@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+    <name>ps_apiresources</name>
+    <displayName><![CDATA[PrestaShop API Resources]]></displayName>
+    <version><![CDATA[0.1.0]]></version>
+    <description><![CDATA[Includes the resources allowing using the API for the PrestaShop domain.]]></description>
+    <author><![CDATA[PrestaShop]]></author>
+    <tab><![CDATA[administration]]></tab>
+    <is_configurable>0</is_configurable>
+    <need_instance>0</need_instance>
+</module>

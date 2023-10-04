@@ -1,0 +1,34 @@
+{
+  "name": "prestashop/ps_apiresources",
+  "description": "PrestaShop - API Resources",
+  "homepage": "https://github.com/PrestaShop/ps_apiresources",
+  "license": "AFL-3.0",
+  "authors": [
+    {
+      "name": "PrestaShop SA",
+      "email": "contact@prestashop.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.1"
+  },
+  "require-dev": {
+    "prestashop/php-dev-tools": "^4.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "PrestaShop\\Module\\APIResources\\": "src/"
+    },
+    "classmap": ["ps_apiresources.php"]
+  },
+  "config": {
+    "preferred-install": "dist",
+    "classmap-authoritative": true,
+    "optimize-autoloader": true,
+    "prepend-autoloader": false,
+    "platform": {
+      "php": "8.1.0"
+    }
+  },
+  "type": "prestashop-module"
+}
