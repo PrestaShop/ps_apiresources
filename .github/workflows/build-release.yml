@@ -1,0 +1,6 @@
+name: Build release
+on: [push, pull_request]
+
+jobs:
+  build-and-release-draft:
+    uses: PrestaShop/.github/.github/workflows/build-release.yml@master
