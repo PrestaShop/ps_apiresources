@@ -42,10 +42,10 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
             requirements: ['apiAccessId' => '\d+'],
             openapiContext: [
                 'summary' => 'Get API Access details',
-                'description' => 'Get API Access public details only, sensitive informations like secrets are not returned',
+                'description' => 'Get API Access public details only, sensitive information like secrets is not returned',
                 'parameters' => [
                     [
-                        'name' => 'id',
+                        'name' => 'apiAccessId',
                         'in' => 'path',
                         'required' => true,
                         'schema' => [
