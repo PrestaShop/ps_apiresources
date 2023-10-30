@@ -67,6 +67,36 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
                 'scopes' => ['api_access_read'],
             ]
         ),
+        new Delete(
+            uriTemplate: '/api-access/{apiAccessId}',
+            requirements: ['apiAccessId' => '\d+'],
+            openapiContext: [
+                'summary' => 'Delete API Access details',
+                'description' => 'Delete API Access public details only, sensitive information like secrets is not returned',
+                'parameters' => [
+                    [
+                        'name' => 'apiAccessId',
+                        'in' => 'path',
+                        'required' => true,
+                        'schema' => [
+                            'type' => 'string',
+                        ],
+                        'description' => 'Id of the API Access you are deleting',
+                    ],
+                    [
+                        'name' => 'Authorization',
+                        'in' => 'scopes',
+                        'description' => 'api_access_write',
+                    ],
+                ],
+            ],
+            exceptionToStatus: [ApiAccessNotFoundException::class => 404],
+            provider: CommandProcessor::class,
+            extraProperties: [
+                'query' => DeleteApiAccessCommand::class,
+                'scopes' => ['api_access_write'],
+            ]
+        ),
     ],
 )]
 class ApiAccess
