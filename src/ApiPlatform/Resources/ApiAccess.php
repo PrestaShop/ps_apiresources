@@ -45,7 +45,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
 #[ApiResource(
     operations: [
         new Get(
-            uriTemplate: '/api-access/{apiAccessId}',
+            uriTemplate: '/apiAccess/{apiAccessId}',
             requirements: ['apiAccessId' => '\d+'],
             openapiContext: [
                 'summary' => 'Get API Access details',
@@ -75,7 +75,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
             ]
         ),
         new Delete(
-            uriTemplate: '/api-access/{apiAccessId}',
+            uriTemplate: '/apiAccess/{apiAccessId}',
             requirements: ['apiAccessId' => '\d+'],
             openapiContext: [
                 'summary' => 'Delete API Access details',
@@ -106,7 +106,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
             ]
         ),
         new Post(
-            uriTemplate: '/api-access',
+            uriTemplate: '/apiAccess',
             processor: CommandProcessor::class,
             extraProperties: [
                 'command' => AddApiAccessCommand::class,
@@ -115,7 +115,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
             ]
         ),
         new Put(
-            uriTemplate: '/api-access/{apiAccessId}',
+            uriTemplate: '/apiAccess/{apiAccessId}',
             read: false,
             processor: CommandProcessor::class,
             extraProperties: [
