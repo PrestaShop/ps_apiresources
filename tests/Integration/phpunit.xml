@@ -1,0 +1,20 @@
+<phpunit
+    bootstrap="bootstrap.php"
+    convertDeprecationsToExceptions="false"
+    processIsolation="false">
+  <php>
+    <env name="KERNEL_CLASS" value="AdminKernel" />
+    <env name="SYMFONY_DEPRECATIONS_HELPER" value="weak"/>
+  </php>
+  <testsuites>
+    <testsuite name="Integration">
+      <directory>.</directory>
+    </testsuite>
+  </testsuites>
+
+  <groups>
+    <exclude>
+      <group>isolatedProcess</group>
+    </exclude>
+  </groups>
+</phpunit>
