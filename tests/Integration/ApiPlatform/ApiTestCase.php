@@ -62,6 +62,10 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             $defaultOptions['headers']['accept'] = ['application/json'];
         }
 
+        if (!isset($defaultOptions['headers']['content-type'])) {
+            $defaultOptions['headers']['content-type'] = ['application/json'];
+        }
+
         return parent::createClient($kernelOptions, $defaultOptions);
     }
 
@@ -77,7 +81,12 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             'grant_type' => 'client_credentials',
             'scope' => $scopes,
         ]];
-        $options = ['extra' => $parameters];
+        $options = [
+            'extra' => $parameters,
+            'headers' => [
+                'content-type' => 'application/x-www-form-urlencoded',
+            ],
+        ];
         $response = $client->request('POST', '/api/oauth2/token', $options);
 
         return json_decode($response->getContent())->access_token;
