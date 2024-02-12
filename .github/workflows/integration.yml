@@ -1,0 +1,51 @@
+name: Integration tests
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read   #   to clone the repos and get release assets (shivammathur/setup-php)
+
+jobs:
+  integration:
+    permissions:
+      contents: read   #   to clone the repos and get release assets (shivammathur/setup-php)
+    name: Integration tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: [ '8.1', '8.2' ]
+      fail-fast: false
+    steps:
+      - name: Checkout module code
+        uses: actions/checkout@v3
+        with:
+          path: ps_apiresources
+      - uses: actions/checkout@v3
+        name: Checkout PrestaShop repository
+        with:
+          fetch-depth: 0
+          repository: PrestaShop/PrestaShop
+          path: prestashop
+      - name: Build Docker
+        run: |
+          cd prestashop
+          USER_ID=$(id -u) GROUP_ID=$(id -g) PS_INSTALL_AUTO=0 docker-compose build --no-cache && docker-compose up -d --force-recreate
+          if [ $? -ne 0 ]; then
+            echo "docker install failed"
+            exit
+          fi
+          bash -l -c 'while [[ "$(curl -L -s -o /dev/null -w %{http_code} 'http://localhost:8001/install-dev/')" != "200" ]]; do echo "waiting for shop install"; sleep 5; done'
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop_prestashop-git_1 php bin/console prestashop:module uninstall ps_apiresources
+      - name: Install Module
+        run: |
+          rm -rf prestashop/modules/ps_apiresources
+          mkdir -p prestashop/modules/ps_apiresources
+          cp -r ps_apiresources/* prestashop/modules/ps_apiresources
+          ls -l prestashop/modules/ps_apiresources
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop_prestashop-git_1 composer install --no-interaction --working-dir=/var/www/html/modules/ps_apiresources
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop_prestashop-git_1 php bin/console prestashop:module install ps_apiresources
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop_prestashop-git_1 composer create-test-db
+      - name: Run integration tests
+        run : |
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop_prestashop-git_1 vendor/bin/phpunit -c modules/ps_apiresources/tests/Integration/phpunit.xml

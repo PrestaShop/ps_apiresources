@@ -21,6 +21,11 @@
     },
     "classmap": ["ps_apiresources.php"]
   },
+  "autoload-dev": {
+    "psr-4": {
+      "PsApiResourcesTest\\": "tests/"
+    }
+  },
   "config": {
     "preferred-install": "dist",
     "classmap-authoritative": true,

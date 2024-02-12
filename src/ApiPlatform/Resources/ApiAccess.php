@@ -28,11 +28,18 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
-use ApiPlatform\Core\Annotation\ApiProperty;
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Command\AddApiAccessCommand;
+use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Command\DeleteApiAccessCommand;
+use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Command\EditApiAccessCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Exception\ApiAccessNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Query\GetApiAccessForEditing;
+use PrestaShopBundle\ApiPlatform\Processor\CommandProcessor;
 use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
 
 #[ApiResource(
@@ -60,25 +67,84 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
                     ],
                 ],
             ],
-            exceptionToStatus: [ApiAccessNotFoundException::class => 404],
             provider: QueryProvider::class,
             extraProperties: [
                 'query' => GetApiAccessForEditing::class,
+                'CQRSQuery' => GetApiAccessForEditing::class,
                 'scopes' => ['api_access_read'],
             ]
         ),
+        new Delete(
+            uriTemplate: '/api-access/{apiAccessId}',
+            requirements: ['apiAccessId' => '\d+'],
+            openapiContext: [
+                'summary' => 'Delete API Access details',
+                'description' => 'Delete API Access public details only, sensitive information like secrets is not returned',
+                'parameters' => [
+                    [
+                        'name' => 'apiAccessId',
+                        'in' => 'path',
+                        'required' => true,
+                        'schema' => [
+                            'type' => 'string',
+                        ],
+                        'description' => 'Id of the API Access you are deleting',
+                    ],
+                    [
+                        'name' => 'Authorization',
+                        'in' => 'scopes',
+                        'description' => 'api_access_write',
+                    ],
+                ],
+            ],
+            output: false,
+            provider: QueryProvider::class,
+            extraProperties: [
+                'query' => DeleteApiAccessCommand::class,
+                'CQRSQuery' => DeleteApiAccessCommand::class,
+                'scopes' => ['api_access_write'],
+            ]
+        ),
+        new Post(
+            uriTemplate: '/api-access',
+            processor: CommandProcessor::class,
+            extraProperties: [
+                'command' => AddApiAccessCommand::class,
+                'CQRSCommand' => AddApiAccessCommand::class,
+                'scopes' => ['api_access_write'],
+            ]
+        ),
+        new Put(
+            uriTemplate: '/api-access/{apiAccessId}',
+            read: false,
+            processor: CommandProcessor::class,
+            extraProperties: [
+                'command' => EditApiAccessCommand::class,
+                'query' => GetApiAccessForEditing::class,
+                'CQRSCommand' => EditApiAccessCommand::class,
+                'CQRSQuery' => GetApiAccessForEditing::class,
+                'scopes' => ['api_access_write'],
+            ]
+        ),
     ],
+    exceptionToStatus: [ApiAccessNotFoundException::class => 404],
 )]
 class ApiAccess
 {
     #[ApiProperty(identifier: true)]
     public int $apiAccessId;
 
-    public string $clientName;
+    public string $secret;
 
-    public string $clientId;
+    public string $apiClientId;
+
+    public string $clientName;
 
     public string $description;
 
     public bool $enabled;
+
+    public int $lifetime;
+
+    public array $scopes;
 }
