@@ -39,4 +39,6 @@ if (!defined('PHPUNIT_COMPOSER_INSTALL')) {
     define('PHPUNIT_COMPOSER_INSTALL', dirname(__DIR__, 4) . '/vendor/autoload.php');
 }
 
-require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+if (file_exists(dirname(__DIR__, 2) . '/vendor/autoload.php')) {
+    require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+}
