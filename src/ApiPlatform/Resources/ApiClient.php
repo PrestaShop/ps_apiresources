@@ -30,21 +30,21 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Delete;
-use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\Post;
-use ApiPlatform\Metadata\Put;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\AddApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\DeleteApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\EditApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Exception\ApiClientNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Query\GetApiClientForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Processor\CommandProcessor;
 use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
 
 #[ApiResource(
     operations: [
-        new Get(
+        new CQRSGet(
             uriTemplate: '/api-client/{apiClientId}',
             requirements: ['apiClientId' => '\d+'],
             openapiContext: [
@@ -68,13 +68,10 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
                 ],
             ],
             provider: QueryProvider::class,
-            extraProperties: [
-                'query' => GetApiClientForEditing::class,
-                'CQRSQuery' => GetApiClientForEditing::class,
-                'scopes' => ['api_client_read'],
-            ]
+            CQRSQuery: GetApiClientForEditing::class,
+            scopes: ['api_client_read']
         ),
-        new Delete(
+        new CQRSDelete(
             uriTemplate: '/api-client/{apiClientId}',
             requirements: ['apiClientId' => '\d+'],
             openapiContext: [
@@ -99,32 +96,22 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
             ],
             output: false,
             provider: QueryProvider::class,
-            extraProperties: [
-                'query' => DeleteApiClientCommand::class,
-                'CQRSQuery' => DeleteApiClientCommand::class,
-                'scopes' => ['api_client_write'],
-            ]
+            CQRSQuery: DeleteApiClientCommand::class,
+            scopes: ['api_client_write']
         ),
-        new Post(
+        new CQRSCreate(
             uriTemplate: '/api-client',
             processor: CommandProcessor::class,
-            extraProperties: [
-                'command' => AddApiClientCommand::class,
-                'CQRSCommand' => AddApiClientCommand::class,
-                'scopes' => ['api_client_write'],
-            ]
+            CQRSCommand: AddApiClientCommand::class,
+            scopes: ['api_client_write']
         ),
-        new Put(
+        new CQRSPartialUpdate(
             uriTemplate: '/api-client/{apiClientId}',
             read: false,
             processor: CommandProcessor::class,
-            extraProperties: [
-                'command' => EditApiClientCommand::class,
-                'query' => GetApiClientForEditing::class,
-                'CQRSCommand' => EditApiClientCommand::class,
-                'CQRSQuery' => GetApiClientForEditing::class,
-                'scopes' => ['api_client_write'],
-            ]
+            CQRSCommand: EditApiClientCommand::class,
+            CQRSQuery: GetApiClientForEditing::class,
+            scopes: ['api_client_write']
         ),
     ],
     exceptionToStatus: [ApiClientNotFoundException::class => 404],
