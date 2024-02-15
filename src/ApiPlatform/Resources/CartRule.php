@@ -30,14 +30,12 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\CartRule\Command\EditCartRuleCommand;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
-use PrestaShopBundle\ApiPlatform\Processor\CommandProcessor;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 
 #[ApiResource(
     operations: [
-        new CQRSPartialUpdate(
+        new CQRSUpdate(
             uriTemplate: '/cart-rule',
-            processor: CommandProcessor::class,
             CQRSCommand: EditCartRuleCommand::class
         ),
     ],

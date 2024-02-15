@@ -32,7 +32,6 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\SearchProducts;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSQueryCollection;
-use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
 
 #[ApiResource(
     operations: [
@@ -74,7 +73,6 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
                     ],
                 ],
             ],
-            provider: QueryProvider::class,
             CQRSQuery: SearchProducts::class
         ),
     ],

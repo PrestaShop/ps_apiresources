@@ -39,8 +39,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
-use PrestaShopBundle\ApiPlatform\Processor\CommandProcessor;
-use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
 
 #[ApiResource(
     operations: [
@@ -67,7 +65,6 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
                     ],
                 ],
             ],
-            provider: QueryProvider::class,
             CQRSQuery: GetApiClientForEditing::class,
             scopes: ['api_client_read']
         ),
@@ -95,20 +92,17 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
                 ],
             ],
             output: false,
-            provider: QueryProvider::class,
             CQRSQuery: DeleteApiClientCommand::class,
             scopes: ['api_client_write']
         ),
         new CQRSCreate(
             uriTemplate: '/api-client',
-            processor: CommandProcessor::class,
             CQRSCommand: AddApiClientCommand::class,
             scopes: ['api_client_write']
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/api-client/{apiClientId}',
             read: false,
-            processor: CommandProcessor::class,
             CQRSCommand: EditApiClientCommand::class,
             CQRSQuery: GetApiClientForEditing::class,
             scopes: ['api_client_write']

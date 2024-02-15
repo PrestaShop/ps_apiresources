@@ -36,11 +36,9 @@ use PrestaShop\PrestaShop\Core\Domain\Hook\Exception\HookNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHook;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHookStatus;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
-use PrestaShopBundle\ApiPlatform\Processor\CommandProcessor;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
-use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
 
 #[ApiResource(
     operations: [
@@ -68,13 +66,11 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
                 ],
             ],
             exceptionToStatus: [HookNotFoundException::class => 404],
-            provider: QueryProvider::class,
             CQRSQuery: GetHookStatus::class,
             scopes: ['hook_read']
         ),
-        new CQRSPartialUpdate(
+        new CQRSUpdate(
             uriTemplate: '/hook-status',
-            processor: CommandProcessor::class,
             CQRSCommand: UpdateHookStatusCommand::class,
             scopes: ['hook_write']
         ),
@@ -82,11 +78,9 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
             uriTemplate: '/hooks/{id}',
             requirements: ['id' => '\d+'],
             exceptionToStatus: [HookNotFoundException::class => 404],
-            provider: QueryProvider::class,
             CQRSQuery: GetHook::class,
             scopes: ['hook_read']
         ),
-        // PR module + inte module + convertir en custom ce qu'il reste en natif
         new DQBPaginatedList(
             uriTemplate: '/hooks',
             provider: QueryListProvider::class,

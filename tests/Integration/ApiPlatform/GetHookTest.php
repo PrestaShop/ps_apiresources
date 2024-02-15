@@ -69,4 +69,74 @@ class GetHookTest extends ApiTestCase
 
         $hook->delete();
     }
+
+    public function testListHooks(): void
+    {
+        $hooks = $this->generateHooks();
+        $bearerToken = $this->getBearerToken([
+            'hook_read',
+            'hook_write',
+        ]);
+
+        $response = static::createClient()->request('GET', '/api/hooks', ['auth_bearer' => $bearerToken]);
+        self::assertResponseStatusCodeSame(200);
+        self::assertCount(50, json_decode($response->getContent())->items);
+        $totalItems = json_decode($response->getContent())->totalItems;
+
+        $response = static::createClient()->request('GET', '/api/hooks?limit=10', ['auth_bearer' => $bearerToken]);
+        self::assertResponseStatusCodeSame(200);
+        self::assertCount(10, json_decode($response->getContent())->items);
+
+        $response = static::createClient()->request('GET', '/api/hooks?limit=1&orderBy=id_hook&sortOrder=desc', ['auth_bearer' => $bearerToken]);
+        self::assertResponseStatusCodeSame(200);
+        self::assertCount(1, json_decode($response->getContent())->items);
+        $returnedHook = json_decode($response->getContent());
+        self::assertEquals('id_hook', $returnedHook->orderBy);
+        self::assertEquals('desc', $returnedHook->sortOrder);
+        self::assertEquals(1, $returnedHook->limit);
+        self::assertEquals([], $returnedHook->filters);
+        self::assertEquals('testHook50', $returnedHook->items[0]->name);
+        self::assertTrue($returnedHook->items[0]->active);
+
+        $response = static::createClient()->request('GET', '/api/hooks?filters[name]=testHook', ['auth_bearer' => $bearerToken]);
+        self::assertResponseStatusCodeSame(200);
+        self::assertCount(50, json_decode($response->getContent())->items);
+        foreach (json_decode($response->getContent())->items as $key => $item) {
+            self::assertEquals('testHook' . $key, $item->name);
+        }
+
+        $newHook = new \Hook();
+        $newHook->name = 'testHook51';
+        $newHook->active = true;
+        $newHook->add();
+        $hooks[] = $newHook;
+
+        $response = static::createClient()->request('GET', '/api/hooks', ['auth_bearer' => $bearerToken]);
+        self::assertResponseStatusCodeSame(200);
+        self::assertEquals($totalItems + 1, json_decode($response->getContent())->totalItems);
+
+        static::createClient()->request('GET', '/api/hooks');
+        self::assertResponseStatusCodeSame(401);
+
+        foreach ($hooks as $hook) {
+            $hook->delete();
+        }
+    }
+
+    /**
+     * @return \Hook[]
+     */
+    protected function generateHooks(): array
+    {
+        $hooks = [];
+        for ($i = 0; $i <= 50; ++$i) {
+            $hook = new \Hook();
+            $hook->name = 'testHook' . $i;
+            $hook->active = true;
+            $hook->add();
+            $hooks[] = $hook;
+        }
+
+        return $hooks;
+    }
 }
