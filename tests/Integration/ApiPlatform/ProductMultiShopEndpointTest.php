@@ -69,7 +69,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         self::$secondShopId = self::addShop('Second shop', self::DEFAULT_SHOP_GROUP_ID);
         self::$thirdShopId = self::addShop('Third shop', self::$secondShopGroupId);
         self::$fourthShopId = self::addShop('Fourth shop', self::$secondShopGroupId);
-        self::createApiAccess(['product_write', 'product_read']);
+        self::createApiClient(['product_write', 'product_read']);
 
         self::$defaultProductData = [
             'type' => ProductType::TYPE_STANDARD,

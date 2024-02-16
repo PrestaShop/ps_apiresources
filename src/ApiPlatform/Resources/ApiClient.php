@@ -34,109 +34,109 @@ use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
-use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Command\AddApiAccessCommand;
-use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Command\DeleteApiAccessCommand;
-use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Command\EditApiAccessCommand;
-use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Exception\ApiAccessNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\ApiAccess\Query\GetApiAccessForEditing;
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\AddApiClientCommand;
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\DeleteApiClientCommand;
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\EditApiClientCommand;
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\Exception\ApiClientNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\Query\GetApiClientForEditing;
 use PrestaShopBundle\ApiPlatform\Processor\CommandProcessor;
 use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
 
 #[ApiResource(
     operations: [
         new Get(
-            uriTemplate: '/api-access/{apiAccessId}',
-            requirements: ['apiAccessId' => '\d+'],
+            uriTemplate: '/api-client/{apiClientId}',
+            requirements: ['apiClientId' => '\d+'],
             openapiContext: [
-                'summary' => 'Get API Access details',
-                'description' => 'Get API Access public details only, sensitive information like secrets is not returned',
+                'summary' => 'Get API Client details',
+                'description' => 'Get API Client public details only, sensitive information like secrets is not returned',
                 'parameters' => [
                     [
-                        'name' => 'apiAccessId',
+                        'name' => 'apiClientId',
                         'in' => 'path',
                         'required' => true,
                         'schema' => [
                             'type' => 'string',
                         ],
-                        'description' => 'Id of the API Access you are requesting the details from',
+                        'description' => 'Id of the API Client you are requesting the details from',
                     ],
                     [
                         'name' => 'Authorization',
                         'in' => 'scopes',
-                        'description' => 'api_access_read',
+                        'description' => 'api_client_read',
                     ],
                 ],
             ],
             provider: QueryProvider::class,
             extraProperties: [
-                'query' => GetApiAccessForEditing::class,
-                'CQRSQuery' => GetApiAccessForEditing::class,
-                'scopes' => ['api_access_read'],
+                'query' => GetApiClientForEditing::class,
+                'CQRSQuery' => GetApiClientForEditing::class,
+                'scopes' => ['api_client_read'],
             ]
         ),
         new Delete(
-            uriTemplate: '/api-access/{apiAccessId}',
-            requirements: ['apiAccessId' => '\d+'],
+            uriTemplate: '/api-client/{apiClientId}',
+            requirements: ['apiClientId' => '\d+'],
             openapiContext: [
-                'summary' => 'Delete API Access details',
-                'description' => 'Delete API Access public details only, sensitive information like secrets is not returned',
+                'summary' => 'Delete API Client details',
+                'description' => 'Delete API Client public details only, sensitive information like secrets is not returned',
                 'parameters' => [
                     [
-                        'name' => 'apiAccessId',
+                        'name' => 'apiClientId',
                         'in' => 'path',
                         'required' => true,
                         'schema' => [
                             'type' => 'string',
                         ],
-                        'description' => 'Id of the API Access you are deleting',
+                        'description' => 'Id of the API Client you are deleting',
                     ],
                     [
                         'name' => 'Authorization',
                         'in' => 'scopes',
-                        'description' => 'api_access_write',
+                        'description' => 'api_client_write',
                     ],
                 ],
             ],
             output: false,
             provider: QueryProvider::class,
             extraProperties: [
-                'query' => DeleteApiAccessCommand::class,
-                'CQRSQuery' => DeleteApiAccessCommand::class,
-                'scopes' => ['api_access_write'],
+                'query' => DeleteApiClientCommand::class,
+                'CQRSQuery' => DeleteApiClientCommand::class,
+                'scopes' => ['api_client_write'],
             ]
         ),
         new Post(
-            uriTemplate: '/api-access',
+            uriTemplate: '/api-client',
             processor: CommandProcessor::class,
             extraProperties: [
-                'command' => AddApiAccessCommand::class,
-                'CQRSCommand' => AddApiAccessCommand::class,
-                'scopes' => ['api_access_write'],
+                'command' => AddApiClientCommand::class,
+                'CQRSCommand' => AddApiClientCommand::class,
+                'scopes' => ['api_client_write'],
             ]
         ),
         new Put(
-            uriTemplate: '/api-access/{apiAccessId}',
+            uriTemplate: '/api-client/{apiClientId}',
             read: false,
             processor: CommandProcessor::class,
             extraProperties: [
-                'command' => EditApiAccessCommand::class,
-                'query' => GetApiAccessForEditing::class,
-                'CQRSCommand' => EditApiAccessCommand::class,
-                'CQRSQuery' => GetApiAccessForEditing::class,
-                'scopes' => ['api_access_write'],
+                'command' => EditApiClientCommand::class,
+                'query' => GetApiClientForEditing::class,
+                'CQRSCommand' => EditApiClientCommand::class,
+                'CQRSQuery' => GetApiClientForEditing::class,
+                'scopes' => ['api_client_write'],
             ]
         ),
     ],
-    exceptionToStatus: [ApiAccessNotFoundException::class => 404],
+    exceptionToStatus: [ApiClientNotFoundException::class => 404],
 )]
-class ApiAccess
+class ApiClient
 {
     #[ApiProperty(identifier: true)]
-    public int $apiAccessId;
+    public int $apiClientId;
 
     public string $secret;
 
-    public string $apiClientId;
+    public string $clientId;
 
     public string $clientName;
 

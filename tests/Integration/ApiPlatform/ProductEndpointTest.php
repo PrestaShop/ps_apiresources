@@ -49,7 +49,7 @@ class ProductEndpointTest extends ApiTestCase
         ProductResetter::resetProducts();
         LanguageResetter::resetLanguages();
         self::$frenchLangId = self::addLanguageByLocale('fr-FR');
-        self::createApiAccess(['product_write', 'product_read']);
+        self::createApiClient(['product_write', 'product_read']);
     }
 
     public static function tearDownAfterClass(): void
