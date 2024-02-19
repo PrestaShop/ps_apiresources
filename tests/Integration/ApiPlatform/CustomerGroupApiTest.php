@@ -38,7 +38,7 @@ class CustomerGroupApiTest extends ApiTestCase
     {
         parent::setUpBeforeClass();
         DatabaseDump::restoreTables(['group', 'group_lang', 'group_reduction', 'group_shop', 'category_group']);
-        self::createApiAccess(['customer_group_write', 'customer_group_read']);
+        self::createApiClient(['customer_group_write', 'customer_group_read']);
     }
 
     public static function tearDownAfterClass(): void
