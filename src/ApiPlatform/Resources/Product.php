@@ -61,6 +61,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: Product::QUERY_MAPPING,
             CQRSCommandMapping: [
+                '[_context][shopId]' => '[shopId]',
                 '[type]' => '[productType]',
                 '[names]' => '[localizedNames]',
             ],
@@ -81,6 +82,9 @@ use Symfony\Component\HttpFoundation\Response;
             scopes: [
                 'product_write',
             ],
+            CQRSQueryMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+            ]
         ),
     ],
     exceptionToStatus: [
@@ -102,12 +106,14 @@ class Product
     public array $descriptions;
 
     public const QUERY_MAPPING = [
-        '[langId]' => '[displayLanguageId]',
+        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[_context][langId]' => '[displayLanguageId]',
         '[basicInformation][localizedNames]' => '[names]',
         '[basicInformation][localizedDescriptions]' => '[descriptions]',
     ];
 
     public const UPDATE_MAPPING = [
+        '[_context][shopConstraint]' => '[shopConstraint]',
         '[type]' => '[productType]',
         '[names]' => '[localizedNames]',
         '[descriptions]' => '[localizedDescriptions]',
