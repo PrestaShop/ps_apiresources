@@ -80,6 +80,11 @@ class CustomerGroupApiTest extends ApiTestCase
             'PUT',
             '/api/customers/group/1',
         ];
+
+        yield 'delete endpoint' => [
+            'DELETE',
+            '/api/customers/group/1',
+        ];
     }
 
     public function testAddCustomerGroup(): int

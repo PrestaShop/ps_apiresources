@@ -97,6 +97,11 @@ class ProductEndpointTest extends ApiTestCase
             '/api/product/1',
             'application/merge-patch+json',
         ];
+
+        yield 'delete endpoint' => [
+            'DELETE',
+            '/api/product/1',
+        ];
     }
 
     public function testAddProduct(): int
@@ -278,7 +283,7 @@ class ProductEndpointTest extends ApiTestCase
         $productsNumber = $this->getProductsNumber();
         $bearerToken = $this->getBearerToken(['product_read', 'product_write']);
         $client = static::createClient();
-        // Update customer group with partial data
+        // Delete product
         $response = $client->request('DELETE', '/api/product/' . $productId, [
             'auth_bearer' => $bearerToken,
         ]);
