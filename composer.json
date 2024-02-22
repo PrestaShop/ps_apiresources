@@ -14,7 +14,8 @@
   },
   "require-dev": {
     "prestashop/php-dev-tools": "^4.2",
-    "czproject/git-php": "^4.2"
+    "czproject/git-php": "^4.2",
+    "phpunit/phpunit": "^9.6"
   },
   "autoload": {
     "psr-4": {
@@ -38,7 +39,11 @@
   },
   "scripts": {
     "clear-test-cache": "PsApiResourcesTest\\EnvironmentBuilder::clearCache",
-    "create-test-db": "@composer setup-local-tests -- --build-db",
+    "create-test-db": [
+      "@composer clear-test-cache",
+      "@composer setup-local-tests -- --build-db"
+    ],
+    "run-module-tests": "@php -d date.timezone=UTC ./vendor/bin/phpunit -c tests/Integration/phpunit-local.xml",
     "setup-local-tests": "PsApiResourcesTest\\EnvironmentBuilder::setupLocalTests"
   },
   "type": "prestashop-module"
