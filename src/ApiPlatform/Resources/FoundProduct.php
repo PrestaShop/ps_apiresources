@@ -30,13 +30,12 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\GetCollection;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\SearchProducts;
-use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSQueryCollection;
 
 #[ApiResource(
     operations: [
-        new GetCollection(
+        new CQRSQueryCollection(
             uriTemplate: '/products/search/{phrase}/{resultsLimit}/{isoCode}',
             openapiContext: [
                 'parameters' => [
@@ -74,10 +73,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryProvider;
                     ],
                 ],
             ],
-            provider: QueryProvider::class,
-            extraProperties: [
-                'CQRSQuery' => SearchProducts::class,
-            ]
+            CQRSQuery: SearchProducts::class
         ),
     ],
 )]
