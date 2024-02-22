@@ -85,6 +85,14 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         ];
     }
 
+    public function getProtectedEndpoints(): iterable
+    {
+        yield 'get endpoint' => [
+            'GET',
+            '/api/product/1',
+        ];
+    }
+
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
@@ -99,8 +107,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public function testShopContextIsRequired(): void
     {
         $bearerToken = $this->getBearerToken(['product_write']);
-        $client = static::createClient();
-        $response = $client->request('POST', '/api/product', [
+        $response = static::createClient()->request('POST', '/api/product', [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'type' => ProductType::TYPE_STANDARD,
@@ -118,8 +125,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public function testCreateProductForFirstShop(): int
     {
         $bearerToken = $this->getBearerToken(['product_write']);
-        $client = static::createClient();
-        $response = $client->request('POST', '/api/product', [
+        $response = static::createClient()->request('POST', '/api/product', [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'type' => ProductType::TYPE_STANDARD,
@@ -155,8 +161,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public function testGetProductForFirstShopIsSuccessful(int $productId): int
     {
         $bearerToken = $this->getBearerToken(['product_read']);
-        $client = static::createClient();
-        $response = $client->request('GET', '/api/product/' . $productId, [
+        $response = static::createClient()->request('GET', '/api/product/' . $productId, [
             'auth_bearer' => $bearerToken,
             'extra' => [
                 'parameters' => [
@@ -180,8 +185,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public function testGetProductForSecondShopIsFailing(int $productId): int
     {
         $bearerToken = $this->getBearerToken(['product_read']);
-        $client = static::createClient();
-        $response = $client->request('GET', '/api/product/' . $productId, [
+        $response = static::createClient()->request('GET', '/api/product/' . $productId, [
             'auth_bearer' => $bearerToken,
             'extra' => [
                 'parameters' => [

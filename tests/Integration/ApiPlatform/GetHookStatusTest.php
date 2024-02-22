@@ -44,6 +44,19 @@ class GetHookStatusTest extends ApiTestCase
         DatabaseDump::restoreTables(['hook']);
     }
 
+    public function getProtectedEndpoints(): iterable
+    {
+        yield 'get endpoint' => [
+            'GET',
+            '/api/hook-status/1',
+        ];
+
+        yield 'put endpoint' => [
+            'PUT',
+            '/api/hook-status',
+        ];
+    }
+
     public function testGetHookStatus(): void
     {
         $inactiveHook = new \Hook();
