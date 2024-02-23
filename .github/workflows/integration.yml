@@ -51,4 +51,4 @@ jobs:
           USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop_prestashop-git_1 composer create-test-db
       - name: Run integration tests
         run : |
-          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop_prestashop-git_1 vendor/bin/phpunit -c modules/ps_apiresources/tests/Integration/phpunit.xml
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop_prestashop-git_1 vendor/bin/phpunit -c modules/ps_apiresources/tests/Integration/phpunit-ci.xml

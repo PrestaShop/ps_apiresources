@@ -56,6 +56,50 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         self::$clientSecret = null;
     }
 
+    /**
+     * @dataProvider getProtectedEndpoints
+     *
+     * @param string $method
+     * @param string $uri
+     */
+    public function testProtectedEndpoints(string $method, string $uri, string $contentType = 'application/json'): void
+    {
+        $options['headers']['content-type'] = $contentType;
+        // Check that endpoints are not accessible without a proper Bearer token
+        $response = static::createClient([], $options)->request($method, $uri);
+        self::assertResponseStatusCodeSame(401);
+
+        $content = $response->getContent(false);
+        $this->assertNotEmpty($content);
+        $this->assertEquals('No Authorization header provided', $content);
+
+        // Test same endpoint with a token but without scopes
+        $emptyBearerToken = $this->getBearerToken();
+        static::createClient([], $options)->request($method, $uri, ['auth_bearer' => $emptyBearerToken]);
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    /**
+     * You must provide a list of protected endpoints that will we automatically checked,
+     * the test will check that the endpoints are not accessible when no token is specified
+     * AND that they are not accessible when the no particular scope is specified.
+     *
+     * You should use yield return like this:
+     *
+     *  yield 'get endpoint' => [
+     *      'GET',
+     *      '/api/product/1',
+     *  ];
+     *
+     * Since all Api Platform resources should likely have some protected endpoints this provider
+     * method was made abstract to force its implementation. In the unlikely event you need to use
+     * this class on a resouce with absolutely no protected endpoints you can still implement this
+     * method and return new \EmptyIterator();
+     *
+     * @return iterable
+     */
+    abstract public function getProtectedEndpoints(): iterable;
+
     protected static function createClient(array $kernelOptions = [], array $defaultOptions = []): Client
     {
         if (!isset($defaultOptions['headers']['accept'])) {
@@ -74,7 +118,6 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         if (null === self::$clientSecret) {
             self::createApiClient($scopes);
         }
-        $client = static::createClient();
         $parameters = ['parameters' => [
             'client_id' => static::CLIENT_ID,
             'client_secret' => static::$clientSecret,
@@ -87,14 +130,13 @@ abstract class ApiTestCase extends SymfonyApiTestCase
                 'content-type' => 'application/x-www-form-urlencoded',
             ],
         ];
-        $response = $client->request('POST', '/api/oauth2/token', $options);
+        $response = static::createClient()->request('POST', '/api/oauth2/token', $options);
 
         return json_decode($response->getContent())->access_token;
     }
 
     protected static function createApiClient(array $scopes = [], int $lifetime = 10000): void
     {
-        $client = static::createClient();
         $command = new AddApiClientCommand(
             static::CLIENT_NAME,
             static::CLIENT_ID,
@@ -104,7 +146,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             $scopes
         );
 
-        $container = $client->getContainer();
+        $container = static::createClient()->getContainer();
         $commandBus = $container->get('prestashop.core.command_bus');
         $createdApiClient = $commandBus->handle($command);
 
@@ -113,7 +155,6 @@ abstract class ApiTestCase extends SymfonyApiTestCase
 
     protected static function addLanguageByLocale(string $locale): int
     {
-        $client = static::createClient();
         $isoCode = substr($locale, 0, strpos($locale, '-'));
 
         // Copy resource assets into tmp folder to mimic an upload file path
@@ -140,7 +181,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             [1]
         );
 
-        $container = $client->getContainer();
+        $container = static::createClient()->getContainer();
         $commandBus = $container->get('prestashop.core.command_bus');
 
         return $commandBus->handle($command)->getValue();

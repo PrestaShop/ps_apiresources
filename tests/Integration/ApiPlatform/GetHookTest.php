@@ -45,6 +45,14 @@ class GetHookTest extends ApiTestCase
         DatabaseDump::restoreTables(['hook']);
     }
 
+    public function getProtectedEndpoints(): iterable
+    {
+        yield 'get endpoint' => [
+            'GET',
+            '/api/hooks/1',
+        ];
+    }
+
     public function testGetHook(): void
     {
         $hook = new \Hook();

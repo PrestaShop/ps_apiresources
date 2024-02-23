@@ -1,5 +1,5 @@
 <phpunit
-    bootstrap="bootstrap.php"
+    bootstrap="bootstrap-local.php"
     convertDeprecationsToExceptions="false"
     processIsolation="false">
   <php>
@@ -11,10 +11,4 @@
       <directory>.</directory>
     </testsuite>
   </testsuites>
-
-  <groups>
-    <exclude>
-      <group>isolatedProcess</group>
-    </exclude>
-  </groups>
 </phpunit>
