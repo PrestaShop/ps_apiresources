@@ -29,10 +29,12 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagSettings;
 use PrestaShop\PrestaShop\Core\Multistore\MultistoreConfig;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Tests\Resources\Resetter\ConfigurationResetter;
+use Tests\Resources\Resetter\FeatureFlagResetter;
 use Tests\Resources\Resetter\LanguageResetter;
 use Tests\Resources\Resetter\ProductResetter;
 use Tests\Resources\Resetter\ShopResetter;
@@ -83,6 +85,9 @@ class ProductMultiShopEndpointTest extends ApiTestCase
             ],
             'active' => false,
         ];
+
+        $featureFlagManager = self::getContainer()->get('PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagManager');
+        $featureFlagManager->enable(FeatureFlagSettings::FEATURE_FLAG_AUTHORIZATION_SERVER_MULTISTORE);
     }
 
     public function getProtectedEndpoints(): iterable
@@ -102,6 +107,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         ConfigurationResetter::resetConfiguration();
         // Reset modules folder that are removed with the FR language
         (new ResourceResetter())->resetTestModules();
+        FeatureFlagResetter::resetFeatureFlags();
     }
 
     public function testShopContextIsRequired(): void
