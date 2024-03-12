@@ -49,7 +49,7 @@ class GetHookTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/api/hooks/1',
+            '/hooks/1',
         ];
     }
 
@@ -65,14 +65,14 @@ class GetHookTest extends ApiTestCase
             'hook_write',
         ]);
 
-        $response = static::createClient()->request('GET', '/api/hooks/' . (int) $hook->id, ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/hooks/' . (int) $hook->id, ['auth_bearer' => $bearerToken]);
         self::assertEquals(json_decode($response->getContent())->active, $hook->active);
         self::assertResponseStatusCodeSame(200);
 
-        static::createClient()->request('GET', '/api/hooks/' . 9999, ['auth_bearer' => $bearerToken]);
+        static::createClient()->request('GET', '/hooks/' . 9999, ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(404);
 
-        static::createClient()->request('GET', '/api/hooks/' . $hook->id);
+        static::createClient()->request('GET', '/hooks/' . $hook->id);
         self::assertResponseStatusCodeSame(401);
 
         $hook->delete();
@@ -86,16 +86,16 @@ class GetHookTest extends ApiTestCase
             'hook_write',
         ]);
 
-        $response = static::createClient()->request('GET', '/api/hooks', ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/hooks', ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(200);
         self::assertCount(50, json_decode($response->getContent())->items);
         $totalItems = json_decode($response->getContent())->totalItems;
 
-        $response = static::createClient()->request('GET', '/api/hooks?limit=10', ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/hooks?limit=10', ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(200);
         self::assertCount(10, json_decode($response->getContent())->items);
 
-        $response = static::createClient()->request('GET', '/api/hooks?limit=1&orderBy=id_hook&sortOrder=desc', ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/hooks?limit=1&orderBy=id_hook&sortOrder=desc', ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(200);
         self::assertCount(1, json_decode($response->getContent())->items);
         $returnedHook = json_decode($response->getContent());
@@ -106,7 +106,7 @@ class GetHookTest extends ApiTestCase
         self::assertEquals('testHook50', $returnedHook->items[0]->name);
         self::assertTrue($returnedHook->items[0]->active);
 
-        $response = static::createClient()->request('GET', '/api/hooks?filters[name]=testHook', ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/hooks?filters[name]=testHook', ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(200);
         self::assertCount(50, json_decode($response->getContent())->items);
         foreach (json_decode($response->getContent())->items as $key => $item) {
@@ -119,11 +119,11 @@ class GetHookTest extends ApiTestCase
         $newHook->add();
         $hooks[] = $newHook;
 
-        $response = static::createClient()->request('GET', '/api/hooks', ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/hooks', ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(200);
         self::assertEquals($totalItems + 1, json_decode($response->getContent())->totalItems);
 
-        static::createClient()->request('GET', '/api/hooks');
+        static::createClient()->request('GET', '/hooks');
         self::assertResponseStatusCodeSame(401);
 
         foreach ($hooks as $hook) {

@@ -51,22 +51,22 @@ class CustomerGroupApiTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/api/customers/group/1',
+            '/customers/group/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/api/customers/group',
+            '/customers/group',
         ];
 
         yield 'update endpoint' => [
             'PUT',
-            '/api/customers/group/1',
+            '/customers/group/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/api/customers/group/1',
+            '/customers/group/1',
         ];
     }
 
@@ -75,7 +75,7 @@ class CustomerGroupApiTest extends ApiTestCase
         $numberOfGroups = count(\Group::getGroups(\Context::getContext()->language->id));
 
         $bearerToken = $this->getBearerToken(['customer_group_write']);
-        $response = static::createClient()->request('POST', '/api/customers/group', [
+        $response = static::createClient()->request('POST', '/customers/group', [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'localizedNames' => [
@@ -124,7 +124,7 @@ class CustomerGroupApiTest extends ApiTestCase
 
         $bearerToken = $this->getBearerToken(['customer_group_write']);
         // Update customer group with partial data
-        $response = static::createClient()->request('PUT', '/api/customers/group/' . $customerGroupId, [
+        $response = static::createClient()->request('PUT', '/customers/group/' . $customerGroupId, [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'localizedNames' => [
@@ -168,7 +168,7 @@ class CustomerGroupApiTest extends ApiTestCase
     public function testGetCustomerGroup(int $customerGroupId): int
     {
         $bearerToken = $this->getBearerToken(['customer_group_read']);
-        $response = static::createClient()->request('GET', '/api/customers/group/' . $customerGroupId, [
+        $response = static::createClient()->request('GET', '/customers/group/' . $customerGroupId, [
             'auth_bearer' => $bearerToken,
         ]);
         self::assertResponseStatusCodeSame(200);
@@ -204,13 +204,13 @@ class CustomerGroupApiTest extends ApiTestCase
     {
         $bearerToken = $this->getBearerToken(['customer_group_read', 'customer_group_write']);
         // Update customer group with partial data
-        $response = static::createClient()->request('DELETE', '/api/customers/group/' . $customerGroupId, [
+        $response = static::createClient()->request('DELETE', '/customers/group/' . $customerGroupId, [
             'auth_bearer' => $bearerToken,
         ]);
         self::assertResponseStatusCodeSame(204);
         $this->assertEmpty($response->getContent());
 
-        static::createClient()->request('GET', '/api/customers/group/' . $customerGroupId, [
+        static::createClient()->request('GET', '/customers/group/' . $customerGroupId, [
             'auth_bearer' => $bearerToken,
         ]);
         self::assertResponseStatusCodeSame(404);
