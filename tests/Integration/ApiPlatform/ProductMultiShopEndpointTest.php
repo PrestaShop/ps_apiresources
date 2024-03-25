@@ -94,7 +94,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/api/product/1',
+            '/product/1',
         ];
     }
 
@@ -113,7 +113,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public function testShopContextIsRequired(): void
     {
         $bearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('POST', '/api/product', [
+        $response = static::createClient()->request('POST', '/product', [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'type' => ProductType::TYPE_STANDARD,
@@ -131,7 +131,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public function testCreateProductForFirstShop(): int
     {
         $bearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('POST', '/api/product', [
+        $response = static::createClient()->request('POST', '/product', [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'type' => ProductType::TYPE_STANDARD,
@@ -167,7 +167,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public function testGetProductForFirstShopIsSuccessful(int $productId): int
     {
         $bearerToken = $this->getBearerToken(['product_read']);
-        $response = static::createClient()->request('GET', '/api/product/' . $productId, [
+        $response = static::createClient()->request('GET', '/product/' . $productId, [
             'auth_bearer' => $bearerToken,
             'extra' => [
                 'parameters' => [
@@ -191,7 +191,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public function testGetProductForSecondShopIsFailing(int $productId): int
     {
         $bearerToken = $this->getBearerToken(['product_read']);
-        $response = static::createClient()->request('GET', '/api/product/' . $productId, [
+        $response = static::createClient()->request('GET', '/product/' . $productId, [
             'auth_bearer' => $bearerToken,
             'extra' => [
                 'parameters' => [

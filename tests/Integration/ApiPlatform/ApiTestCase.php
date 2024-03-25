@@ -57,6 +57,16 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     }
 
     /**
+     * API endpoints are only available in the AdminApi application so we force using the proper kernel here.
+     *
+     * @return string
+     */
+    protected static function getKernelClass(): string
+    {
+        return \AdminAPIKernel::class;
+    }
+
+    /**
      * @dataProvider getProtectedEndpoints
      *
      * @param string $method
@@ -88,7 +98,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
      *
      *  yield 'get endpoint' => [
      *      'GET',
-     *      '/api/product/1',
+     *      '/product/1',
      *  ];
      *
      * Since all Api Platform resources should likely have some protected endpoints this provider
@@ -130,7 +140,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
                 'content-type' => 'application/x-www-form-urlencoded',
             ],
         ];
-        $response = static::createClient()->request('POST', '/api/oauth2/token', $options);
+        $response = static::createClient()->request('POST', '/access_token', $options);
 
         return json_decode($response->getContent())->access_token;
     }

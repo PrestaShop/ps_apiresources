@@ -60,7 +60,7 @@ class ProductListingEndpointTest extends ApiTestCase
     {
         yield 'list endpoint' => [
             'GET',
-            '/api/products',
+            '/products',
         ];
     }
 
@@ -70,15 +70,15 @@ class ProductListingEndpointTest extends ApiTestCase
             'product_read',
         ]);
 
-        $response = static::createClient()->request('GET', '/api/products', ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/products', ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(200);
         self::assertCount(19, json_decode($response->getContent())->items);
 
-        $response = static::createClient()->request('GET', '/api/products?limit=10', ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/products?limit=10', ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(200);
         self::assertCount(10, json_decode($response->getContent())->items);
 
-        $response = static::createClient()->request('GET', '/api/products?limit=1&orderBy=id_product&sortOrder=desc', ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/products?limit=1&orderBy=id_product&sortOrder=desc', ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(200);
         self::assertCount(1, json_decode($response->getContent())->items);
         $returnedProduct = json_decode($response->getContent());
@@ -92,7 +92,7 @@ class ProductListingEndpointTest extends ApiTestCase
         self::assertEquals('Home Accessories', $returnedProduct->items[0]->category);
         self::assertTrue($returnedProduct->items[0]->active);
 
-        static::createClient()->request('GET', '/api/products');
+        static::createClient()->request('GET', '/products');
         self::assertResponseStatusCodeSame(401);
     }
 }

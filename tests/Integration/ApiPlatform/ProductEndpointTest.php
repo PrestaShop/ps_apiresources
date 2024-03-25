@@ -65,23 +65,23 @@ class ProductEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/api/product/1',
+            '/product/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/api/product',
+            '/product',
         ];
 
         yield 'update endpoint' => [
             'PATCH',
-            '/api/product/1',
+            '/product/1',
             'application/merge-patch+json',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/api/product/1',
+            '/product/1',
         ];
     }
 
@@ -89,7 +89,7 @@ class ProductEndpointTest extends ApiTestCase
     {
         $productsNumber = $this->getProductsNumber();
         $bearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('POST', '/api/product', [
+        $response = static::createClient()->request('POST', '/product', [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'type' => ProductType::TYPE_STANDARD,
@@ -140,7 +140,7 @@ class ProductEndpointTest extends ApiTestCase
         $bearerToken = $this->getBearerToken(['product_write']);
 
         // Update product with partial data, even multilang fields can be updated language by language
-        $response = static::createClient()->request('PATCH', '/api/product/' . $productId, [
+        $response = static::createClient()->request('PATCH', '/product/' . $productId, [
             'auth_bearer' => $bearerToken,
             'headers' => [
                 'content-type' => 'application/merge-patch+json',
@@ -180,7 +180,7 @@ class ProductEndpointTest extends ApiTestCase
         );
 
         // Update product with partial data, only name default language the other names are not impacted
-        $response = static::createClient()->request('PATCH', '/api/product/' . $productId, [
+        $response = static::createClient()->request('PATCH', '/product/' . $productId, [
             'auth_bearer' => $bearerToken,
             'headers' => [
                 'content-type' => 'application/merge-patch+json',
@@ -223,7 +223,7 @@ class ProductEndpointTest extends ApiTestCase
     public function testGetProduct(int $productId): int
     {
         $bearerToken = $this->getBearerToken(['product_read']);
-        $response = static::createClient()->request('GET', '/api/product/' . $productId, [
+        $response = static::createClient()->request('GET', '/product/' . $productId, [
             'auth_bearer' => $bearerToken,
         ]);
         self::assertResponseStatusCodeSame(200);
@@ -261,19 +261,19 @@ class ProductEndpointTest extends ApiTestCase
         $productsNumber = $this->getProductsNumber();
         $readBearerToken = $this->getBearerToken(['product_read']);
         // Delete product with token without write permission
-        static::createClient()->request('DELETE', '/api/product/' . $productId, [
+        static::createClient()->request('DELETE', '/product/' . $productId, [
             'auth_bearer' => $readBearerToken,
         ]);
         self::assertResponseStatusCodeSame(403);
         // The product should still exists
-        static::createClient()->request('GET', '/api/product/' . $productId, [
+        static::createClient()->request('GET', '/product/' . $productId, [
             'auth_bearer' => $readBearerToken,
         ]);
         self::assertResponseStatusCodeSame(200);
 
         // Delete product with proper token
         $writeBearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('DELETE', '/api/product/' . $productId, [
+        $response = static::createClient()->request('DELETE', '/product/' . $productId, [
             'auth_bearer' => $writeBearerToken,
         ]);
         self::assertResponseStatusCodeSame(204);
@@ -283,7 +283,7 @@ class ProductEndpointTest extends ApiTestCase
         $this->assertEquals($productsNumber - 1, $this->getProductsNumber());
 
         $bearerToken = $this->getBearerToken(['product_read', 'product_write']);
-        static::createClient()->request('GET', '/api/product/' . $productId, [
+        static::createClient()->request('GET', '/product/' . $productId, [
             'auth_bearer' => $bearerToken,
         ]);
         self::assertResponseStatusCodeSame(404);
