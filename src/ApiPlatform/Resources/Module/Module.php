@@ -30,8 +30,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Module\APIResources\List\ModuleQueryBuilder;
 use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
 
 #[ApiResource(
     operations: [
@@ -41,6 +43,13 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
             scopes: [
                 'module_read',
             ],
+        ),
+        new DQBPaginatedList(
+            uriTemplate: '/modules',
+            scopes: [
+                'module_read',
+            ],
+            queryBuilder: ModuleQueryBuilder::class,
         ),
     ],
 )]
