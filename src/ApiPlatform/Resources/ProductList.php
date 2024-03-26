@@ -49,7 +49,7 @@ use Symfony\Component\HttpFoundation\Response;
                 '[final_price_tax_excluded]' => '[price]',
             ],
             queryBuilder: 'prestashop.core.grid.query_builder.product',
-            filterClass: ProductFilters::class,
+            filtersClass: ProductFilters::class,
         ),
     ],
     exceptionToStatus: [

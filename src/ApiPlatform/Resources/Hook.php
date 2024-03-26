@@ -35,7 +35,6 @@ use PrestaShop\PrestaShop\Core\Domain\Hook\Command\UpdateHookStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Exception\HookNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHook;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHookStatus;
-use PrestaShop\PrestaShop\Core\Search\Filters;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
@@ -88,7 +87,6 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             scopes: ['hook_read'],
             ApiResourceMapping: ['[id_hook]' => '[id]'],
             queryBuilder: 'prestashop.core.api.query_builder.hook',
-            filterClass: Filters::class,
         ),
     ],
 )]
