@@ -1,0 +1,8 @@
+services:
+  _defaults:
+    public: false
+    autowire: true
+
+  PrestaShop\Module\APIResources\List\ModuleQueryBuilder:
+    parent: 'prestashop.core.grid.abstract_query_builder'
+    autowire: true

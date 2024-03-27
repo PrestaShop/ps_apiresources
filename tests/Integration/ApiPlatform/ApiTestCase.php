@@ -145,6 +145,30 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return json_decode($response->getContent())->access_token;
     }
 
+    protected function listItems(string $listUrl, array $scopes = [], array $filters = []): array
+    {
+        $bearerToken = $this->getBearerToken($scopes);
+        $response = static::createClient()->request('GET', $listUrl, [
+            'auth_bearer' => $bearerToken,
+            'extra' => [
+                'parameters' => [
+                    'filters' => $filters,
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+        $this->assertArrayHasKey('totalItems', $decodedResponse);
+        $this->assertArrayHasKey('sortOrder', $decodedResponse);
+        $this->assertArrayHasKey('limit', $decodedResponse);
+        $this->assertArrayHasKey('filters', $decodedResponse);
+        $this->assertArrayHasKey('items', $decodedResponse);
+
+        return $decodedResponse;
+    }
+
     protected static function createApiClient(array $scopes = [], int $lifetime = 10000): void
     {
         $command = new AddApiClientCommand(
