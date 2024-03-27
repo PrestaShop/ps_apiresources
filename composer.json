@@ -1,50 +1,53 @@
 {
-  "name": "prestashop/ps_apiresources",
-  "description": "PrestaShop - API Resources",
-  "homepage": "https://github.com/PrestaShop/ps_apiresources",
-  "license": "AFL-3.0",
-  "authors": [
-    {
-      "name": "PrestaShop SA",
-      "email": "contact@prestashop.com"
-    }
-  ],
-  "require": {
-    "php": ">=8.1"
-  },
-  "require-dev": {
-    "prestashop/php-dev-tools": "^4.3",
-    "czproject/git-php": "^4.2",
-    "phpunit/phpunit": "^9.6"
-  },
-  "autoload": {
-    "psr-4": {
-      "PrestaShop\\Module\\APIResources\\": "src/"
-    },
-    "classmap": ["ps_apiresources.php"]
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "PsApiResourcesTest\\": "tests/"
-    }
-  },
-  "config": {
-    "preferred-install": "dist",
-    "classmap-authoritative": true,
-    "optimize-autoloader": true,
-    "prepend-autoloader": false,
-    "platform": {
-      "php": "8.1.0"
-    }
-  },
-  "scripts": {
-    "clear-test-cache": "PsApiResourcesTest\\EnvironmentBuilder::clearCache",
-    "create-test-db": [
-      "@composer clear-test-cache",
-      "@composer setup-local-tests -- --build-db"
+    "name": "prestashop/ps_apiresources",
+    "description": "PrestaShop - API Resources",
+    "homepage": "https://github.com/PrestaShop/ps_apiresources",
+    "license": "AFL-3.0",
+    "authors": [
+        {
+            "name": "PrestaShop SA",
+            "email": "contact@prestashop.com"
+        }
     ],
-    "run-module-tests": "@php -d date.timezone=UTC ./vendor/bin/phpunit -c tests/Integration/phpunit-local.xml",
-    "setup-local-tests": "PsApiResourcesTest\\EnvironmentBuilder::setupLocalTests"
-  },
-  "type": "prestashop-module"
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "prestashop/php-dev-tools": "^4.3",
+        "czproject/git-php": "^4.2",
+        "phpunit/phpunit": "^9.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "PrestaShop\\Module\\APIResources\\": "src/"
+        },
+        "classmap": [
+            "ps_apiresources.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PsApiResourcesTest\\": "tests/"
+        }
+    },
+    "config": {
+        "preferred-install": "dist",
+        "classmap-authoritative": true,
+        "optimize-autoloader": true,
+        "prepend-autoloader": false,
+        "platform": {
+            "php": "8.1.0"
+        }
+    },
+    "scripts": {
+        "clear-test-cache": "PsApiResourcesTest\\EnvironmentBuilder::clearCache",
+        "create-test-db": [
+            "@composer clear-test-cache",
+            "@composer setup-local-tests -- --build-db"
+        ],
+        "run-module-tests": "@php -d date.timezone=UTC ./vendor/bin/phpunit -c tests/Integration/phpunit-local.xml",
+        "setup-local-tests": "PsApiResourcesTest\\EnvironmentBuilder::setupLocalTests"
+    },
+    "type": "prestashop-module",
+    "author": "PrestaShop"
 }
