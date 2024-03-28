@@ -30,7 +30,11 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
     operations: [
         new CQRSUpdate(
             uriTemplate: '/cart-rule',
-            CQRSCommand: EditCartRuleCommand::class
+            CQRSCommand: EditCartRuleCommand::class,
+            scopes: [
+                'cart_rule_write',
+            ],
+            experimentalOperation: true,
         ),
     ],
 )]
