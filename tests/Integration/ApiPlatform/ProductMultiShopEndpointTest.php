@@ -81,7 +81,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         ];
 
         $featureFlagManager = self::getContainer()->get('PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagManager');
-        $featureFlagManager->enable(FeatureFlagSettings::FEATURE_FLAG_AUTHORIZATION_SERVER_MULTISTORE);
+        $featureFlagManager->enable(FeatureFlagSettings::FEATURE_FLAG_ADMIN_API_MULTISTORE);
     }
 
     public function getProtectedEndpoints(): iterable
