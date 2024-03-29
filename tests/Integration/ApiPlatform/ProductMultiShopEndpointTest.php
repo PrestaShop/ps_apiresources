@@ -61,6 +61,8 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         self::$frenchLangId = self::addLanguageByLocale('fr-FR');
 
         self::updateConfiguration(MultistoreConfig::FEATURE_STATUS, 1);
+        // Disable secure protection for the tests (the configuration reset forced the default config back)
+        self::updateConfiguration('PS_ADMIN_API_FORCE_DEBUG_SECURED', 0);
         self::$secondShopGroupId = self::addShopGroup('Second group');
         self::$secondShopId = self::addShop('Second shop', self::DEFAULT_SHOP_GROUP_ID);
         self::$thirdShopId = self::addShop('Third shop', self::$secondShopGroupId);
