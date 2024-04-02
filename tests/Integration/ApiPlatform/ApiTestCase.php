@@ -40,6 +40,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+        self::updateConfiguration('PS_ADMIN_API_FORCE_DEBUG_SECURED', 0);
         ApiClientResetter::resetApiClient();
     }
 
@@ -47,6 +48,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     {
         parent::tearDownAfterClass();
         ApiClientResetter::resetApiClient();
+        self::updateConfiguration('PS_ADMIN_API_FORCE_DEBUG_SECURED', 1);
         self::$clientSecret = null;
     }
 
@@ -258,5 +260,6 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     protected static function updateConfiguration(string $configurationKey, $value, ShopConstraint $shopConstraint = null): void
     {
         self::getContainer()->get(ShopConfigurationInterface::class)->set($configurationKey, $value, $shopConstraint ?: ShopConstraint::allShops());
+        \Configuration::resetStaticCache();
     }
 }
