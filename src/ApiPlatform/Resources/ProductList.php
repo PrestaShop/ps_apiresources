@@ -25,16 +25,17 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Adapter\Product\Grid\Data\Factory\ProductGridDataFactoryDecorator;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopAssociationNotFound;
 use PrestaShop\PrestaShop\Core\Search\Filters\ProductFilters;
-use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new DQBPaginatedList(
+        new PaginatedList(
             uriTemplate: '/products',
             provider: QueryListProvider::class,
             scopes: ['product_read'],
@@ -42,7 +43,7 @@ use Symfony\Component\HttpFoundation\Response;
                 '[id_product]' => '[productId]',
                 '[final_price_tax_excluded]' => '[price]',
             ],
-            queryBuilder: 'prestashop.core.grid.query_builder.product',
+            gridDataFactory: ProductGridDataFactoryDecorator::class,
             filtersClass: ProductFilters::class,
         ),
     ],

@@ -24,13 +24,12 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\ApiClient;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Grid\Query\ApiClientQueryBuilder;
 use PrestaShop\PrestaShop\Core\Search\Filters\ApiClientFilters;
-use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
 #[ApiResource(
     operations: [
-        new DQBPaginatedList(
+        new PaginatedList(
             uriTemplate: '/api-clients',
             scopes: [
                 'api_client_read',
@@ -41,7 +40,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
                 '[client_name]' => '[clientName]',
                 '[external_issuer]' => '[externalIssuer]',
             ],
-            queryBuilder: ApiClientQueryBuilder::class,
+            gridDataFactory: 'prestashop.core.grid.data_factory.api_client',
             filtersClass: ApiClientFilters::class,
             filtersMapping: [
                 '[apiClientId]' => '[id_api_client]',

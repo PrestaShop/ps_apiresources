@@ -31,7 +31,7 @@ use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHook;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHookStatus;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
-use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 
 #[ApiResource(
@@ -75,12 +75,12 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             CQRSQuery: GetHook::class,
             scopes: ['hook_read']
         ),
-        new DQBPaginatedList(
+        new PaginatedList(
             uriTemplate: '/hooks',
             provider: QueryListProvider::class,
             scopes: ['hook_read'],
             ApiResourceMapping: ['[id_hook]' => '[id]'],
-            queryBuilder: 'prestashop.core.api.query_builder.hook',
+            gridDataFactory: 'prestashop.core.grid.data_factory.hook',
         ),
     ],
 )]

@@ -24,10 +24,9 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\Module\APIResources\List\ModuleQueryBuilder;
 use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
 #[ApiResource(
     operations: [
@@ -38,12 +37,12 @@ use PrestaShopBundle\ApiPlatform\Metadata\DQBPaginatedList;
                 'module_read',
             ],
         ),
-        new DQBPaginatedList(
+        new PaginatedList(
             uriTemplate: '/modules',
             scopes: [
                 'module_read',
             ],
-            queryBuilder: ModuleQueryBuilder::class,
+            gridDataFactory: 'prestashop.core.grid.data_factory.module',
         ),
     ],
 )]
