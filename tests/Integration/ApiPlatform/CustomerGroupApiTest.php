@@ -105,6 +105,46 @@ class CustomerGroupApiTest extends ApiTestCase
         return $customerGroupId;
     }
 
+    public function testAddCustomerGroupWithoutShopIds(): int
+    {
+        $numberOfGroups = count(\Group::getGroups(\Context::getContext()->language->id));
+
+        $bearerToken = $this->getBearerToken(['customer_group_write']);
+        $response = static::createClient()->request('POST', '/customers/group', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'localizedNames' => [
+                    1 => 'test1',
+                ],
+                'reductionPercent' => 10.3,
+                'displayPriceTaxExcluded' => true,
+                'showPrice' => true,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        self::assertCount($numberOfGroups + 1, \Group::getGroups(\Context::getContext()->language->id));
+
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+        $this->assertArrayHasKey('customerGroupId', $decodedResponse);
+        $customerGroupId = $decodedResponse['customerGroupId'];
+        $this->assertEquals(
+            [
+                'customerGroupId' => $customerGroupId,
+                'localizedNames' => [
+                    1 => 'test1',
+                ],
+                'reductionPercent' => 10.3,
+                'displayPriceTaxExcluded' => true,
+                'showPrice' => true,
+                'shopIds' => [1],
+            ],
+            $decodedResponse
+        );
+
+        return $customerGroupId;
+    }
+
     /**
      * @depends testAddCustomerGroup
      *

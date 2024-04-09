@@ -66,6 +66,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
             ],
             // Here, we use command mapping to adapt the normalized command result for the CQRS query
             CQRSCommandMapping: [
+                '[_context][shopIds]' => '[shopIds]',
                 '[groupId]' => '[customerGroupId]',
             ],
         ),
