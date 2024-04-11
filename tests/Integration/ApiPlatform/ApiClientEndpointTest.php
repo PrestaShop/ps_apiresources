@@ -51,6 +51,11 @@ class ApiClientEndpointTest extends ApiTestCase
             'DELETE',
             '/api-client/1',
         ];
+
+        yield 'list endpoint' => [
+            'GET',
+            '/api-clients',
+        ];
     }
 
     public function testAddApiClient(): int
@@ -111,6 +116,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientId' => 'client_id_test',
                 'clientName' => 'Client name test',
                 'description' => 'Client description test',
+                'externalIssuer' => null,
                 'enabled' => true,
                 'lifetime' => 3600,
                 'scopes' => [
@@ -161,6 +167,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientId' => 'client_id_test_updated',
                 'clientName' => 'Client name test updated',
                 'description' => 'Client description test updated',
+                'externalIssuer' => null,
                 'enabled' => false,
                 'lifetime' => 1800,
                 'scopes' => [
@@ -177,6 +184,7 @@ class ApiClientEndpointTest extends ApiTestCase
             'json' => [
                 'description' => 'Client description test partially updated',
                 'lifetime' => 900,
+                'externalIssuer' => 'http://not-possible-to-modify',
             ],
         ]);
         self::assertResponseStatusCodeSame(200);
@@ -190,6 +198,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientId' => 'client_id_test_updated',
                 'clientName' => 'Client name test updated',
                 'description' => 'Client description test partially updated',
+                'externalIssuer' => null,
                 'enabled' => false,
                 'lifetime' => 900,
                 'scopes' => [
@@ -226,6 +235,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientId' => 'client_id_test_updated',
                 'clientName' => 'Client name test updated',
                 'description' => 'Client description test partially updated',
+                'externalIssuer' => null,
                 'enabled' => false,
                 'lifetime' => 900,
                 'scopes' => [
@@ -241,6 +251,36 @@ class ApiClientEndpointTest extends ApiTestCase
 
     /**
      * @depends testGetUpdatedApiClient
+     *
+     * @param int $apiClientId
+     *
+     * @return int
+     */
+    public function testListApiClients(int $apiClientId): int
+    {
+        $apiClients = $this->listItems('/api-clients', ['api_client_read']);
+        // Two APi Clients, the one created for test to actually use the API and the one created in the previous test
+        $this->assertEquals(2, $apiClients['totalItems']);
+
+        // Test content from the second (most recent) api client created
+        $this->assertEquals(
+            [
+                'apiClientId' => $apiClientId,
+                'clientId' => 'client_id_test_updated',
+                'clientName' => 'Client name test updated',
+                'description' => 'Client description test partially updated',
+                'externalIssuer' => null,
+                'enabled' => false,
+                'lifetime' => 900,
+            ],
+            $apiClients['items'][1],
+        );
+
+        return $apiClientId;
+    }
+
+    /**
+     * @depends testListApiClients
      *
      * @param int $apiClientId
      */

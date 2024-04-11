@@ -77,7 +77,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
 
         $content = $response->getContent(false);
         $this->assertNotEmpty($content);
-        $this->assertEquals('No Authorization header provided', $content);
+        $this->assertEquals('"No Authorization header provided"', $content);
 
         // Test same endpoint with a token but without scopes
         $emptyBearerToken = $this->getBearerToken();

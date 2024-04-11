@@ -20,7 +20,7 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\ApiClient;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
@@ -39,52 +39,12 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
         new CQRSGet(
             uriTemplate: '/api-client/{apiClientId}',
             requirements: ['apiClientId' => '\d+'],
-            openapiContext: [
-                'summary' => 'Get API Client details',
-                'description' => 'Get API Client public details only, sensitive information like secrets is not returned',
-                'parameters' => [
-                    [
-                        'name' => 'apiClientId',
-                        'in' => 'path',
-                        'required' => true,
-                        'schema' => [
-                            'type' => 'string',
-                        ],
-                        'description' => 'Id of the API Client you are requesting the details from',
-                    ],
-                    [
-                        'name' => 'Authorization',
-                        'in' => 'scopes',
-                        'description' => 'api_client_read',
-                    ],
-                ],
-            ],
             CQRSQuery: GetApiClientForEditing::class,
             scopes: ['api_client_read']
         ),
         new CQRSDelete(
             uriTemplate: '/api-client/{apiClientId}',
             requirements: ['apiClientId' => '\d+'],
-            openapiContext: [
-                'summary' => 'Delete API Client details',
-                'description' => 'Delete API Client public details only, sensitive information like secrets is not returned',
-                'parameters' => [
-                    [
-                        'name' => 'apiClientId',
-                        'in' => 'path',
-                        'required' => true,
-                        'schema' => [
-                            'type' => 'string',
-                        ],
-                        'description' => 'Id of the API Client you are deleting',
-                    ],
-                    [
-                        'name' => 'Authorization',
-                        'in' => 'scopes',
-                        'description' => 'api_client_write',
-                    ],
-                ],
-            ],
             output: false,
             CQRSQuery: DeleteApiClientCommand::class,
             scopes: ['api_client_write']
@@ -102,6 +62,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
             scopes: ['api_client_write']
         ),
     ],
+    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [ApiClientNotFoundException::class => 404],
 )]
 class ApiClient
@@ -109,17 +70,24 @@ class ApiClient
     #[ApiProperty(identifier: true)]
     public int $apiClientId;
 
-    public string $secret;
-
     public string $clientId;
 
     public string $clientName;
 
     public string $description;
 
+    public ?string $externalIssuer;
+
     public bool $enabled;
 
     public int $lifetime;
 
     public array $scopes;
+
+    /**
+     * Only used for the return of created API Client, it is the only endpoint where the secret is returned.
+     *
+     * @var string
+     */
+    public string $secret;
 }
