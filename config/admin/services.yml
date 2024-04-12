@@ -6,3 +6,21 @@ services:
   PrestaShop\Module\APIResources\List\ModuleQueryBuilder:
     parent: 'prestashop.core.grid.abstract_query_builder'
     autowire: true
+
+  prestashop.core.grid.data_factory.hook:
+    class: '%prestashop.core.grid.data.factory.doctrine_grid_data_factory%'
+    public: true
+    arguments:
+      - '@prestashop.core.api.query_builder.hook'
+      - '@prestashop.core.hook.dispatcher'
+      - '@prestashop.core.grid.query.doctrine_query_parser'
+      - 'hook'
+
+  prestashop.core.grid.data_factory.module:
+    class: '%prestashop.core.grid.data.factory.doctrine_grid_data_factory%'
+    public: true
+    arguments:
+      - '@PrestaShop\Module\APIResources\List\ModuleQueryBuilder'
+      - '@prestashop.core.hook.dispatcher'
+      - '@prestashop.core.grid.query.doctrine_query_parser'
+      - 'module'
