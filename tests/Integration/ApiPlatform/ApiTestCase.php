@@ -28,6 +28,8 @@ use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\AddApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\Configuration\ShopConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Domain\Language\Command\AddLanguageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Tests\Resources\Resetter\ApiClientResetter;
 
 abstract class ApiTestCase extends SymfonyApiTestCase
@@ -60,6 +62,16 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     protected static function getKernelClass(): string
     {
         return \AdminAPIKernel::class;
+    }
+
+    protected static function bootKernel(array $options = []): KernelInterface
+    {
+        $bootKernel = parent::bootKernel($options);
+        // We must define the global $kernel variable for legacy code to access the container (see SymfonyContainer::getInstance)
+        global $kernel;
+        $kernel = $bootKernel;
+
+        return $bootKernel;
     }
 
     /**
@@ -163,6 +175,15 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         $this->assertArrayHasKey('items', $decodedResponse);
 
         return $decodedResponse;
+    }
+
+    protected function prepareUploadedFile(string $assetFilePath): UploadedFile
+    {
+        // Uploaded file must be a temporary copy because the file will be moved by the API
+        $tmpUploadedImagePath = rtrim(sys_get_temp_dir(), '/') . '/' . basename($assetFilePath);
+        copy($assetFilePath, $tmpUploadedImagePath);
+
+        return new UploadedFile($tmpUploadedImagePath, basename($assetFilePath));
     }
 
     protected static function createApiClient(array $scopes = [], int $lifetime = 10000): void

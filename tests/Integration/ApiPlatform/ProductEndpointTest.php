@@ -77,6 +77,26 @@ class ProductEndpointTest extends ApiTestCase
             'DELETE',
             '/product/1',
         ];
+
+        yield 'upload image endpoint' => [
+            'POST',
+            '/product/1/image',
+        ];
+
+        yield 'get image endpoint' => [
+            'GET',
+            '/product/image/1',
+        ];
+
+        yield 'update image endpoint' => [
+            'POST',
+            '/product/image/1',
+        ];
+
+        yield 'list images endpoint' => [
+            'GET',
+            '/product/1/images',
+        ];
     }
 
     public function testAddProduct(): int
@@ -250,6 +270,262 @@ class ProductEndpointTest extends ApiTestCase
      *
      * @param int $productId
      */
+    public function testAddImage(int $productId): int
+    {
+        $bearerToken = $this->getBearerToken(['product_write']);
+        $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
+
+        $response = static::createClient()->request('POST', '/product/' . $productId . '/image', [
+            'auth_bearer' => $bearerToken,
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'files' => [
+                    'image' => $uploadedImage,
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(201);
+
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+        $this->assertArrayHasKey('imageId', $decodedResponse);
+        $this->assertIsInt($decodedResponse['imageId']);
+        $imageId = $decodedResponse['imageId'];
+        $this->assertGreaterThan(0, $decodedResponse['imageId']);
+        $this->assertArrayHasKey('imageUrl', $decodedResponse);
+        $this->assertMatchesRegularExpression('@/img/p[/0-9]+' . $imageId . '\.jpg@', $decodedResponse['imageUrl']);
+        $this->assertArrayHasKey('thumbnailUrl', $decodedResponse);
+        $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
+        $this->assertArrayHasKey('legends', $decodedResponse);
+        $this->assertEquals([
+            self::EN_LANG_ID => '',
+            self::$frenchLangId => '',
+        ], $decodedResponse['legends']);
+        $this->assertArrayHasKey('cover', $decodedResponse);
+        $this->assertIsBool($decodedResponse['cover']);
+        $this->assertArrayHasKey('position', $decodedResponse);
+        $this->assertIsInt($decodedResponse['position']);
+        $this->assertEquals(1, $decodedResponse['position']);
+
+        return $imageId;
+    }
+
+    /**
+     * @depends testAddImage
+     *
+     * @param int $imageId
+     */
+    public function testGetImage(int $imageId): string
+    {
+        $bearerToken = $this->getBearerToken(['product_read']);
+        $response = static::createClient()->request('GET', '/product/image/' . $imageId, ['auth_bearer' => $bearerToken]);
+        self::assertResponseStatusCodeSame(200);
+
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+        $this->assertArrayHasKey('imageId', $decodedResponse);
+        $this->assertIsInt($decodedResponse['imageId']);
+        $this->assertEquals($imageId, $decodedResponse['imageId']);
+        $this->assertGreaterThan(0, $decodedResponse['imageId']);
+        $this->assertArrayHasKey('imageUrl', $decodedResponse);
+        $this->assertMatchesRegularExpression('@/img/p[/0-9]+' . $imageId . '\.jpg@', $decodedResponse['imageUrl']);
+        $this->assertArrayHasKey('thumbnailUrl', $decodedResponse);
+        $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
+        $this->assertArrayHasKey('legends', $decodedResponse);
+        $this->assertEquals([
+            self::EN_LANG_ID => '',
+            self::$frenchLangId => '',
+        ], $decodedResponse['legends']);
+        $this->assertArrayHasKey('cover', $decodedResponse);
+        $this->assertIsBool($decodedResponse['cover']);
+        $this->assertTrue($decodedResponse['cover']);
+        $this->assertArrayHasKey('position', $decodedResponse);
+        $this->assertIsInt($decodedResponse['position']);
+        $this->assertEquals(1, $decodedResponse['position']);
+
+        return $this->getImageMD5($decodedResponse);
+    }
+
+    /**
+     * @depends testAddImage
+     * @depends testGetImage
+     *
+     * @param int $imageId
+     */
+    public function testUpdateImage(int $imageId, string $imageMD5): int
+    {
+        $bearerToken = $this->getBearerToken(['product_write']);
+        $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Brown_bear_cushion.jpg');
+
+        $response = static::createClient()->request('POST', '/product/image/' . $imageId, [
+            'auth_bearer' => $bearerToken,
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => [
+                    'legends' => [
+                        self::EN_LANG_ID => 'legend en',
+                        self::$frenchLangId => 'legend fr',
+                    ],
+                ],
+                'files' => [
+                    'image' => $uploadedImage,
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+        $this->assertArrayHasKey('imageId', $decodedResponse);
+        $this->assertIsInt($decodedResponse['imageId']);
+        $imageId = $decodedResponse['imageId'];
+        $this->assertGreaterThan(0, $decodedResponse['imageId']);
+        $this->assertArrayHasKey('imageUrl', $decodedResponse);
+        $this->assertMatchesRegularExpression('@/img/p[/0-9]+' . $imageId . '\.jpg@', $decodedResponse['imageUrl']);
+        $this->assertArrayHasKey('thumbnailUrl', $decodedResponse);
+        $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
+        $this->assertArrayHasKey('legends', $decodedResponse);
+        $this->assertEquals([
+            self::EN_LANG_ID => 'legend en',
+            self::$frenchLangId => 'legend fr',
+        ], $decodedResponse['legends']);
+        $this->assertArrayHasKey('cover', $decodedResponse);
+        $this->assertIsBool($decodedResponse['cover']);
+        $this->assertArrayHasKey('position', $decodedResponse);
+        $this->assertIsInt($decodedResponse['position']);
+        $this->assertEquals(1, $decodedResponse['position']);
+
+        $newImageMD5 = $this->getImageMD5($decodedResponse);
+        $this->assertNotEquals($imageMD5, $newImageMD5);
+
+        return $imageId;
+    }
+
+    /**
+     * @depends testGetProduct
+     * @depends testUpdateImage
+     */
+    public function testListImages(int $productId, int $imageId): void
+    {
+        $bearerToken = $this->getBearerToken(['product_write', 'product_read']);
+
+        // First add a new image so that we have at least to images
+        $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
+        $newImageResponse = static::createClient()->request('POST', '/product/' . $productId . '/image', [
+            'auth_bearer' => $bearerToken,
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'files' => [
+                    'image' => $uploadedImage,
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        $newImage = json_decode($newImageResponse->getContent(), true);
+        $newImageId = $newImage['imageId'];
+
+        // Get the whole list of images
+        $response = static::createClient()->request('GET', '/product/' . $productId . '/images', ['auth_bearer' => $bearerToken]);
+        self::assertResponseStatusCodeSame(200);
+        $productImages = json_decode($response->getContent(), true);
+        $this->assertEquals(2, count($productImages));
+        $this->assertEquals([
+            [
+                'imageId' => $imageId,
+                'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
+                'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
+                'legends' => [
+                    self::EN_LANG_ID => 'legend en',
+                    self::$frenchLangId => 'legend fr',
+                ],
+                'cover' => true,
+                'position' => 1,
+                'shopIds' => [
+                    1,
+                ],
+            ],
+            [
+                'imageId' => $newImageId,
+                'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, false),
+                'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, true),
+                'legends' => [
+                    self::EN_LANG_ID => '',
+                    self::$frenchLangId => '',
+                ],
+                'cover' => false,
+                'position' => 2,
+                'shopIds' => [
+                    1,
+                ],
+            ],
+        ], $productImages);
+
+        // Now update the second image to be the cover and have position 1
+        static::createClient()->request('POST', '/product/image/' . $newImageId, [
+            'auth_bearer' => $bearerToken,
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => [
+                    // We use string on purpose because form data are sent by string, thus we validate here that the denormalization still
+                    // works with string value (actually we only ignore the wrong type, but it works nonetheless)
+                    'cover' => '1',
+                    'position' => '1',
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        // Now check the updated list, the content is changed but so is the order because images are sorted by position
+        $response = static::createClient()->request('GET', '/product/' . $productId . '/images', ['auth_bearer' => $bearerToken]);
+        self::assertResponseStatusCodeSame(200);
+        $productImages = json_decode($response->getContent(), true);
+        $this->assertEquals(2, count($productImages));
+        $this->assertEquals([
+            [
+                'imageId' => $newImageId,
+                'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, false),
+                'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, true),
+                'legends' => [
+                    self::EN_LANG_ID => '',
+                    self::$frenchLangId => '',
+                ],
+                'cover' => true,
+                'position' => 1,
+                'shopIds' => [
+                    1,
+                ],
+            ],
+            [
+                'imageId' => $imageId,
+                'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
+                'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
+                'legends' => [
+                    self::EN_LANG_ID => 'legend en',
+                    self::$frenchLangId => 'legend fr',
+                ],
+                'cover' => false,
+                'position' => 2,
+                'shopIds' => [
+                    1,
+                ],
+            ],
+        ], $productImages);
+    }
+
+    /**
+     * @depends testGetProduct
+     * @depends testListImages
+     *
+     * @param int $productId
+     */
     public function testDeleteProduct(int $productId): void
     {
         $productsNumber = $this->getProductsNumber();
@@ -290,5 +566,21 @@ class ProductEndpointTest extends ApiTestCase
         $queryBuilder = $productQueryBuilder->getCountQueryBuilder(new ProductFilters(ShopConstraint::allShops(), ProductFilters::getDefaults(), ProductGridDefinitionFactory::GRID_ID));
 
         return (int) $queryBuilder->executeQuery()->fetchOne();
+    }
+
+    protected function getImagePath(int $imageId, bool $isThumbnail): string
+    {
+        return implode('/', str_split((string) $imageId)) . '/' . $imageId . ($isThumbnail ? '-small_default' : '') . '.jpg';
+    }
+
+    protected function getImageMD5(array $image): string
+    {
+        $matches = [];
+        $imageId = $image['imageId'];
+        preg_match('@/p/[/0-9]+' . $imageId . '\.jpg@', $image['imageUrl'], $matches);
+        $imageFilePath = _PS_IMG_DIR_ . $matches[0];
+        $this->assertTrue(file_exists($imageFilePath));
+
+        return md5_file($imageFilePath);
     }
 }
