@@ -24,11 +24,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetProductImages;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSQueryCollection;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 
 #[ApiResource(
     operations: [
-        new CQRSQueryCollection(
+        new CQRSGetCollection(
             uriTemplate: '/product/{productId}/images',
             CQRSQuery: GetProductImages::class,
             scopes: [
