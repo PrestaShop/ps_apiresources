@@ -81,6 +81,7 @@ class ProductEndpointTest extends ApiTestCase
         yield 'upload image endpoint' => [
             'POST',
             '/product/1/image',
+            'multipart/form-data',
         ];
 
         yield 'get image endpoint' => [
@@ -91,6 +92,7 @@ class ProductEndpointTest extends ApiTestCase
         yield 'update image endpoint' => [
             'POST',
             '/product/image/1',
+            'multipart/form-data',
         ];
 
         yield 'list images endpoint' => [
