@@ -31,7 +31,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/module/{moduleId}',
+            uriTemplate: '/module/{technicalName}',
             CQRSQuery: GetModuleInfos::class,
             scopes: [
                 'module_read',
@@ -48,7 +48,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 )]
 class Module
 {
-    #[ApiProperty(identifier: true)]
     public int $moduleId;
 
     public string $technicalName;
@@ -56,4 +55,6 @@ class Module
     public string $version;
 
     public bool $enabled;
+
+    public bool $installed;
 }

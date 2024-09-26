@@ -44,7 +44,7 @@ class ModuleEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/module/1',
+            '/module/ps_featureproducts',
         ];
 
         yield 'list modules' => [
@@ -58,7 +58,7 @@ class ModuleEndpointTest extends ApiTestCase
         ];
     }
 
-    public function testListModules(): int
+    public function testListModules(): array
     {
         $modules = $this->listItems('/modules', ['module_read']);
         $this->assertGreaterThan(1, $modules['totalItems']);
@@ -71,37 +71,37 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertTrue(version_compare($apiModule['version'], '0.1.0', '>='));
         $this->assertGreaterThan(0, $apiModule['moduleId']);
 
-        return $apiModule['moduleId'];
+        return ['moduleId' => $apiModule['moduleId'], 'technicalName' => $apiModule['technicalName']];
     }
 
     /**
      * @depends testListModules
      */
-    public function testGetModuleInfos(int $moduleId): string
+    public function testGetModuleInfos(array $module): array
     {
-        $moduleInfos = $this->getModuleInfos($moduleId);
+        $moduleInfos = $this->getModuleInfos($module['technicalName']);
 
         // Returned data has modified fields, the others haven't changed
         $this->assertArrayHasKey('version', $moduleInfos);
         $version = $moduleInfos['version'];
         $this->assertEquals(
             [
-                'moduleId' => $moduleId,
-                'technicalName' => 'ps_apiresources',
+                'moduleId' => $module['moduleId'],
+                'technicalName' => $module['technicalName'],
                 'version' => $version,
                 'enabled' => true,
+                'installed' => true,
             ],
             $moduleInfos
         );
 
-        return $moduleInfos['technicalName'];
+        return $module;
     }
 
     /**
-     * @depends testListModules
      * @depends testGetModuleInfos
      */
-    public function testBulkUpdateStatus(int $moduleId, string $technicalName): void
+    public function testBulkUpdateStatus(array $module): void
     {
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
@@ -113,7 +113,7 @@ class ModuleEndpointTest extends ApiTestCase
             'auth_bearer' => $bearerToken,
             'json' => [
                 'modules' => [
-                    $technicalName,
+                    $module['technicalName'],
                 ],
                 'enabled' => false,
             ],
@@ -123,7 +123,7 @@ class ModuleEndpointTest extends ApiTestCase
         \Module::resetStaticCache();
 
         // Check updated disabled status
-        $moduleInfos = $this->getModuleInfos($moduleId);
+        $moduleInfos = $this->getModuleInfos($module['technicalName']);
         $this->assertFalse($moduleInfos['enabled']);
 
         // Check number of disabled modules
@@ -135,7 +135,7 @@ class ModuleEndpointTest extends ApiTestCase
             'auth_bearer' => $bearerToken,
             'json' => [
                 'modules' => [
-                    $technicalName,
+                    $module['technicalName'],
                 ],
                 'enabled' => true,
             ],
@@ -145,7 +145,7 @@ class ModuleEndpointTest extends ApiTestCase
         \Module::resetStaticCache();
 
         // Check updated enabled status
-        $moduleInfos = $this->getModuleInfos($moduleId);
+        $moduleInfos = $this->getModuleInfos($module['technicalName']);
         $this->assertTrue($moduleInfos['enabled']);
 
         // Check number of disabled modules
@@ -153,10 +153,10 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(0, $disabledModules['totalItems']);
     }
 
-    private function getModuleInfos(int $moduleId): array
+    private function getModuleInfos(string $technicalName): array
     {
         $bearerToken = $this->getBearerToken(['module_read']);
-        $response = static::createClient()->request('GET', '/module/' . $moduleId, [
+        $response = static::createClient()->request('GET', '/module/' . $technicalName, [
             'auth_bearer' => $bearerToken,
         ]);
         self::assertResponseStatusCodeSame(200);
