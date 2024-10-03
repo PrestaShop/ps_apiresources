@@ -22,10 +22,11 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\UpdateModuleStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
 #[ApiResource(
@@ -35,6 +36,14 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             CQRSQuery: GetModuleInfos::class,
             scopes: [
                 'module_read',
+            ],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/module/status/{technicalName}',
+            CQRSCommand: UpdateModuleStatusCommand::class,
+            CQRSQuery: GetModuleInfos::class,
+            scopes: [
+                'module_write',
             ],
         ),
         new PaginatedList(

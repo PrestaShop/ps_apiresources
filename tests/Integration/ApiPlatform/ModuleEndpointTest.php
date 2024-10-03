@@ -52,9 +52,14 @@ class ModuleEndpointTest extends ApiTestCase
             '/modules',
         ];
 
-        yield 'bulk toggle' => [
+        yield 'bulk toggle status' => [
             'PUT',
             '/modules/toggle-status',
+        ];
+
+        yield 'toggle module status' => [
+            'PUT',
+            '/module/status/{technicalName}',
         ];
     }
 
@@ -71,7 +76,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertTrue(version_compare($apiModule['version'], '0.1.0', '>='));
         $this->assertGreaterThan(0, $apiModule['moduleId']);
 
-        return ['moduleId' => $apiModule['moduleId'], 'technicalName' => $apiModule['technicalName']];
+        return ['moduleId' => $apiModule['moduleId'], 'technicalName' => $apiModule['technicalName'], 'version' => $apiModule['version']];
     }
 
     /**
@@ -80,15 +85,11 @@ class ModuleEndpointTest extends ApiTestCase
     public function testGetModuleInfos(array $module): array
     {
         $moduleInfos = $this->getModuleInfos($module['technicalName']);
-
-        // Returned data has modified fields, the others haven't changed
-        $this->assertArrayHasKey('version', $moduleInfos);
-        $version = $moduleInfos['version'];
         $this->assertEquals(
             [
                 'moduleId' => $module['moduleId'],
                 'technicalName' => $module['technicalName'],
-                'version' => $version,
+                'version' => $module['version'],
                 'enabled' => true,
                 'installed' => true,
             ],
@@ -101,7 +102,7 @@ class ModuleEndpointTest extends ApiTestCase
     /**
      * @depends testGetModuleInfos
      */
-    public function testBulkUpdateStatus(array $module): void
+    public function testBulkUpdateStatus(array $module): array
     {
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
@@ -119,8 +120,6 @@ class ModuleEndpointTest extends ApiTestCase
             ],
         ]);
         self::assertResponseStatusCodeSame(204);
-        // Active status is cached so we must clear it before calling the single endpoint
-        \Module::resetStaticCache();
 
         // Check updated disabled status
         $moduleInfos = $this->getModuleInfos($module['technicalName']);
@@ -141,12 +140,80 @@ class ModuleEndpointTest extends ApiTestCase
             ],
         ]);
         self::assertResponseStatusCodeSame(204);
-        // Active status is cached so we must clear it before calling the single endpoint
-        \Module::resetStaticCache();
 
         // Check updated enabled status
         $moduleInfos = $this->getModuleInfos($module['technicalName']);
         $this->assertTrue($moduleInfos['enabled']);
+
+        // Check number of disabled modules
+        $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
+        $this->assertEquals(0, $disabledModules['totalItems']);
+
+        return $module;
+    }
+
+    /**
+     * @depends testBulkUpdateStatus
+     */
+    public function testUpdateModuleStatus(array $module): void
+    {
+        // Check number of disabled modules
+        $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
+        $this->assertEquals(0, $disabledModules['totalItems']);
+
+        // Disable specific module
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        $response = static::createClient()->request('PUT', sprintf('/module/status/%s', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'enabled' => false,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        // Check response from status update request
+        $expectedModuleInfos = [
+            'moduleId' => $module['moduleId'],
+            'technicalName' => $module['technicalName'],
+            'version' => $module['version'],
+            'enabled' => false,
+            'installed' => true,
+        ];
+        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+
+        // Check updated disabled status
+        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $this->assertEquals($expectedModuleInfos, $moduleInfos);
+
+        // Check number of disabled modules
+        $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
+        $this->assertEquals(1, $disabledModules['totalItems']);
+
+        // Enable specific module
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        $response = static::createClient()->request('PUT', sprintf('/module/status/%s', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'enabled' => true,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        // Check response from status update request
+        $expectedModuleInfos['enabled'] = true;
+        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+
+        // Check updated enabled status
+        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $this->assertTrue($moduleInfos['enabled']);
+
+        // Check updated enabled status
+        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $this->assertEquals($expectedModuleInfos, $moduleInfos);
 
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
