@@ -22,19 +22,28 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\UpdateModuleStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/module/{moduleId}',
+            uriTemplate: '/module/{technicalName}',
             CQRSQuery: GetModuleInfos::class,
             scopes: [
                 'module_read',
+            ],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/module/status/{technicalName}',
+            CQRSCommand: UpdateModuleStatusCommand::class,
+            CQRSQuery: GetModuleInfos::class,
+            scopes: [
+                'module_write',
             ],
         ),
         new PaginatedList(
@@ -48,7 +57,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 )]
 class Module
 {
-    #[ApiProperty(identifier: true)]
     public int $moduleId;
 
     public string $technicalName;
@@ -56,4 +64,6 @@ class Module
     public string $version;
 
     public bool $enabled;
+
+    public bool $installed;
 }
