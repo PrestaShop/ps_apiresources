@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\ResetModuleCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Command\UpdateModuleStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -45,6 +46,14 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             scopes: [
                 'module_write',
             ],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/module/{technicalName}/reset',
+            CQRSCommand: ResetModuleCommand::class,
+            CQRSQuery: GetModuleInfos::class,
+            scopes: [
+                'module_write',
+            ]
         ),
         new PaginatedList(
             uriTemplate: '/modules',
