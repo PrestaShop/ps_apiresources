@@ -61,6 +61,11 @@ class ModuleEndpointTest extends ApiTestCase
             'PUT',
             '/module/status/{technicalName}',
         ];
+
+        yield 'reset module' => [
+            'PUT',
+            '/module/{technicalName}/reset',
+        ];
     }
 
     public function testListModules(): array
@@ -155,7 +160,7 @@ class ModuleEndpointTest extends ApiTestCase
     /**
      * @depends testBulkUpdateStatus
      */
-    public function testUpdateModuleStatus(array $module): void
+    public function testUpdateModuleStatusDisable(array $module): array
     {
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
@@ -191,6 +196,14 @@ class ModuleEndpointTest extends ApiTestCase
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
         $this->assertEquals(1, $disabledModules['totalItems']);
 
+        return $moduleInfos;
+    }
+
+    /**
+     * @depends testUpdateModuleStatusDisable
+     */
+    public function testUpdateModuleStatusEnable(array $module): void
+    {
         // Enable specific module
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
         $response = static::createClient()->request('PUT', sprintf('/module/status/%s', $module['technicalName']), [
@@ -218,6 +231,58 @@ class ModuleEndpointTest extends ApiTestCase
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
         $this->assertEquals(0, $disabledModules['totalItems']);
+    }
+
+    /**
+     * @depends testBulkUpdateStatus
+     */
+    public function testResetModule(array $module): void
+    {
+        // Reset specific module
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        $response = static::createClient()->request('PUT', sprintf('/module/%s/reset', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'keepData' => false,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        // Check response from status update request
+        $expectedModuleInfos = [
+            'moduleId' => $module['moduleId'],
+            'technicalName' => $module['technicalName'],
+            'version' => $module['version'],
+            'enabled' => true,
+            'installed' => true,
+        ];
+        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+    }
+
+    public function testResetModuleNotFound(): void
+    {
+        $module = [
+            'technicalName' => 'ps_notthere',
+        ];
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        static::createClient()->request('PUT', sprintf('/module/%s/reset', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    /**
+     * @depends testUpdateModuleStatusDisable
+     */
+    public function restResetModuleNotActive(array $module): void
+    {
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        static::createClient()->request('PUT', sprintf('/module/%s/reset', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(400);
     }
 
     private function getModuleInfos(string $technicalName): array
