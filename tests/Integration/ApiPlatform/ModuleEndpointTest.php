@@ -160,7 +160,7 @@ class ModuleEndpointTest extends ApiTestCase
     /**
      * @depends testBulkUpdateStatus
      */
-    public function testUpdateModuleStatus(array $module): void
+    public function testUpdateModuleStatusDisable(array $module): array
     {
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
@@ -196,6 +196,14 @@ class ModuleEndpointTest extends ApiTestCase
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
         $this->assertEquals(1, $disabledModules['totalItems']);
 
+        return $moduleInfos;
+    }
+
+    /**
+     * @depends testUpdateModuleStatusDisable
+     */
+    public function testUpdateModuleStatusEnable(array $module): void
+    {
         // Enable specific module
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
         $response = static::createClient()->request('PUT', sprintf('/module/status/%s', $module['technicalName']), [
@@ -253,11 +261,23 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($expectedModuleInfos, $decodedResponse);
     }
 
-    public function testResetModule_NotInstalled(): void
+    public function testResetModuleNotFound(): void
     {
         $module = [
             'technicalName' => 'ps_notthere',
         ];
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        static::createClient()->request('PUT', sprintf('/module/%s/reset', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    /**
+     * @depends testUpdateModuleStatusDisable
+     */
+    public function restResetModuleNotActive(array $module): void
+    {
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
         static::createClient()->request('PUT', sprintf('/module/%s/reset', $module['technicalName']), [
             'auth_bearer' => $bearerToken,
