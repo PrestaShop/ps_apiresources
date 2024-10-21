@@ -30,14 +30,14 @@ class ModuleEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['module', 'module_shop']);
+        DatabaseDump::restoreMatchingTables('/module/');
         self::createApiClient(['module_write', 'module_read']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        DatabaseDump::restoreTables(['module', 'module_shop']);
+        DatabaseDump::restoreMatchingTables('/module/');
     }
 
     public function getProtectedEndpoints(): iterable
@@ -59,13 +59,41 @@ class ModuleEndpointTest extends ApiTestCase
 
         yield 'toggle module status' => [
             'PUT',
-            '/module/status/{technicalName}',
+            '/module/{technicalName}/status',
         ];
 
         yield 'reset module' => [
-            'PUT',
+            'PATCH',
             '/module/{technicalName}/reset',
         ];
+    }
+
+    public function testModuleNotFound(): void
+    {
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        // GET on non existent module returns a 404
+        static::createClient()->request('GET', '/module/ps_falsemodule', [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(404);
+
+        // PUT status on non existent module returns a 404
+        static::createClient()->request('PUT', '/module/ps_falsemodule/status', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'enabled' => true,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(404);
+
+        // PATCH reset on non existent module returns a 404
+        static::createClient()->request('PATCH', '/module/ps_falsemodule/reset', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'keepData' => true,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testListModules(): array
@@ -168,7 +196,7 @@ class ModuleEndpointTest extends ApiTestCase
 
         // Disable specific module
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PUT', sprintf('/module/status/%s', $module['technicalName']), [
+        $response = static::createClient()->request('PUT', sprintf('/module/%s/status', $module['technicalName']), [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'enabled' => false,
@@ -196,17 +224,9 @@ class ModuleEndpointTest extends ApiTestCase
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
         $this->assertEquals(1, $disabledModules['totalItems']);
 
-        return $moduleInfos;
-    }
-
-    /**
-     * @depends testUpdateModuleStatusDisable
-     */
-    public function testUpdateModuleStatusEnable(array $module): void
-    {
         // Enable specific module
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PUT', sprintf('/module/status/%s', $module['technicalName']), [
+        $response = static::createClient()->request('PUT', sprintf('/module/%s/status', $module['technicalName']), [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'enabled' => true,
@@ -231,6 +251,8 @@ class ModuleEndpointTest extends ApiTestCase
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
         $this->assertEquals(0, $disabledModules['totalItems']);
+
+        return $module;
     }
 
     /**
@@ -240,7 +262,7 @@ class ModuleEndpointTest extends ApiTestCase
     {
         // Reset specific module
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PUT', sprintf('/module/%s/reset', $module['technicalName']), [
+        $response = static::createClient()->request('PATCH', sprintf('/module/%s/reset', $module['technicalName']), [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'keepData' => false,
@@ -249,6 +271,12 @@ class ModuleEndpointTest extends ApiTestCase
         self::assertResponseStatusCodeSame(200);
         $decodedResponse = json_decode($response->getContent(), true);
         $this->assertNotFalse($decodedResponse);
+
+        // Module ID has been modified because the module was uninstalled the reinstalled
+        $this->assertNotEquals($module['moduleId'], $decodedResponse['moduleId']);
+        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $this->assertNotEquals($module['moduleId'], $moduleInfos['moduleId']);
+        $module['moduleId'] = $decodedResponse['moduleId'];
 
         // Check response from status update request
         $expectedModuleInfos = [
@@ -261,25 +289,13 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($expectedModuleInfos, $decodedResponse);
     }
 
-    public function testResetModuleNotFound(): void
-    {
-        $module = [
-            'technicalName' => 'ps_notthere',
-        ];
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        static::createClient()->request('PUT', sprintf('/module/%s/reset', $module['technicalName']), [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(404);
-    }
-
     /**
      * @depends testUpdateModuleStatusDisable
      */
     public function restResetModuleNotActive(array $module): void
     {
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        static::createClient()->request('PUT', sprintf('/module/%s/reset', $module['technicalName']), [
+        static::createClient()->request('PATCH', sprintf('/module/%s/reset', $module['technicalName']), [
             'auth_bearer' => $bearerToken,
         ]);
         self::assertResponseStatusCodeSame(400);
