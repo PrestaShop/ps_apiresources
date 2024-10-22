@@ -23,40 +23,23 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkToggleModuleStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkUninstallModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\UninstallModuleCommand;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/modules/toggle-status',
+            uriTemplate: '/module/{technicalName}/uninstall',
             output: false,
-            CQRSCommand: BulkToggleModuleStatusCommand::class,
-            scopes: [
-                'module_write',
-            ],
-            CQRSCommandMapping: [
-                '[enabled]' => '[expectedStatus]',
-            ],
-        ),
-        new CQRSUpdate(
-            uriTemplate: '/modules/uninstall',
-            output: false,
-            CQRSCommand: BulkUninstallModuleCommand::class,
+            CQRSCommand: UninstallModuleCommand::class,
             scopes: [
                 'module_write',
             ],
         ),
     ],
 )]
-class BulkModules
+class UninstallModule extends Module
 {
-    /**
-     * @var string[]
-     */
-    public array $modules;
-
-    public bool $enabled;
     public bool $deleteFile;
+
 }
