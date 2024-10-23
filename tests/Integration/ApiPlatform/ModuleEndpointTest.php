@@ -62,6 +62,16 @@ class ModuleEndpointTest extends ApiTestCase
             '/module/status/{technicalName}',
         ];
 
+        yield 'uninstall module' => [
+            'PUT',
+            '/module/{technicalName}/uninstall',
+        ];
+
+        yield 'bulk uninstall' => [
+            'PUT',
+            '/modules/uninstall',
+        ];
+
         yield 'install module' => [
             'POST',
             '/module/{technicalName}/install',
@@ -225,6 +235,47 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(0, $disabledModules['totalItems']);
     }
 
+    public function testUninstallModule()
+    {
+        $module = [
+            'technicalName' => 'bankwire',
+            'deleteFile' => false
+        ];
+
+        // uninstall specific module deleteFile true
+        $bearerToken = $this->getBearerToken(['module_write']);
+        static::createClient()->request('PUT', sprintf('/module/%s/uninstall', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'deleteFile' => $module['deleteFile'],
+            ],
+        ]);
+
+        self::assertResponseStatusCodeSame(204);
+
+    }
+
+    public function testBulkUninstallModule()
+    {
+        $modules = ['ps_featuredproducts', 'ps_emailsubscription'];
+
+        // uninstall specific module deleteFile true
+        $bearerToken = $this->getBearerToken(['module_write']);
+        static::createClient()->request('PUT', sprintf('/modules/uninstall'), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'modules' => $modules,
+                'deleteFile' => true,
+            ],
+        ]);
+
+        self::assertResponseStatusCodeSame(204);
+    }
+
+
+    /**
+     * @depends testUninstallModule
+     */
     public function testInstallModuleExistInFolder(): void
     {
         $module = array('technicalName' => 'bankwire');
@@ -282,6 +333,9 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($expectedModuleInfos, $decodedResponse);
     }
 
+    /**
+     * @depends testBulkUpdateStatus
+     */
     public function testInstallModuleFromUrl(): void
     {
         $module = array(
