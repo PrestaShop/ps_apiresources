@@ -61,6 +61,11 @@ class ModuleEndpointTest extends ApiTestCase
             'PUT',
             '/module/status/{technicalName}',
         ];
+
+        yield 'install module' => [
+            'POST',
+            '/module/{technicalName}/install',
+        ];
     }
 
     public function testListModules(): array
@@ -218,6 +223,94 @@ class ModuleEndpointTest extends ApiTestCase
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
         $this->assertEquals(0, $disabledModules['totalItems']);
+    }
+
+    public function testInstallModuleExistInFolder(): void
+    {
+        $module = array('technicalName' => 'bankwire');
+
+        $bearerToken = $this->getBearerToken(['module_write']);
+        $response = static::createClient()->request('POST', sprintf('/module/%s/install', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+            ],
+        ]);
+
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        // Check response from status update request
+        $expectedModuleInfos = [
+            'technicalName' => $module['technicalName'],
+            'version' => $module['version'],
+            'enabled' => true,
+            'installed' => true,
+        ];
+
+        // Check response from status update request
+        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+    }
+
+    public function testInstallModuleFromZip(): void
+    {
+        $module = array(
+            'technicalName' => 'test_install_cqrs_command',
+            'source' => _PS_MODULE_DIR_ . 'test_install_cqrs_command.zip'
+        );
+        $bearerToken = $this->getBearerToken(['module_write']);
+        $response = static::createClient()->request('POST', sprintf('/module/%s/install', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'source' => $module['source'],
+            ],
+        ]);
+
+        self::assertResponseStatusCodeSame(201);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        // Check response from status update request
+        $expectedModuleInfos = [
+            'technicalName' => $module['technicalName'],
+            'version' => $module['version'],
+            'enabled' => true,
+            'installed' => true,
+        ];
+
+        // Check response from status update request
+        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+    }
+
+    public function testInstallModuleFromUrl(): void
+    {
+        $module = array(
+            'technicalName' => 'ps_featuredproducts',
+            'source' => 'https://github.com/PrestaShop/ps_featuredproducts/releases/download/v2.1.5/ps_featuredproducts.zip',
+        );
+
+        $bearerToken = $this->getBearerToken(['module_write']);
+        $response = static::createClient()->request('POST', sprintf('/module/%s/install', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'source' => $module['source'],
+            ],
+        ]);
+
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        // Check response from status update request
+        $expectedModuleInfos = [
+            'technicalName' => $module['technicalName'],
+            'version' => $module['version'],
+            'enabled' => true,
+            'installed' => true,
+        ];
+
+        // Check response from status update request
+        $this->assertEquals($expectedModuleInfos, $decodedResponse);
     }
 
     private function getModuleInfos(string $technicalName): array
