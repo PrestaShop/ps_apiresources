@@ -278,7 +278,10 @@ class ModuleEndpointTest extends ApiTestCase
      */
     public function testInstallModuleExistInFolder(): void
     {
-        $module = array('technicalName' => 'bankwire');
+        $module = array(
+            'technicalName' => 'bankwire',
+            'version' => '2.0.0'
+        );
 
         $bearerToken = $this->getBearerToken(['module_write']);
         $response = static::createClient()->request('POST', sprintf('/module/%s/install', $module['technicalName']), [
@@ -307,7 +310,8 @@ class ModuleEndpointTest extends ApiTestCase
     {
         $module = array(
             'technicalName' => 'test_install_cqrs_command',
-            'source' => _PS_MODULE_DIR_ . 'test_install_cqrs_command.zip'
+            'source' => _PS_MODULE_DIR_ . 'test_install_cqrs_command.zip',
+            'version' => '1.0.0'
         );
         $bearerToken = $this->getBearerToken(['module_write']);
         $response = static::createClient()->request('POST', sprintf('/module/%s/install', $module['technicalName']), [
@@ -341,6 +345,7 @@ class ModuleEndpointTest extends ApiTestCase
         $module = array(
             'technicalName' => 'ps_featuredproducts',
             'source' => 'https://github.com/PrestaShop/ps_featuredproducts/releases/download/v2.1.5/ps_featuredproducts.zip',
+            'version' => '2.1.5'
         );
 
         $bearerToken = $this->getBearerToken(['module_write']);
