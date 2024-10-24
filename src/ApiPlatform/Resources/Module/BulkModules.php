@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkToggleModuleStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 
 #[ApiResource(
@@ -40,6 +41,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
             ],
         ),
     ],
+    exceptionToStatus: [ModuleNotFoundException::class => 404],
 )]
 class BulkModules
 {
