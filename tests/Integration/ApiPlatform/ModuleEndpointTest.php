@@ -30,14 +30,14 @@ class ModuleEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['module', 'module_shop']);
+        DatabaseDump::restoreMatchingTables('/module/');
         self::createApiClient(['module_write', 'module_read']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        DatabaseDump::restoreTables(['module', 'module_shop']);
+        DatabaseDump::restoreMatchingTables('/module/');
     }
 
     public function getProtectedEndpoints(): iterable
@@ -59,7 +59,12 @@ class ModuleEndpointTest extends ApiTestCase
 
         yield 'toggle module status' => [
             'PUT',
-            '/module/status/{technicalName}',
+            '/module/{technicalName}/status',
+        ];
+
+        yield 'reset module' => [
+            'PATCH',
+            '/module/{technicalName}/reset',
         ];
 
         yield 'uninstall module' => [
@@ -76,6 +81,34 @@ class ModuleEndpointTest extends ApiTestCase
             'POST',
             '/module/{technicalName}/install',
         ];
+    }
+
+    public function testModuleNotFound(): void
+    {
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        // GET on non existent module returns a 404
+        static::createClient()->request('GET', '/module/ps_falsemodule', [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(404);
+
+        // PUT status on non existent module returns a 404
+        static::createClient()->request('PUT', '/module/ps_falsemodule/status', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'enabled' => true,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(404);
+
+        // PATCH reset on non existent module returns a 404
+        static::createClient()->request('PATCH', '/module/ps_falsemodule/reset', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'keepData' => true,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testListModules(): array
@@ -170,7 +203,7 @@ class ModuleEndpointTest extends ApiTestCase
     /**
      * @depends testBulkUpdateStatus
      */
-    public function testUpdateModuleStatus(array $module): void
+    public function testUpdateModuleStatusDisable(array $module): array
     {
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
@@ -178,7 +211,7 @@ class ModuleEndpointTest extends ApiTestCase
 
         // Disable specific module
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PUT', sprintf('/module/status/%s', $module['technicalName']), [
+        $response = static::createClient()->request('PUT', sprintf('/module/%s/status', $module['technicalName']), [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'enabled' => false,
@@ -208,7 +241,7 @@ class ModuleEndpointTest extends ApiTestCase
 
         // Enable specific module
         $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PUT', sprintf('/module/status/%s', $module['technicalName']), [
+        $response = static::createClient()->request('PUT', sprintf('/module/%s/status', $module['technicalName']), [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'enabled' => true,
@@ -233,6 +266,54 @@ class ModuleEndpointTest extends ApiTestCase
         // Check number of disabled modules
         $disabledModules = $this->listItems('/modules', ['module_read'], ['enabled' => false]);
         $this->assertEquals(0, $disabledModules['totalItems']);
+
+        return $module;
+    }
+
+    /**
+     * @depends testBulkUpdateStatus
+     */
+    public function testResetModule(array $module): void
+    {
+        // Reset specific module
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        $response = static::createClient()->request('PATCH', sprintf('/module/%s/reset', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'keepData' => false,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        // Module ID has been modified because the module was uninstalled the reinstalled
+        $this->assertNotEquals($module['moduleId'], $decodedResponse['moduleId']);
+        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $this->assertNotEquals($module['moduleId'], $moduleInfos['moduleId']);
+        $module['moduleId'] = $decodedResponse['moduleId'];
+
+        // Check response from status update request
+        $expectedModuleInfos = [
+            'moduleId' => $module['moduleId'],
+            'technicalName' => $module['technicalName'],
+            'version' => $module['version'],
+            'enabled' => true,
+            'installed' => true,
+        ];
+        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+    }
+
+    /**
+     * @depends testUpdateModuleStatusDisable
+     */
+    public function restResetModuleNotActive(array $module): void
+    {
+        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
+        static::createClient()->request('PATCH', sprintf('/module/%s/reset', $module['technicalName']), [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(400);
     }
 
     public function testUninstallModule()
