@@ -25,10 +25,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Module\Command\InstallModuleCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Command\ResetModuleCommand;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\UninstallModuleCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Command\UpdateModuleStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\UploadModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Exception\AlreadyInstalledModuleException;
 use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotInstalledException;
 use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
@@ -61,25 +61,9 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/module/{technicalName}/upload',
-            CQRSCommand: UploadModuleCommand::class,
-            CQRSQuery: GetModuleInfos::class,
-            scopes: [
-                'module_write',
-            ],
-        ),
-        new CQRSUpdate(
             uriTemplate: '/module/{technicalName}/install',
             CQRSCommand: InstallModuleCommand::class,
             CQRSQuery: GetModuleInfos::class,
-            scopes: [
-                'module_write',
-            ],
-        ),
-        new CQRSUpdate(
-            uriTemplate: '/module/{technicalName}/uninstall',
-            output: false,
-            CQRSCommand: UninstallModuleCommand::class,
             scopes: [
                 'module_write',
             ],
@@ -93,7 +77,11 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
-    exceptionToStatus: [ModuleNotFoundException::class => 404],
+    exceptionToStatus: [
+        ModuleNotFoundException::class => 404,
+        ModuleNotInstalledException::class => 403,
+        AlreadyInstalledModuleException::class => 403,
+    ],
 )]
 class Module
 {
@@ -108,8 +96,4 @@ class Module
     public bool $enabled;
 
     public bool $installed;
-
-    public bool $deleteFiles;
-
-    public string $source;
 }
