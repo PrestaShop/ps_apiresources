@@ -33,7 +33,7 @@ class ModuleQueryBuilder extends AbstractDoctrineQueryBuilder
     public function __construct(
         Connection $connection,
         string $dbPrefix,
-        private readonly DoctrineSearchCriteriaApplicatorInterface $searchCriteriaApplicator
+        private readonly DoctrineSearchCriteriaApplicatorInterface $searchCriteriaApplicator,
     ) {
         parent::__construct($connection, $dbPrefix);
     }
