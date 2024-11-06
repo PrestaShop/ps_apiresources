@@ -61,5 +61,5 @@ class BulkModules
 
     public bool $enabled;
 
-    public bool $deleteFile;
+    public bool $deleteFiles;
 }

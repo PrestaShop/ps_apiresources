@@ -405,13 +405,13 @@ class ModuleEndpointTest extends ApiTestCase
             'installed' => false,
         ];
 
-        // Uninstall specific module deleteFile true
+        // Uninstall specific module deleteFiles true
         $bearerToken = $this->getBearerToken(['module_write']);
         static::createClient()->request('PUT', sprintf('/module/%s/uninstall', $expectedModule['technicalName']), [
             'auth_bearer' => $bearerToken,
             'json' => [
                 // We keep files, so we can check the module status afterward (deleted module would return a 404)
-                'deleteFile' => false,
+                'deleteFiles' => false,
             ],
         ]);
         self::assertResponseStatusCodeSame(204);
@@ -435,14 +435,14 @@ class ModuleEndpointTest extends ApiTestCase
             $this->assertTrue(version_compare($moduleInfos['installedVersion'], '0.1.0', '>='));
         }
 
-        // uninstall specific module deleteFile true
+        // uninstall specific module deleteFiles true
         $bearerToken = $this->getBearerToken(['module_write']);
         static::createClient()->request('PUT', sprintf('/modules/uninstall'), [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'modules' => $modules,
                 // Force removal of the files
-                'deleteFile' => true,
+                'deleteFiles' => true,
             ],
         ]);
         self::assertResponseStatusCodeSame(204);

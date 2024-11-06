@@ -109,7 +109,7 @@ class Module
 
     public bool $installed;
 
-    public bool $deleteFile;
+    public bool $deleteFiles;
 
     public string $source;
 }
