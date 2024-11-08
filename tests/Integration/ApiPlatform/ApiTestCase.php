@@ -238,7 +238,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return $commandBus->handle($command)->getValue();
     }
 
-    protected static function addShopGroup(string $groupName, string $color = null): int
+    protected static function addShopGroup(string $groupName, ?string $color = null): int
     {
         $shopGroup = new \ShopGroup();
         $shopGroup->name = $groupName;
@@ -255,7 +255,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return (int) $shopGroup->id;
     }
 
-    protected static function addShop(string $shopName, int $shopGroupId, string $color = null): int
+    protected static function addShop(string $shopName, int $shopGroupId, ?string $color = null): int
     {
         $shop = new \Shop();
         $shop->active = true;
@@ -278,7 +278,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return (int) $shop->id;
     }
 
-    protected static function updateConfiguration(string $configurationKey, $value, ShopConstraint $shopConstraint = null): void
+    protected static function updateConfiguration(string $configurationKey, $value, ?ShopConstraint $shopConstraint = null): void
     {
         self::getContainer()->get(ShopConfigurationInterface::class)->set($configurationKey, $value, $shopConstraint ?: ShopConstraint::allShops());
         \Configuration::resetStaticCache();

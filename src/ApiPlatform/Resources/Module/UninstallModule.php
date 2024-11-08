@@ -18,48 +18,31 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-declare(strict_types=1);
-
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkToggleModuleStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkUninstallModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\UninstallModuleCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotInstalledException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/modules/toggle-status',
+            uriTemplate: '/module/{technicalName}/uninstall',
             output: false,
-            CQRSCommand: BulkToggleModuleStatusCommand::class,
-            scopes: [
-                'module_write',
-            ],
-            CQRSCommandMapping: [
-                '[enabled]' => '[expectedStatus]',
-            ],
-        ),
-        new CQRSUpdate(
-            uriTemplate: '/modules/uninstall',
-            output: false,
-            CQRSCommand: BulkUninstallModuleCommand::class,
+            CQRSCommand: UninstallModuleCommand::class,
             scopes: [
                 'module_write',
             ],
         ),
     ],
-    exceptionToStatus: [ModuleNotFoundException::class => 404],
+    exceptionToStatus: [
+        ModuleNotFoundException::class => 404,
+        ModuleNotInstalledException::class => 403,
+    ],
 )]
-class BulkModules
+class UninstallModule extends Module
 {
-    /**
-     * @var string[]
-     */
-    public array $modules;
-
-    public bool $enabled;
-
     public bool $deleteFiles;
 }

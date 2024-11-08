@@ -18,48 +18,45 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-declare(strict_types=1);
-
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkToggleModuleStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkUninstallModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\UploadModuleCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use Symfony\Component\HttpFoundation\File\File;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/modules/toggle-status',
-            output: false,
-            CQRSCommand: BulkToggleModuleStatusCommand::class,
+        new CQRSCreate(
+            uriTemplate: '/module/upload-source',
+            CQRSCommand: UploadModuleCommand::class,
+            CQRSQuery: GetModuleInfos::class,
+            scopes: [
+                'module_write',
+            ],
+        ),
+        new CQRSCreate(
+            uriTemplate: '/module/upload-archive',
+            inputFormats: ['multipart' => ['multipart/form-data']],
+            read: false,
+            CQRSCommand: UploadModuleCommand::class,
+            CQRSQuery: GetModuleInfos::class,
             scopes: [
                 'module_write',
             ],
             CQRSCommandMapping: [
-                '[enabled]' => '[expectedStatus]',
-            ],
-        ),
-        new CQRSUpdate(
-            uriTemplate: '/modules/uninstall',
-            output: false,
-            CQRSCommand: BulkUninstallModuleCommand::class,
-            scopes: [
-                'module_write',
+                '[archive][pathName]' => '[source]',
             ],
         ),
     ],
+    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [ModuleNotFoundException::class => 404],
 )]
-class BulkModules
+class UploadModule extends Module
 {
-    /**
-     * @var string[]
-     */
-    public array $modules;
+    public string $source;
 
-    public bool $enabled;
-
-    public bool $deleteFiles;
+    public File $archive;
 }

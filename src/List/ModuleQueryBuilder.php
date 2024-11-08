@@ -33,7 +33,7 @@ class ModuleQueryBuilder extends AbstractDoctrineQueryBuilder
     public function __construct(
         Connection $connection,
         string $dbPrefix,
-        private readonly DoctrineSearchCriteriaApplicatorInterface $searchCriteriaApplicator
+        private readonly DoctrineSearchCriteriaApplicatorInterface $searchCriteriaApplicator,
     ) {
         parent::__construct($connection, $dbPrefix);
     }
@@ -41,7 +41,7 @@ class ModuleQueryBuilder extends AbstractDoctrineQueryBuilder
     public function getSearchQueryBuilder(SearchCriteriaInterface $searchCriteria)
     {
         $builder = $this->getModuleQueryBuilder($searchCriteria)
-            ->select('m.id_module AS moduleId, m.name AS technicalName, m.active AS enabled, m.version');
+            ->select('m.id_module AS moduleId, m.name AS technicalName, m.active AS enabled, m.version AS installedVersion');
 
         $this->searchCriteriaApplicator
             ->applySorting($searchCriteria, $builder)

@@ -15,7 +15,8 @@
     "require-dev": {
         "prestashop/php-dev-tools": "^4.3",
         "czproject/git-php": "^4.2",
-        "phpunit/phpunit": "^9.6"
+        "phpunit/phpunit": "^9.6",
+        "friendsofphp/php-cs-fixer": "^v3"
     },
     "autoload": {
         "psr-4": {

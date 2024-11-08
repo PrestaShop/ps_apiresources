@@ -17,7 +17,7 @@ services:
       - 'hook'
 
   prestashop.core.grid.data_factory.module:
-    class: '%prestashop.core.grid.data.factory.doctrine_grid_data_factory%'
+    class: PrestaShop\Module\APIResources\List\ModuleGridDataFactory
     public: true
     arguments:
       - '@PrestaShop\Module\APIResources\List\ModuleQueryBuilder'
