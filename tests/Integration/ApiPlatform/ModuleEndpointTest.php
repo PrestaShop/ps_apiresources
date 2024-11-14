@@ -89,6 +89,11 @@ class ModuleEndpointTest extends ApiTestCase
             'multipart/form-data',
         ];
 
+        yield 'upgrade' => [
+            'PUT',
+            '/module/{technicalName}/upgrade',
+        ];
+
         yield 'uninstall module' => [
             'PUT',
             '/module/{technicalName}/uninstall',
@@ -644,6 +649,90 @@ class ModuleEndpointTest extends ApiTestCase
         foreach ($modules as $module) {
             $this->assertModuleNotFound($module);
         }
+    }
+
+    /**
+     * @depends testInstallModule
+     */
+    public function testUpdateModule(): void
+    {
+
+        $module212 = array(
+            'moduleId' => null,
+            'technicalName' => 'dashproducts',
+            'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.2/dashproducts.zip',
+            'version' => '2.1.2',
+            // Module is simply uploaded not installed
+            'installedVersion' => null,
+            'enabled' => false,
+            'installed' => false,
+
+        );
+        $bearerToken = $this->getBearerToken(['module_write']);
+
+        // Upload Zip from github
+        static::createClient()->request('POST', '/module/upload-source', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'source' => $module212['source'],
+            ],
+        ]);
+
+        static::createClient()->request('PUT', sprintf('/module/%s/install', $module212['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            // We must define a JSON body even if it is empty, we need to search how to make this optional
+            'json' => [
+            ],
+        ]);
+
+        $module213 = array(
+            'moduleId' => null,
+            'technicalName' => 'dashproducts',
+            'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.3/dashproducts.zip',
+            'version' => '2.1.3',
+            // Module is simply uploaded not installed
+            'installedVersion' => '2.1.2',
+            'enabled' => false,
+            'installed' => false,
+
+        );
+
+        static::createClient()->request('POST', '/module/upload-source', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'source' => $module213['source'],
+            ],
+        ]);
+
+        $response = static::createClient()->request('POST', sprintf('/module/%s/update', $module212['technicalName']), [
+            'auth_bearer' => $bearerToken,
+            // We must define a JSON body even if it is empty, we need to search how to make this optional
+            'json' => [
+            ],
+        ]);
+
+        // Check response from status update request
+        $expectedModule = [
+            'technicalName' => $module213['technicalName'],
+            'version' => $module213['version'],
+            // Module is simply uploaded not installed
+            'installedVersion' => $module213['installedVersion'],
+            'enabled' => true,
+            'installed' => true,
+        ];
+
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+        // The ID is dynamic so we fetch it after creation
+        $this->assertArrayHasKey('moduleId', $decodedResponse);
+        $expectedModule['moduleId'] = $decodedResponse['moduleId'];
+
+        // Check response from install request
+        $this->assertEquals($expectedModule, $decodedResponse);
+
+        // Check result from GET API
+        $this->assertEquals($expectedModule, $this->getModuleInfos($module213['technicalName']));
     }
 
     private function getModuleInfos(string $technicalName): array
