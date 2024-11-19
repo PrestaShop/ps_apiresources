@@ -23,7 +23,7 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\UpdateModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\UpgradeModuleCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 
@@ -31,7 +31,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
     operations: [
         new CQRSUpdate(
             uriTemplate: '/module/{technicalName}/upgrade',
-            CQRSCommand: UpdateModuleCommand::class,
+            CQRSCommand: UpgradeModuleCommand::class,
             CQRSQuery: GetModuleInfos::class,
             scopes: [
                 'module_write',

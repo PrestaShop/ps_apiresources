@@ -654,7 +654,7 @@ class ModuleEndpointTest extends ApiTestCase
     /**
      * @depends testInstallModule
      */
-    public function testUpdateModule(): void
+    public function testUpgradeModule(): void
     {
 
         $module212 = array(
@@ -704,14 +704,14 @@ class ModuleEndpointTest extends ApiTestCase
             ],
         ]);
 
-        $response = static::createClient()->request('POST', sprintf('/module/%s/update', $module212['technicalName']), [
+        $response = static::createClient()->request('POST', sprintf('/module/%s/upgrade', $module212['technicalName']), [
             'auth_bearer' => $bearerToken,
             // We must define a JSON body even if it is empty, we need to search how to make this optional
             'json' => [
             ],
         ]);
 
-        // Check response from status update request
+        // Check response from status upgrade request
         $expectedModule = [
             'technicalName' => $module213['technicalName'],
             'version' => $module213['version'],
