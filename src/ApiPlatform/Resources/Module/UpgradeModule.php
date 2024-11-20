@@ -39,6 +39,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
         ),
     ],
 )]
-class UpgradeModule  extends Module
+class UpgradeModule extends Module
 {
 }

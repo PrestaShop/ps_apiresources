@@ -651,58 +651,76 @@ class ModuleEndpointTest extends ApiTestCase
         }
     }
 
-    /**
-     * @depends testInstallModule
-     */
     public function testUpgradeModule(): void
     {
+        $bearerToken = $this->getBearerToken(['module_write']);
 
+        // Upload Zip from GitHub with version 2.1.2 the module is present but not installed
+        $response = static::createClient()->request('POST', '/module/upload-source', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.2/dashproducts.zip',
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        // The returned response and the GET infos response should be identical
         $module212 = [
             'moduleId' => null,
             'technicalName' => 'dashproducts',
-            'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.2/dashproducts.zip',
-            'version' => '2.1.2',
+            'moduleVersion' => '2.1.2',
             // Module is simply uploaded not installed
             'installedVersion' => null,
             'enabled' => false,
             'installed' => false,
-
         ];
-        $bearerToken = $this->getBearerToken(['module_write']);
+        $this->assertEquals($module212, $decodedResponse);
+        $this->assertEquals($module212, $this->getModuleInfos($module212['technicalName']));
 
-        // Upload Zip from github
-        static::createClient()->request('POST', '/module/upload-source', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'source' => $module212['source'],
-            ],
-        ]);
-
-        static::createClient()->request('PUT', sprintf('/module/%s/install', $module212['technicalName']), [
+        // Now we install the module
+        $response = static::createClient()->request('PUT', sprintf('/module/%s/install', $module212['technicalName']), [
             'auth_bearer' => $bearerToken,
             // We must define a JSON body even if it is empty, we need to search how to make this optional
             'json' => [
             ],
         ]);
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
 
-        $module213 = array(
-            'moduleId' => null,
-            'technicalName' => 'dashproducts',
-            'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.3/dashproducts.zip',
-            'version' => '2.1.3',
-            // Module is simply uploaded not installed
-            'installedVersion' => '2.1.2',
-            'enabled' => false,
-            'installed' => false,
+        // The ID is dynamic, so we fetch it after creation
+        $this->assertArrayHasKey('moduleId', $decodedResponse);
+        $module212['moduleId'] = $decodedResponse['moduleId'];
+        $module212['installed'] = true;
+        $module212['enabled'] = true;
+        $module212['installedVersion'] = '2.1.2';
+        $this->assertEquals($module212, $decodedResponse);
+        $this->assertEquals($module212, $this->getModuleInfos($module212['technicalName']));
 
-        );
-
-        static::createClient()->request('POST', '/module/upload-source', [
+        // Now upload the source for version 2.1.3, the module version is updated but not the installed one
+        $response = static::createClient()->request('POST', '/module/upload-source', [
             'auth_bearer' => $bearerToken,
             'json' => [
-                'source' => $module213['source'],
+                'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.3/dashproducts.zip',
             ],
         ]);
+        self::assertResponseStatusCodeSame(201);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertNotFalse($decodedResponse);
+
+        $module213 = [
+            'moduleId' => $module212['moduleId'],
+            'technicalName' => 'dashproducts',
+            'moduleVersion' => '2.1.3',
+            // Module is simply uploaded not installed
+            'installedVersion' => '2.1.2',
+            'enabled' => true,
+            'installed' => true,
+        ];
+        $this->assertEquals($module213, $decodedResponse);
+        $this->assertEquals($module213, $this->getModuleInfos($module213['technicalName']));
 
         $response = static::createClient()->request('PUT', sprintf('/module/%s/upgrade', $module212['technicalName']), [
             'auth_bearer' => $bearerToken,
@@ -710,29 +728,14 @@ class ModuleEndpointTest extends ApiTestCase
             'json' => [
             ],
         ]);
-
-        // Check response from status upgrade request
-        $expectedModule = [
-            'technicalName' => $module213['technicalName'],
-            'version' => $module213['version'],
-            // Module is simply uploaded not installed
-            'installedVersion' => $module213['installedVersion'],
-            'enabled' => true,
-            'installed' => true,
-        ];
-
         self::assertResponseStatusCodeSame(200);
         $decodedResponse = json_decode($response->getContent(), true);
         $this->assertNotFalse($decodedResponse);
-        // The ID is dynamic so we fetch it after creation
-        $this->assertArrayHasKey('moduleId', $decodedResponse);
-        $expectedModule['moduleId'] = $decodedResponse['moduleId'];
 
-        // Check response from install request
-        $this->assertEquals($expectedModule, $decodedResponse);
-
-        // Check result from GET API
-        $this->assertEquals($expectedModule, $this->getModuleInfos($module213['technicalName']));
+        // Check response from status upgrade request
+        $module213['installedVersion'] = '2.1.3';
+        $this->assertEquals($module213, $decodedResponse);
+        $this->assertEquals($module213, $this->getModuleInfos($module213['technicalName']));
     }
 
     private function getModuleInfos(string $technicalName): array
