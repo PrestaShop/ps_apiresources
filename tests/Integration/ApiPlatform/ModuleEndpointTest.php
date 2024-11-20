@@ -657,7 +657,7 @@ class ModuleEndpointTest extends ApiTestCase
     public function testUpgradeModule(): void
     {
 
-        $module212 = array(
+        $module212 = [
             'moduleId' => null,
             'technicalName' => 'dashproducts',
             'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.2/dashproducts.zip',
@@ -667,7 +667,7 @@ class ModuleEndpointTest extends ApiTestCase
             'enabled' => false,
             'installed' => false,
 
-        );
+        ];
         $bearerToken = $this->getBearerToken(['module_write']);
 
         // Upload Zip from github
@@ -704,7 +704,7 @@ class ModuleEndpointTest extends ApiTestCase
             ],
         ]);
 
-        $response = static::createClient()->request('POST', sprintf('/module/%s/upgrade', $module212['technicalName']), [
+        $response = static::createClient()->request('PUT', sprintf('/module/%s/upgrade', $module212['technicalName']), [
             'auth_bearer' => $bearerToken,
             // We must define a JSON body even if it is empty, we need to search how to make this optional
             'json' => [
