@@ -31,6 +31,7 @@ class GetHookTest extends ApiTestCase
     {
         parent::setUpBeforeClass();
         DatabaseDump::restoreTables(['hook']);
+        self::createApiClient(['hook_write', 'hook_read']);
     }
 
     public static function tearDownAfterClass(): void
