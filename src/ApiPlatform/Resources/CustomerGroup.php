@@ -110,5 +110,6 @@ class CustomerGroup
 
     public bool $showPrice;
 
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $shopIds;
 }
