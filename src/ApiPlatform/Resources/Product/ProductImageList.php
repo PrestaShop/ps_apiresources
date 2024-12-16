@@ -45,6 +45,8 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 )]
 class ProductImageList
 {
+    public int $productId;
+
     public int $imageId;
 
     public string $imageUrl;
