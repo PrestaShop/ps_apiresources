@@ -35,6 +35,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
     operations: [
@@ -102,6 +103,7 @@ class CustomerGroup
     #[ApiProperty(identifier: true)]
     public int $customerGroupId;
 
+    #[LocalizedValue]
     public array $localizedNames;
 
     public float $reductionPercent;

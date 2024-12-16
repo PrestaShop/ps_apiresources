@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetProductImages;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
     operations: [
@@ -53,6 +54,7 @@ class ProductImageList
 
     public string $thumbnailUrl;
 
+    #[LocalizedValue]
     public array $legends;
 
     public bool $cover;
