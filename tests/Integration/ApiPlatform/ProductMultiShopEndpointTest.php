@@ -36,9 +36,6 @@ use Tests\Resources\ResourceResetter;
 
 class ProductMultiShopEndpointTest extends ApiTestCase
 {
-    protected const EN_LANG_ID = 1;
-    protected static int $frenchLangId;
-
     protected const DEFAULT_SHOP_GROUP_ID = 1;
     protected static int $secondShopGroupId;
 
@@ -58,7 +55,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         ShopResetter::resetShops();
         ConfigurationResetter::resetConfiguration();
 
-        self::$frenchLangId = self::addLanguageByLocale('fr-FR');
+        self::addLanguageByLocale('fr-FR');
 
         self::updateConfiguration(MultistoreConfig::FEATURE_STATUS, 1);
         // Disable secure protection for the tests (the configuration reset forced the default config back)
@@ -72,12 +69,12 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         self::$defaultProductData = [
             'type' => ProductType::TYPE_STANDARD,
             'names' => [
-                self::EN_LANG_ID => 'product name',
-                self::$frenchLangId => 'nom produit',
+                'en-US' => 'product name',
+                'fr-FR' => 'nom produit',
             ],
             'descriptions' => [
-                self::EN_LANG_ID => '',
-                self::$frenchLangId => '',
+                'en-US' => '',
+                'fr-FR' => '',
             ],
             'active' => false,
         ];
@@ -114,8 +111,8 @@ class ProductMultiShopEndpointTest extends ApiTestCase
             'json' => [
                 'type' => ProductType::TYPE_STANDARD,
                 'names' => [
-                    self::EN_LANG_ID => 'product name',
-                    self::$frenchLangId => 'nom produit',
+                    'en-US' => 'product name',
+                    'fr-FR' => 'nom produit',
                 ],
             ],
         ]);
@@ -132,8 +129,8 @@ class ProductMultiShopEndpointTest extends ApiTestCase
             'json' => [
                 'type' => ProductType::TYPE_STANDARD,
                 'names' => [
-                    self::EN_LANG_ID => 'product name',
-                    self::$frenchLangId => 'nom produit',
+                    'en-US' => 'product name',
+                    'fr-FR' => 'nom produit',
                 ],
             ],
             'extra' => [
