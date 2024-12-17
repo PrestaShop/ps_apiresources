@@ -33,16 +33,13 @@ use Tests\Resources\ResourceResetter;
 
 class ProductEndpointTest extends ApiTestCase
 {
-    protected const EN_LANG_ID = 1;
-    protected static int $frenchLangId;
-
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
         (new ResourceResetter())->backupTestModules();
         ProductResetter::resetProducts();
         LanguageResetter::resetLanguages();
-        self::$frenchLangId = self::addLanguageByLocale('fr-FR');
+        self::addLanguageByLocale('fr-FR');
         self::createApiClient(['product_write', 'product_read']);
     }
 
@@ -110,8 +107,8 @@ class ProductEndpointTest extends ApiTestCase
             'json' => [
                 'type' => ProductType::TYPE_STANDARD,
                 'names' => [
-                    self::EN_LANG_ID => 'product name',
-                    self::$frenchLangId => 'nom produit',
+                    'en-US' => 'product name',
+                    'fr-FR' => 'nom produit',
                 ],
             ],
         ]);
@@ -128,12 +125,12 @@ class ProductEndpointTest extends ApiTestCase
                 'type' => ProductType::TYPE_STANDARD,
                 'productId' => $productId,
                 'names' => [
-                    self::EN_LANG_ID => 'product name',
-                    self::$frenchLangId => 'nom produit',
+                    'en-US' => 'product name',
+                    'fr-FR' => 'nom produit',
                 ],
                 'descriptions' => [
-                    self::EN_LANG_ID => '',
-                    self::$frenchLangId => '',
+                    'en-US' => '',
+                    'fr-FR' => '',
                 ],
                 'active' => false,
             ],
@@ -163,10 +160,10 @@ class ProductEndpointTest extends ApiTestCase
             ],
             'json' => [
                 'names' => [
-                    self::$frenchLangId => 'nouveau nom',
+                    'fr-FR' => 'nouveau nom',
                 ],
                 'descriptions' => [
-                    self::EN_LANG_ID => 'new description',
+                    'en-US' => 'new description',
                 ],
                 'active' => true,
             ],
@@ -183,12 +180,12 @@ class ProductEndpointTest extends ApiTestCase
                 'type' => ProductType::TYPE_STANDARD,
                 'productId' => $productId,
                 'names' => [
-                    self::EN_LANG_ID => 'product name',
-                    self::$frenchLangId => 'nouveau nom',
+                    'en-US' => 'product name',
+                    'fr-FR' => 'nouveau nom',
                 ],
                 'descriptions' => [
-                    self::EN_LANG_ID => 'new description',
-                    self::$frenchLangId => '',
+                    'en-US' => 'new description',
+                    'fr-FR' => '',
                 ],
                 'active' => true,
             ],
@@ -203,7 +200,7 @@ class ProductEndpointTest extends ApiTestCase
             ],
             'json' => [
                 'names' => [
-                    self::EN_LANG_ID => 'new product name',
+                    'en-US' => 'new product name',
                 ],
             ],
         ]);
@@ -216,12 +213,12 @@ class ProductEndpointTest extends ApiTestCase
                 'type' => ProductType::TYPE_STANDARD,
                 'productId' => $productId,
                 'names' => [
-                    self::EN_LANG_ID => 'new product name',
-                    self::$frenchLangId => 'nouveau nom',
+                    'en-US' => 'new product name',
+                    'fr-FR' => 'nouveau nom',
                 ],
                 'descriptions' => [
-                    self::EN_LANG_ID => 'new description',
-                    self::$frenchLangId => '',
+                    'en-US' => 'new description',
+                    'fr-FR' => '',
                 ],
                 'active' => true,
             ],
@@ -252,12 +249,12 @@ class ProductEndpointTest extends ApiTestCase
                 'type' => ProductType::TYPE_STANDARD,
                 'productId' => $productId,
                 'names' => [
-                    self::EN_LANG_ID => 'new product name',
-                    self::$frenchLangId => 'nouveau nom',
+                    'en-US' => 'new product name',
+                    'fr-FR' => 'nouveau nom',
                 ],
                 'descriptions' => [
-                    self::EN_LANG_ID => 'new description',
-                    self::$frenchLangId => '',
+                    'en-US' => 'new description',
+                    'fr-FR' => '',
                 ],
                 'active' => true,
             ],
@@ -302,8 +299,8 @@ class ProductEndpointTest extends ApiTestCase
         $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
         $this->assertArrayHasKey('legends', $decodedResponse);
         $this->assertEquals([
-            self::EN_LANG_ID => '',
-            self::$frenchLangId => '',
+            'en-US' => '',
+            'fr-FR' => '',
         ], $decodedResponse['legends']);
         $this->assertArrayHasKey('cover', $decodedResponse);
         $this->assertIsBool($decodedResponse['cover']);
@@ -337,8 +334,8 @@ class ProductEndpointTest extends ApiTestCase
         $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
         $this->assertArrayHasKey('legends', $decodedResponse);
         $this->assertEquals([
-            self::EN_LANG_ID => '',
-            self::$frenchLangId => '',
+            'en-US' => '',
+            'fr-FR' => '',
         ], $decodedResponse['legends']);
         $this->assertArrayHasKey('cover', $decodedResponse);
         $this->assertIsBool($decodedResponse['cover']);
@@ -369,8 +366,8 @@ class ProductEndpointTest extends ApiTestCase
             'extra' => [
                 'parameters' => [
                     'legends' => [
-                        self::EN_LANG_ID => 'legend en',
-                        self::$frenchLangId => 'legend fr',
+                        'en-US' => 'legend en',
+                        'fr-FR' => 'legend fr',
                     ],
                 ],
                 'files' => [
@@ -392,8 +389,8 @@ class ProductEndpointTest extends ApiTestCase
         $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
         $this->assertArrayHasKey('legends', $decodedResponse);
         $this->assertEquals([
-            self::EN_LANG_ID => 'legend en',
-            self::$frenchLangId => 'legend fr',
+            'en-US' => 'legend en',
+            'fr-FR' => 'legend fr',
         ], $decodedResponse['legends']);
         $this->assertArrayHasKey('cover', $decodedResponse);
         $this->assertIsBool($decodedResponse['cover']);
@@ -443,8 +440,8 @@ class ProductEndpointTest extends ApiTestCase
                 'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
                 'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
                 'legends' => [
-                    self::EN_LANG_ID => 'legend en',
-                    self::$frenchLangId => 'legend fr',
+                    'en-US' => 'legend en',
+                    'fr-FR' => 'legend fr',
                 ],
                 'cover' => true,
                 'position' => 1,
@@ -457,8 +454,8 @@ class ProductEndpointTest extends ApiTestCase
                 'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, false),
                 'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, true),
                 'legends' => [
-                    self::EN_LANG_ID => '',
-                    self::$frenchLangId => '',
+                    'en-US' => '',
+                    'fr-FR' => '',
                 ],
                 'cover' => false,
                 'position' => 2,
@@ -496,8 +493,8 @@ class ProductEndpointTest extends ApiTestCase
                 'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, false),
                 'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, true),
                 'legends' => [
-                    self::EN_LANG_ID => '',
-                    self::$frenchLangId => '',
+                    'en-US' => '',
+                    'fr-FR' => '',
                 ],
                 'cover' => true,
                 'position' => 1,
@@ -510,8 +507,8 @@ class ProductEndpointTest extends ApiTestCase
                 'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
                 'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
                 'legends' => [
-                    self::EN_LANG_ID => 'legend en',
-                    self::$frenchLangId => 'legend fr',
+                    'en-US' => 'legend en',
+                    'fr-FR' => 'legend fr',
                 ],
                 'cover' => false,
                 'position' => 2,

@@ -34,6 +34,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
@@ -95,8 +96,10 @@ class Product
 
     public bool $active;
 
+    #[LocalizedValue]
     public array $names;
 
+    #[LocalizedValue]
     public array $descriptions;
 
     public const QUERY_MAPPING = [

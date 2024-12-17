@@ -73,7 +73,7 @@ class CustomerGroupApiTest extends ApiTestCase
             'auth_bearer' => $bearerToken,
             'json' => [
                 'localizedNames' => [
-                    1 => 'test1',
+                    'en-US' => 'test1',
                 ],
                 'reductionPercent' => 10.3,
                 'displayPriceTaxExcluded' => true,
@@ -92,7 +92,7 @@ class CustomerGroupApiTest extends ApiTestCase
             [
                 'customerGroupId' => $customerGroupId,
                 'localizedNames' => [
-                    1 => 'test1',
+                    'en-US' => 'test1',
                 ],
                 'reductionPercent' => 10.3,
                 'displayPriceTaxExcluded' => true,
@@ -114,7 +114,7 @@ class CustomerGroupApiTest extends ApiTestCase
             'auth_bearer' => $bearerToken,
             'json' => [
                 'localizedNames' => [
-                    1 => 'test1',
+                    'en-US' => 'test1',
                 ],
                 'reductionPercent' => 10.3,
                 'displayPriceTaxExcluded' => true,
@@ -132,7 +132,7 @@ class CustomerGroupApiTest extends ApiTestCase
             [
                 'customerGroupId' => $customerGroupId,
                 'localizedNames' => [
-                    1 => 'test1',
+                    'en-US' => 'test1',
                 ],
                 'reductionPercent' => 10.3,
                 'displayPriceTaxExcluded' => true,
@@ -162,7 +162,7 @@ class CustomerGroupApiTest extends ApiTestCase
             'auth_bearer' => $bearerToken,
             'json' => [
                 'localizedNames' => [
-                    1 => 'new_test1',
+                    'en-US' => 'new_test1',
                 ],
                 'displayPriceTaxExcluded' => false,
                 'shopIds' => [1],
@@ -179,7 +179,7 @@ class CustomerGroupApiTest extends ApiTestCase
             [
                 'customerGroupId' => $customerGroupId,
                 'localizedNames' => [
-                    1 => 'new_test1',
+                    'en-US' => 'new_test1',
                 ],
                 'reductionPercent' => 10.3,
                 'displayPriceTaxExcluded' => false,
@@ -214,7 +214,7 @@ class CustomerGroupApiTest extends ApiTestCase
             [
                 'customerGroupId' => $customerGroupId,
                 'localizedNames' => [
-                    1 => 'new_test1',
+                    'en-US' => 'new_test1',
                 ],
                 'reductionPercent' => 10.3,
                 'displayPriceTaxExcluded' => false,

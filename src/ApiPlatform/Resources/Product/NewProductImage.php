@@ -26,6 +26,7 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\AddProductImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetProductImage;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\File\File;
 
 #[ApiResource(
@@ -49,12 +50,15 @@ use Symfony\Component\HttpFoundation\File\File;
 )]
 class NewProductImage
 {
+    public int $productId;
+
     public int $imageId;
 
     public string $imageUrl;
 
     public string $thumbnailUrl;
 
+    #[LocalizedValue]
     public array $legends;
 
     public bool $cover;
