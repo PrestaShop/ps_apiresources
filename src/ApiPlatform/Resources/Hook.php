@@ -25,51 +25,16 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Hook\Command\UpdateHookStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Exception\HookNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHook;
-use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHookStatus;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/hook-status/{id}',
-            requirements: ['id' => '\d+'],
-            openapiContext: [
-                'summary' => 'Get hook status A',
-                'description' => 'Get hook status B',
-                'parameters' => [
-                    [
-                        'name' => 'id',
-                        'in' => 'path',
-                        'required' => true,
-                        'schema' => [
-                            'type' => 'string',
-                        ],
-                        'description' => 'Id of the hook you are requesting the status from',
-                    ],
-                    [
-                        'name' => 'Authorization',
-                        'in' => 'scopes',
-                        'description' => 'hook_read <br> hook_write ',
-                    ],
-                ],
-            ],
-            exceptionToStatus: [HookNotFoundException::class => 404],
-            CQRSQuery: GetHookStatus::class,
-            scopes: ['hook_read']
-        ),
-        new CQRSUpdate(
-            uriTemplate: '/hook-status',
-            CQRSCommand: UpdateHookStatusCommand::class,
-            scopes: ['hook_write']
-        ),
-        new CQRSGet(
-            uriTemplate: '/hooks/{id}',
+            uriTemplate: '/hook/{id}',
             requirements: ['id' => '\d+'],
             exceptionToStatus: [HookNotFoundException::class => 404],
             CQRSQuery: GetHook::class,
