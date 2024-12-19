@@ -25,14 +25,21 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Hook\Command\UpdateHookStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Exception\HookNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHook;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 
 #[ApiResource(
     operations: [
+        new CQRSUpdate(
+            uriTemplate: '/hook-status',
+            CQRSCommand: UpdateHookStatusCommand::class,
+            scopes: ['hook_write']
+        ),
         new CQRSGet(
             uriTemplate: '/hook/{id}',
             requirements: ['id' => '\d+'],
