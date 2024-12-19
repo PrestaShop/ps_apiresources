@@ -31,7 +31,7 @@ class GetHookTest extends ApiTestCase
     {
         parent::setUpBeforeClass();
         DatabaseDump::restoreTables(['hook']);
-        self::createApiClient(['hook_write', 'hook_read']);
+        self::createApiClient(['hook_read']);
     }
 
     public static function tearDownAfterClass(): void
@@ -44,7 +44,7 @@ class GetHookTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/hooks/1',
+            '/hook/1',
         ];
     }
 
@@ -57,17 +57,16 @@ class GetHookTest extends ApiTestCase
 
         $bearerToken = $this->getBearerToken([
             'hook_read',
-            'hook_write',
         ]);
 
-        $response = static::createClient()->request('GET', '/hooks/' . (int) $hook->id, ['auth_bearer' => $bearerToken]);
+        $response = static::createClient()->request('GET', '/hook/' . (int) $hook->id, ['auth_bearer' => $bearerToken]);
         self::assertEquals(json_decode($response->getContent())->active, $hook->active);
         self::assertResponseStatusCodeSame(200);
 
-        static::createClient()->request('GET', '/hooks/' . 9999, ['auth_bearer' => $bearerToken]);
+        static::createClient()->request('GET', '/hook/' . 9999, ['auth_bearer' => $bearerToken]);
         self::assertResponseStatusCodeSame(404);
 
-        static::createClient()->request('GET', '/hooks/' . $hook->id);
+        static::createClient()->request('GET', '/hook/' . $hook->id);
         self::assertResponseStatusCodeSame(401);
 
         $hook->delete();
@@ -78,7 +77,6 @@ class GetHookTest extends ApiTestCase
         $hooks = $this->generateHooks();
         $bearerToken = $this->getBearerToken([
             'hook_read',
-            'hook_write',
         ]);
 
         $response = static::createClient()->request('GET', '/hooks', ['auth_bearer' => $bearerToken]);
