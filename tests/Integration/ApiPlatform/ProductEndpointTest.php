@@ -133,6 +133,9 @@ class ProductEndpointTest extends ApiTestCase
                     'fr-FR' => '',
                 ],
                 'active' => false,
+                'shopIds' => [
+                    1,
+                ],
             ],
             $decodedResponse
         );
@@ -188,6 +191,9 @@ class ProductEndpointTest extends ApiTestCase
                     'fr-FR' => '',
                 ],
                 'active' => true,
+                'shopIds' => [
+                    1,
+                ],
             ],
             $decodedResponse
         );
@@ -221,6 +227,9 @@ class ProductEndpointTest extends ApiTestCase
                     'fr-FR' => '',
                 ],
                 'active' => true,
+                'shopIds' => [
+                    1,
+                ],
             ],
             $decodedResponse
         );
@@ -257,6 +266,9 @@ class ProductEndpointTest extends ApiTestCase
                     'fr-FR' => '',
                 ],
                 'active' => true,
+                'shopIds' => [
+                    1,
+                ],
             ],
             $decodedResponse
         );

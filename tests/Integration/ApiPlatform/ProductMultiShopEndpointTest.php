@@ -77,6 +77,9 @@ class ProductMultiShopEndpointTest extends ApiTestCase
                 'fr-FR' => '',
             ],
             'active' => false,
+            'shopIds' => [
+                self::DEFAULT_SHOP_ID,
+            ],
         ];
 
         $featureFlagManager = self::getContainer()->get('PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagManager');
@@ -202,6 +205,149 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         ), $content);
 
         return $productId;
+    }
+
+    /**
+     * @depends testGetProductForSecondShopIsFailing
+     *
+     * @param int $productId
+     *
+     * @return int
+     */
+    public function testAssociateProductToShops(int $productId): int
+    {
+        $allShopIds = [
+            self::DEFAULT_SHOP_ID,
+            self::$secondShopId,
+            self::$thirdShopId,
+            self::$fourthShopId,
+        ];
+        $bearerToken = $this->getBearerToken(['product_write']);
+        $response = static::createClient()->request('PATCH', '/product/' . $productId . '/shops', [
+            'auth_bearer' => $bearerToken,
+            'extra' => [
+                'parameters' => [
+                    'shopId' => self::DEFAULT_SHOP_ID,
+                ],
+            ],
+            'json' => [
+                'sourceShopId' => self::DEFAULT_SHOP_ID,
+                'associatedShopIds' => $allShopIds,
+            ],
+        ]);
+        $updatedProduct = json_decode($response->getContent(), true);
+        $this->assertEquals($productId, $updatedProduct['productId']);
+        $this->assertEquals($allShopIds, $updatedProduct['shopIds']);
+
+        return $productId;
+    }
+
+    /**
+     * @depends testAssociateProductToShops
+     *
+     * @param int $productId
+     *
+     * @return int
+     */
+    public function testUpdateProductForShops(int $productId): int
+    {
+        $bearerToken = $this->getBearerToken(['product_write']);
+        // Modify name for all shops
+        static::createClient()->request('PATCH', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+            'extra' => [
+                'parameters' => [
+                    'allShops' => true,
+                ],
+            ],
+            'json' => [
+                'names' => [
+                    'en-US' => 'global product name',
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        // Check that all shops have been modified
+        foreach ([self::DEFAULT_SHOP_ID, self::$secondShopId, self::$thirdShopId, self::$fourthShopId] as $shopId) {
+            $product = $this->getProduct($productId, $shopId);
+            $this->assertEquals('global product name', $product['names']['en-US']);
+        }
+
+        // Modify names for second group shop
+        static::createClient()->request('PATCH', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+            'extra' => [
+                'parameters' => [
+                    'shopGroupId' => self::$secondShopGroupId,
+                ],
+            ],
+            'json' => [
+                'names' => [
+                    'en-US' => 'second group product name',
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        // Modify names for first shop
+        static::createClient()->request('PATCH', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+            'extra' => [
+                'parameters' => [
+                    'shopId' => self::DEFAULT_SHOP_ID,
+                ],
+            ],
+            'json' => [
+                'names' => [
+                    'en-US' => 'first shop product name',
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        // Modify names for shop2 and shop4
+        static::createClient()->request('PATCH', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+            'extra' => [
+                'parameters' => [
+                    'shopIds' => [self::$secondShopId, self::$fourthShopId],
+                ],
+            ],
+            'json' => [
+                'names' => [
+                    'en-US' => 'even shops product name',
+                ],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        // Now check each shop modified content
+        $product = $this->getProduct($productId, self::DEFAULT_SHOP_ID);
+        $this->assertEquals('first shop product name', $product['names']['en-US']);
+        $product = $this->getProduct($productId, self::$secondShopId);
+        $this->assertEquals('even shops product name', $product['names']['en-US']);
+        $product = $this->getProduct($productId, self::$thirdShopId);
+        $this->assertEquals('second group product name', $product['names']['en-US']);
+        $product = $this->getProduct($productId, self::$fourthShopId);
+        $this->assertEquals('even shops product name', $product['names']['en-US']);
+
+        return $productId;
+    }
+
+    protected function getProduct(int $productId, int $shopId): array
+    {
+        $bearerToken = $this->getBearerToken(['product_read']);
+        $response = static::createClient()->request('GET', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+            'extra' => [
+                'parameters' => [
+                    'shopId' => $shopId,
+                ],
+            ],
+        ]);
+
+        return json_decode($response->getContent(), true);
     }
 
     protected function assertProductData(int $productId, array $expectedData, ResponseInterface $response): void

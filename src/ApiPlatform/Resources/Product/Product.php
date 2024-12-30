@@ -102,6 +102,9 @@ class Product
     #[LocalizedValue]
     public array $descriptions;
 
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
+    public array $shopIds;
+
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[_context][langId]' => '[displayLanguageId]',
