@@ -22,6 +22,10 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\ApiClientSettings;
+use PrestaShop\PrestaShop\Core\Util\String\RandomString;
+use Symfony\Component\HttpFoundation\Response;
+
 class ApiClientEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
@@ -321,5 +325,56 @@ class ApiClientEndpointTest extends ApiTestCase
             'auth_bearer' => $readBearerToken,
         ]);
         self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testCreateInvalidApiClient(): void
+    {
+        $bearerToken = $this->getBearerToken(['api_client_write']);
+        $response = static::createClient()->request('POST', '/api-client', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'clientId' => '',
+                'clientName' => '',
+                'description' => RandomString::generate(ApiClientSettings::MAX_DESCRIPTION_LENGTH + 1),
+                'lifetime' => 0,
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        // Get content without throwing exception since an error occurred, but we expected it
+        $decodedResponse = json_decode($response->getContent(false), true);
+        $this->assertNotFalse($decodedResponse);
+        $this->assertIsArray($decodedResponse);
+
+        $expectedErrors = [
+            [
+                'propertyPath' => 'clientId',
+                'message' => 'This value should not be blank.',
+            ],
+            [
+                'propertyPath' => 'clientId',
+                'message' => 'This value is too short. It should have 1 character or more.',
+            ],
+            [
+                'propertyPath' => 'clientName',
+                'message' => 'This value should not be blank.',
+            ],
+            [
+                'propertyPath' => 'clientName',
+                'message' => 'This value is too short. It should have 1 character or more.',
+            ],
+            [
+                'propertyPath' => 'lifetime',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'enabled',
+                'message' => 'This value should not be blank.',
+            ],
+            [
+                'propertyPath' => 'description',
+                'message' => sprintf('This value is too long. It should have %d characters or less.', ApiClientSettings::MAX_DESCRIPTION_LENGTH),
+            ],
+        ];
+        $this->assertValidationErrors($decodedResponse, $expectedErrors);
     }
 }
