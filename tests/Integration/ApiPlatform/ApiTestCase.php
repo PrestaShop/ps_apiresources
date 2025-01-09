@@ -186,6 +186,43 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return new UploadedFile($tmpUploadedImagePath, basename($assetFilePath));
     }
 
+    protected function assertValidationErrors(array $responseErrors, array $expectedErrors): void
+    {
+        foreach ($responseErrors as $errorDetail) {
+            $this->assertArrayHasKey('propertyPath', $errorDetail);
+            $this->assertArrayHasKey('message', $errorDetail);
+            $this->assertArrayHasKey('code', $errorDetail);
+
+            $errorFound = false;
+            foreach ($expectedErrors as $expectedError) {
+                if (
+                    (empty($expectedError['message']) || $expectedError['message'] === $errorDetail['message'])
+                    && (empty($expectedError['propertyPath']) || $expectedError['propertyPath'] === $errorDetail['propertyPath'])
+                ) {
+                    $errorFound = true;
+                    break;
+                }
+            }
+
+            $this->assertTrue($errorFound, 'Found error that was not expected: ' . var_export($errorDetail, true));
+        }
+
+        foreach ($expectedErrors as $expectedError) {
+            $errorFound = false;
+            foreach ($responseErrors as $errorDetail) {
+                if (
+                    (empty($expectedError['message']) || $expectedError['message'] === $errorDetail['message'])
+                    && (empty($expectedError['propertyPath']) || $expectedError['propertyPath'] === $errorDetail['propertyPath'])
+                ) {
+                    $errorFound = true;
+                    break;
+                }
+            }
+
+            $this->assertTrue($errorFound, 'Could not find expected error: ' . var_export($expectedError, true));
+        }
+    }
+
     protected static function createApiClient(array $scopes = [], int $lifetime = 10000): void
     {
         $command = new AddApiClientCommand(
