@@ -47,7 +47,7 @@ use Symfony\Component\HttpFoundation\File\File;
                 'module_write',
             ],
             CQRSCommandMapping: [
-                '[archive][pathName]' => '[source]',
+                '[archive].pathName' => '[source]',
             ],
         ),
     ],

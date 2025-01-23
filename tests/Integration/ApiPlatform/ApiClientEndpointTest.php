@@ -71,7 +71,8 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientId' => 'client_id_test',
                 'clientName' => 'Client name test',
                 'description' => 'Client description test',
-                'enabled' => true,
+                // Check that false can be used (previously bug because of a NotBlank constraint)
+                'enabled' => false,
                 'lifetime' => 3600,
                 'scopes' => [
                     'api_client_read',
@@ -121,7 +122,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientName' => 'Client name test',
                 'description' => 'Client description test',
                 'externalIssuer' => null,
-                'enabled' => true,
+                'enabled' => false,
                 'lifetime' => 3600,
                 'scopes' => [
                     'api_client_read',
@@ -152,7 +153,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientId' => 'client_id_test_updated',
                 'clientName' => 'Client name test updated',
                 'description' => 'Client description test updated',
-                'enabled' => false,
+                'enabled' => true,
                 'lifetime' => 1800,
                 'scopes' => [
                     'api_client_write',
@@ -172,7 +173,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientName' => 'Client name test updated',
                 'description' => 'Client description test updated',
                 'externalIssuer' => null,
-                'enabled' => false,
+                'enabled' => true,
                 'lifetime' => 1800,
                 'scopes' => [
                     'api_client_write',
@@ -203,7 +204,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientName' => 'Client name test updated',
                 'description' => 'Client description test partially updated',
                 'externalIssuer' => null,
-                'enabled' => false,
+                'enabled' => true,
                 'lifetime' => 900,
                 'scopes' => [
                     'api_client_write',
@@ -240,7 +241,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientName' => 'Client name test updated',
                 'description' => 'Client description test partially updated',
                 'externalIssuer' => null,
-                'enabled' => false,
+                'enabled' => true,
                 'lifetime' => 900,
                 'scopes' => [
                     'api_client_write',
@@ -274,7 +275,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'clientName' => 'Client name test updated',
                 'description' => 'Client description test partially updated',
                 'externalIssuer' => null,
-                'enabled' => false,
+                'enabled' => true,
                 'lifetime' => 900,
             ],
             $apiClients['items'][1],
@@ -368,7 +369,7 @@ class ApiClientEndpointTest extends ApiTestCase
             ],
             [
                 'propertyPath' => 'enabled',
-                'message' => 'This value should not be blank.',
+                'message' => 'This value should not be null.',
             ],
             [
                 'propertyPath' => 'description',

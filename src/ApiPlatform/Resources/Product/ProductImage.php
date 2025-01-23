@@ -58,7 +58,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
             CQRSQueryMapping: ProductImage::QUERY_MAPPING,
             CQRSCommandMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
-                '[image][pathName]' => '[filePath]',
+                '[image].pathName' => '[filePath]',
                 '[legends]' => '[localizedLegends]',
                 '[cover]' => '[isCover]',
             ]

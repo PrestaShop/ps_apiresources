@@ -43,7 +43,7 @@ use Symfony\Component\HttpFoundation\File\File;
             CQRSQueryMapping: NewProductImage::QUERY_MAPPING,
             CQRSCommandMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
-                '[image][pathName]' => '[pathName]',
+                '[image].pathName' => '[pathName]',
             ],
         ),
     ],

@@ -91,7 +91,7 @@ class ApiClient
 
     public ?string $externalIssuer;
 
-    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $enabled;
 
     #[Assert\NotBlank(groups: ['Create'])]
