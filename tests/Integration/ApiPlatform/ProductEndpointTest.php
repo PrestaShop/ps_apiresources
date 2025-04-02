@@ -33,6 +33,94 @@ use Tests\Resources\ResourceResetter;
 
 class ProductEndpointTest extends ApiTestCase
 {
+    protected static array $defaultProductData = [
+        'type' => ProductType::TYPE_STANDARD,
+        'names' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'descriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'shortDescriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'tags' => [],
+        'priceTaxExcluded' => 0.0,
+        'priceTaxIncluded' => 0.0,
+        'ecotaxTaxExcluded' => 0.0,
+        'ecotaxTaxIncluded' => 0.0,
+        'taxRulesGroupId' => 9,
+        'onSale' => false,
+        'wholesalePrice' => 0.0,
+        'unitPriceTaxExcluded' => 0.0,
+        'unitPriceTaxIncluded' => 0.0,
+        'unity' => '',
+        'unitPriceRatio' => 0.0,
+        'visibility' => 'both',
+        'availableForOrder' => true,
+        'onlineOnly' => false,
+        'showPrice' => true,
+        'condition' => 'new',
+        'showCondition' => false,
+        'manufacturerId' => 0,
+        'isbn' => '',
+        'upc' => '',
+        'gtin' => '',
+        'mpn' => '',
+        'reference' => '',
+        'width' => 0.0,
+        'height' => 0.0,
+        'depth' => 0.0,
+        'weight' => 0.0,
+        'additionalShippingCost' => 0.0,
+        'carrierReferenceIds' => [],
+        'deliveryTimeNoteType' => 1,
+        'deliveryTimeInStockNotes' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'deliveryTimeOutOfStockNotes' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'metaTitles' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'metaDescriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'linkRewrites' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'redirectType' => 'default',
+        'packStockType' => 3,
+        'outOfStockType' => 2,
+        'quantity' => 0,
+        'minimalQuantity' => 1,
+        'lowStockThreshold' => 0,
+        'lowStockAlertEnabled' => false,
+        'availableNowLabels' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'location' => '',
+        'availableLaterLabels' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'coverThumbnailUrl' => 'http://myshop.com/img/p/en-default-cart_default.jpg',
+        'active' => false,
+        'shopIds' => [
+            1,
+        ],
+    ];
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -128,6 +216,10 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'product name',
                     'fr-FR' => 'nom produit',
                 ],
+                'linkRewrites' => [
+                    'en-US' => 'product-name',
+                    'fr-FR' => 'nom-produit',
+                ],
                 'descriptions' => [
                     'en-US' => '',
                     'fr-FR' => '',
@@ -136,7 +228,7 @@ class ProductEndpointTest extends ApiTestCase
                 'shopIds' => [
                     1,
                 ],
-            ],
+            ] + self::$defaultProductData,
             $decodedResponse
         );
 
@@ -186,6 +278,10 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'product name',
                     'fr-FR' => 'nouveau nom',
                 ],
+                'linkRewrites' => [
+                    'en-US' => 'product-name',
+                    'fr-FR' => 'nom-produit',
+                ],
                 'descriptions' => [
                     'en-US' => 'new description',
                     'fr-FR' => '',
@@ -194,7 +290,7 @@ class ProductEndpointTest extends ApiTestCase
                 'shopIds' => [
                     1,
                 ],
-            ],
+            ] + self::$defaultProductData,
             $decodedResponse
         );
 
@@ -222,6 +318,10 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'new product name',
                     'fr-FR' => 'nouveau nom',
                 ],
+                'linkRewrites' => [
+                    'en-US' => 'product-name',
+                    'fr-FR' => 'nom-produit',
+                ],
                 'descriptions' => [
                     'en-US' => 'new description',
                     'fr-FR' => '',
@@ -230,7 +330,7 @@ class ProductEndpointTest extends ApiTestCase
                 'shopIds' => [
                     1,
                 ],
-            ],
+            ] + self::$defaultProductData,
             $decodedResponse
         );
 
@@ -261,6 +361,10 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'new product name',
                     'fr-FR' => 'nouveau nom',
                 ],
+                'linkRewrites' => [
+                    'en-US' => 'product-name',
+                    'fr-FR' => 'nom-produit',
+                ],
                 'descriptions' => [
                     'en-US' => 'new description',
                     'fr-FR' => '',
@@ -269,7 +373,7 @@ class ProductEndpointTest extends ApiTestCase
                 'shopIds' => [
                     1,
                 ],
-            ],
+            ] + self::$defaultProductData,
             $decodedResponse
         );
 

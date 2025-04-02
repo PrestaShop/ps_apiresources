@@ -102,6 +102,116 @@ class Product
     #[LocalizedValue]
     public array $descriptions;
 
+    #[LocalizedValue]
+    public array $shortDescriptions;
+
+    #[LocalizedValue]
+    public array $tags;
+
+    public float $priceTaxExcluded;
+
+    public float $priceTaxIncluded;
+
+    public float $ecotaxTaxExcluded;
+
+    public float $ecotaxTaxIncluded;
+
+    public int $taxRulesGroupId;
+
+    public bool $onSale;
+
+    public float $wholesalePrice;
+
+    public float $unitPriceTaxExcluded;
+
+    public float $unitPriceTaxIncluded;
+
+    public string $unity;
+
+    public float $unitPriceRatio;
+
+    public string $visibility;
+
+    public bool $availableForOrder;
+
+    public bool $onlineOnly;
+
+    public bool $showPrice;
+
+    public string $condition;
+
+    public bool $showCondition;
+
+    public int $manufacturerId;
+
+    public string $isbn;
+
+    public string $upc;
+
+    public string $gtin;
+
+    public string $mpn;
+
+    public string $reference;
+
+    public float $width;
+
+    public float $height;
+
+    public float $depth;
+
+    public float $weight;
+
+    public float $additionalShippingCost;
+
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    public array $carrierReferenceIds;
+
+    public int $deliveryTimeNoteType;
+
+    #[LocalizedValue]
+    public array $deliveryTimeInStockNotes;
+
+    #[LocalizedValue]
+    public array $deliveryTimeOutOfStockNotes;
+
+    #[LocalizedValue]
+    public array $metaTitles;
+
+    #[LocalizedValue]
+    public array $metaDescriptions;
+
+    #[LocalizedValue]
+    public array $linkRewrites;
+
+    public string $redirectType;
+
+    public ?int $redirectTargetId = null;
+
+    public int $packStockType;
+
+    public int $outOfStockType;
+
+    public int $quantity;
+
+    public int $minimalQuantity;
+
+    public int $lowStockThreshold;
+
+    public bool $lowStockAlertEnabled;
+
+    #[LocalizedValue]
+    public array $availableNowLabels;
+
+    public string $location;
+
+    #[LocalizedValue]
+    public array $availableLaterLabels;
+
+    public ?\DateTimeInterface $availableDate = null;
+
+    public string $coverThumbnailUrl;
+
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $shopIds;
 
@@ -110,6 +220,55 @@ class Product
         '[_context][langId]' => '[displayLanguageId]',
         '[basicInformation][localizedNames]' => '[names]',
         '[basicInformation][localizedDescriptions]' => '[descriptions]',
+        '[basicInformation][localizedShortDescriptions]' => '[shortDescriptions]',
+        '[basicInformation][localizedTags]' => '[tags]',
+        '[pricesInformation][price]' => '[priceTaxExcluded]',
+        '[pricesInformation][priceTaxIncluded]' => '[priceTaxIncluded]',
+        '[pricesInformation][ecotax]' => '[ecotaxTaxExcluded]',
+        '[pricesInformation][ecotaxTaxIncluded]' => '[ecotaxTaxIncluded]',
+        '[pricesInformation][taxRulesGroupId]' => '[taxRulesGroupId]',
+        '[pricesInformation][onSale]' => '[onSale]',
+        '[pricesInformation][wholesalePrice]' => '[wholesalePrice]',
+        '[pricesInformation][unitPrice]' => '[unitPriceTaxExcluded]',
+        '[pricesInformation][unitPriceTaxIncluded]' => '[unitPriceTaxIncluded]',
+        '[pricesInformation][unity]' => '[unity]',
+        '[pricesInformation][unitPriceRatio]' => '[unitPriceRatio]',
+        '[options][visibility]' => '[visibility]',
+        '[options][availableForOrder]' => '[availableForOrder]',
+        '[options][onlineOnly]' => '[onlineOnly]',
+        '[options][showPrice]' => '[showPrice]',
+        '[options][condition]' => '[condition]',
+        '[options][showCondition]' => '[showCondition]',
+        '[options][manufacturerId]' => '[manufacturerId]',
+        '[details][isbn]' => '[isbn]',
+        '[details][upc]' => '[upc]',
+        '[details][gtin]' => '[gtin]',
+        '[details][mpn]' => '[mpn]',
+        '[details][reference]' => '[reference]',
+        '[shippingInformation][width]' => '[width]',
+        '[shippingInformation][height]' => '[height]',
+        '[shippingInformation][depth]' => '[depth]',
+        '[shippingInformation][weight]' => '[weight]',
+        '[shippingInformation][additionalShippingCost]' => '[additionalShippingCost]',
+        '[shippingInformation][carrierReferences]' => '[carrierReferenceIds]',
+        '[shippingInformation][deliveryTimeNoteType]' => '[deliveryTimeNoteType]',
+        '[shippingInformation][localizedDeliveryTimeInStockNotes]' => '[deliveryTimeInStockNotes]',
+        '[shippingInformation][localizedDeliveryTimeOutOfStockNotes]' => '[deliveryTimeOutOfStockNotes]',
+        '[productSeoOptions][localizedMetaTitles]' => '[metaTitles]',
+        '[productSeoOptions][localizedMetaDescriptions]' => '[metaDescriptions]',
+        '[productSeoOptions][localizedLinkRewrites]' => '[linkRewrites]',
+        '[productSeoOptions][redirectType]' => '[redirectType]',
+        '[productSeoOptions][redirectTarget][id]' => '[redirectTargetId]',
+        '[stockInformation][packStockType]' => '[packStockType]',
+        '[stockInformation][outOfStockType]' => '[outOfStockType]',
+        '[stockInformation][quantity]' => '[quantity]',
+        '[stockInformation][minimalQuantity]' => '[minimalQuantity]',
+        '[stockInformation][lowStockThreshold]' => '[lowStockThreshold]',
+        '[stockInformation][lowStockAlertEnabled]' => '[lowStockAlertEnabled]',
+        '[stockInformation][localizedAvailableNowLabels]' => '[availableNowLabels]',
+        '[stockInformation][localizedAvailableLaterLabels]' => '[availableLaterLabels]',
+        '[stockInformation][location]' => '[location]',
+        '[stockInformation][availableDate]' => '[availableDate]',
     ];
 
     public const UPDATE_MAPPING = [
@@ -117,5 +276,13 @@ class Product
         '[type]' => '[productType]',
         '[names]' => '[localizedNames]',
         '[descriptions]' => '[localizedDescriptions]',
+        '[shortDescriptions]' => '[localizedShortDescriptions]',
+        '[metaTitles]' => '[localizedMetaTitles]',
+        '[metaDescriptions]' => '[localizedMetaDescriptions]',
+        '[linkRewrites]' => '[localizedLinkRewrites]',
+        '[deliveryTimeInStockNotes]' => '[localizedDeliveryTimeInStockNotes]',
+        '[deliveryTimeOutOfStockNotes]' => '[localizedDeliveryTimeOutOfStockNotes]',
+        '[availableNowLabels]' => '[localizedAvailableNowLabels]',
+        '[availableLaterLabels]' => '[localizedAvailableLaterLabels]',
     ];
 }

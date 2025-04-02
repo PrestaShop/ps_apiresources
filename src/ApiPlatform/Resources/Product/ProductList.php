@@ -41,7 +41,8 @@ use Symfony\Component\HttpFoundation\Response;
             scopes: ['product_read'],
             ApiResourceMapping: [
                 '[id_product]' => '[productId]',
-                '[final_price_tax_excluded]' => '[price]',
+                '[final_price_tax_excluded]' => '[priceTaxExcluded]',
+                '[final_price_tax_included]' => '[priceTaxIncluded]',
             ],
             gridDataFactory: ProductGridDataFactoryDecorator::class,
             filtersClass: ProductFilters::class,
@@ -65,7 +66,9 @@ class ProductList
 
     public int $quantity;
 
-    public string $price;
+    public float $priceTaxExcluded;
+
+    public float $priceTaxIncluded;
 
     public string $category;
 }
