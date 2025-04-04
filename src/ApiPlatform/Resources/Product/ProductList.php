@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Adapter\Product\Grid\Data\Factory\ProductGridDataFactoryDecorator;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopAssociationNotFound;
@@ -41,8 +42,8 @@ use Symfony\Component\HttpFoundation\Response;
             scopes: ['product_read'],
             ApiResourceMapping: [
                 '[id_product]' => '[productId]',
-                '[final_price_tax_excluded]' => '[priceTaxExcluded]',
-                '[final_price_tax_included]' => '[priceTaxIncluded]',
+                '[price_tax_excluded_decimal_value]' => '[priceTaxExcluded]',
+                '[price_tax_included_decimal_value]' => '[priceTaxIncluded]',
             ],
             gridDataFactory: ProductGridDataFactoryDecorator::class,
             filtersClass: ProductFilters::class,
@@ -66,9 +67,9 @@ class ProductList
 
     public int $quantity;
 
-    public float $priceTaxExcluded;
+    public DecimalNumber $priceTaxExcluded;
 
-    public float $priceTaxIncluded;
+    public DecimalNumber $priceTaxIncluded;
 
     public string $category;
 }

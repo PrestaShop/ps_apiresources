@@ -82,7 +82,8 @@ class ProductListingEndpointTest extends ApiTestCase
         self::assertEquals([], $returnedProduct->filters);
         self::assertEquals('Customizable mug', $returnedProduct->items[0]->name);
         self::assertEquals(300, $returnedProduct->items[0]->quantity);
-        self::assertEquals('13.900000', $returnedProduct->items[0]->price);
+        self::assertEquals('13.900000', $returnedProduct->items[0]->priceTaxExcluded);
+        self::assertEquals('14.734000', $returnedProduct->items[0]->priceTaxIncluded);
         self::assertEquals('Home Accessories', $returnedProduct->items[0]->category);
         self::assertTrue($returnedProduct->items[0]->active);
 
