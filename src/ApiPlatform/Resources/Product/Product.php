@@ -208,7 +208,7 @@ class Product
     #[LocalizedValue]
     public array $availableLaterLabels;
 
-    public ?\DateTimeInterface $availableDate = null;
+    public ?\DateTimeImmutable $availableDate = null;
 
     public string $coverThumbnailUrl;
 
@@ -285,5 +285,10 @@ class Product
         '[availableNowLabels]' => '[localizedAvailableNowLabels]',
         '[availableLaterLabels]' => '[localizedAvailableLaterLabels]',
         '[priceTaxExcluded]' => '[price]',
+        '[unitPriceTaxExcluded]' => '[unitPrice]',
+        '[ecotaxTaxExcluded]' => '[ecotax]',
+        // Group inputs in a sublevel to be called with the setRedirectOption setter
+        '[redirectType]' => '[redirectOption][redirectType]',
+        '[redirectTargetId]' => '[redirectOption][redirectTarget]',
     ];
 }

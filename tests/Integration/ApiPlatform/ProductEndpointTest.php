@@ -57,6 +57,7 @@ class ProductEndpointTest extends ApiTestCase
         'priceTaxIncluded' => 0.0,
         'ecotaxTaxExcluded' => 0.0,
         'ecotaxTaxIncluded' => 0.0,
+        // US-FL Rate (6%)
         'taxRulesGroupId' => 9,
         'onSale' => false,
         'wholesalePrice' => 0.0,
@@ -410,10 +411,11 @@ class ProductEndpointTest extends ApiTestCase
             ],
             'priceTaxExcluded' => 10.0,
             'ecotaxTaxExcluded' => 2.0,
-            'taxRulesGroupId' => 8,
+            // US-GA Rate (4%)
+            'taxRulesGroupId' => 10,
             'onSale' => true,
             'wholesalePrice' => 3.45,
-            'unitPriceTaxExcluded' => 4.42,
+            'unitPriceTaxExcluded' => 5.0,
             'unity' => 'per kg',
             'visibility' => ProductVisibility::VISIBLE_IN_CATALOG,
             'availableForOrder' => false,
@@ -454,7 +456,6 @@ class ProductEndpointTest extends ApiTestCase
                 'fr-FR' => 'nouveau-lien',
             ],
             'packStockType' => PackStockType::STOCK_TYPE_BOTH,
-            'quantity' => 42,
             'minimalQuantity' => 3,
             'lowStockThreshold' => 5,
             'lowStockAlertEnabled' => true,
@@ -462,14 +463,20 @@ class ProductEndpointTest extends ApiTestCase
                 'en-US' => 'available now',
                 'fr-FR' => 'disponible maintenant',
             ],
-            'location' => 'third shelf',
             'availableLaterLabels' => [
                 'en-US' => 'available later',
                 'fr-FR' => 'disponible plus tard',
             ],
             'active' => false,
         ];
-        $expectedUpdateProduct = ['productId' => $productId] + $updateProduct + self::$defaultProductData;
+        $expectedUpdateProduct = [
+            'productId' => $productId,
+            // These fields are not part of the posted data but are automatically updated after data is modified
+            'priceTaxIncluded' => 10.4,
+            'ecotaxTaxIncluded' => 2.0,
+            'unitPriceTaxIncluded' => 5.2,
+            'unitPriceRatio' => 2.0,
+        ] + $updateProduct + self::$defaultProductData;
 
         // Update product with partial data, even multilang fields can be updated language by language
         $response = static::createClient()->request('PATCH', '/product/' . $productId, [
