@@ -22,7 +22,12 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Product\Pack\ValueObject\PackStockType;
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\ValueObject\OutOfStockType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\DeliveryTimeNoteType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductCondition;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductVisibility;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\ProductGridDefinitionFactory;
 use PrestaShop\PrestaShop\Core\Grid\Query\ProductQueryBuilder;
@@ -59,11 +64,11 @@ class ProductEndpointTest extends ApiTestCase
         'unitPriceTaxIncluded' => 0.0,
         'unity' => '',
         'unitPriceRatio' => 0.0,
-        'visibility' => 'both',
+        'visibility' => ProductVisibility::VISIBLE_EVERYWHERE,
         'availableForOrder' => true,
         'onlineOnly' => false,
         'showPrice' => true,
-        'condition' => 'new',
+        'condition' => ProductCondition::NEW,
         'showCondition' => false,
         'manufacturerId' => 0,
         'isbn' => '',
@@ -77,7 +82,7 @@ class ProductEndpointTest extends ApiTestCase
         'weight' => 0.0,
         'additionalShippingCost' => 0.0,
         'carrierReferenceIds' => [],
-        'deliveryTimeNoteType' => 1,
+        'deliveryTimeNoteType' => DeliveryTimeNoteType::TYPE_DEFAULT,
         'deliveryTimeInStockNotes' => [
             'en-US' => '',
             'fr-FR' => '',
@@ -99,8 +104,8 @@ class ProductEndpointTest extends ApiTestCase
             'fr-FR' => '',
         ],
         'redirectType' => 'default',
-        'packStockType' => 3,
-        'outOfStockType' => 2,
+        'packStockType' => PackStockType::STOCK_TYPE_DEFAULT,
+        'outOfStockType' => OutOfStockType::OUT_OF_STOCK_DEFAULT,
         'quantity' => 0,
         'minimalQuantity' => 1,
         'lowStockThreshold' => 0,
@@ -381,7 +386,118 @@ class ProductEndpointTest extends ApiTestCase
     }
 
     /**
-     * @depends testGetProduct
+     * @depends testPartialUpdateProduct
+     *
+     * @param int $productId
+     */
+    public function testUpdateAllProductFields(int $productId): int
+    {
+        $bearerToken = $this->getBearerToken(['product_read', 'product_write']);
+
+        $updateProduct = [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'new name',
+                'fr-FR' => 'nouveau nom',
+            ],
+            'descriptions' => [
+                'en-US' => 'new description',
+                'fr-FR' => 'nouvelle description',
+            ],
+            'shortDescriptions' => [
+                'en-US' => 'new short description',
+                'fr-FR' => 'nouvelle description courte',
+            ],
+            'priceTaxExcluded' => 10.0,
+            'ecotaxTaxExcluded' => 2.0,
+            'taxRulesGroupId' => 8,
+            'onSale' => true,
+            'wholesalePrice' => 3.45,
+            'unitPriceTaxExcluded' => 4.42,
+            'unity' => 'per kg',
+            'visibility' => ProductVisibility::VISIBLE_IN_CATALOG,
+            'availableForOrder' => false,
+            'onlineOnly' => true,
+            'showPrice' => false,
+            'condition' => ProductCondition::USED,
+            'showCondition' => false,
+            'manufacturerId' => 1,
+            'isbn' => '978-3-16-148410-0',
+            'upc' => '72527273070',
+            'gtin' => '978020137962',
+            'mpn' => 'mpn1',
+            'reference' => 'ref1',
+            'width' => 10.20,
+            'height' => 90.60,
+            'depth' => 32.70,
+            'weight' => 10.07,
+            'additionalShippingCost' => 1.2,
+            'deliveryTimeNoteType' => DeliveryTimeNoteType::TYPE_SPECIFIC,
+            'deliveryTimeInStockNotes' => [
+                'en-US' => 'under 2 days',
+                'fr-FR' => 'moins de 2 jours',
+            ],
+            'deliveryTimeOutOfStockNotes' => [
+                'en-US' => 'one month',
+                'fr-FR' => 'un mois',
+            ],
+            'metaTitles' => [
+                'en-US' => 'new meta title',
+                'fr-FR' => 'nouveau titre meta',
+            ],
+            'metaDescriptions' => [
+                'en-US' => 'new meta description',
+                'fr-FR' => 'nouvelle description meta',
+            ],
+            'linkRewrites' => [
+                'en-US' => 'new-link',
+                'fr-FR' => 'nouveau-lien',
+            ],
+            'packStockType' => PackStockType::STOCK_TYPE_BOTH,
+            'quantity' => 42,
+            'minimalQuantity' => 3,
+            'lowStockThreshold' => 5,
+            'lowStockAlertEnabled' => true,
+            'availableNowLabels' => [
+                'en-US' => 'available now',
+                'fr-FR' => 'disponible maintenant',
+            ],
+            'location' => 'third shelf',
+            'availableLaterLabels' => [
+                'en-US' => 'available later',
+                'fr-FR' => 'disponible plus tard',
+            ],
+            'active' => false,
+        ];
+        $expectedUpdateProduct = ['productId' => $productId] + $updateProduct + self::$defaultProductData;
+
+        // Update product with partial data, even multilang fields can be updated language by language
+        $response = static::createClient()->request('PATCH', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+            'headers' => [
+                'content-type' => 'application/merge-patch+json',
+            ],
+            'json' => $updateProduct,
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        // Check updated response
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertEquals($expectedUpdateProduct, $decodedResponse);
+
+        // Now check the result when we GET the product
+        $response = static::createClient()->request('GET', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertEquals($expectedUpdateProduct, $decodedResponse);
+
+        return $productId;
+    }
+
+    /**
+     * @depends testUpdateAllProductFields
      *
      * @param int $productId
      */

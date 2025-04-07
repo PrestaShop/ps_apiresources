@@ -284,5 +284,6 @@ class Product
         '[deliveryTimeOutOfStockNotes]' => '[localizedDeliveryTimeOutOfStockNotes]',
         '[availableNowLabels]' => '[localizedAvailableNowLabels]',
         '[availableLaterLabels]' => '[localizedAvailableLaterLabels]',
+        '[priceTaxExcluded]' => '[price]',
     ];
 }
