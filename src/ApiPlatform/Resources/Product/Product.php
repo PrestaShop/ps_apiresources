@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AddProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\DeleteProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
@@ -108,27 +109,27 @@ class Product
     #[LocalizedValue]
     public array $tags;
 
-    public float $priceTaxExcluded;
+    public DecimalNumber $priceTaxExcluded;
 
-    public float $priceTaxIncluded;
+    public DecimalNumber $priceTaxIncluded;
 
-    public float $ecotaxTaxExcluded;
+    public DecimalNumber $ecotaxTaxExcluded;
 
-    public float $ecotaxTaxIncluded;
+    public DecimalNumber $ecotaxTaxIncluded;
 
     public int $taxRulesGroupId;
 
     public bool $onSale;
 
-    public float $wholesalePrice;
+    public DecimalNumber $wholesalePrice;
 
-    public float $unitPriceTaxExcluded;
+    public DecimalNumber $unitPriceTaxExcluded;
 
-    public float $unitPriceTaxIncluded;
+    public DecimalNumber $unitPriceTaxIncluded;
 
     public string $unity;
 
-    public float $unitPriceRatio;
+    public DecimalNumber $unitPriceRatio;
 
     public string $visibility;
 
@@ -154,15 +155,15 @@ class Product
 
     public string $reference;
 
-    public float $width;
+    public DecimalNumber $width;
 
-    public float $height;
+    public DecimalNumber $height;
 
-    public float $depth;
+    public DecimalNumber $depth;
 
-    public float $weight;
+    public DecimalNumber $weight;
 
-    public float $additionalShippingCost;
+    public DecimalNumber $additionalShippingCost;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $carrierReferenceIds;
@@ -186,7 +187,7 @@ class Product
 
     public string $redirectType;
 
-    public ?int $redirectTargetId = null;
+    public ?int $redirectTarget = null;
 
     public int $packStockType;
 
@@ -258,7 +259,7 @@ class Product
         '[productSeoOptions][localizedMetaDescriptions]' => '[metaDescriptions]',
         '[productSeoOptions][localizedLinkRewrites]' => '[linkRewrites]',
         '[productSeoOptions][redirectType]' => '[redirectType]',
-        '[productSeoOptions][redirectTarget][id]' => '[redirectTargetId]',
+        '[productSeoOptions][redirectTarget][id]' => '[redirectTarget]',
         '[stockInformation][packStockType]' => '[packStockType]',
         '[stockInformation][outOfStockType]' => '[outOfStockType]',
         '[stockInformation][quantity]' => '[quantity]',
@@ -287,8 +288,5 @@ class Product
         '[priceTaxExcluded]' => '[price]',
         '[unitPriceTaxExcluded]' => '[unitPrice]',
         '[ecotaxTaxExcluded]' => '[ecotax]',
-        // Group inputs in a sublevel to be called with the setRedirectOption setter
-        '[redirectType]' => '[redirectOption][redirectType]',
-        '[redirectTargetId]' => '[redirectOption][redirectTarget]',
     ];
 }

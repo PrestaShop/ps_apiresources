@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\AddCustomerGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\DeleteCustomerGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\EditCustomerGroupCommand;
@@ -106,7 +107,7 @@ class CustomerGroup
     #[LocalizedValue]
     public array $localizedNames;
 
-    public float $reductionPercent;
+    public DecimalNumber $reductionPercent;
 
     public bool $displayPriceTaxExcluded;
 

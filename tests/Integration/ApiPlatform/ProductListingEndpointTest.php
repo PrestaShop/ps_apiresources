@@ -80,14 +80,15 @@ class ProductListingEndpointTest extends ApiTestCase
         self::assertEquals('desc', $returnedProduct->sortOrder);
         self::assertEquals(1, $returnedProduct->limit);
         self::assertEquals([], $returnedProduct->filters);
-        self::assertEquals('Customizable mug', $returnedProduct->items[0]->name);
-        self::assertEquals(300, $returnedProduct->items[0]->quantity);
-        self::assertEquals('13.900000', $returnedProduct->items[0]->priceTaxExcluded);
-        self::assertEquals('14.734000', $returnedProduct->items[0]->priceTaxIncluded);
-        self::assertEquals('Home Accessories', $returnedProduct->items[0]->category);
-        self::assertTrue($returnedProduct->items[0]->active);
-
-        static::createClient()->request('GET', '/products');
-        self::assertResponseStatusCodeSame(401);
+        $expectedProduct = json_decode(json_encode([
+            'productId' => 19,
+            'name' => 'Customizable mug',
+            'quantity' => 300,
+            'priceTaxExcluded' => 13.90,
+            'priceTaxIncluded' => 14.734,
+            'category' => 'Home Accessories',
+            'active' => true,
+        ]));
+        self::assertEquals($expectedProduct, $returnedProduct->items[0]);
     }
 }

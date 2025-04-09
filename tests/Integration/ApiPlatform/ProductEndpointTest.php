@@ -28,6 +28,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\DeliveryTimeNoteType;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductCondition;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductVisibility;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\RedirectType;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\ProductGridDefinitionFactory;
 use PrestaShop\PrestaShop\Core\Grid\Query\ProductQueryBuilder;
@@ -104,7 +105,7 @@ class ProductEndpointTest extends ApiTestCase
             'en-US' => '',
             'fr-FR' => '',
         ],
-        'redirectType' => 'default',
+        'redirectType' => RedirectType::TYPE_DEFAULT,
         'packStockType' => PackStockType::STOCK_TYPE_DEFAULT,
         'outOfStockType' => OutOfStockType::OUT_OF_STOCK_DEFAULT,
         'quantity' => 0,
@@ -468,7 +469,14 @@ class ProductEndpointTest extends ApiTestCase
                 'fr-FR' => 'disponible plus tard',
             ],
             'active' => false,
+            // Multi-parameters setter
+            'redirectOption' => [
+                'redirectType' => RedirectType::TYPE_CATEGORY_PERMANENT,
+                'redirectTarget' => 1,
+            ],
         ];
+
+        // Build expected data
         $expectedUpdateProduct = [
             'productId' => $productId,
             // These fields are not part of the posted data but are automatically updated after data is modified
@@ -477,6 +485,11 @@ class ProductEndpointTest extends ApiTestCase
             'unitPriceTaxIncluded' => 5.2,
             'unitPriceRatio' => 2.0,
         ] + $updateProduct + self::$defaultProductData;
+
+        // Redirect options are passed as a sub object but they are returned independently when product is read
+        unset($expectedUpdateProduct['redirectOption']);
+        $expectedUpdateProduct['redirectType'] = RedirectType::TYPE_CATEGORY_PERMANENT;
+        $expectedUpdateProduct['redirectTarget'] = 1;
 
         // Update product with partial data, even multilang fields can be updated language by language
         $response = static::createClient()->request('PATCH', '/product/' . $productId, [
