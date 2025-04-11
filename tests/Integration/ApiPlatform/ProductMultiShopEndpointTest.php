@@ -44,7 +44,93 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     protected static int $thirdShopId;
     protected static int $fourthShopId;
 
-    protected static array $defaultProductData;
+    protected static array $defaultProductData = [
+        'type' => ProductType::TYPE_STANDARD,
+        'names' => [
+            'en-US' => 'product name',
+            'fr-FR' => 'nom produit',
+        ],
+        'descriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'shortDescriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'tags' => [],
+        'priceTaxExcluded' => 0.0,
+        'priceTaxIncluded' => 0.0,
+        'ecotaxTaxExcluded' => 0.0,
+        'ecotaxTaxIncluded' => 0.0,
+        'taxRulesGroupId' => 9,
+        'onSale' => false,
+        'wholesalePrice' => 0.0,
+        'unitPriceTaxExcluded' => 0.0,
+        'unitPriceTaxIncluded' => 0.0,
+        'unity' => '',
+        'unitPriceRatio' => 0.0,
+        'visibility' => 'both',
+        'availableForOrder' => true,
+        'onlineOnly' => false,
+        'showPrice' => true,
+        'condition' => 'new',
+        'showCondition' => false,
+        'manufacturerId' => 0,
+        'isbn' => '',
+        'upc' => '',
+        'gtin' => '',
+        'mpn' => '',
+        'reference' => '',
+        'width' => 0.0,
+        'height' => 0.0,
+        'depth' => 0.0,
+        'weight' => 0.0,
+        'additionalShippingCost' => 0.0,
+        'carrierReferenceIds' => [],
+        'deliveryTimeNoteType' => 1,
+        'deliveryTimeInStockNotes' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'deliveryTimeOutOfStockNotes' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'metaTitles' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'metaDescriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'linkRewrites' => [
+            'en-US' => 'product-name',
+            'fr-FR' => 'nom-produit',
+        ],
+        'redirectType' => 'default',
+        'packStockType' => 3,
+        'outOfStockType' => 2,
+        'quantity' => 0,
+        'minimalQuantity' => 1,
+        'lowStockThreshold' => 0,
+        'lowStockAlertEnabled' => false,
+        'availableNowLabels' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'location' => '',
+        'availableLaterLabels' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'coverThumbnailUrl' => 'http://myshop.com/img/p/en-default-cart_default.jpg',
+        'active' => false,
+        'shopIds' => [
+            self::DEFAULT_SHOP_ID,
+        ],
+    ];
 
     public static function setUpBeforeClass(): void
     {
@@ -65,22 +151,6 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         self::$thirdShopId = self::addShop('Third shop', self::$secondShopGroupId);
         self::$fourthShopId = self::addShop('Fourth shop', self::$secondShopGroupId);
         self::createApiClient(['product_write', 'product_read']);
-
-        self::$defaultProductData = [
-            'type' => ProductType::TYPE_STANDARD,
-            'names' => [
-                'en-US' => 'product name',
-                'fr-FR' => 'nom produit',
-            ],
-            'descriptions' => [
-                'en-US' => '',
-                'fr-FR' => '',
-            ],
-            'active' => false,
-            'shopIds' => [
-                self::DEFAULT_SHOP_ID,
-            ],
-        ];
 
         $featureFlagManager = self::getContainer()->get('PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagManager');
         $featureFlagManager->enable(FeatureFlagSettings::FEATURE_FLAG_ADMIN_API_MULTISTORE);
@@ -353,7 +423,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     protected function assertProductData(int $productId, array $expectedData, ResponseInterface $response): void
     {
         // Merge expected data with default one, this way no need to always specify all the fields
-        $checkedData = array_merge(self::$defaultProductData, ['productId' => $productId], $expectedData);
+        $checkedData = $expectedData + ['productId' => $productId] + self::$defaultProductData;
         $decodedResponse = json_decode($response->getContent(), true);
         $this->assertNotFalse($decodedResponse);
         $this->assertNotFalse($decodedResponse);

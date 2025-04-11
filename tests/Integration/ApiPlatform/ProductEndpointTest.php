@@ -22,7 +22,13 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Product\Pack\ValueObject\PackStockType;
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\ValueObject\OutOfStockType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\DeliveryTimeNoteType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductCondition;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductVisibility;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\RedirectType;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\ProductGridDefinitionFactory;
 use PrestaShop\PrestaShop\Core\Grid\Query\ProductQueryBuilder;
@@ -33,6 +39,95 @@ use Tests\Resources\ResourceResetter;
 
 class ProductEndpointTest extends ApiTestCase
 {
+    protected static array $defaultProductData = [
+        'type' => ProductType::TYPE_STANDARD,
+        'names' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'descriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'shortDescriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'tags' => [],
+        'priceTaxExcluded' => 0.0,
+        'priceTaxIncluded' => 0.0,
+        'ecotaxTaxExcluded' => 0.0,
+        'ecotaxTaxIncluded' => 0.0,
+        // US-FL Rate (6%)
+        'taxRulesGroupId' => 9,
+        'onSale' => false,
+        'wholesalePrice' => 0.0,
+        'unitPriceTaxExcluded' => 0.0,
+        'unitPriceTaxIncluded' => 0.0,
+        'unity' => '',
+        'unitPriceRatio' => 0.0,
+        'visibility' => ProductVisibility::VISIBLE_EVERYWHERE,
+        'availableForOrder' => true,
+        'onlineOnly' => false,
+        'showPrice' => true,
+        'condition' => ProductCondition::NEW,
+        'showCondition' => false,
+        'manufacturerId' => 0,
+        'isbn' => '',
+        'upc' => '',
+        'gtin' => '',
+        'mpn' => '',
+        'reference' => '',
+        'width' => 0.0,
+        'height' => 0.0,
+        'depth' => 0.0,
+        'weight' => 0.0,
+        'additionalShippingCost' => 0.0,
+        'carrierReferenceIds' => [],
+        'deliveryTimeNoteType' => DeliveryTimeNoteType::TYPE_DEFAULT,
+        'deliveryTimeInStockNotes' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'deliveryTimeOutOfStockNotes' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'metaTitles' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'metaDescriptions' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'linkRewrites' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'redirectType' => RedirectType::TYPE_DEFAULT,
+        'packStockType' => PackStockType::STOCK_TYPE_DEFAULT,
+        'outOfStockType' => OutOfStockType::OUT_OF_STOCK_DEFAULT,
+        'quantity' => 0,
+        'minimalQuantity' => 1,
+        'lowStockThreshold' => 0,
+        'lowStockAlertEnabled' => false,
+        'availableNowLabels' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'location' => '',
+        'availableLaterLabels' => [
+            'en-US' => '',
+            'fr-FR' => '',
+        ],
+        'coverThumbnailUrl' => 'http://myshop.com/img/p/en-default-cart_default.jpg',
+        'active' => false,
+        'shopIds' => [
+            1,
+        ],
+    ];
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -128,6 +223,10 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'product name',
                     'fr-FR' => 'nom produit',
                 ],
+                'linkRewrites' => [
+                    'en-US' => 'product-name',
+                    'fr-FR' => 'nom-produit',
+                ],
                 'descriptions' => [
                     'en-US' => '',
                     'fr-FR' => '',
@@ -136,7 +235,7 @@ class ProductEndpointTest extends ApiTestCase
                 'shopIds' => [
                     1,
                 ],
-            ],
+            ] + self::$defaultProductData,
             $decodedResponse
         );
 
@@ -186,6 +285,10 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'product name',
                     'fr-FR' => 'nouveau nom',
                 ],
+                'linkRewrites' => [
+                    'en-US' => 'product-name',
+                    'fr-FR' => 'nom-produit',
+                ],
                 'descriptions' => [
                     'en-US' => 'new description',
                     'fr-FR' => '',
@@ -194,7 +297,7 @@ class ProductEndpointTest extends ApiTestCase
                 'shopIds' => [
                     1,
                 ],
-            ],
+            ] + self::$defaultProductData,
             $decodedResponse
         );
 
@@ -222,6 +325,10 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'new product name',
                     'fr-FR' => 'nouveau nom',
                 ],
+                'linkRewrites' => [
+                    'en-US' => 'product-name',
+                    'fr-FR' => 'nom-produit',
+                ],
                 'descriptions' => [
                     'en-US' => 'new description',
                     'fr-FR' => '',
@@ -230,7 +337,7 @@ class ProductEndpointTest extends ApiTestCase
                 'shopIds' => [
                     1,
                 ],
-            ],
+            ] + self::$defaultProductData,
             $decodedResponse
         );
 
@@ -261,6 +368,10 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'new product name',
                     'fr-FR' => 'nouveau nom',
                 ],
+                'linkRewrites' => [
+                    'en-US' => 'product-name',
+                    'fr-FR' => 'nom-produit',
+                ],
                 'descriptions' => [
                     'en-US' => 'new description',
                     'fr-FR' => '',
@@ -269,7 +380,7 @@ class ProductEndpointTest extends ApiTestCase
                 'shopIds' => [
                     1,
                 ],
-            ],
+            ] + self::$defaultProductData,
             $decodedResponse
         );
 
@@ -277,7 +388,136 @@ class ProductEndpointTest extends ApiTestCase
     }
 
     /**
-     * @depends testGetProduct
+     * @depends testPartialUpdateProduct
+     *
+     * @param int $productId
+     */
+    public function testUpdateAllProductFields(int $productId): int
+    {
+        $bearerToken = $this->getBearerToken(['product_read', 'product_write']);
+
+        $updateProduct = [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'new name',
+                'fr-FR' => 'nouveau nom',
+            ],
+            'descriptions' => [
+                'en-US' => 'new description',
+                'fr-FR' => 'nouvelle description',
+            ],
+            'shortDescriptions' => [
+                'en-US' => 'new short description',
+                'fr-FR' => 'nouvelle description courte',
+            ],
+            'priceTaxExcluded' => 10.0,
+            'ecotaxTaxExcluded' => 2.0,
+            // US-GA Rate (4%)
+            'taxRulesGroupId' => 10,
+            'onSale' => true,
+            'wholesalePrice' => 3.45,
+            'unitPriceTaxExcluded' => 5.0,
+            'unity' => 'per kg',
+            'visibility' => ProductVisibility::VISIBLE_IN_CATALOG,
+            'availableForOrder' => false,
+            'onlineOnly' => true,
+            'showPrice' => false,
+            'condition' => ProductCondition::USED,
+            'showCondition' => false,
+            'manufacturerId' => 1,
+            'isbn' => '978-3-16-148410-0',
+            'upc' => '72527273070',
+            'gtin' => '978020137962',
+            'mpn' => 'mpn1',
+            'reference' => 'ref1',
+            'width' => 10.20,
+            'height' => 90.60,
+            'depth' => 32.70,
+            'weight' => 10.07,
+            'additionalShippingCost' => 1.2,
+            'deliveryTimeNoteType' => DeliveryTimeNoteType::TYPE_SPECIFIC,
+            'deliveryTimeInStockNotes' => [
+                'en-US' => 'under 2 days',
+                'fr-FR' => 'moins de 2 jours',
+            ],
+            'deliveryTimeOutOfStockNotes' => [
+                'en-US' => 'one month',
+                'fr-FR' => 'un mois',
+            ],
+            'metaTitles' => [
+                'en-US' => 'new meta title',
+                'fr-FR' => 'nouveau titre meta',
+            ],
+            'metaDescriptions' => [
+                'en-US' => 'new meta description',
+                'fr-FR' => 'nouvelle description meta',
+            ],
+            'linkRewrites' => [
+                'en-US' => 'new-link',
+                'fr-FR' => 'nouveau-lien',
+            ],
+            'packStockType' => PackStockType::STOCK_TYPE_BOTH,
+            'minimalQuantity' => 3,
+            'lowStockThreshold' => 5,
+            'lowStockAlertEnabled' => true,
+            'availableNowLabels' => [
+                'en-US' => 'available now',
+                'fr-FR' => 'disponible maintenant',
+            ],
+            'availableLaterLabels' => [
+                'en-US' => 'available later',
+                'fr-FR' => 'disponible plus tard',
+            ],
+            'active' => false,
+            // Multi-parameters setter
+            'redirectOption' => [
+                'redirectType' => RedirectType::TYPE_CATEGORY_PERMANENT,
+                'redirectTarget' => 1,
+            ],
+        ];
+
+        // Build expected data
+        $expectedUpdateProduct = [
+            'productId' => $productId,
+            // These fields are not part of the posted data but are automatically updated after data is modified
+            'priceTaxIncluded' => 10.4,
+            'ecotaxTaxIncluded' => 2.0,
+            'unitPriceTaxIncluded' => 5.2,
+            'unitPriceRatio' => 2.0,
+        ] + $updateProduct + self::$defaultProductData;
+
+        // Redirect options are passed as a sub object but they are returned independently when product is read
+        unset($expectedUpdateProduct['redirectOption']);
+        $expectedUpdateProduct['redirectType'] = RedirectType::TYPE_CATEGORY_PERMANENT;
+        $expectedUpdateProduct['redirectTarget'] = 1;
+
+        // Update product with partial data, even multilang fields can be updated language by language
+        $response = static::createClient()->request('PATCH', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+            'headers' => [
+                'content-type' => 'application/merge-patch+json',
+            ],
+            'json' => $updateProduct,
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        // Check updated response
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertEquals($expectedUpdateProduct, $decodedResponse);
+
+        // Now check the result when we GET the product
+        $response = static::createClient()->request('GET', '/product/' . $productId, [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(200);
+        $decodedResponse = json_decode($response->getContent(), true);
+        $this->assertEquals($expectedUpdateProduct, $decodedResponse);
+
+        return $productId;
+    }
+
+    /**
+     * @depends testUpdateAllProductFields
      *
      * @param int $productId
      */
