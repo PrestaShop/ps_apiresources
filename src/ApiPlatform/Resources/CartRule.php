@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\CartRule\Command\EditCartRuleCommand;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
@@ -30,7 +31,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/cart-rule',
+            uriTemplate: '/cart-rule/{cartRuleId}',
             CQRSCommand: EditCartRuleCommand::class,
             scopes: [
                 'cart_rule_write',
@@ -41,6 +42,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 )]
 class CartRule
 {
+    #[ApiProperty(identifier: true)]
     public int $cartRuleId;
 
     public string $description;
