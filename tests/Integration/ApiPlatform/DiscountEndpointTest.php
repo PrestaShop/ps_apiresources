@@ -23,7 +23,10 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
+use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DeleteDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Query\GetDiscountForEditing;
+use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\DiscountGridDefinitionFactory;
+use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 
 class DiscountEndpointTest extends ApiTestCase
@@ -39,6 +42,20 @@ class DiscountEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
 
         LanguageResetter::resetLanguages();
+        DatabaseDump::restoreTables([
+            'cart_cart_rule',
+            'cart_rule',
+            'cart_rule_carrier',
+            'cart_rule_combination',
+            'cart_rule_country',
+            'cart_rule_group',
+            'cart_rule_lang',
+            'cart_rule_product_rule',
+            'cart_rule_product_rule_group',
+            'cart_rule_product_rule_value',
+            'cart_rule_shop',
+        ]);
+
         self::addLanguageByLocale('fr-FR');
         self::createApiClient(['discount_write', 'discount_read']);
     }
@@ -162,14 +179,58 @@ class DiscountEndpointTest extends ApiTestCase
         self::assertResponseStatusCodeSame(200);
 
         $decodedResponse = json_decode($response->getContent(), true);
-
         $this->assertNotFalse($decodedResponse);
         $this->assertArrayHasKey('discountId', $decodedResponse);
+        $this->assertEquals(1, $decodedResponse['priority']);
+        $this->assertFalse($decodedResponse['active']);
+        $this->assertArrayHasKey('validFrom', $decodedResponse);
+        $this->assertArrayHasKey('validTo', $decodedResponse);
+        $this->assertEquals(1, $decodedResponse['totalQuantity']);
+        $this->assertEquals(1, $decodedResponse['quantityPerUser']);
+        $this->assertEquals('', $decodedResponse['description']);
+        $this->assertEquals('', $decodedResponse['code']);
+        $this->assertEquals('0', $decodedResponse['customerId']);
+        $this->assertFalse($decodedResponse['highlightInCart']);
+        $this->assertTrue($decodedResponse['allowPartialUse']);
+        $this->assertEquals(1, $decodedResponse['currencyId']);
+        $this->assertEquals(0, $decodedResponse['reductionProduct']);
         $this->assertArrayHasKey(
             'type',
             $decodedResponse
         );
         $this->assertEquals('cart_level', $decodedResponse['type']);
+    }
+
+    public function testListDiscount(): void
+    {
+        // skip test if class does not exist
+        if (!class_exists(DiscountGridDefinitionFactory::class)) {
+            $this->markTestSkipped('GetDiscountForEditing class does not exist');
+        }
+
+        $bearerToken = $this->getBearerToken(['discount_read']);
+        $response = static::createClient()->request('GET', '/discounts', [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(200);
+
+        $decodedResponse = json_decode($response->getContent(), true);
+
+        $this->assertCount(6, $decodedResponse);
+    }
+
+    public function testDeleteDiscount(): void
+    {
+        // skip test if class does not exist
+        if (!class_exists(DeleteDiscountCommand::class)) {
+            $this->markTestSkipped('GetDiscountForEditing class does not exist');
+        }
+
+        $bearerToken = $this->getBearerToken(['discount_write']);
+        static::createClient()->request('DELETE', '/discount/1', [
+            'auth_bearer' => $bearerToken,
+        ]);
+        self::assertResponseStatusCodeSame(204);
     }
 
     public function getProtectedEndpoints(): iterable
@@ -182,6 +243,16 @@ class DiscountEndpointTest extends ApiTestCase
         yield 'create endpoint' => [
             'POST',
             '/discount',
+        ];
+
+        yield 'list endpoint' => [
+            'GET',
+            '/discounts',
+        ];
+
+        yield 'delete endpoint' => [
+            'DELETE',
+            '/discount/1',
         ];
     }
 }

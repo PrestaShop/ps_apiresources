@@ -23,53 +23,34 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DeleteDiscountCommand;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Query\GetDiscountForEditing;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShop\PrestaShop\Core\Search\Filters\DiscountFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
+use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSGet(
-            uriTemplate: '/discount/{discountId}',
-            requirements: ['discountId' => '\d+'],
-            CQRSQuery: GetDiscountForEditing::class,
-            scopes: ['discount_read']
-        ),
-        new CQRSCreate(
-            uriTemplate: '/discount',
-            validationContext: ['groups' => ['Default', 'Create']],
-            CQRSCommand: AddDiscountCommand::class,
-            CQRSQuery: GetDiscountForEditing::class,
-            scopes: ['discount_write'],
-            CQRSCommandMapping: [
-                '[names]' => '[localizedNames]',
+        new PaginatedList(
+            uriTemplate: '/discounts',
+            provider: QueryListProvider::class,
+            scopes: ['discount_read'],
+            ApiResourceMapping: [
+                '[id_discount]' => '[discountId]',
             ],
-        ),
-        new CQRSDelete(
-            uriTemplate: '/discount/{discountId}',
-            CQRSQuery: DeleteDiscountCommand::class,
-            scopes: [
-                'discount_write',
-            ],
+            gridDataFactory: 'prestashop.core.grid.data.factory.discount',
+            filtersClass: DiscountFilters::class,
         ),
     ],
     exceptionToStatus: [
         DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
-        DiscountConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class Discount
+class DiscountList
 {
     #[ApiProperty(identifier: true)]
     public int $discountId;
-    #[Assert\NotBlank(groups: ['Create'])]
     #[LocalizedValue]
     public array $names;
     public int $priority;
@@ -83,7 +64,6 @@ class Discount
     public int $customerId;
     public bool $highlightInCart;
     public bool $allowPartialUse;
-    #[Assert\NotBlank(groups: ['Create'])]
     public string $type;
     public ?DecimalNumber $percentDiscount;
     public ?DecimalNumber $amountDiscount;
