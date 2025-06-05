@@ -20,57 +20,46 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\CartRule\Command\EditCartRuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkToggleModuleStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkUninstallModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/cart-rule/{cartRuleId}',
-            CQRSCommand: EditCartRuleCommand::class,
+            uriTemplate: '/modules/toggle-status',
+            output: false,
+            CQRSCommand: BulkToggleModuleStatusCommand::class,
             scopes: [
-                'cart_rule_write',
+                'module_write',
             ],
-            experimentalOperation: true,
+            CQRSCommandMapping: [
+                '[enabled]' => '[expectedStatus]',
+            ],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/modules/uninstall',
+            output: false,
+            CQRSCommand: BulkUninstallModuleCommand::class,
+            scopes: [
+                'module_write',
+            ],
         ),
     ],
+    exceptionToStatus: [ModuleNotFoundException::class => 404],
 )]
-class CartRule
+class BulkModules
 {
-    #[ApiProperty(identifier: true)]
-    public int $cartRuleId;
+    /**
+     * @var string[]
+     */
+    public array $modules;
 
-    public string $description;
+    public bool $enabled;
 
-    public string $code;
-
-    public array $minimumAmount;
-
-    public bool $minimumAmountShippingIncluded;
-
-    public int $customerId;
-
-    #[LocalizedValue]
-    public array $localizedNames;
-
-    public bool $highlightInCart;
-
-    public bool $allowPartialUse;
-
-    public int $priority;
-
-    public bool $active;
-
-    public array $validityDateRange;
-
-    public int $totalQuantity;
-
-    public int $quantityPerUser;
-
-    public array $cartRuleAction;
+    public bool $deleteFiles;
 }

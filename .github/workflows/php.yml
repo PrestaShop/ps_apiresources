@@ -1,9 +1,12 @@
 name: PHP tests
 on: [push, pull_request]
+concurrency:
+  group: ${{ github.event_name }}-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
     # Check there is no syntax errors in the project
     php-linter:
-        name: PHP Syntax check 8.1
+        name: PHP Syntax check
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
@@ -11,6 +14,15 @@ jobs:
 
             - name: PHP syntax checker 8.1
               uses: prestashop/github-action-php-lint/8.1@master
+
+            - name: PHP syntax checker 8.2
+              uses: prestashop/github-action-php-lint/8.2@master
+
+            - name: PHP syntax checker 8.3
+              uses: prestashop/github-action-php-lint/8.3@master
+
+            - name: PHP syntax checker 8.4
+              uses: prestashop/github-action-php-lint/8.4@master
 
     # Check the PHP code follow the coding standards
     php-cs-fixer:
@@ -36,3 +48,27 @@ jobs:
 
             - name: Run PHP-CS-Fixer
               run: ./vendor/bin/php-cs-fixer fix --dry-run --diff --using-cache=no
+
+    license-headers:
+      name: Check license headers
+      runs-on: ubuntu-latest
+      steps:
+        - name: Setup PHP
+          uses: shivammathur/setup-php@v2
+          with:
+            php-version: '8.1'
+
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Cache dependencies
+          uses: actions/cache@v3
+          with:
+            path: vendor
+            key: php-${{ hashFiles('composer.lock') }}
+
+        - name: Install dependencies
+          run: composer install
+
+        - name: Run header-stamp
+          run: php vendor/bin/header-stamp --license=vendor/prestashop/header-stamp/assets/afl.txt --exclude=vendor --dry-run

@@ -17,23 +17,28 @@
  * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
-if (!defined('_PS_ROOT_DIR_')) {
-    define('_PS_ROOT_DIR_', dirname(__DIR__, 4));
-}
-define('_PS_IN_TEST_', true);
-define('_PS_MODULE_DIR_', _PS_ROOT_DIR_ . '/tests/Resources/modules/');
-require_once _PS_ROOT_DIR_ . '/vendor/smarty/smarty/libs/functions.php';
-require_once _PS_ROOT_DIR_ . '/admin-dev/bootstrap.php';
 
-/*
- * Following code makes tests run under phpstorm
- * Else we get error : Class 'PHPUnit_Util_Configuration' not found
- * @see https://stackoverflow.com/questions/33299149/phpstorm-8-and-phpunit-problems-with-runinseparateprocess
- */
-if (!defined('PHPUNIT_COMPOSER_INSTALL')) {
-    define('PHPUNIT_COMPOSER_INSTALL', dirname(__DIR__, 4) . '/vendor/autoload.php');
-}
+declare(strict_types=1);
 
-if (file_exists(dirname(__DIR__, 2) . '/vendor/autoload.php')) {
-    require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
+
+use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\UpgradeModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+
+#[ApiResource(
+    operations: [
+        new CQRSUpdate(
+            uriTemplate: '/module/{technicalName}/upgrade',
+            CQRSCommand: UpgradeModuleCommand::class,
+            CQRSQuery: GetModuleInfos::class,
+            scopes: [
+                'module_write',
+            ],
+        ),
+    ],
+)]
+class UpgradeModule extends Module
+{
 }

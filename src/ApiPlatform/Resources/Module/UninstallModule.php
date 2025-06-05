@@ -18,59 +18,31 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-declare(strict_types=1);
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
-
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\CartRule\Command\EditCartRuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\UninstallModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotInstalledException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/cart-rule/{cartRuleId}',
-            CQRSCommand: EditCartRuleCommand::class,
+            uriTemplate: '/module/{technicalName}/uninstall',
+            output: false,
+            CQRSCommand: UninstallModuleCommand::class,
             scopes: [
-                'cart_rule_write',
+                'module_write',
             ],
-            experimentalOperation: true,
         ),
     ],
+    exceptionToStatus: [
+        ModuleNotFoundException::class => 404,
+        ModuleNotInstalledException::class => 403,
+    ],
 )]
-class CartRule
+class UninstallModule extends Module
 {
-    #[ApiProperty(identifier: true)]
-    public int $cartRuleId;
-
-    public string $description;
-
-    public string $code;
-
-    public array $minimumAmount;
-
-    public bool $minimumAmountShippingIncluded;
-
-    public int $customerId;
-
-    #[LocalizedValue]
-    public array $localizedNames;
-
-    public bool $highlightInCart;
-
-    public bool $allowPartialUse;
-
-    public int $priority;
-
-    public bool $active;
-
-    public array $validityDateRange;
-
-    public int $totalQuantity;
-
-    public int $quantityPerUser;
-
-    public array $cartRuleAction;
+    public bool $deleteFiles;
 }

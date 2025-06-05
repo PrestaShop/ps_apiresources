@@ -6,23 +6,17 @@
  *
  * NOTICE OF LICENSE
  *
- * This source file is subject to the Open Software License (OSL 3.0)
+ * This source file is subject to the Academic Free License version 3.0
  * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
- * https://opensource.org/licenses/OSL-3.0
+ * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
  * obtain it through the world-wide-web, please send an email
  * to license@prestashop.com so we can send you a copy immediately.
  *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
- * versions in the future. If you wish to customize PrestaShop for your
- * needs please refer to https://devdocs.prestashop.com/ for more information.
- *
  * @author    PrestaShop SA and Contributors <contact@prestashop.com>
  * @copyright Since 2007 PrestaShop SA and Contributors
- * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
 declare(strict_types=1);
@@ -31,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\AddCustomerGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\DeleteCustomerGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\EditCustomerGroupCommand;
@@ -41,6 +36,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
     operations: [
@@ -72,6 +68,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
             ],
             // Here, we use command mapping to adapt the normalized command result for the CQRS query
             CQRSCommandMapping: [
+                '[_context][shopIds]' => '[shopIds]',
                 '[groupId]' => '[customerGroupId]',
             ],
         ),
@@ -107,13 +104,15 @@ class CustomerGroup
     #[ApiProperty(identifier: true)]
     public int $customerGroupId;
 
+    #[LocalizedValue]
     public array $localizedNames;
 
-    public float $reductionPercent;
+    public DecimalNumber $reductionPercent;
 
     public bool $displayPriceTaxExcluded;
 
     public bool $showPrice;
 
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $shopIds;
 }

@@ -20,57 +20,46 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\CartRule\Command\EditCartRuleCommand;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetProductImages;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/cart-rule/{cartRuleId}',
-            CQRSCommand: EditCartRuleCommand::class,
+        new CQRSGetCollection(
+            uriTemplate: '/product/{productId}/images',
+            CQRSQuery: GetProductImages::class,
             scopes: [
-                'cart_rule_write',
+                'product_read',
             ],
-            experimentalOperation: true,
+            CQRSQueryMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+            ],
+            ApiResourceMapping: [
+                '[localizedLegends]' => '[legends]',
+            ],
         ),
     ],
 )]
-class CartRule
+class ProductImageList
 {
-    #[ApiProperty(identifier: true)]
-    public int $cartRuleId;
+    public int $productId;
 
-    public string $description;
+    public int $imageId;
 
-    public string $code;
+    public string $imageUrl;
 
-    public array $minimumAmount;
-
-    public bool $minimumAmountShippingIncluded;
-
-    public int $customerId;
+    public string $thumbnailUrl;
 
     #[LocalizedValue]
-    public array $localizedNames;
+    public array $legends;
 
-    public bool $highlightInCart;
+    public bool $cover;
 
-    public bool $allowPartialUse;
+    public int $position;
 
-    public int $priority;
-
-    public bool $active;
-
-    public array $validityDateRange;
-
-    public int $totalQuantity;
-
-    public int $quantityPerUser;
-
-    public array $cartRuleAction;
+    public array $shopIds;
 }
