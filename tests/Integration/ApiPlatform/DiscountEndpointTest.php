@@ -57,7 +57,10 @@ class DiscountEndpointTest extends ApiTestCase
         ]);
 
         self::addLanguageByLocale('fr-FR');
-        self::createApiClient(['discount_write', 'discount_read']);
+        // Check if the command exists, if it doesn't the scopes are not usable
+        if (class_exists(AddDiscountCommand::class)) {
+            self::createApiClient(['discount_write', 'discount_read']);
+        }
     }
 
     public static function tearDownAfterClass(): void
