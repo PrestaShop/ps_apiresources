@@ -23,9 +23,6 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DeleteDiscountCommand;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Query\GetDiscountForEditing;
-use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\DiscountGridDefinitionFactory;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 
@@ -70,6 +67,15 @@ class DiscountEndpointTest extends ApiTestCase
         LanguageResetter::resetLanguages();
     }
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // If the discount domain does not exist we can skip all the tests here
+        if (!class_exists(AddDiscountCommand::class)) {
+            $this->markTestSkipped('AddDiscountCommand class does not exist');
+        }
+    }
+
     /**
      * @dataProvider discountTypesDataProvider
      *
@@ -80,11 +86,6 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testAddDiscount(string $type, array $names, ?array $data): int
     {
-        // skip test if class does not exist
-        if (!class_exists(AddDiscountCommand::class)) {
-            $this->markTestSkipped('AddDiscountCommand class does not exist');
-        }
-
         $bearerToken = $this->getBearerToken(['discount_write']);
         $json = [
             'type' => $type,
@@ -170,11 +171,6 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testGetDiscount(): void
     {
-        // skip test if class does not exist
-        if (!class_exists(GetDiscountForEditing::class)) {
-            $this->markTestSkipped('GetDiscountForEditing class does not exist');
-        }
-
         $bearerToken = $this->getBearerToken(['discount_read']);
         $response = static::createClient()->request('GET', '/discount/1', [
             'auth_bearer' => $bearerToken,
@@ -206,11 +202,6 @@ class DiscountEndpointTest extends ApiTestCase
 
     public function testListDiscount(): void
     {
-        // skip test if class does not exist
-        if (!class_exists(DiscountGridDefinitionFactory::class)) {
-            $this->markTestSkipped('GetDiscountForEditing class does not exist');
-        }
-
         $bearerToken = $this->getBearerToken(['discount_read']);
         $response = static::createClient()->request('GET', '/discounts', [
             'auth_bearer' => $bearerToken,
@@ -224,11 +215,6 @@ class DiscountEndpointTest extends ApiTestCase
 
     public function testDeleteDiscount(): void
     {
-        // skip test if class does not exist
-        if (!class_exists(DeleteDiscountCommand::class)) {
-            $this->markTestSkipped('GetDiscountForEditing class does not exist');
-        }
-
         $bearerToken = $this->getBearerToken(['discount_write']);
         static::createClient()->request('DELETE', '/discount/1', [
             'auth_bearer' => $bearerToken,
