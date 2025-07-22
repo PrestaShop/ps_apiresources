@@ -51,6 +51,10 @@ composer setup-local-tests -- [arguments]
 
 Example:
 ```bash
+# To test with 9.0.x branch
+composer setup-local-tests -- --force --core-branch=9.0.x
+
+# To test with a branch from your fork (in this example fork: jolelievre branch: product-api)
 composer setup-local-tests -- --force --core-branch=jolelievre:product-api
 ```
 

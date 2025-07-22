@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php: [ '8.1', '8.2', '8.3' ]
+        php: [ '8.1', '8.2', '8.3', '8.4' ]
         prestashop_version: ['develop', '9.0.x']
       fail-fast: false
     steps:
@@ -33,6 +33,7 @@ jobs:
           path: prestashop
           ref: ${{ matrix.prestashop_version }}
       - name: Build Docker
+        timeout-minutes: 15
         env:
           VERSION: ${{ matrix.php }}-apache
         run: |

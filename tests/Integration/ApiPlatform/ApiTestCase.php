@@ -29,6 +29,8 @@ use PrestaShop\PrestaShop\Core\Domain\Configuration\ShopConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Domain\Language\Command\AddLanguageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Tests\Resources\Resetter\ApiClientResetter;
 
@@ -37,7 +39,8 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     protected const CLIENT_ID = 'test_client_id';
     protected const CLIENT_NAME = 'test_client_name';
 
-    protected static ?string $clientSecret = null;
+    protected static ?array $apiClients = null;
+    protected static ?array $bearerTokens = null;
 
     public static function setUpBeforeClass(): void
     {
@@ -51,7 +54,8 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         parent::tearDownAfterClass();
         ApiClientResetter::resetApiClient();
         self::updateConfiguration('PS_ADMIN_API_FORCE_DEBUG_SECURED', 1);
-        self::$clientSecret = null;
+        self::$apiClients = null;
+        self::$bearerTokens = null;
     }
 
     /**
@@ -131,14 +135,29 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return parent::createClient($kernelOptions, $defaultOptions);
     }
 
+    /**
+     * Get bearer token with the requested scopes, if not ApiClient exists that can use these scopes
+     * it is automatically created.
+     */
     protected function getBearerToken(array $scopes = []): string
     {
-        if (null === self::$clientSecret) {
-            self::createApiClient($scopes);
+        if (null === static::$bearerTokens) {
+            static::$bearerTokens = [];
         }
+
+        // If a token with these scopes already exists then we reuse it, it prevents requesting the /access_token API all the time
+        foreach (static::$bearerTokens as $bearerToken) {
+            $containsAllScopes = count(array_intersect($bearerToken['scopes'], $scopes)) === count($scopes);
+            if ($containsAllScopes) {
+                return $bearerToken['token'];
+            }
+        }
+
+        // No token was found that can use all the request scopes so we create a new one
+        $apiClient = static::getApiClientWithScopes($scopes);
         $parameters = ['parameters' => [
-            'client_id' => static::CLIENT_ID,
-            'client_secret' => static::$clientSecret,
+            'client_id' => $apiClient['client_id'],
+            'client_secret' => $apiClient['secret'],
             'grant_type' => 'client_credentials',
             'scope' => $scopes,
         ]];
@@ -149,10 +168,119 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             ],
         ];
         $response = static::createClient()->request('POST', '/access_token', $options);
+        self::assertResponseStatusCodeSame(200);
 
-        return json_decode($response->getContent())->access_token;
+        $bearerToken = json_decode($response->getContent())->access_token;
+
+        // Cache the bearer token with associated scopes
+        static::$bearerTokens[] = [
+            'token' => $bearerToken,
+            'scopes' => $scopes,
+        ];
+
+        return $bearerToken;
     }
 
+    /**
+     * @param string $httpMethod HTTP method to use (GET, POST, PATCH, PUT, DELETE)
+     * @param string $endPointUrl HTTP url for the requested endpoint
+     * @param array|null $data Flatten array data that will be sent as JSON (null if no JSON is sent)
+     * @param array $scopes List of scopes to use for this request, a Bearer token will be requested based on the list and use for the request
+     * @param int|null $expectedHttpCode Expected HTTP code, by default it will be inferred based on the HTTP method used but you can specify it (especially when you want to assert requests that will return error codes)
+     * @param array|null $requestOptions Specify custom options for the request (useful to change the content-type, upload files, ...))
+     *
+     * @return array|string|null JSON response is returned as an array, unless it only contains one string message, null is returned for NoContent responses
+     */
+    protected function requestApi(string $httpMethod, string $endPointUrl, ?array $data = null, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        $options = [];
+        if (!empty($scopes)) {
+            $bearerToken = $this->getBearerToken($scopes);
+            $options['auth_bearer'] = $bearerToken;
+        }
+
+        // Null value means no JSON sent, empty array means a JSON data is sent but it's empty (different because the use content-type
+        // will be application/json and there is some content to deserialize even if it's empty)
+        if (null !== $data) {
+            $options['json'] = $data;
+        }
+
+        // Merge additional options if present
+        if (null !== $requestOptions) {
+            $options = array_merge($options, $requestOptions);
+        }
+
+        $response = static::createClient()->request($httpMethod, $endPointUrl, $options);
+
+        // Unless you mean to test a specific code (for invalid requests mostly) the expected code can be deduced from the
+        // HTTP method by convention
+        if (null === $expectedHttpCode) {
+            $expectedHttpCode = match ($httpMethod) {
+                Request::METHOD_POST => Response::HTTP_CREATED,
+                Request::METHOD_DELETE => Response::HTTP_NO_CONTENT,
+                default => Response::HTTP_OK,
+            };
+        }
+
+        self::assertResponseStatusCodeSame($expectedHttpCode);
+        $content = $response->getContent(false);
+
+        // Some endpoint returns no content (204 code should be used in this case)
+        if (empty($content)) {
+            $this->assertEquals(Response::HTTP_NO_CONTENT, $response->getStatusCode());
+
+            return null;
+        }
+
+        $decodedResponse = json_decode($content, true);
+        $this->assertNotFalse($decodedResponse);
+
+        return $decodedResponse;
+    }
+
+    /**
+     * Performs a GET request to get a single item.
+     */
+    protected function getItem(string $endPointUrl, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_GET, $endPointUrl, null, $scopes, $expectedHttpCode, $requestOptions);
+    }
+
+    /**
+     * Performs a POST request to create an item
+     */
+    protected function createItem(string $endPointUrl, array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_POST, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
+    }
+
+    /**
+     * Performs a PATCH request to partially update an item
+     */
+    protected function partialUpdateItem(string $endPointUrl, array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_PATCH, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
+    }
+
+    /**
+     * Performs a PUT request to completely update an item
+     */
+    protected function updateItem(string $endPointUrl, array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_PUT, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
+    }
+
+    /**
+     * Performs a DELETE request to delete an item
+     */
+    protected function deleteItem(string $endPointUrl, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, null, $scopes, $expectedHttpCode, $requestOptions);
+    }
+
+    /**
+     * Performs a GET request to list some items, returned data is paginated
+     */
     protected function listItems(string $listUrl, array $scopes = [], array $filters = []): array
     {
         $bearerToken = $this->getBearerToken($scopes);
@@ -177,6 +305,16 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return $decodedResponse;
     }
 
+    /**
+     * Performs a GET request to list some items, but simply return the count
+     */
+    protected function countItems(string $listUrl, array $scopes = [], array $filters = []): int
+    {
+        $list = $this->listItems($listUrl, $scopes, $filters);
+
+        return $list['totalItems'];
+    }
+
     protected function prepareUploadedFile(string $assetFilePath): UploadedFile
     {
         // Uploaded file must be a temporary copy because the file will be moved by the API
@@ -186,7 +324,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return new UploadedFile($tmpUploadedImagePath, basename($assetFilePath));
     }
 
-    protected function assertValidationErrors(array $responseErrors, array $expectedErrors): void
+    protected function assertValidationErrors(array $expectedErrors, array $responseErrors): void
     {
         foreach ($responseErrors as $errorDetail) {
             $this->assertArrayHasKey('propertyPath', $errorDetail);
@@ -223,11 +361,17 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         }
     }
 
-    protected static function createApiClient(array $scopes = [], int $lifetime = 10000): void
+    protected static function createApiClient(array $scopes = [], int $lifetime = 10000): array
     {
+        $apiClient = [
+            'client_name' => md5(implode(',', $scopes)),
+            'client_id' => md5(implode(',', $scopes)),
+            'scopes' => $scopes,
+        ];
+
         $command = new AddApiClientCommand(
-            static::CLIENT_NAME,
-            static::CLIENT_ID,
+            $apiClient['client_name'],
+            $apiClient['client_id'],
             true,
             '',
             $lifetime,
@@ -238,7 +382,30 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         $commandBus = $container->get('prestashop.core.command_bus');
         $createdApiClient = $commandBus->handle($command);
 
-        self::$clientSecret = $createdApiClient->getSecret();
+        $apiClient['secret'] = $createdApiClient->getSecret();
+        self::$apiClients[] = $apiClient;
+
+        return $apiClient;
+    }
+
+    /**
+     * Get an API client that has permissions over the provided scopes, create it if it doesn't exist.
+     */
+    protected static function getApiClientWithScopes(array $scopes = []): array
+    {
+        if (null === self::$apiClients) {
+            self::$apiClients = [];
+        }
+
+        foreach (static::$apiClients as $apiClient) {
+            $containsAllScopes = count(array_intersect($apiClient['scopes'], $scopes)) === count($scopes);
+            if ($containsAllScopes) {
+                return $apiClient;
+            }
+        }
+
+        // API Client with all the scopes was not found so we create a new one with the required scopes
+        return self::createApiClient($scopes);
     }
 
     protected static function addLanguageByLocale(string $locale): int
