@@ -31,6 +31,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopAssociationNotFound;
+use PrestaShop\PrestaShop\Core\Util\DateTime\DateTime;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -209,6 +210,7 @@ class Product
     #[LocalizedValue]
     public array $availableLaterLabels;
 
+    #[ApiProperty(openapiContext: ['type' => 'date', 'example' => DateTime::DEFAULT_DATE_FORMAT])]
     public ?\DateTimeImmutable $availableDate = null;
 
     public string $coverThumbnailUrl;
