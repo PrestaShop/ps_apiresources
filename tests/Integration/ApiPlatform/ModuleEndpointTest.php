@@ -24,6 +24,7 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Module;
 use PrestaShop\PrestaShop\Core\Module\ModuleRepository;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\ResourceResetter;
 
@@ -31,10 +32,11 @@ class ModuleEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
-        // We also need to restore role tables related to mule installation, so it's safer to restore everything
+        // We also need to restore role tables related to module installation, so it's safer to restore everything
         // We must do it before the parent::setUpBeforeClass or the necessary configuration will be erased
         DatabaseDump::restoreAllTables();
         parent::setUpBeforeClass();
+        // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients
         self::createApiClient(['module_write', 'module_read']);
 
         /** @var ModuleRepository $moduleRepository */
@@ -46,7 +48,7 @@ class ModuleEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        // We also need to restore role tables related to mule installation, so it's safer to restore everything
+        // We also need to restore role tables related to module installation, so it's safer to restore everything
         DatabaseDump::restoreAllTables();
         (new ResourceResetter())->resetTestModules();
     }
@@ -107,56 +109,30 @@ class ModuleEndpointTest extends ApiTestCase
 
     public function testModuleNotFound(): void
     {
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
         // GET on non existent module returns a 404
-        static::createClient()->request('GET', '/module/ps_falsemodule', [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        $this->getItem('/module/ps_falsemodule', ['module_read'], Response::HTTP_NOT_FOUND);
 
         // PUT status on non existent module returns a 404
-        static::createClient()->request('PUT', '/module/ps_falsemodule/status', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'enabled' => true,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        $this->updateItem('/module/ps_falsemodule/status', [
+            'enabled' => true,
+        ], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT bulk status on non existent module returns a 404
-        static::createClient()->request('PUT', '/modules/toggle-status', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'modules' => ['ps_falsemodule'],
-                'enabled' => true,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        $this->updateItem('/modules/toggle-status', [
+            'modules' => ['ps_falsemodule'],
+            'enabled' => true,
+        ], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PATCH reset on non existent module returns a 404
-        static::createClient()->request('PATCH', '/module/ps_falsemodule/reset', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'keepData' => true,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        $this->partialUpdateItem('/module/ps_falsemodule/reset', [
+            'keepData' => true,
+        ], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT install on non existent module returns a 404
-        static::createClient()->request('PUT', '/module/ps_falsemodule/install', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        $this->updateItem('/module/ps_falsemodule/install', [], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT uninstall on non existent module returns a 404
-        static::createClient()->request('PUT', '/module/ps_falsemodule/uninstall', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        $this->updateItem('/module/ps_falsemodule/uninstall', [], ['module_write'], Response::HTTP_NOT_FOUND);
     }
 
     public function testListModules(): array
@@ -167,11 +143,19 @@ class ModuleEndpointTest extends ApiTestCase
         $modules = $this->listItems('/modules', ['module_read'], ['technicalName' => 'ps_apiresources']);
         $this->assertEquals(1, $modules['totalItems']);
         $apiModule = $modules['items'][0];
-        $this->assertEquals('ps_apiresources', $apiModule['technicalName']);
-        $this->assertTrue($apiModule['enabled']);
-        $this->assertTrue(version_compare($apiModule['moduleVersion'], '0.1.0', '>='));
-        $this->assertTrue(version_compare($apiModule['installedVersion'], '0.1.0', '>='));
+
+        // These two fields are likely to move so we check it's at least 0.2.0
+        $this->assertTrue(version_compare($apiModule['moduleVersion'], '0.2.0', '>='));
+        $this->assertTrue(version_compare($apiModule['installedVersion'], '0.2.0', '>='));
         $this->assertGreaterThan(0, $apiModule['moduleId']);
+
+        $this->assertEquals([
+            'moduleId' => $apiModule['moduleId'],
+            'technicalName' => 'ps_apiresources',
+            'enabled' => true,
+            'moduleVersion' => $apiModule['moduleVersion'],
+            'installedVersion' => $apiModule['installedVersion'],
+        ], $apiModule);
 
         return $apiModule;
     }
@@ -181,7 +165,7 @@ class ModuleEndpointTest extends ApiTestCase
      */
     public function testGetModuleInfos(array $module): array
     {
-        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
         $this->assertEquals(
             [
                 'moduleId' => $module['moduleId'],
@@ -207,20 +191,15 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(0, $disabledModules['totalItems']);
 
         // Bulk disable on one module
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        static::createClient()->request('PUT', '/modules/toggle-status', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'modules' => [
-                    $module['technicalName'],
-                ],
-                'enabled' => false,
+        $this->updateItem('/modules/toggle-status', [
+            'modules' => [
+                $module['technicalName'],
             ],
-        ]);
-        self::assertResponseStatusCodeSame(204);
+            'enabled' => false,
+        ], ['module_write'], Response::HTTP_NO_CONTENT);
 
         // Check updated disabled status
-        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
         $this->assertFalse($moduleInfos['enabled']);
 
         // Check number of disabled modules
@@ -228,19 +207,15 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(1, $disabledModules['totalItems']);
 
         // Bulk enable on one module
-        static::createClient()->request('PUT', '/modules/toggle-status', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'modules' => [
-                    $module['technicalName'],
-                ],
-                'enabled' => true,
+        $this->updateItem('/modules/toggle-status', [
+            'modules' => [
+                $module['technicalName'],
             ],
-        ]);
-        self::assertResponseStatusCodeSame(204);
+            'enabled' => true,
+        ], ['module_write'], Response::HTTP_NO_CONTENT);
 
         // Check updated enabled status
-        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
         $this->assertTrue($moduleInfos['enabled']);
 
         // Check number of disabled modules
@@ -260,16 +235,9 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(0, $disabledModules['totalItems']);
 
         // Disable specific module
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PUT', sprintf('/module/%s/status', $module['technicalName']), [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'enabled' => false,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        $updatedModule = $this->updateItem(sprintf('/module/%s/status', $module['technicalName']), [
+            'enabled' => false,
+        ], ['module_write']);
 
         // Check response from status update request
         $expectedModuleInfos = [
@@ -280,10 +248,10 @@ class ModuleEndpointTest extends ApiTestCase
             'enabled' => false,
             'installed' => true,
         ];
-        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+        $this->assertEquals($expectedModuleInfos, $updatedModule);
 
         // Check updated disabled status
-        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
         $this->assertEquals($expectedModuleInfos, $moduleInfos);
 
         // Check number of disabled modules
@@ -291,27 +259,15 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(1, $disabledModules['totalItems']);
 
         // Enable specific module
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PUT', sprintf('/module/%s/status', $module['technicalName']), [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'enabled' => true,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-
+        $updatedModule = $this->updateItem(sprintf('/module/%s/status', $module['technicalName']), [
+            'enabled' => true,
+        ], ['module_write']);
         // Check response from status update request
         $expectedModuleInfos['enabled'] = true;
-        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+        $this->assertEquals($expectedModuleInfos, $updatedModule);
 
         // Check updated enabled status
-        $moduleInfos = $this->getModuleInfos($module['technicalName']);
-        $this->assertTrue($moduleInfos['enabled']);
-
-        // Check updated enabled status
-        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
         $this->assertEquals($expectedModuleInfos, $moduleInfos);
 
         // Check number of disabled modules
@@ -327,23 +283,20 @@ class ModuleEndpointTest extends ApiTestCase
     public function testResetModule(array $module): array
     {
         // Reset specific module
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PATCH', sprintf('/module/%s/reset', $module['technicalName']), [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'keepData' => false,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        $updatedModule = $this->partialUpdateItem(sprintf('/module/%s/reset', $module['technicalName']), [
+            'keepData' => false,
+        ], ['module_write']);
 
         // Module ID has been modified because the module was uninstalled the reinstalled
-        $this->assertNotEquals($module['moduleId'], $decodedResponse['moduleId']);
-        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $this->assertNotEquals($module['moduleId'], $updatedModule['moduleId']);
+
+        // Check updated module via GET endpoint
+        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
+        // Initial ID has been modified
         $this->assertNotEquals($module['moduleId'], $moduleInfos['moduleId']);
-        $this->assertEquals($moduleInfos['moduleId'], $decodedResponse['moduleId']);
-        $module['moduleId'] = $decodedResponse['moduleId'];
+        // New ID is in sync between the returned data from rest endpoint end the new data fetch via GET
+        $this->assertEquals($moduleInfos['moduleId'], $updatedModule['moduleId']);
+        $module['moduleId'] = $updatedModule['moduleId'];
 
         // Check response from status update request
         $expectedModuleInfos = [
@@ -354,7 +307,7 @@ class ModuleEndpointTest extends ApiTestCase
             'enabled' => true,
             'installed' => true,
         ];
-        $this->assertEquals($expectedModuleInfos, $decodedResponse);
+        $this->assertEquals($expectedModuleInfos, $updatedModule);
 
         return $module;
     }
@@ -365,14 +318,9 @@ class ModuleEndpointTest extends ApiTestCase
     public function testResetModuleNotActive(array $module): array
     {
         // Disable specific module
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        static::createClient()->request('PUT', sprintf('/module/%s/status', $module['technicalName']), [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'enabled' => false,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
+        $updatedModule = $this->updateItem(sprintf('/module/%s/status', $module['technicalName']), [
+            'enabled' => false,
+        ], ['module_write']);
 
         $expectedModuleInfos = [
             'moduleId' => $module['moduleId'],
@@ -382,31 +330,26 @@ class ModuleEndpointTest extends ApiTestCase
             'enabled' => false,
             'installed' => true,
         ];
-        $this->assertEquals($expectedModuleInfos, $this->getModuleInfos($module['technicalName']));
+        $this->assertEquals($expectedModuleInfos, $updatedModule);
+        $this->assertEquals($expectedModuleInfos, $this->getItem('/module/' . $module['technicalName'], ['module_read']));
 
         // Now try to reset a disabled module it should be reset and enabled
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PATCH', sprintf('/module/%s/reset', $module['technicalName']), [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'keepData' => false,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
+        $resetModule = $this->partialUpdateItem(sprintf('/module/%s/reset', $module['technicalName']), [
+            'keepData' => false,
+        ], ['module_write']);
 
         // Module ID has been modified because the module was uninstalled the reinstalled
-        $this->assertNotEquals($module['moduleId'], $decodedResponse['moduleId']);
-        $moduleInfos = $this->getModuleInfos($module['technicalName']);
+        $this->assertNotEquals($module['moduleId'], $resetModule['moduleId']);
+        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
         $this->assertNotEquals($module['moduleId'], $moduleInfos['moduleId']);
-        $this->assertEquals($moduleInfos['moduleId'], $decodedResponse['moduleId']);
-        $module['moduleId'] = $decodedResponse['moduleId'];
+        $this->assertEquals($moduleInfos['moduleId'], $resetModule['moduleId']);
+        $module['moduleId'] = $resetModule['moduleId'];
 
         // Module is now expected to be enabled and its ID has been updated
         $expectedModuleInfos['enabled'] = true;
         $expectedModuleInfos['moduleId'] = $module['moduleId'];
-        $this->assertEquals($expectedModuleInfos, $decodedResponse);
-        $this->assertEquals($expectedModuleInfos, $this->getModuleInfos($module['technicalName']));
+        $this->assertEquals($expectedModuleInfos, $resetModule);
+        $this->assertEquals($expectedModuleInfos, $this->getItem('/module/' . $module['technicalName'], ['module_read']));
 
         return $module;
     }
@@ -416,8 +359,17 @@ class ModuleEndpointTest extends ApiTestCase
      */
     public function testUploadModuleFromSource(): void
     {
-        $this->assertModuleNotFound('dashactivity');
+        // Assert module dashactivity is not found and returns a 404
+        $this->getItem('/module/dashactivity', ['module_read'], Response::HTTP_NOT_FOUND);
+
+        // Now upload the module via a zip URL
+        $uploadedModule = $this->createItem('/module/upload-source', [
+            'source' => 'https://github.com/PrestaShop/dashactivity/releases/download/v2.1.0/dashactivity.zip',
+        ], ['module_write']);
+
+        // Check response from status update request
         $expectedModule = [
+            // Module is not installed, only uploaded so its ID is null
             'moduleId' => null,
             'technicalName' => 'dashactivity',
             'moduleVersion' => '2.1.0',
@@ -426,23 +378,10 @@ class ModuleEndpointTest extends ApiTestCase
             'enabled' => false,
             'installed' => false,
         ];
-
-        $bearerToken = $this->getBearerToken(['module_write']);
-        $response = static::createClient()->request('POST', '/module/upload-source', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'source' => 'https://github.com/PrestaShop/dashactivity/releases/download/v2.1.0/dashactivity.zip',
-            ],
-        ]);
-
-        self::assertResponseStatusCodeSame(201);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        // Check response from status update request
-        $this->assertEquals($expectedModule, $decodedResponse);
+        $this->assertEquals($expectedModule, $uploadedModule);
 
         // Check result from GET API
-        $this->assertEquals($expectedModule, $this->getModuleInfos($expectedModule['technicalName']));
+        $this->assertEquals($expectedModule, $this->getItem('/module/dashactivity', ['module_read']));
     }
 
     /**
@@ -458,26 +397,18 @@ class ModuleEndpointTest extends ApiTestCase
             'installed' => true,
         ];
 
-        $bearerToken = $this->getBearerToken(['module_write']);
-        $response = static::createClient()->request('PUT', sprintf('/module/%s/install', $expectedModule['technicalName']), [
-            'auth_bearer' => $bearerToken,
-            // We must define a JSON body even if it is empty, we need to search how to make this optional
-            'json' => [
-            ],
-        ]);
+        // We must define a JSON body even if it is empty, we need to search how to make this optional
+        $installedModule = $this->updateItem(sprintf('/module/%s/install', $expectedModule['technicalName']), [], ['module_write']);
 
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
         // The ID is dynamic so we fetch it after creation
-        $this->assertArrayHasKey('moduleId', $decodedResponse);
-        $expectedModule['moduleId'] = $decodedResponse['moduleId'];
+        $this->assertArrayHasKey('moduleId', $installedModule);
+        $expectedModule['moduleId'] = $installedModule['moduleId'];
 
         // Check response from install request
-        $this->assertEquals($expectedModule, $decodedResponse);
+        $this->assertEquals($expectedModule, $installedModule);
 
         // Check result from GET API
-        $this->assertEquals($expectedModule, $this->getModuleInfos($expectedModule['technicalName']));
+        $this->assertEquals($expectedModule, $this->getItem('/module/' . $expectedModule['technicalName'], ['module_read']));
     }
 
     /**
@@ -485,17 +416,9 @@ class ModuleEndpointTest extends ApiTestCase
      */
     public function testInstallModuleAlreadyInstalled(): void
     {
-        $bearerToken = $this->getBearerToken(['module_write']);
-        $response = static::createClient()->request('PUT', '/module/dashactivity/install', [
-            'auth_bearer' => $bearerToken,
-            // We must define a JSON body even if it is empty, we need to search how to make this optional
-            'json' => [
-            ],
-        ]);
-
-        self::assertResponseStatusCodeSame(403);
-        $decodedResponse = json_decode($response->getContent(false), true);
-        $this->assertEquals('Cannot install module dashactivity since it is already installed', $decodedResponse['detail']);
+        // Installing a module already installed is forbidden
+        $errorResponse = $this->updateItem('/module/dashactivity/install', [], ['module_write'], Response::HTTP_FORBIDDEN);
+        $this->assertEquals('Cannot install module dashactivity since it is already installed', $errorResponse['detail']);
     }
 
     /**
@@ -504,27 +427,25 @@ class ModuleEndpointTest extends ApiTestCase
     public function testUninstallModuleWithFilesKept()
     {
         $expectedModule = [
+            // Module is uninstalled so no more ID
             'moduleId' => null,
             'technicalName' => 'dashactivity',
+            // Module is uninstalled but files were kept so we still know the version of the module on the disk
             'moduleVersion' => '2.1.0',
+            // Module is uninstalled so installed version is null
             'installedVersion' => null,
             'enabled' => false,
             'installed' => false,
         ];
 
         // Uninstall specific module deleteFiles false
-        $bearerToken = $this->getBearerToken(['module_write']);
-        static::createClient()->request('PUT', sprintf('/module/%s/uninstall', $expectedModule['technicalName']), [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                // We keep files, so we can check the module status afterward (deleted module would return a 404)
-                'deleteFiles' => false,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(204);
+        $this->updateItem(sprintf('/module/%s/uninstall', $expectedModule['technicalName']), [
+            // We keep files, so we can check the module status afterward (deleted module would return a 404)
+            'deleteFiles' => false,
+        ], ['module_write'], Response::HTTP_NO_CONTENT);
 
-        // Check result from GET API
-        $this->assertEquals($expectedModule, $this->getModuleInfos($expectedModule['technicalName']));
+        // Check result from GET API (the module is uninstalled but its files were kept so we can still provide some minimum infos)
+        $this->assertEquals($expectedModule, $this->getItem('/module/' . $expectedModule['technicalName'], ['module_read']));
     }
 
     /**
@@ -532,17 +453,12 @@ class ModuleEndpointTest extends ApiTestCase
      */
     public function testUninstallModuleNotInstalled(): void
     {
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PUT', '/module/dashactivity/uninstall', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                // We keep files, so we can check the module status afterward (deleted module would return a 404)
-                'deleteFiles' => false,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(403);
-        $decodedResponse = json_decode($response->getContent(false), true);
-        $this->assertEquals('Cannot uninstall module dashactivity since it is not installed', $decodedResponse['detail']);
+        // Uninstalling a module already installed is forbidden
+        $errorResponse = $this->updateItem('/module/dashactivity/uninstall', [
+            // We keep files, so we can check the module status afterward (deleted module would return a 404)
+            'deleteFiles' => false,
+        ], ['module_write'], Response::HTTP_FORBIDDEN);
+        $this->assertEquals('Cannot uninstall module dashactivity since it is not installed', $errorResponse['detail']);
     }
 
     /**
@@ -551,15 +467,10 @@ class ModuleEndpointTest extends ApiTestCase
     public function testResetModuleNotInstalled(): void
     {
         // Now try to reset a module not installed it should be forbidden
-        $bearerToken = $this->getBearerToken(['module_read', 'module_write']);
-        $response = static::createClient()->request('PATCH', '/module/dashactivity/reset', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(403);
-        $decodedResponse = json_decode($response->getContent(false), true);
-        $this->assertEquals('Cannot reset module dashactivity since it is not installed', $decodedResponse['detail']);
+        $errorResponse = $this->partialUpdateItem('/module/dashactivity/reset', [
+            // We must force empty JSON for this one as well
+        ], ['module_write'], Response::HTTP_FORBIDDEN);
+        $this->assertEquals('Cannot reset module dashactivity since it is not installed', $errorResponse['detail']);
     }
 
     /**
@@ -567,11 +478,8 @@ class ModuleEndpointTest extends ApiTestCase
      */
     public function testUploadModuleByArchive()
     {
-        $bearerToken = $this->getBearerToken(['module_write']);
         $uploadedArchive = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/archive/test_install_cqrs_command.zip');
-
-        $response = static::createClient()->request('POST', '/module/upload-archive', [
-            'auth_bearer' => $bearerToken,
+        $uploadedModule = $this->requestApi('POST', '/module/upload-archive', null, ['module_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -581,21 +489,22 @@ class ModuleEndpointTest extends ApiTestCase
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(201);
-        $decodedResponse = json_decode($response->getContent(), true);
+
         $expectedModule = [
+            // Module uploaded but not installed so no moduleId
             'moduleId' => null,
             'technicalName' => 'test_install_cqrs_command',
             'moduleVersion' => '1.0.0',
+            // Module uploaded but not installed so no version in DB
             'installedVersion' => null,
             'enabled' => false,
             'installed' => false,
         ];
 
         // The returned response contains the module details
-        $this->assertEquals($expectedModule, $decodedResponse);
+        $this->assertEquals($expectedModule, $uploadedModule);
         // The module GET endpoint returns the same data
-        $this->assertEquals($expectedModule, $this->getModuleInfos($expectedModule['technicalName']));
+        $this->assertEquals($expectedModule, $this->getItem('/module/' . $expectedModule['technicalName'], ['module_read']));
     }
 
     /**
@@ -604,18 +513,13 @@ class ModuleEndpointTest extends ApiTestCase
     public function testUninstallModuleAndRemoveFiles(): void
     {
         // Uninstall specific module deleteFiles true
-        $bearerToken = $this->getBearerToken(['module_write']);
-        static::createClient()->request('PUT', '/module/test_install_cqrs_command/uninstall', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                // We remove files, so the module no longer exists
-                'deleteFiles' => true,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(204);
+        $this->updateItem('/module/test_install_cqrs_command/uninstall', [
+            // We remove files, so the module no longer exists
+            'deleteFiles' => true,
+        ], ['module_write'], Response::HTTP_NO_CONTENT);
 
         // Check that the module no longer exists
-        $this->assertModuleNotFound('test_install_cqrs_command');
+        $this->getItem('/module/test_install_cqrs_command', ['module_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -625,7 +529,7 @@ class ModuleEndpointTest extends ApiTestCase
     {
         $modules = ['bankwire', 'ps_emailsubscription'];
         foreach ($modules as $module) {
-            $moduleInfos = $this->getModuleInfos($module);
+            $moduleInfos = $this->getItem('/module/' . $module, ['module_read']);
             $this->assertGreaterThan(0, $moduleInfos['moduleId']);
             $this->assertTrue($moduleInfos['enabled']);
             $this->assertTrue($moduleInfos['installed']);
@@ -633,21 +537,16 @@ class ModuleEndpointTest extends ApiTestCase
             $this->assertTrue(version_compare($moduleInfos['installedVersion'], '0.1.0', '>='));
         }
 
-        // uninstall specific module deleteFiles true
-        $bearerToken = $this->getBearerToken(['module_write']);
-        static::createClient()->request('PUT', sprintf('/modules/uninstall'), [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'modules' => $modules,
-                // Force removal of the files
-                'deleteFiles' => true,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(204);
+        // Uninstall specific module deleteFiles true
+        $this->updateItem('/modules/uninstall', [
+            'modules' => $modules,
+            // Force removal of the files
+            'deleteFiles' => true,
+        ], ['module_write'], Response::HTTP_NO_CONTENT);
 
         // Module files have been removed, so they don't exist at all anymore, thus requesting their info results in a 404
         foreach ($modules as $module) {
-            $this->assertModuleNotFound($module);
+            $this->getItem('/module/' . $module, ['module_read'], Response::HTTP_NOT_FOUND);
         }
     }
 
@@ -656,15 +555,9 @@ class ModuleEndpointTest extends ApiTestCase
         $bearerToken = $this->getBearerToken(['module_write']);
 
         // Upload Zip from GitHub with version 2.1.2 the module is present but not installed
-        $response = static::createClient()->request('POST', '/module/upload-source', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.2/dashproducts.zip',
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(201);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        $uploadedModule = $this->createItem('/module/upload-source', [
+            'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.2/dashproducts.zip',
+        ], ['module_write'], Response::HTTP_CREATED);
 
         // The returned response and the GET infos response should be identical
         $module212 = [
@@ -676,88 +569,55 @@ class ModuleEndpointTest extends ApiTestCase
             'enabled' => false,
             'installed' => false,
         ];
-        $this->assertEquals($module212, $decodedResponse);
-        $this->assertEquals($module212, $this->getModuleInfos($module212['technicalName']));
+        $this->assertEquals($module212, $uploadedModule);
+        $this->assertEquals($module212, $this->getItem('/module/' . $module212['technicalName'], ['module_read']));
 
         // Now we install the module
-        $response = static::createClient()->request('PUT', sprintf('/module/%s/install', $module212['technicalName']), [
-            'auth_bearer' => $bearerToken,
+        $installedModule = $this->updateItem(sprintf('/module/%s/install', $module212['technicalName']), [
             // We must define a JSON body even if it is empty, we need to search how to make this optional
-            'json' => [
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        ], ['module_write']);
 
         // The ID is dynamic, so we fetch it after creation
-        $this->assertArrayHasKey('moduleId', $decodedResponse);
-        $module212['moduleId'] = $decodedResponse['moduleId'];
-        $module212['installed'] = true;
-        $module212['enabled'] = true;
-        $module212['installedVersion'] = '2.1.2';
-        $this->assertEquals($module212, $decodedResponse);
-        $this->assertEquals($module212, $this->getModuleInfos($module212['technicalName']));
+        $this->assertArrayHasKey('moduleId', $installedModule);
 
-        // Now upload the source for version 2.1.3, the module version is updated but not the installed one
-        $response = static::createClient()->request('POST', '/module/upload-source', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.3/dashproducts.zip',
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(201);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-
-        $module213 = [
-            'moduleId' => $module212['moduleId'],
+        $installedModule212 = [
+            'moduleId' => $installedModule['moduleId'],
             'technicalName' => 'dashproducts',
-            'moduleVersion' => '2.1.3',
-            // Module is simply uploaded not installed
+            'moduleVersion' => '2.1.2',
             'installedVersion' => '2.1.2',
             'enabled' => true,
             'installed' => true,
         ];
-        $this->assertEquals($module213, $decodedResponse);
-        $this->assertEquals($module213, $this->getModuleInfos($module213['technicalName']));
+        $this->assertEquals($installedModule212, $installedModule);
+        $this->assertEquals($installedModule212, $this->getItem('/module/' . $installedModule212['technicalName'], ['module_read']));
 
-        $response = static::createClient()->request('PUT', sprintf('/module/%s/upgrade', $module212['technicalName']), [
-            'auth_bearer' => $bearerToken,
+        // Now upload the source for version 2.1.3, the module version is updated but not the installed one (not upgraded yet)
+        $reUploadedModule = $this->createItem('/module/upload-source', [
+            'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.3/dashproducts.zip',
+        ], ['module_write'], Response::HTTP_CREATED);
+
+        $module213 = [
+            // ID has not changed since previous installation
+            'moduleId' => $installedModule212['moduleId'],
+            'technicalName' => 'dashproducts',
+            // Module version (based on the disk, available files) has been updated
+            'moduleVersion' => '2.1.3',
+            // Module is simply uploaded not installed (an upgrade action is still needed)
+            'installedVersion' => '2.1.2',
+            'enabled' => true,
+            'installed' => true,
+        ];
+        $this->assertEquals($module213, $reUploadedModule);
+        $this->assertEquals($module213, $this->getItem('/module/' . $module213['technicalName'], ['module_read']));
+
+        // Now perform the upgrade action
+        $upgradedModule = $this->updateItem(sprintf('/module/%s/upgrade', $installedModule212['technicalName']), [
             // We must define a JSON body even if it is empty, we need to search how to make this optional
-            'json' => [
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        ], ['module_write']);
 
-        // Check response from status upgrade request
-        $module213['installedVersion'] = '2.1.3';
-        $this->assertEquals($module213, $decodedResponse);
-        $this->assertEquals($module213, $this->getModuleInfos($module213['technicalName']));
-    }
-
-    private function getModuleInfos(string $technicalName): array
-    {
-        $bearerToken = $this->getBearerToken(['module_read']);
-        $response = static::createClient()->request('GET', '/module/' . $technicalName, [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-
-        return $decodedResponse;
-    }
-
-    private function assertModuleNotFound(string $technicalName): void
-    {
-        $bearerToken = $this->getBearerToken(['module_read']);
-        static::createClient()->request('GET', '/module/' . $technicalName, [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        // Check response from status upgrade request (the installedVersion field should have been updated)
+        $upgradedModule213 = ['installedVersion' => '2.1.3'] + $module213;
+        $this->assertEquals($upgradedModule213, $upgradedModule);
+        $this->assertEquals($upgradedModule213, $this->getItem('/module/' . $upgradedModule213['technicalName'], ['module_read']));
     }
 }
