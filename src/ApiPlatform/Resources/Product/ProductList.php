@@ -47,6 +47,11 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             gridDataFactory: ProductGridDataFactoryDecorator::class,
             filtersClass: ProductFilters::class,
+            filtersMapping: [
+                '[productId]' => '[id_product]',
+                '[priceTaxExcluded]' => '[final_price_tax_excluded]',
+                '[priceTaxIncluded]' => '[final_price_tax_included]',
+            ],
         ),
     ],
     exceptionToStatus: [

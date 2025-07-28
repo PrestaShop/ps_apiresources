@@ -26,7 +26,6 @@ use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagSettings;
 use PrestaShop\PrestaShop\Core\Multistore\MultistoreConfig;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 use Tests\Resources\Resetter\ConfigurationResetter;
 use Tests\Resources\Resetter\FeatureFlagResetter;
 use Tests\Resources\Resetter\LanguageResetter;
@@ -178,47 +177,34 @@ class ProductMultiShopEndpointTest extends ApiTestCase
 
     public function testShopContextIsRequired(): void
     {
-        $bearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('POST', '/product', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'type' => ProductType::TYPE_STANDARD,
-                'names' => [
-                    'en-US' => 'product name',
-                    'fr-FR' => 'nom produit',
-                ],
+        $errorResponse = $this->createItem('/product', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'product name',
+                'fr-FR' => 'nom produit',
             ],
-        ]);
-        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
-        $content = $response->getContent(false);
-        $this->assertStringContainsString('Multi shop is enabled, you must specify a shop context', $content);
+        ], ['product_write'], Response::HTTP_BAD_REQUEST);
+        $this->assertEquals('Multi shop is enabled, you must specify a shop context', $errorResponse);
     }
 
     public function testCreateProductForFirstShop(): int
     {
-        $bearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('POST', '/product', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'type' => ProductType::TYPE_STANDARD,
-                'names' => [
-                    'en-US' => 'product name',
-                    'fr-FR' => 'nom produit',
-                ],
+        $product = $this->createItem('/product', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'product name',
+                'fr-FR' => 'nom produit',
             ],
+        ], ['product_write'], Response::HTTP_CREATED, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::DEFAULT_SHOP_ID,
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(201);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('productId', $decodedResponse);
-        $productId = $decodedResponse['productId'];
-        $this->assertProductData($productId, self::$defaultProductData, $response);
+        $this->assertArrayHasKey('productId', $product);
+        $productId = $product['productId'];
+        $this->assertProductData($productId, self::$defaultProductData, $product);
 
         return $productId;
     }
@@ -232,17 +218,14 @@ class ProductMultiShopEndpointTest extends ApiTestCase
      */
     public function testGetProductForFirstShopIsSuccessful(int $productId): int
     {
-        $bearerToken = $this->getBearerToken(['product_read']);
-        $response = static::createClient()->request('GET', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
+        $product = $this->getItem('/product/' . $productId, ['product_read'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::DEFAULT_SHOP_ID,
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(200);
-        $this->assertProductData($productId, self::$defaultProductData, $response);
+        $this->assertProductData($productId, self::$defaultProductData, $product);
 
         return $productId;
     }
@@ -256,23 +239,18 @@ class ProductMultiShopEndpointTest extends ApiTestCase
      */
     public function testGetProductForSecondShopIsFailing(int $productId): int
     {
-        $bearerToken = $this->getBearerToken(['product_read']);
-        $response = static::createClient()->request('GET', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
+        $errorResponse = $this->getItem('/product/' . $productId, ['product_read'], Response::HTTP_NOT_FOUND, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::$secondShopId,
                 ],
             ],
         ]);
-
-        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
-        $content = $response->getContent(false);
-        $this->assertStringContainsString(sprintf(
+        $this->assertEquals(sprintf(
             'Could not find association between Product %d and Shop %d',
             $productId,
             self::$secondShopId
-        ), $content);
+        ), $errorResponse['detail']);
 
         return $productId;
     }
@@ -292,20 +270,16 @@ class ProductMultiShopEndpointTest extends ApiTestCase
             self::$thirdShopId,
             self::$fourthShopId,
         ];
-        $bearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('PATCH', '/product/' . $productId . '/shops', [
-            'auth_bearer' => $bearerToken,
+        $updatedProduct = $this->partialUpdateItem('/product/' . $productId . '/shops', [
+            'sourceShopId' => self::DEFAULT_SHOP_ID,
+            'associatedShopIds' => $allShopIds,
+        ], ['product_write'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::DEFAULT_SHOP_ID,
                 ],
             ],
-            'json' => [
-                'sourceShopId' => self::DEFAULT_SHOP_ID,
-                'associatedShopIds' => $allShopIds,
-            ],
         ]);
-        $updatedProduct = json_decode($response->getContent(), true);
         $this->assertEquals($productId, $updatedProduct['productId']);
         $this->assertEquals($allShopIds, $updatedProduct['shopIds']);
 
@@ -323,20 +297,17 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     {
         $bearerToken = $this->getBearerToken(['product_write']);
         // Modify name for all shops
-        static::createClient()->request('PATCH', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
+        $this->partialUpdateItem('/product/' . $productId, [
+            'names' => [
+                'en-US' => 'global product name',
+            ],
+        ], ['product_write'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'allShops' => true,
                 ],
             ],
-            'json' => [
-                'names' => [
-                    'en-US' => 'global product name',
-                ],
-            ],
         ]);
-        self::assertResponseStatusCodeSame(200);
 
         // Check that all shops have been modified
         foreach ([self::DEFAULT_SHOP_ID, self::$secondShopId, self::$thirdShopId, self::$fourthShopId] as $shopId) {
@@ -345,52 +316,43 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         }
 
         // Modify names for second group shop
-        static::createClient()->request('PATCH', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
+        $this->partialUpdateItem('/product/' . $productId, [
+            'names' => [
+                'en-US' => 'second group product name',
+            ],
+        ], ['product_write'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopGroupId' => self::$secondShopGroupId,
                 ],
             ],
-            'json' => [
-                'names' => [
-                    'en-US' => 'second group product name',
-                ],
-            ],
         ]);
-        self::assertResponseStatusCodeSame(200);
 
         // Modify names for first shop
-        static::createClient()->request('PATCH', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
+        $this->partialUpdateItem('/product/' . $productId, [
+            'names' => [
+                'en-US' => 'first shop product name',
+            ],
+        ], ['product_write'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::DEFAULT_SHOP_ID,
                 ],
             ],
-            'json' => [
-                'names' => [
-                    'en-US' => 'first shop product name',
-                ],
-            ],
         ]);
-        self::assertResponseStatusCodeSame(200);
 
         // Modify names for shop2 and shop4
-        static::createClient()->request('PATCH', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
+        $this->partialUpdateItem('/product/' . $productId, [
+            'names' => [
+                'en-US' => 'even shops product name',
+            ],
+        ], ['product_write'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopIds' => [self::$secondShopId, self::$fourthShopId],
                 ],
             ],
-            'json' => [
-                'names' => [
-                    'en-US' => 'even shops product name',
-                ],
-            ],
         ]);
-        self::assertResponseStatusCodeSame(200);
 
         // Now check each shop modified content
         $product = $this->getProduct($productId, self::DEFAULT_SHOP_ID);
@@ -407,30 +369,24 @@ class ProductMultiShopEndpointTest extends ApiTestCase
 
     protected function getProduct(int $productId, int $shopId): array
     {
-        $bearerToken = $this->getBearerToken(['product_read']);
-        $response = static::createClient()->request('GET', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
+        return $this->getItem('/product/' . $productId, ['product_read'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopId' => $shopId,
                 ],
             ],
         ]);
-
-        return json_decode($response->getContent(), true);
     }
 
-    protected function assertProductData(int $productId, array $expectedData, ResponseInterface $response): void
+    protected function assertProductData(int $productId, array $expectedData, array $productData): void
     {
         // Merge expected data with default one, this way no need to always specify all the fields
         $checkedData = $expectedData + ['productId' => $productId] + self::$defaultProductData;
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('productId', $decodedResponse);
+        $this->assertNotFalse($productData);
+        $this->assertArrayHasKey('productId', $productData);
         $this->assertEquals(
-            $decodedResponse,
-            $checkedData
+            $checkedData,
+            $productData
         );
     }
 }

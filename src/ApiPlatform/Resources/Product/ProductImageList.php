@@ -23,9 +23,11 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetProductImages;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
@@ -42,6 +44,9 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
                 '[localizedLegends]' => '[legends]',
             ],
         ),
+    ],
+    exceptionToStatus: [
+        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class ProductImageList
