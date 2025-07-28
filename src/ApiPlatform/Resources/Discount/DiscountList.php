@@ -22,10 +22,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
 use PrestaShop\PrestaShop\Core\Search\Filters\DiscountFilters;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 use Symfony\Component\HttpFoundation\Response;
@@ -51,25 +49,8 @@ class DiscountList
 {
     #[ApiProperty(identifier: true)]
     public int $discountId;
-    #[LocalizedValue]
-    public array $names;
-    public int $priority;
-    public bool $active;
-    public \DateTimeImmutable $validFrom;
-    public \DateTimeImmutable $validTo;
-    public int $totalQuantity;
-    public int $quantityPerUser;
-    public string $description;
-    public string $code;
-    public int $customerId;
-    public bool $highlightInCart;
-    public bool $allowPartialUse;
     public string $type;
-    public ?DecimalNumber $percentDiscount;
-    public ?DecimalNumber $amountDiscount;
-    public int $currencyId;
-    public bool $isTaxIncluded;
-    public int $productId;
-    public array $combinations;
-    public int $reductionProduct;
+    public string $name;
+    public bool $active;
+    public string $code;
 }
