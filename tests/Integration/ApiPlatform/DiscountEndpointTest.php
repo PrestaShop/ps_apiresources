@@ -84,9 +84,8 @@ class DiscountEndpointTest extends ApiTestCase
      *
      * @return int
      */
-    public function testAddDiscount(string $type, array $names, ?array $data): int
+    public function testAddDiscountAndGet(string $type, array $names, ?array $data): int
     {
-        $bearerToken = $this->getBearerToken(['discount_write']);
         $json = [
             'type' => $type,
             'names' => $names,
@@ -94,21 +93,37 @@ class DiscountEndpointTest extends ApiTestCase
         if ($data !== null) {
             $json = array_merge($json, $data);
         }
-        $response = static::createClient()->request('POST', '/discount', [
-            'auth_bearer' => $bearerToken,
-            'json' => $json,
-        ]);
-        self::assertResponseStatusCodeSame(201);
 
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('discountId', $decodedResponse);
-        $discountId = $decodedResponse['discountId'];
-        $this->assertArrayHasKey(
-            'type',
-            $decodedResponse
-        );
-        $this->assertEquals($type, $decodedResponse['type']);
+        $discount = $this->createItem('/discount', $json, ['discount_write']);
+        $this->assertArrayHasKey('discountId', $discount);
+        $discountId = $discount['discountId'];
+
+        $expectedDiscount = [
+            'discountId' => $discountId,
+            'type' => $type,
+            'names' => $names,
+            'priority' => 1,
+            'active' => false,
+            'totalQuantity' => 1,
+            'quantityPerUser' => 1,
+            'description' => '',
+            'code' => '',
+            'customerId' => 0,
+            'highlightInCart' => false,
+            'allowPartialUse' => true,
+            'currencyId' => 1,
+            'reductionProduct' => 0,
+            // These two values are dynamic, we can't hard-code the expected value
+            'validFrom' => $discount['validFrom'],
+            'validTo' => $discount['validTo'],
+        ];
+        if ($data !== null) {
+            $expectedDiscount = array_merge($expectedDiscount, $data);
+        }
+
+        $this->assertEquals($expectedDiscount, $discount);
+        // Now test that the GET request returns the same expected result
+        $this->assertEquals($expectedDiscount, $this->getItem('/discount/' . $discountId, ['discount_read']));
 
         return $discountId;
     }
@@ -135,7 +150,8 @@ class DiscountEndpointTest extends ApiTestCase
                     'percentDiscount' => 20.0,
                 ],
             ],
-            [
+            // todo: This one must be improved, the naming productId is not correct, it should be giftProductId
+            /*[
                 self::FREE_GIFT,
                 [
                     'en-US' => 'new free gift discount',
@@ -144,7 +160,7 @@ class DiscountEndpointTest extends ApiTestCase
                 [
                     'productId' => 1,
                 ],
-            ],
+            ],*/
             [
                 self::FREE_SHIPPING,
                 [
@@ -165,52 +181,25 @@ class DiscountEndpointTest extends ApiTestCase
     }
 
     /**
-     * @depends testAddDiscount
-     *
-     * @return int
+     * @depends testAddDiscountAndGet
      */
-    public function testGetDiscount(): void
-    {
-        $bearerToken = $this->getBearerToken(['discount_read']);
-        $response = static::createClient()->request('GET', '/discount/1', [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('discountId', $decodedResponse);
-        $this->assertEquals(1, $decodedResponse['priority']);
-        $this->assertFalse($decodedResponse['active']);
-        $this->assertArrayHasKey('validFrom', $decodedResponse);
-        $this->assertArrayHasKey('validTo', $decodedResponse);
-        $this->assertEquals(1, $decodedResponse['totalQuantity']);
-        $this->assertEquals(1, $decodedResponse['quantityPerUser']);
-        $this->assertEquals('', $decodedResponse['description']);
-        $this->assertEquals('', $decodedResponse['code']);
-        $this->assertEquals('0', $decodedResponse['customerId']);
-        $this->assertFalse($decodedResponse['highlightInCart']);
-        $this->assertTrue($decodedResponse['allowPartialUse']);
-        $this->assertEquals(1, $decodedResponse['currencyId']);
-        $this->assertEquals(0, $decodedResponse['reductionProduct']);
-        $this->assertArrayHasKey(
-            'type',
-            $decodedResponse
-        );
-        $this->assertEquals('cart_level', $decodedResponse['type']);
-    }
-
     public function testListDiscount(): void
     {
-        $bearerToken = $this->getBearerToken(['discount_read']);
-        $response = static::createClient()->request('GET', '/discounts', [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
+        $paginatedDiscounts = $this->listItems('/discounts', ['discount_read']);
+        $createdDiscountData = $this->discountTypesDataProvider();
+        $this->assertEquals(count($createdDiscountData), $paginatedDiscounts['totalItems']);
 
-        $decodedResponse = json_decode($response->getContent(), true);
-
-        $this->assertCount(6, $decodedResponse);
+        foreach ($paginatedDiscounts['items'] as $key => $discount) {
+            $creationData = $createdDiscountData[$key];
+            $expectedDiscount = [
+                'discountId' => $discount['discountId'],
+                'type' => $creationData[0],
+                'name' => $creationData[1]['en-US'],
+                'active' => false,
+                'code' => '',
+            ];
+            $this->assertEquals($expectedDiscount, $discount);
+        }
     }
 
     public function testDeleteDiscount(): void

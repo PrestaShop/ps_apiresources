@@ -132,7 +132,7 @@ class EnvironmentBuilder
     private static function checkoutBranch(GitRepository $repo, array $arguments): bool
     {
         if (empty($arguments['core-branch'])) {
-            self::log('No specified branch no need to checkout any particular one.');
+            self::log('No specified branch no need to checkout any particular one, keeping current one (by default develop).');
 
             return false;
         }

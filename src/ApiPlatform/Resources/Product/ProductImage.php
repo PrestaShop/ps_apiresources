@@ -24,12 +24,14 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\DeleteProductImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\UpdateProductImageCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Image\Exception\ProductImageNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetProductImage;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
-use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
@@ -44,6 +46,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
             CQRSQueryMapping: ProductImage::QUERY_MAPPING,
         ),
         new CQRSUpdate(
+            // We have to force POST request, because we cannot use PUT with files AND data
             method: CQRSUpdate::METHOD_POST,
             uriTemplate: '/product/image/{imageId}',
             inputFormats: ['multipart' => ['multipart/form-data']],
@@ -63,6 +66,13 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
                 '[cover]' => '[isCover]',
             ]
         ),
+        new CQRSDelete(
+            uriTemplate: '/product/image/{imageId}',
+            CQRSQuery: DeleteProductImageCommand::class,
+        ),
+    ],
+    exceptionToStatus: [
+        ProductImageNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class ProductImage
@@ -82,8 +92,6 @@ class ProductImage
     public int $position;
 
     public array $shopIds;
-
-    public File $image;
 
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',

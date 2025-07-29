@@ -36,30 +36,37 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/hook-status',
+            uriTemplate: '/hook-status/{hookId}',
             CQRSCommand: UpdateHookStatusCommand::class,
-            scopes: ['hook_write']
+            CQRSQuery: GetHook::class,
+            scopes: ['hook_write'],
+            CQRSQueryMapping: self::MAPPING,
+            CQRSCommandMapping: self::MAPPING,
         ),
         new CQRSGet(
-            uriTemplate: '/hook/{id}',
-            requirements: ['id' => '\d+'],
+            uriTemplate: '/hook/{hookId}',
+            requirements: ['hookId' => '\d+'],
             exceptionToStatus: [HookNotFoundException::class => 404],
             CQRSQuery: GetHook::class,
-            scopes: ['hook_read']
+            scopes: ['hook_read'],
+            CQRSQueryMapping: self::MAPPING,
         ),
         new PaginatedList(
             uriTemplate: '/hooks',
             provider: QueryListProvider::class,
             scopes: ['hook_read'],
-            ApiResourceMapping: ['[id_hook]' => '[id]'],
+            ApiResourceMapping: ['[id_hook]' => '[hookId]'],
             gridDataFactory: 'prestashop.core.grid.data_factory.hook',
+            filtersMapping: [
+                '[hookId]' => '[id_hook]',
+            ],
         ),
     ],
 )]
 class Hook
 {
     #[ApiProperty(identifier: true)]
-    public int $id;
+    public int $hookId;
 
     public bool $active;
 
@@ -68,4 +75,11 @@ class Hook
     public string $title;
 
     public string $description;
+
+    protected const MAPPING = [
+        // Transforms the url hookId parameter into the $id parameter for GetHook
+        '[hookId]' => '[id]',
+        // Transforms the query result Hook::getId into the Api resource hookId
+        '[id]' => '[hookId]',
+    ];
 }

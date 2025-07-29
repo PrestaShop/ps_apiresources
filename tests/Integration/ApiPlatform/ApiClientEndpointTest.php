@@ -31,6 +31,7 @@ class ApiClientEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+        // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients
         self::createApiClient(['api_client_write', 'api_client_read']);
     }
 
@@ -64,36 +65,34 @@ class ApiClientEndpointTest extends ApiTestCase
 
     public function testAddApiClient(): int
     {
-        $bearerToken = $this->getBearerToken(['api_client_write']);
-        $response = static::createClient()->request('POST', '/api-client', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'clientId' => 'client_id_test',
-                'clientName' => 'Client name test',
-                'description' => 'Client description test',
-                // Check that false can be used (previously bug because of a NotBlank constraint)
-                'enabled' => false,
-                'lifetime' => 3600,
-                'scopes' => [
-                    'api_client_read',
-                    'hook_read',
-                ],
+        $itemsCount = $this->countItems('/api-clients', ['api_client_read']);
+
+        $apiClient = $this->createItem('/api-client', [
+            'clientId' => 'client_id_test',
+            'clientName' => 'Client name test',
+            'description' => 'Client description test',
+            // Check that false can be used (previously bug because of a NotBlank constraint)
+            'enabled' => false,
+            'lifetime' => 3600,
+            'scopes' => [
+                'api_client_read',
+                'hook_read',
             ],
-        ]);
-        self::assertResponseStatusCodeSame(201);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('apiClientId', $decodedResponse);
-        $this->assertArrayHasKey('secret', $decodedResponse);
-        $apiClientId = $decodedResponse['apiClientId'];
-        $secret = $decodedResponse['secret'];
+        ], ['api_client_write']);
+        $this->assertArrayHasKey('apiClientId', $apiClient);
+        $this->assertArrayHasKey('secret', $apiClient);
+        $apiClientId = $apiClient['apiClientId'];
+        $secret = $apiClient['secret'];
         $this->assertEquals(
             [
                 'apiClientId' => $apiClientId,
                 'secret' => $secret,
             ],
-            $decodedResponse
+            $apiClient
         );
+
+        $newItemsCount = $this->countItems('/api-clients', ['api_client_read']);
+        $this->assertEquals($itemsCount + 1, $newItemsCount);
 
         return $apiClientId;
     }
@@ -107,14 +106,7 @@ class ApiClientEndpointTest extends ApiTestCase
      */
     public function testGetApiClient(int $apiClientId): int
     {
-        $bearerToken = $this->getBearerToken(['api_client_read']);
-        $response = static::createClient()->request('GET', '/api-client/' . $apiClientId, [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        $apiClient = $this->getItem('/api-client/' . $apiClientId, ['api_client_read']);
         $this->assertEquals(
             [
                 'apiClientId' => $apiClientId,
@@ -129,7 +121,7 @@ class ApiClientEndpointTest extends ApiTestCase
                     'hook_read',
                 ],
             ],
-            $decodedResponse
+            $apiClient
         );
 
         return $apiClientId;
@@ -144,28 +136,18 @@ class ApiClientEndpointTest extends ApiTestCase
      */
     public function testUpdateApiClient(int $apiClientId): int
     {
-        $bearerToken = $this->getBearerToken(['api_client_write']);
-
         // Update API client
-        $response = static::createClient()->request('PATCH', '/api-client/' . $apiClientId, [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'clientId' => 'client_id_test_updated',
-                'clientName' => 'Client name test updated',
-                'description' => 'Client description test updated',
-                'enabled' => true,
-                'lifetime' => 1800,
-                'scopes' => [
-                    'api_client_write',
-                    'hook_read',
-                ],
+        $updatedApiClient = $this->partialUpdateItem('/api-client/' . $apiClientId, [
+            'clientId' => 'client_id_test_updated',
+            'clientName' => 'Client name test updated',
+            'description' => 'Client description test updated',
+            'enabled' => true,
+            'lifetime' => 1800,
+            'scopes' => [
+                'api_client_write',
+                'hook_read',
             ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        // Returned data has modified fields, the others haven't changed
+        ], ['api_client_write']);
         $this->assertEquals(
             [
                 'apiClientId' => $apiClientId,
@@ -180,39 +162,31 @@ class ApiClientEndpointTest extends ApiTestCase
                     'hook_read',
                 ],
             ],
-            $decodedResponse
+            $updatedApiClient
         );
 
         // Update partially API client
-        $response = static::createClient()->request('PATCH', '/api-client/' . $apiClientId, [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'description' => 'Client description test partially updated',
-                'lifetime' => 900,
-                'externalIssuer' => 'http://not-possible-to-modify',
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
+        $updatedApiClient = $this->partialUpdateItem('/api-client/' . $apiClientId, [
+            'description' => 'Client description test partially updated',
+            'lifetime' => 900,
+            // Even if we try to modify the external issuer it is an immutable/internal field anyway
+            'externalIssuer' => 'http://not-possible-to-modify',
+        ], ['api_client_write']);
 
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
         // Returned data has modified fields, the others haven't changed
-        $this->assertEquals(
-            [
-                'apiClientId' => $apiClientId,
-                'clientId' => 'client_id_test_updated',
-                'clientName' => 'Client name test updated',
-                'description' => 'Client description test partially updated',
-                'externalIssuer' => null,
-                'enabled' => true,
-                'lifetime' => 900,
-                'scopes' => [
-                    'api_client_write',
-                    'hook_read',
-                ],
+        $this->assertEquals([
+            'apiClientId' => $apiClientId,
+            'clientId' => 'client_id_test_updated',
+            'clientName' => 'Client name test updated',
+            'description' => 'Client description test partially updated',
+            'externalIssuer' => null,
+            'enabled' => true,
+            'lifetime' => 900,
+            'scopes' => [
+                'api_client_write',
+                'hook_read',
             ],
-            $decodedResponse
-        );
+        ], $updatedApiClient);
 
         return $apiClientId;
     }
@@ -226,14 +200,7 @@ class ApiClientEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedApiClient(int $apiClientId): int
     {
-        $bearerToken = $this->getBearerToken(['api_client_read']);
-        $response = static::createClient()->request('GET', '/api-client/' . $apiClientId, [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        $apiClient = $this->getItem('/api-client/' . $apiClientId, ['api_client_read']);
         $this->assertEquals(
             [
                 'apiClientId' => $apiClientId,
@@ -248,7 +215,7 @@ class ApiClientEndpointTest extends ApiTestCase
                     'hook_read',
                 ],
             ],
-            $decodedResponse
+            $apiClient
         );
 
         return $apiClientId;
@@ -264,10 +231,17 @@ class ApiClientEndpointTest extends ApiTestCase
     public function testListApiClients(int $apiClientId): int
     {
         $apiClients = $this->listItems('/api-clients', ['api_client_read']);
-        // Two APi Clients, the one created for test to actually use the API and the one created in the previous test
-        $this->assertEquals(2, $apiClients['totalItems']);
+        // At least two API Clients, the one created for test to actually use the API and the one created in the previous test
+        $this->assertGreaterThanOrEqual(2, $apiClients['totalItems']);
 
-        // Test content from the second (most recent) api client created
+        // Search for the one created previously during the tests and assert its data in the list
+        $testApiClient = null;
+        foreach ($apiClients['items'] as $apiClient) {
+            if ($apiClient['clientId'] === 'client_id_test_updated') {
+                $testApiClient = $apiClient;
+            }
+        }
+        $this->assertNotNull($testApiClient);
         $this->assertEquals(
             [
                 'apiClientId' => $apiClientId,
@@ -278,7 +252,7 @@ class ApiClientEndpointTest extends ApiTestCase
                 'enabled' => true,
                 'lifetime' => 900,
             ],
-            $apiClients['items'][1],
+            $testApiClient
         );
 
         return $apiClientId;
@@ -291,62 +265,40 @@ class ApiClientEndpointTest extends ApiTestCase
      */
     public function testDeleteApiClient(int $apiClientId): void
     {
-        // Delete API client without token
-        static::createClient()->request('DELETE', '/api-client/' . $apiClientId);
-        self::assertResponseStatusCodeSame(401);
-        // Delete API client without token
+        // Delete API client without token is unauthorized (401)
+        $errorMessage = $this->deleteItem('/api-client/' . $apiClientId, [], Response::HTTP_UNAUTHORIZED);
+        $this->assertEquals('No Authorization header provided', $errorMessage);
+
+        // Delete API client with invalid token
         static::createClient()->request('DELETE', '/api-client/' . $apiClientId, [
             'auth_bearer' => 'toto',
         ]);
-        self::assertResponseStatusCodeSame(401);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
 
-        // Try to delete with a token with only read scope
-        $readBearerToken = $this->getBearerToken(['api_client_read']);
-        $response = static::createClient()->request('DELETE', '/api-client/' . $apiClientId, [
-            'auth_bearer' => $readBearerToken,
-        ]);
-        $this->assertEquals(403, $response->getStatusCode());
-        self::assertResponseStatusCodeSame(403);
+        // Try to delete with a token with only read scope is forbidden (403)
+        $this->deleteItem('/api-client/' . $apiClientId, ['api_client_read'], Response::HTTP_FORBIDDEN);
 
         // Check that API client was not deleted
-        static::createClient()->request('GET', '/api-client/' . $apiClientId, [
-            'auth_bearer' => $readBearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
+        $this->assertNotNull($this->getItem('/api-client/' . $apiClientId, ['api_client_read']));
 
         // Delete API client with valid token
-        $writeBearerToken = $this->getBearerToken(['api_client_write']);
-        $response = static::createClient()->request('DELETE', '/api-client/' . $apiClientId, [
-            'auth_bearer' => $writeBearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(204);
-        $this->assertEmpty($response->getContent());
+        $this->deleteItem('/api-client/' . $apiClientId, ['api_client_write']);
 
-        static::createClient()->request('GET', '/api-client/' . $apiClientId, [
-            'auth_bearer' => $readBearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        $errorResponse = $this->getItem('/api-client/' . $apiClientId, ['api_client_read'], Response::HTTP_NOT_FOUND);
+        $this->assertEquals('Could not find Api client ' . $apiClientId, $errorResponse['detail']);
     }
 
     public function testCreateInvalidApiClient(): void
     {
-        $bearerToken = $this->getBearerToken(['api_client_write']);
-        $response = static::createClient()->request('POST', '/api-client', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'clientId' => '',
-                'clientName' => '',
-                'description' => RandomString::generate(ApiClientSettings::MAX_DESCRIPTION_LENGTH + 1),
-                'lifetime' => 0,
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
-        // Get content without throwing exception since an error occurred, but we expected it
-        $decodedResponse = json_decode($response->getContent(false), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertIsArray($decodedResponse);
-
-        $expectedErrors = [
+        // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
+        $validationErrorsResponse = $this->createItem('/api-client', [
+            'clientId' => '',
+            'clientName' => '',
+            'description' => RandomString::generate(ApiClientSettings::MAX_DESCRIPTION_LENGTH + 1),
+            'lifetime' => 0,
+        ], ['api_client_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
             [
                 'propertyPath' => 'clientId',
                 'message' => 'This value should not be blank.',
@@ -375,7 +327,6 @@ class ApiClientEndpointTest extends ApiTestCase
                 'propertyPath' => 'description',
                 'message' => sprintf('This value is too long. It should have %d characters or less.', ApiClientSettings::MAX_DESCRIPTION_LENGTH),
             ],
-        ];
-        $this->assertValidationErrors($decodedResponse, $expectedErrors);
+        ], $validationErrorsResponse);
     }
 }

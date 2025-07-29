@@ -29,10 +29,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductCondition;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductVisibility;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\RedirectType;
-use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
-use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\ProductGridDefinitionFactory;
-use PrestaShop\PrestaShop\Core\Grid\Query\ProductQueryBuilder;
-use PrestaShop\PrestaShop\Core\Search\Filters\ProductFilters;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\Resetter\LanguageResetter;
 use Tests\Resources\Resetter\ProductResetter;
 use Tests\Resources\ResourceResetter;
@@ -135,6 +132,7 @@ class ProductEndpointTest extends ApiTestCase
         ProductResetter::resetProducts();
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
+        // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients
         self::createApiClient(['product_write', 'product_read']);
     }
 
@@ -160,6 +158,11 @@ class ProductEndpointTest extends ApiTestCase
         ];
 
         yield 'update endpoint' => [
+            'PATCH',
+            '/product/1',
+        ];
+
+        yield 'update endpoint with merge content type' => [
             'PATCH',
             '/product/1',
             'application/merge-patch+json',
@@ -195,26 +198,18 @@ class ProductEndpointTest extends ApiTestCase
 
     public function testAddProduct(): int
     {
-        $productsNumber = $this->getProductsNumber();
-        $bearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('POST', '/product', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'type' => ProductType::TYPE_STANDARD,
-                'names' => [
-                    'en-US' => 'product name',
-                    'fr-FR' => 'nom produit',
-                ],
+        $productsNumber = $this->countItems('/products', ['product_read']);
+        $addedProduct = $this->createItem('/product', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'product name',
+                'fr-FR' => 'nom produit',
             ],
-        ]);
-        self::assertResponseStatusCodeSame(201);
-        $newProductsNumber = $this->getProductsNumber();
+        ], ['product_write']);
+        $newProductsNumber = $this->countItems('/products', ['product_read']);
         self::assertEquals($productsNumber + 1, $newProductsNumber);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('productId', $decodedResponse);
-        $productId = $decodedResponse['productId'];
+        $this->assertArrayHasKey('productId', $addedProduct);
+        $productId = $addedProduct['productId'];
         $this->assertEquals(
             [
                 'type' => ProductType::TYPE_STANDARD,
@@ -236,7 +231,7 @@ class ProductEndpointTest extends ApiTestCase
                     1,
                 ],
             ] + self::$defaultProductData,
-            $decodedResponse
+            $addedProduct
         );
 
         return $productId;
@@ -251,31 +246,20 @@ class ProductEndpointTest extends ApiTestCase
      */
     public function testPartialUpdateProduct(int $productId): int
     {
-        $productsNumber = $this->getProductsNumber();
-        $bearerToken = $this->getBearerToken(['product_write']);
-
-        // Update product with partial data, even multilang fields can be updated language by language
-        $response = static::createClient()->request('PATCH', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
-            'headers' => [
-                'content-type' => 'application/merge-patch+json',
+        $productsNumber = $this->countItems('/products', ['product_read']);
+        $patchedProduct = $this->partialUpdateItem('/product/' . $productId, [
+            'names' => [
+                'fr-FR' => 'nouveau nom',
             ],
-            'json' => [
-                'names' => [
-                    'fr-FR' => 'nouveau nom',
-                ],
-                'descriptions' => [
-                    'en-US' => 'new description',
-                ],
-                'active' => true,
+            'descriptions' => [
+                'en-US' => 'new description',
             ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        // No new product
-        $this->assertEquals($productsNumber, $this->getProductsNumber());
+            'active' => true,
+        ], ['product_write']);
 
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        // No new product, the number of products stays the same
+        $this->assertEquals($productsNumber, $this->countItems('/products', ['product_read']));
+
         // Returned data has modified fields, the others haven't changed
         $this->assertEquals(
             [
@@ -298,24 +282,16 @@ class ProductEndpointTest extends ApiTestCase
                     1,
                 ],
             ] + self::$defaultProductData,
-            $decodedResponse
+            $patchedProduct
         );
 
         // Update product with partial data, only name default language the other names are not impacted
-        $response = static::createClient()->request('PATCH', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
-            'headers' => [
-                'content-type' => 'application/merge-patch+json',
+        $patchedProduct2 = $this->partialUpdateItem('/product/' . $productId, [
+            'names' => [
+                'en-US' => 'new product name',
             ],
-            'json' => [
-                'names' => [
-                    'en-US' => 'new product name',
-                ],
-            ],
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
+        ], ['product_write']);
+
         // Returned data has modified fields, the others haven't changed
         $this->assertEquals(
             [
@@ -338,7 +314,7 @@ class ProductEndpointTest extends ApiTestCase
                     1,
                 ],
             ] + self::$defaultProductData,
-            $decodedResponse
+            $patchedProduct2
         );
 
         return $productId;
@@ -351,15 +327,8 @@ class ProductEndpointTest extends ApiTestCase
      */
     public function testGetProduct(int $productId): int
     {
-        $bearerToken = $this->getBearerToken(['product_read']);
-        $response = static::createClient()->request('GET', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
         // Returned data has modified fields, the others haven't changed
+        $product = $this->getItem('/product/' . $productId, ['product_read']);
         $this->assertEquals(
             [
                 'type' => ProductType::TYPE_STANDARD,
@@ -381,7 +350,7 @@ class ProductEndpointTest extends ApiTestCase
                     1,
                 ],
             ] + self::$defaultProductData,
-            $decodedResponse
+            $product
         );
 
         return $productId;
@@ -394,9 +363,7 @@ class ProductEndpointTest extends ApiTestCase
      */
     public function testUpdateAllProductFields(int $productId): int
     {
-        $bearerToken = $this->getBearerToken(['product_read', 'product_write']);
-
-        $updateProduct = [
+        $updateProductData = [
             'type' => ProductType::TYPE_STANDARD,
             'names' => [
                 'en-US' => 'new name',
@@ -476,6 +443,9 @@ class ProductEndpointTest extends ApiTestCase
             ],
         ];
 
+        // Update the product
+        $updatedProduct = $this->partialUpdateItem('/product/' . $productId, $updateProductData, ['product_write']);
+
         // Build expected data
         $expectedUpdateProduct = [
             'productId' => $productId,
@@ -484,34 +454,16 @@ class ProductEndpointTest extends ApiTestCase
             'ecotaxTaxIncluded' => 2.0,
             'unitPriceTaxIncluded' => 5.2,
             'unitPriceRatio' => 2.0,
-        ] + $updateProduct + self::$defaultProductData;
+        ] + $updateProductData + self::$defaultProductData;
 
         // Redirect options are passed as a sub object but they are returned independently when product is read
         unset($expectedUpdateProduct['redirectOption']);
         $expectedUpdateProduct['redirectType'] = RedirectType::TYPE_CATEGORY_PERMANENT;
         $expectedUpdateProduct['redirectTarget'] = 1;
 
-        // Update product with partial data, even multilang fields can be updated language by language
-        $response = static::createClient()->request('PATCH', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
-            'headers' => [
-                'content-type' => 'application/merge-patch+json',
-            ],
-            'json' => $updateProduct,
-        ]);
-        self::assertResponseStatusCodeSame(200);
-
-        // Check updated response
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertEquals($expectedUpdateProduct, $decodedResponse);
-
+        $this->assertEquals($expectedUpdateProduct, $updatedProduct);
         // Now check the result when we GET the product
-        $response = static::createClient()->request('GET', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertEquals($expectedUpdateProduct, $decodedResponse);
+        $this->assertEquals($expectedUpdateProduct, $this->getItem('/product/' . $productId, ['product_read']));
 
         return $productId;
     }
@@ -523,11 +475,10 @@ class ProductEndpointTest extends ApiTestCase
      */
     public function testAddImage(int $productId): int
     {
-        $bearerToken = $this->getBearerToken(['product_write']);
         $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
 
-        $response = static::createClient()->request('POST', '/product/' . $productId . '/image', [
-            'auth_bearer' => $bearerToken,
+        // Special type of request, requires multipart/form-data content-type and upload a file via the request
+        $createdImage = $this->requestApi('POST', '/product/' . $productId . '/image', null, ['product_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -537,28 +488,28 @@ class ProductEndpointTest extends ApiTestCase
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(201);
 
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('imageId', $decodedResponse);
-        $this->assertIsInt($decodedResponse['imageId']);
-        $imageId = $decodedResponse['imageId'];
-        $this->assertGreaterThan(0, $decodedResponse['imageId']);
-        $this->assertArrayHasKey('imageUrl', $decodedResponse);
-        $this->assertMatchesRegularExpression('@/img/p[/0-9]+' . $imageId . '\.jpg@', $decodedResponse['imageUrl']);
-        $this->assertArrayHasKey('thumbnailUrl', $decodedResponse);
-        $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
-        $this->assertArrayHasKey('legends', $decodedResponse);
-        $this->assertEquals([
-            'en-US' => '',
-            'fr-FR' => '',
-        ], $decodedResponse['legends']);
-        $this->assertArrayHasKey('cover', $decodedResponse);
-        $this->assertIsBool($decodedResponse['cover']);
-        $this->assertArrayHasKey('position', $decodedResponse);
-        $this->assertIsInt($decodedResponse['position']);
-        $this->assertEquals(1, $decodedResponse['position']);
+        $this->assertArrayHasKey('imageId', $createdImage);
+        $this->assertIsInt($createdImage['imageId']);
+        $this->assertGreaterThan(0, $createdImage['imageId']);
+        $imageId = $createdImage['imageId'];
+
+        // Check URLs format based on the newly created Image ID
+        $expectedImage = [
+            'imageId' => $imageId,
+            'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
+            'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
+            'legends' => [
+                'en-US' => '',
+                'fr-FR' => '',
+            ],
+            'cover' => true,
+            'position' => 1,
+            'shopIds' => [
+                1,
+            ],
+        ];
+        $this->assertEquals($expectedImage, $createdImage);
 
         return $imageId;
     }
@@ -570,33 +521,24 @@ class ProductEndpointTest extends ApiTestCase
      */
     public function testGetImage(int $imageId): string
     {
-        $bearerToken = $this->getBearerToken(['product_read']);
-        $response = static::createClient()->request('GET', '/product/image/' . $imageId, ['auth_bearer' => $bearerToken]);
-        self::assertResponseStatusCodeSame(200);
+        $expectedImage = [
+            'imageId' => $imageId,
+            'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
+            'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
+            'legends' => [
+                'en-US' => '',
+                'fr-FR' => '',
+            ],
+            'cover' => true,
+            'position' => 1,
+            'shopIds' => [
+                1,
+            ],
+        ];
+        $image = $this->getItem('/product/image/' . $imageId, ['product_read']);
+        $this->assertEquals($expectedImage, $image);
 
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('imageId', $decodedResponse);
-        $this->assertIsInt($decodedResponse['imageId']);
-        $this->assertEquals($imageId, $decodedResponse['imageId']);
-        $this->assertGreaterThan(0, $decodedResponse['imageId']);
-        $this->assertArrayHasKey('imageUrl', $decodedResponse);
-        $this->assertMatchesRegularExpression('@/img/p[/0-9]+' . $imageId . '\.jpg@', $decodedResponse['imageUrl']);
-        $this->assertArrayHasKey('thumbnailUrl', $decodedResponse);
-        $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
-        $this->assertArrayHasKey('legends', $decodedResponse);
-        $this->assertEquals([
-            'en-US' => '',
-            'fr-FR' => '',
-        ], $decodedResponse['legends']);
-        $this->assertArrayHasKey('cover', $decodedResponse);
-        $this->assertIsBool($decodedResponse['cover']);
-        $this->assertTrue($decodedResponse['cover']);
-        $this->assertArrayHasKey('position', $decodedResponse);
-        $this->assertIsInt($decodedResponse['position']);
-        $this->assertEquals(1, $decodedResponse['position']);
-
-        return $this->getImageMD5($decodedResponse);
+        return $this->getImageMD5($image);
     }
 
     /**
@@ -607,16 +549,16 @@ class ProductEndpointTest extends ApiTestCase
      */
     public function testUpdateImage(int $imageId, string $imageMD5): int
     {
-        $bearerToken = $this->getBearerToken(['product_write']);
         $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Brown_bear_cushion.jpg');
 
-        $response = static::createClient()->request('POST', '/product/image/' . $imageId, [
-            'auth_bearer' => $bearerToken,
+        // We have to force POST request, because we cannot use PUT with files AND data
+        $updatedImage = $this->requestApi('POST', '/product/image/' . $imageId, null, ['product_write'], Response::HTTP_OK, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
             'extra' => [
                 'parameters' => [
+                    // Parameters are sent via POST parameters not JSON
                     'legends' => [
                         'en-US' => 'legend en',
                         'fr-FR' => 'legend fr',
@@ -627,30 +569,30 @@ class ProductEndpointTest extends ApiTestCase
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(200);
+        $this->assertArrayHasKey('imageId', $updatedImage);
+        $this->assertIsInt($updatedImage['imageId']);
+        $imageId = $updatedImage['imageId'];
+        $this->assertGreaterThan(0, $updatedImage['imageId']);
 
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
-        $this->assertArrayHasKey('imageId', $decodedResponse);
-        $this->assertIsInt($decodedResponse['imageId']);
-        $imageId = $decodedResponse['imageId'];
-        $this->assertGreaterThan(0, $decodedResponse['imageId']);
-        $this->assertArrayHasKey('imageUrl', $decodedResponse);
-        $this->assertMatchesRegularExpression('@/img/p[/0-9]+' . $imageId . '\.jpg@', $decodedResponse['imageUrl']);
-        $this->assertArrayHasKey('thumbnailUrl', $decodedResponse);
-        $this->assertMatchesRegularExpression('@/img/p[/0-9]+/' . $imageId . '-small_default\.jpg@', $decodedResponse['thumbnailUrl']);
-        $this->assertArrayHasKey('legends', $decodedResponse);
-        $this->assertEquals([
-            'en-US' => 'legend en',
-            'fr-FR' => 'legend fr',
-        ], $decodedResponse['legends']);
-        $this->assertArrayHasKey('cover', $decodedResponse);
-        $this->assertIsBool($decodedResponse['cover']);
-        $this->assertArrayHasKey('position', $decodedResponse);
-        $this->assertIsInt($decodedResponse['position']);
-        $this->assertEquals(1, $decodedResponse['position']);
+        // The output is almost identical (the image URLs are the same at least), only the legends is different in the JSON response
+        $expectedImage = [
+            'imageId' => $imageId,
+            'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
+            'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
+            'legends' => [
+                'en-US' => 'legend en',
+                'fr-FR' => 'legend fr',
+            ],
+            'cover' => true,
+            'position' => 1,
+            'shopIds' => [
+                1,
+            ],
+        ];
+        $this->assertEquals($expectedImage, $updatedImage);
 
-        $newImageMD5 = $this->getImageMD5($decodedResponse);
+        // But we must ensure that the image has been modified by checking its md5 checksum
+        $newImageMD5 = $this->getImageMD5($updatedImage);
         $this->assertNotEquals($imageMD5, $newImageMD5);
 
         return $imageId;
@@ -666,8 +608,7 @@ class ProductEndpointTest extends ApiTestCase
 
         // First add a new image so that we have at least to images
         $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
-        $newImageResponse = static::createClient()->request('POST', '/product/' . $productId . '/image', [
-            'auth_bearer' => $bearerToken,
+        $newImage = $this->requestApi('POST', '/product/' . $productId . '/image', null, ['product_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -677,14 +618,11 @@ class ProductEndpointTest extends ApiTestCase
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(201);
-        $newImage = json_decode($newImageResponse->getContent(), true);
         $newImageId = $newImage['imageId'];
 
-        // Get the whole list of images
-        $response = static::createClient()->request('GET', '/product/' . $productId . '/images', ['auth_bearer' => $bearerToken]);
-        self::assertResponseStatusCodeSame(200);
-        $productImages = json_decode($response->getContent(), true);
+        // Get the whole list of images (we don't use the usual listItems helper because this is a custom endpoint based on a CQRS query
+        // and a different response format)
+        $productImages = $this->getItem('/product/' . $productId . '/images', ['product_read']);
         $this->assertEquals(2, count($productImages));
         $this->assertEquals([
             [
@@ -718,27 +656,25 @@ class ProductEndpointTest extends ApiTestCase
         ], $productImages);
 
         // Now update the second image to be the cover and have position 1
-        static::createClient()->request('POST', '/product/image/' . $newImageId, [
-            'auth_bearer' => $bearerToken,
+        $this->requestApi('POST', '/product/image/' . $newImageId, null, ['product_write'], Response::HTTP_OK, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
             'extra' => [
                 'parameters' => [
-                    // We use string on purpose because form data are sent by string, thus we validate here that the denormalization still
+                    // We use string on purpose because form data are sent like string, thus we validate here that the denormalization still
                     // works with string value (actually we only ignore the wrong type, but it works nonetheless)
                     'cover' => '1',
                     'position' => '1',
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(200);
 
         // Now check the updated list, the content is changed but so is the order because images are sorted by position
-        $response = static::createClient()->request('GET', '/product/' . $productId . '/images', ['auth_bearer' => $bearerToken]);
-        self::assertResponseStatusCodeSame(200);
-        $productImages = json_decode($response->getContent(), true);
+        $productImages = $this->getItem('/product/' . $productId . '/images', ['product_read']);
         $this->assertEquals(2, count($productImages));
+
+        // The images are sorted differently (since they are automatically order by position) and the cover has been updated
         $this->assertEquals([
             [
                 'imageId' => $newImageId,
@@ -772,51 +708,90 @@ class ProductEndpointTest extends ApiTestCase
     }
 
     /**
+     * @depends testUpdateImage
      * @depends testGetProduct
      * @depends testListImages
+     */
+    public function testDeleteImage(int $imageId, int $productId): void
+    {
+        // Image exists
+        $this->assertIsArray($this->getItem('/product/image/' . $imageId, ['product_read']));
+        // Now delete the image
+        $this->deleteItem('/product/image/' . $imageId, ['product_write']);
+
+        // The image single endpoint returns a 404, and the image is not in the list anymore
+        $this->getItem('/product/image/' . $imageId, ['product_read'], Response::HTTP_NOT_FOUND);
+        $productImages = $this->getItem('/product/' . $productId . '/images', ['product_read']);
+        $this->assertEquals(1, count($productImages));
+    }
+
+    /**
+     * @depends testGetProduct
+     * @depends testDeleteImage
      *
      * @param int $productId
      */
     public function testDeleteProduct(int $productId): void
     {
-        $productsNumber = $this->getProductsNumber();
-        $readBearerToken = $this->getBearerToken(['product_read']);
+        $productsNumber = $this->countItems('/products', ['product_read']);
+
         // Delete product with token without write permission
-        static::createClient()->request('DELETE', '/product/' . $productId, [
-            'auth_bearer' => $readBearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(403);
-        // The product should still exists
-        static::createClient()->request('GET', '/product/' . $productId, [
-            'auth_bearer' => $readBearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(200);
+        $this->deleteItem('/product/' . $productId, ['product_read'], Response::HTTP_FORBIDDEN);
+        // The product should still exist
+        $this->assertIsArray($this->getItem('/product/' . $productId, ['product_read']));
 
         // Delete product with proper token
-        $writeBearerToken = $this->getBearerToken(['product_write']);
-        $response = static::createClient()->request('DELETE', '/product/' . $productId, [
-            'auth_bearer' => $writeBearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(204);
-        $this->assertEmpty($response->getContent());
+        $this->deleteItem('/product/' . $productId, ['product_write']);
 
         // One less products
-        $this->assertEquals($productsNumber - 1, $this->getProductsNumber());
-
-        $bearerToken = $this->getBearerToken(['product_read', 'product_write']);
-        static::createClient()->request('GET', '/product/' . $productId, [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(404);
+        $this->assertEquals($productsNumber - 1, $this->countItems('/products', ['product_read']));
+        // The product is not accessible anymore
+        $this->getItem('/product/' . $productId, ['product_read'], Response::HTTP_NOT_FOUND);
     }
 
-    protected function getProductsNumber(): int
+    /**
+     * @depends testDeleteProduct
+     */
+    public function testListProducts(): void
     {
-        /** @var ProductQueryBuilder $productQueryBuilder */
-        $productQueryBuilder = $this->getContainer()->get('prestashop.core.grid.query_builder.product');
-        $queryBuilder = $productQueryBuilder->getCountQueryBuilder(new ProductFilters(ShopConstraint::allShops(), ProductFilters::getDefaults(), ProductGridDefinitionFactory::GRID_ID));
+        $paginatedProducts = $this->listItems('/products', ['product_read']);
+        $this->assertCount(19, $paginatedProducts['items']);
+        $this->assertEquals(19, $paginatedProducts['totalItems']);
 
-        return (int) $queryBuilder->executeQuery()->fetchOne();
+        $paginatedProducts = $this->listItems('/products?limit=10', ['product_read']);
+        $this->assertCount(10, $paginatedProducts['items']);
+        $this->assertEquals(19, $paginatedProducts['totalItems']);
+
+        $testedFilters = [
+            // No filters
+            [],
+            // Filter by name
+            ['filters' => ['name' => 'Customizable mug']],
+            // Filter by productId (mn/max filter)
+            ['filters' => ['productId' => ['min_field' => 19, 'max_field' => 19]]],
+        ];
+        foreach ($testedFilters as $filters) {
+            $listUrl = '/products?limit=1&orderBy=productId&sortOrder=desc&' . http_build_query($filters);
+            $paginatedProducts = $this->listItems($listUrl, ['product_read']);
+            $this->assertCount(1, $paginatedProducts['items']);
+            $this->assertEquals(19, $paginatedProducts['totalItems']);
+
+            $this->assertEquals('productId', $paginatedProducts['orderBy']);
+            $this->assertEquals('desc', $paginatedProducts['sortOrder']);
+            $this->assertEquals(1, $paginatedProducts['limit']);
+            $this->assertEquals([], $paginatedProducts['filters']);
+
+            $expectedProduct = [
+                'productId' => 19,
+                'name' => 'Customizable mug',
+                'quantity' => 300,
+                'priceTaxExcluded' => 13.90,
+                'priceTaxIncluded' => 14.734,
+                'category' => 'Home Accessories',
+                'active' => true,
+            ];
+            $this->assertEquals($expectedProduct, $paginatedProducts['items'][0]);
+        }
     }
 
     protected function getImagePath(int $imageId, bool $isThumbnail): string

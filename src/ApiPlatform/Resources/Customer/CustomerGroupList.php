@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -18,39 +19,39 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
+declare(strict_types=1);
 
-use ApiPlatform\Metadata\ApiProperty;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
+
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
-use PrestaShop\PrestaShop\Core\Search\Filters\DiscountFilters;
+use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Exception\GroupNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
-use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
-use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
         new PaginatedList(
-            uriTemplate: '/discounts',
-            provider: QueryListProvider::class,
-            scopes: ['discount_read'],
+            uriTemplate: '/customers/groups',
+            gridDataFactory: 'prestashop.core.grid.data.factory.customer_groups',
             ApiResourceMapping: [
-                '[id_discount]' => '[discountId]',
+                '[id_group]' => '[customerGroupId]',
+                '[reduction]' => '[reductionPercent]',
+                '[show_prices]' => '[showPrice]',
+                '[members]' => '[customers]',
             ],
-            gridDataFactory: 'prestashop.core.grid.data.factory.discount',
-            filtersClass: DiscountFilters::class,
         ),
     ],
-    exceptionToStatus: [
-        DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
-    ],
+    exceptionToStatus: [GroupNotFoundException::class => 404],
 )]
-class DiscountList
+class CustomerGroupList
 {
-    #[ApiProperty(identifier: true)]
-    public int $discountId;
-    public string $type;
+    public int $customerGroupId;
+
     public string $name;
-    public bool $active;
-    public string $code;
+
+    public DecimalNumber $reductionPercent;
+
+    public int $customers;
+
+    public bool $showPrice;
 }
