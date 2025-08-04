@@ -199,9 +199,8 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             $options['auth_bearer'] = $bearerToken;
         }
 
-        // Null value means no JSON sent, empty array means a JSON data is sent but it's empty (different because the use content-type
-        // will be application/json and there is some content to deserialize even if it's empty)
-        if (null !== $data) {
+        // JSON option is only set when the JSON is not empty
+        if (!empty($data)) {
             $options['json'] = $data;
         }
 
@@ -249,7 +248,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     /**
      * Performs a POST request to create an item
      */
-    protected function createItem(string $endPointUrl, array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    protected function createItem(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
     {
         return $this->requestApi(Request::METHOD_POST, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
@@ -257,7 +256,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     /**
      * Performs a PATCH request to partially update an item
      */
-    protected function partialUpdateItem(string $endPointUrl, array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    protected function partialUpdateItem(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
     {
         return $this->requestApi(Request::METHOD_PATCH, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
@@ -265,7 +264,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     /**
      * Performs a PUT request to completely update an item
      */
-    protected function updateItem(string $endPointUrl, array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    protected function updateItem(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
     {
         return $this->requestApi(Request::METHOD_PUT, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }

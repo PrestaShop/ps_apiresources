@@ -36,6 +36,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
             scopes: [
                 'module_write',
             ],
+            allowEmptyBody: true,
         ),
     ],
 )]

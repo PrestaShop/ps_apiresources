@@ -129,10 +129,10 @@ class ModuleEndpointTest extends ApiTestCase
         ], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT install on non existent module returns a 404
-        $this->updateItem('/module/ps_falsemodule/install', [], ['module_write'], Response::HTTP_NOT_FOUND);
+        $this->updateItem('/module/ps_falsemodule/install', null, ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT uninstall on non existent module returns a 404
-        $this->updateItem('/module/ps_falsemodule/uninstall', [], ['module_write'], Response::HTTP_NOT_FOUND);
+        $this->updateItem('/module/ps_falsemodule/uninstall', null, ['module_write'], Response::HTTP_NOT_FOUND);
     }
 
     public function testListModules(): array
@@ -397,8 +397,7 @@ class ModuleEndpointTest extends ApiTestCase
             'installed' => true,
         ];
 
-        // We must define a JSON body even if it is empty, we need to search how to make this optional
-        $installedModule = $this->updateItem(sprintf('/module/%s/install', $expectedModule['technicalName']), [], ['module_write']);
+        $installedModule = $this->updateItem(sprintf('/module/%s/install', $expectedModule['technicalName']), null, ['module_write']);
 
         // The ID is dynamic so we fetch it after creation
         $this->assertArrayHasKey('moduleId', $installedModule);
@@ -467,9 +466,7 @@ class ModuleEndpointTest extends ApiTestCase
     public function testResetModuleNotInstalled(): void
     {
         // Now try to reset a module not installed it should be forbidden
-        $errorResponse = $this->partialUpdateItem('/module/dashactivity/reset', [
-            // We must force empty JSON for this one as well
-        ], ['module_write'], Response::HTTP_FORBIDDEN);
+        $errorResponse = $this->partialUpdateItem('/module/dashactivity/reset', null, ['module_write'], Response::HTTP_FORBIDDEN);
         $this->assertEquals('Cannot reset module dashactivity since it is not installed', $errorResponse['detail']);
     }
 
@@ -573,9 +570,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($module212, $this->getItem('/module/' . $module212['technicalName'], ['module_read']));
 
         // Now we install the module
-        $installedModule = $this->updateItem(sprintf('/module/%s/install', $module212['technicalName']), [
-            // We must define a JSON body even if it is empty, we need to search how to make this optional
-        ], ['module_write']);
+        $installedModule = $this->updateItem(sprintf('/module/%s/install', $module212['technicalName']), null, ['module_write']);
 
         // The ID is dynamic, so we fetch it after creation
         $this->assertArrayHasKey('moduleId', $installedModule);
@@ -611,9 +606,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($module213, $this->getItem('/module/' . $module213['technicalName'], ['module_read']));
 
         // Now perform the upgrade action
-        $upgradedModule = $this->updateItem(sprintf('/module/%s/upgrade', $installedModule212['technicalName']), [
-            // We must define a JSON body even if it is empty, we need to search how to make this optional
-        ], ['module_write']);
+        $upgradedModule = $this->updateItem(sprintf('/module/%s/upgrade', $installedModule212['technicalName']), null, ['module_write']);
 
         // Check response from status upgrade request (the installedVersion field should have been updated)
         $upgradedModule213 = ['installedVersion' => '2.1.3'] + $module213;

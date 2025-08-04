@@ -50,7 +50,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/api-client/{apiClientId}',
             requirements: ['apiClientId' => '\d+'],
             output: false,
-            CQRSQuery: DeleteApiClientCommand::class,
+            CQRSCommand: DeleteApiClientCommand::class,
             scopes: ['api_client_write']
         ),
         new CQRSCreate(

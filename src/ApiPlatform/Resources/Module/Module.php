@@ -24,14 +24,12 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Module\Command\InstallModuleCommand;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\ResetModuleCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Command\UpdateModuleStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Exception\AlreadyInstalledModuleException;
 use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotInstalledException;
 use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
@@ -52,14 +50,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
                 'module_write',
             ],
         ),
-        new CQRSPartialUpdate(
-            uriTemplate: '/module/{technicalName}/reset',
-            CQRSCommand: ResetModuleCommand::class,
-            CQRSQuery: GetModuleInfos::class,
-            scopes: [
-                'module_write',
-            ],
-        ),
         new CQRSUpdate(
             uriTemplate: '/module/{technicalName}/install',
             CQRSCommand: InstallModuleCommand::class,
@@ -67,6 +57,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             scopes: [
                 'module_write',
             ],
+            allowEmptyBody: true,
         ),
         new PaginatedList(
             uriTemplate: '/modules',
