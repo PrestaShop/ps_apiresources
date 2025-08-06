@@ -54,7 +54,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSDelete(
             uriTemplate: '/discount/{discountId}',
-            CQRSQuery: DeleteDiscountCommand::class,
+            CQRSCommand: DeleteDiscountCommand::class,
             scopes: [
                 'discount_write',
             ],

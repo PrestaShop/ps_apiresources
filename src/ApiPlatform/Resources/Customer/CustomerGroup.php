@@ -86,12 +86,12 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
         ),
         new CQRSDelete(
             uriTemplate: '/customers/group/{customerGroupId}',
-            CQRSQuery: DeleteCustomerGroupCommand::class,
+            CQRSCommand: DeleteCustomerGroupCommand::class,
             scopes: [
                 'customer_group_write',
             ],
             // Here, we use query mapping to adapt URI parameters to the expected constructor parameter name
-            CQRSQueryMapping: [
+            CQRSCommandMapping: [
                 '[customerGroupId]' => '[groupId]',
             ],
         ),

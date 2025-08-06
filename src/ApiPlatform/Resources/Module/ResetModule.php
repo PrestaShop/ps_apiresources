@@ -21,17 +21,18 @@
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Module;
 
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Module\Command\UninstallModuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Module\Command\ResetModuleCommand;
 use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Module\Exception\ModuleNotInstalledException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/module/{technicalName}/uninstall',
-            output: false,
-            CQRSCommand: UninstallModuleCommand::class,
+        new CQRSPartialUpdate(
+            uriTemplate: '/module/{technicalName}/reset',
+            CQRSCommand: ResetModuleCommand::class,
+            CQRSQuery: GetModuleInfos::class,
             scopes: [
                 'module_write',
             ],
@@ -43,7 +44,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
         ModuleNotInstalledException::class => 403,
     ],
 )]
-class UninstallModule extends Module
+class ResetModule extends Module
 {
-    public bool $deleteFiles = false;
+    public bool $keepData;
 }

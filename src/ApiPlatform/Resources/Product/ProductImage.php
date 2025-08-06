@@ -68,7 +68,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
         ),
         new CQRSDelete(
             uriTemplate: '/product/image/{imageId}',
-            CQRSQuery: DeleteProductImageCommand::class,
+            CQRSCommand: DeleteProductImageCommand::class,
         ),
     ],
     exceptionToStatus: [

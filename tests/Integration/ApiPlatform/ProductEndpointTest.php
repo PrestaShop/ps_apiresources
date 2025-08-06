@@ -604,8 +604,6 @@ class ProductEndpointTest extends ApiTestCase
      */
     public function testListImages(int $productId, int $imageId): void
     {
-        $bearerToken = $this->getBearerToken(['product_write', 'product_read']);
-
         // First add a new image so that we have at least to images
         $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
         $newImage = $this->requestApi('POST', '/product/' . $productId . '/image', null, ['product_write'], Response::HTTP_CREATED, [

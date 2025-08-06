@@ -74,11 +74,11 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSDelete(
             uriTemplate: '/product/{productId}',
-            CQRSQuery: DeleteProductCommand::class,
+            CQRSCommand: DeleteProductCommand::class,
             scopes: [
                 'product_write',
             ],
-            CQRSQueryMapping: [
+            CQRSCommandMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
             ]
         ),
