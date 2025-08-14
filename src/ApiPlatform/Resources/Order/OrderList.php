@@ -38,7 +38,6 @@ use Symfony\Component\HttpFoundation\Response;
                 'summary' => 'List orders',
             ],
         ),
-        // Internal endpoint to register write scope for OAuth (not used by clients)
         new PaginatedList(
             uriTemplate: '/orders/_write-scope',
             provider: OrderProvider::class,
