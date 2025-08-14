@@ -23,19 +23,32 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\GetCollection;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State\OrderProvider;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new GetCollection(
+        new PaginatedList(
             uriTemplate: '/orders',
             provider: OrderProvider::class,
+            scopes: ['order_read'],
+            openapiContext: [
+                'summary' => 'List orders',
+            ],
+        ),
+        // Internal endpoint to register write scope for OAuth (not used by clients)
+        new PaginatedList(
+            uriTemplate: '/orders/_write-scope',
+            provider: OrderProvider::class,
+            scopes: ['order_write'],
+            openapiContext: [
+                'summary' => '[internal] Orders write scope registration',
+                'deprecated' => true,
+            ],
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
-    security: "is_granted('ROLE_ADMIN_API') and oauth_scope('order_read')",
     exceptionToStatus: [
         \InvalidArgumentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],

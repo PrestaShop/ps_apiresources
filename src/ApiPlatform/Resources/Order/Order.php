@@ -36,7 +36,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
-    security: "is_granted('ROLE_ADMIN_API') and oauth_scope('order_read')",
+    security: null,
     exceptionToStatus: [
         \RuntimeException::class => Response::HTTP_NOT_FOUND,
         \InvalidArgumentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
