@@ -48,9 +48,15 @@ use Symfony\Component\HttpFoundation\Response;
             denormalizationContext: [
                 'disable_type_enforcement' => true,
                 'callbacks' => [
-                    'orderId' => 'intval',
-                    'currentOrderCarrierId' => 'intval',
-                    'newCarrierId' => 'intval',
+                    'orderId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
+                        return (int) $value;
+                    },
+                    'currentOrderCarrierId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
+                        return (int) $value;
+                    },
+                    'newCarrierId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
+                        return (int) $value;
+                    },
                 ],
             ],
         ),
@@ -59,7 +65,9 @@ use Symfony\Component\HttpFoundation\Response;
         'skip_null_values' => false,
         'disable_type_enforcement' => true,
         'callbacks' => [
-            'orderId' => 'intval',
+            'orderId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
+                return (int) $value;
+            },
         ],
     ],
     exceptionToStatus: [

@@ -44,8 +44,12 @@ use Symfony\Component\HttpFoundation\Response;
         'skip_null_values' => false,
         'disable_type_enforcement' => true,
         'callbacks' => [
-            'orderId' => 'intval',
-            'statusId' => 'intval',
+            'orderId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
+                return (int) $value;
+            },
+            'statusId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
+                return (int) $value;
+            },
         ],
     ],
     exceptionToStatus: [
