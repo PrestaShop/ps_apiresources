@@ -45,6 +45,14 @@ use Symfony\Component\HttpFoundation\Response;
                 '[number]' => '[trackingNumber]',
             ],
             allowEmptyBody: false,
+            denormalizationContext: [
+                'disable_type_enforcement' => true,
+                'callbacks' => [
+                    'orderId' => 'intval',
+                    'currentOrderCarrierId' => 'intval',
+                    'newCarrierId' => 'intval',
+                ],
+            ],
         ),
     ],
     denormalizationContext: [
