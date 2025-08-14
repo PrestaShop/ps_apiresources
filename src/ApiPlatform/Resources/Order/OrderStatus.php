@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
 
 #[ApiResource(
     operations: [
@@ -44,12 +45,8 @@ use Symfony\Component\HttpFoundation\Response;
         'skip_null_values' => false,
         'disable_type_enforcement' => true,
         'callbacks' => [
-            'orderId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
-                return (int) $value;
-            },
-            'statusId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
-                return (int) $value;
-            },
+            'orderId' => [Callbacks::class, 'toInt'],
+            'statusId' => [Callbacks::class, 'toInt'],
         ],
     ],
     exceptionToStatus: [

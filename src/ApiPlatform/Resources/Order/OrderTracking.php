@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
 
 #[ApiResource(
     operations: [
@@ -48,15 +49,15 @@ use Symfony\Component\HttpFoundation\Response;
             denormalizationContext: [
                 'disable_type_enforcement' => true,
                 'callbacks' => [
-                    'orderId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
-                        return (int) $value;
-                    },
-                    'currentOrderCarrierId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
-                        return (int) $value;
-                    },
-                    'newCarrierId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
-                        return (int) $value;
-                    },
+                    'orderId' => [Callbacks::class, 'toInt'],
+                    'currentOrderCarrierId' => [Callbacks::class, 'toInt'],
+                    'newCarrierId' => [Callbacks::class, 'toInt'],
+                ],
+                'default_constructor_arguments' => [
+                    \PrestaShop\PrestaShop\Core\Domain\Order\Command\UpdateOrderShippingDetailsCommand::class => [
+                        'currentOrderCarrierId' => 0,
+                        'newCarrierId' => 0,
+                    ],
                 ],
             ],
         ),
@@ -65,12 +66,11 @@ use Symfony\Component\HttpFoundation\Response;
         'skip_null_values' => false,
         'disable_type_enforcement' => true,
         'callbacks' => [
-            'orderId' => static function ($value, $object = null, $attribute = null, $format = null, $context = null) {
-                return (int) $value;
-            },
+            'orderId' => [Callbacks::class, 'toInt'],
         ],
     ],
     exceptionToStatus: [
+        \PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
         \PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException::class => Response::HTTP_NOT_FOUND,
         \Symfony\Component\Serializer\Exception\NotNormalizableValueException::class => Response::HTTP_NOT_FOUND,
     ],
