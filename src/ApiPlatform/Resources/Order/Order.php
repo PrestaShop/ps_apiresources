@@ -24,16 +24,37 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
-use ApiPlatform\Metadata\Get;
-use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State\OrderProvider;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new Get(
+        new CQRSGet(
             uriTemplate: '/order/{orderId}',
             requirements: ['orderId' => '\\d+'],
-            provider: OrderProvider::class,
+            scopes: ['order_read'],
+            CQRSQuery: \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderForViewing::class,
+            CQRSQueryMapping: [
+                '[orderId]' => '[orderId]',
+                '[reference]' => '[reference]',
+                // status id and a best-effort status label
+                '[history][currentOrderStatusId]' => '[statusId]',
+                '[history][statuses][0][name]' => '[status]',
+                '[prices][totalPaid]' => '[totalPaidTaxIncl]',
+                '[prices][productsTotal]' => '[totalProductsTaxIncl]',
+                '[customer][email]' => '[customerEmail]',
+                '[customer][fullName]' => '[customerName]',
+                '[createdAt]' => '[dateAdd]',
+                // products list
+                '[products][products]' => '[items]',
+                // Map product item fields
+                '[products][products][][productId]' => '[items][][productId]',
+                '[products][products][][productAttributeId]' => '[items][][productAttributeId]',
+                '[products][products][][name]' => '[items][][name]',
+                '[products][products][][reference]' => '[items][][reference]',
+                '[products][products][][quantity]' => '[items][][quantity]',
+                '[products][products][][priceTaxIncluded]' => '[items][][unitPriceTaxIncl]',
+            ],
         ),
     ],
     normalizationContext: ['skip_null_values' => false],

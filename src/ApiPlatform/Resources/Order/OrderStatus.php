@@ -23,16 +23,21 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Patch;
-use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State\OrderProcessor;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new Patch(
+        new CQRSPartialUpdate(
             uriTemplate: '/order/{orderId}/status',
             requirements: ['orderId' => '\\d+'],
-            processor: OrderProcessor::class,
+            scopes: ['order_write'],
+            CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\UpdateOrderStatusCommand::class,
+            CQRSCommandMapping: [
+                '[orderId]' => '[orderId]',
+                '[statusId]' => '[newOrderStatusId]',
+            ],
+            allowEmptyBody: false,
         ),
     ],
     denormalizationContext: ['skip_null_values' => false],
