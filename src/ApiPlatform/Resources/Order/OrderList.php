@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\ApiProperty;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State\OrderProvider;
 use Symfony\Component\HttpFoundation\Response;
@@ -59,7 +60,8 @@ use Symfony\Component\HttpFoundation\Response;
 class OrderList
 {
     /** @var int */
-    public int $id;
+    #[ApiProperty(identifier: true)]
+    public int $orderId;
 
     /** @var string */
     public string $reference;

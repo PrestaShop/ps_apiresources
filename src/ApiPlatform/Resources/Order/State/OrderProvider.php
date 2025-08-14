@@ -104,7 +104,7 @@ class OrderProvider implements ProviderInterface
     {
         $view = $forList ? new OrderListResource() : new OrderResource();
         // Use id property name consistent with DTO
-        $view->id = (int) $order->id;
+        $view->orderId = (int) $order->id;
         $view->reference = (string) $order->reference;
         $view->statusId = (int) $order->current_state;
 

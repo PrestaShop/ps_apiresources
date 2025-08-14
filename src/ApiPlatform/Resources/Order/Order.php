@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\Get;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State\OrderProvider;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,7 +37,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
-    security: null,
+    security: "oauth_scope('order_read')",
     exceptionToStatus: [
         \RuntimeException::class => Response::HTTP_NOT_FOUND,
         \InvalidArgumentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -48,7 +49,8 @@ use Symfony\Component\HttpFoundation\Response;
 class Order
 {
     /** @var int */
-    public int $id;
+    #[ApiProperty(identifier: true)]
+    public int $orderId;
 
     /** @var string */
     public string $reference;

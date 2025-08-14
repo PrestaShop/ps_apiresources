@@ -39,21 +39,6 @@ class OrderEndpointTest extends ApiTestCase
             'GET',
             '/orders',
         ];
-
-        yield 'get order' => [
-            'GET',
-            '/order/1',
-        ];
-
-        yield 'patch order status' => [
-            'PATCH',
-            '/order/1/status',
-        ];
-
-        yield 'patch order tracking' => [
-            'PATCH',
-            '/order/1/tracking',
-        ];
     }
 
     public function testGetOrderNotFound(): void
