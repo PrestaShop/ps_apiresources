@@ -40,7 +40,14 @@ use Symfony\Component\HttpFoundation\Response;
             allowEmptyBody: false,
         ),
     ],
-    denormalizationContext: ['skip_null_values' => false, 'disable_type_enforcement' => true],
+    denormalizationContext: [
+        'skip_null_values' => false,
+        'disable_type_enforcement' => true,
+        'callbacks' => [
+            'orderId' => 'intval',
+            'statusId' => 'intval',
+        ],
+    ],
     exceptionToStatus: [
         \PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException::class => Response::HTTP_NOT_FOUND,
         \Symfony\Component\Serializer\Exception\NotNormalizableValueException::class => Response::HTTP_NOT_FOUND,
