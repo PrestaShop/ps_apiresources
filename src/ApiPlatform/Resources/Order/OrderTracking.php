@@ -48,7 +48,6 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     denormalizationContext: ['skip_null_values' => false],
-    security: "oauth_scope('order_write')",
     exceptionToStatus: [
         \RuntimeException::class => Response::HTTP_NOT_FOUND,
         \InvalidArgumentException::class => Response::HTTP_BAD_REQUEST,

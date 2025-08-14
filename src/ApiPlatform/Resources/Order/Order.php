@@ -58,7 +58,6 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
-    security: "oauth_scope('order_read')",
     exceptionToStatus: [
         \RuntimeException::class => Response::HTTP_NOT_FOUND,
         \InvalidArgumentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
