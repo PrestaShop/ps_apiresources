@@ -99,7 +99,7 @@ class EnvironmentBuilder
         $configFolder = $prestashopDir . '/app/config/';
         $localeParameters = $moduleDir . '/tests/local-parameters/';
         foreach (['parameters.php', 'parameters.yml'] as $parameterFile) {
-            if (!file_exists($configFolder . $parameterFile) || $arguments['update-local-parameters']) {
+            if (!file_exists($localeParameters . $parameterFile) || $arguments['update-local-parameters']) {
                 // Prefer using the local file if present, if not use the dist default configuration
                 $localFile = $localeParameters . $parameterFile;
                 if (!file_exists($localFile)) {
