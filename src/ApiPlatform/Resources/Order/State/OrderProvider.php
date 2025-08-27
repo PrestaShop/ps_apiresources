@@ -117,12 +117,15 @@ class OrderProvider implements ProviderInterface
         $view->totalPaidTaxIncl = (string) $order->total_paid_tax_incl;
         $view->totalProductsTaxIncl = (string) $order->total_products_wt;
 
-        $customer = new \Customer((int) $order->id_customer);
         if (property_exists($view, 'customerId')) {
             $view->customerId = (int) $order->id_customer;
         }
-        $view->customerEmail = \Validate::isLoadedObject($customer) ? (string) $customer->email : '';
-        $view->customerName = \Validate::isLoadedObject($customer) ? trim($customer->firstname . ' ' . $customer->lastname) : '';
+        if (property_exists($view, 'deliveryAddressId')) {
+            $view->deliveryAddressId = (int) $order->id_address_delivery;
+        }
+        if (property_exists($view, 'invoiceAddressId')) {
+            $view->invoiceAddressId = (int) $order->id_address_invoice;
+        }
 
         $view->dateAdd = (new \DateTime($order->date_add))->format(DATE_ATOM);
 

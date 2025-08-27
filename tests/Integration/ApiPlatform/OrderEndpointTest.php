@@ -52,11 +52,11 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('totalPaidTaxExcl', $order);
         $this->assertArrayHasKey('totalProductsTaxExcl', $order);
         $this->assertArrayHasKey('customerId', $order);
-        $this->assertArrayHasKey('customerCompany', $order);
-        $this->assertArrayHasKey('shippingAddress', $order);
-        $this->assertIsArray($order['shippingAddress']);
-        $this->assertArrayHasKey('invoiceAddress', $order);
-        $this->assertIsArray($order['invoiceAddress']);
+        $this->assertIsInt($order['customerId']);
+        $this->assertArrayHasKey('deliveryAddressId', $order);
+        $this->assertIsInt($order['deliveryAddressId']);
+        $this->assertArrayHasKey('invoiceAddressId', $order);
+        $this->assertIsInt($order['invoiceAddressId']);
         $this->assertIsArray($order['items']);
         $this->assertArrayHasKey('orderDetailId', $order['items'][0]);
     }

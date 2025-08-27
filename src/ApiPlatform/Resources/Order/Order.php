@@ -45,19 +45,8 @@ use Symfony\Component\HttpFoundation\Response;
                 '[prices][productsTotal]' => '[totalProductsTaxIncl]',
                 '[prices][productsTotalTaxExcluded]' => '[totalProductsTaxExcl]',
                 '[customer][id]' => '[customerId]',
-                '[customer][email]' => '[customerEmail]',
-                '[customer][fullName]' => '[customerName]',
-                '[customer][company]' => '[customerCompany]',
-                '[shippingAddress][address1]' => '[shippingAddress][address1]',
-                '[shippingAddress][address2]' => '[shippingAddress][address2]',
-                '[shippingAddress][postcode]' => '[shippingAddress][postcode]',
-                '[shippingAddress][city]' => '[shippingAddress][city]',
-                '[shippingAddress][country]' => '[shippingAddress][country]',
-                '[invoiceAddress][address1]' => '[invoiceAddress][address1]',
-                '[invoiceAddress][address2]' => '[invoiceAddress][address2]',
-                '[invoiceAddress][postcode]' => '[invoiceAddress][postcode]',
-                '[invoiceAddress][city]' => '[invoiceAddress][city]',
-                '[invoiceAddress][country]' => '[invoiceAddress][country]',
+                '[shippingAddress][addressId]' => '[deliveryAddressId]',
+                '[invoiceAddress][addressId]' => '[invoiceAddressId]',
                 '[createdAt]' => '[dateAdd]',
                 // products list
                 '[products][products]' => '[items]',
@@ -111,23 +100,14 @@ class Order
     /** @var string */
     public string $totalProductsTaxExcl;
 
-    /** @var string */
-    public string $customerEmail;
-
-    /** @var string */
-    public string $customerName;
-
-    /** @var string */
-    public string $customerCompany;
-
     /** @var int */
     public int $customerId;
 
-    /** @var array */
-    public array $shippingAddress;
+    /** @var int */
+    public int $deliveryAddressId;
 
-    /** @var array */
-    public array $invoiceAddress;
+    /** @var int */
+    public int $invoiceAddressId;
 
     /** @var string ISO 8601 */
     public string $dateAdd;

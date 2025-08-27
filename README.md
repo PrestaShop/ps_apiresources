@@ -6,6 +6,13 @@ Includes the resources allowing using the API for the PrestaShop domain, all end
 
 This module contains no code only some resource files that are automatically scanned and integrated by the Core, these resources are in [this folder](src/ApiPlatform/Resources).
 
+## Customer and address details
+
+Order resources expose only the identifiers of the customer and related addresses. Full details can be retrieved through dedicated API endpoints:
+
+- `GET /customer/{customerId}` to fetch customer information
+- `GET /address/{addressId}` to fetch address information
+
 ## Reporting issues
 
 You can report issues with this module in the main PrestaShop repository. [Click here to report an issue][report-issue].
