@@ -301,6 +301,32 @@ class ManufacturerEndpointTest extends ApiTestCase
         return $manufacturerId;
     }
 
+    public function testBulkRemoveManufacturers(): void
+    {
+        $manufacturers = $this->listItems('/manufacturers', ['manufacturer_read']);
+
+        // There are four manufacturers in default fixtures
+        $this->assertEquals(3, $manufacturers['totalItems']);
+
+        // We remove the first two manufacturers
+        $removeManufacturerIds = [
+            $manufacturers['items'][0]['manufacturerId'],
+            $manufacturers['items'][2]['manufacturerId'],
+        ];
+
+        $this->updateItem('/manufacturers/delete', [
+            'manufacturerIds' => $removeManufacturerIds,
+        ], ['manufacturer_write'], Response::HTTP_NO_CONTENT);
+
+        // Assert the provided manufacturers have been removed
+        foreach ($removeManufacturerIds as $manufacturerId) {
+            $this->getItem('/manufacturer/' . $manufacturerId, ['manufacturer_read'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Only two manufacturer remain
+        $this->assertEquals(1, $this->countItems('/manufacturers', ['manufacturer_read']));
+    }
+
     public function testInvalidManufacturer(): void
     {
         $manufacturerInvalidData = [
