@@ -108,6 +108,9 @@ class OrderProvider implements ProviderInterface
         $view->reference = (string) $order->reference;
         $view->statusId = (int) $order->current_state;
 
+        $view->shopId = (int) $order->id_shop;
+        $view->langId = (int) $order->id_lang;
+
         $state = new \OrderState($order->current_state, (int) $order->id_lang);
         $view->status = \Validate::isLoadedObject($state) ? (string) $state->name : '';
 
