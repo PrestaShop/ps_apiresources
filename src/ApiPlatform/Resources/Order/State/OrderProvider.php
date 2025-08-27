@@ -24,8 +24,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
-use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\OrderList as OrderListResource;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Order as OrderResource;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\OrderList as OrderListResource;
 
 /**
  * State provider for Orders resources (list and item),
@@ -118,6 +118,9 @@ class OrderProvider implements ProviderInterface
         $view->totalProductsTaxIncl = (string) $order->total_products_wt;
 
         $customer = new \Customer((int) $order->id_customer);
+        if (property_exists($view, 'customerId')) {
+            $view->customerId = (int) $order->id_customer;
+        }
         $view->customerEmail = \Validate::isLoadedObject($customer) ? (string) $customer->email : '';
         $view->customerName = \Validate::isLoadedObject($customer) ? trim($customer->firstname . ' ' . $customer->lastname) : '';
 
@@ -126,6 +129,7 @@ class OrderProvider implements ProviderInterface
         if (!$forList) {
             foreach ($order->getProducts() as $p) {
                 $view->items[] = [
+                    'orderDetailId' => (int) ($p['id_order_detail'] ?? 0),
                     'productId' => (int) ($p['product_id'] ?? 0),
                     'productAttributeId' => isset($p['product_attribute_id']) ? (int) $p['product_attribute_id'] : null,
                     'name' => (string) ($p['product_name'] ?? ''),
@@ -139,5 +143,3 @@ class OrderProvider implements ProviderInterface
         return $view;
     }
 }
-
-

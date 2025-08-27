@@ -22,8 +22,8 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
-use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -44,6 +44,7 @@ use Symfony\Component\HttpFoundation\Response;
                 '[prices][totalPaidTaxExcluded]' => '[totalPaidTaxExcl]',
                 '[prices][productsTotal]' => '[totalProductsTaxIncl]',
                 '[prices][productsTotalTaxExcluded]' => '[totalProductsTaxExcl]',
+                '[customer][id]' => '[customerId]',
                 '[customer][email]' => '[customerEmail]',
                 '[customer][fullName]' => '[customerName]',
                 '[customer][company]' => '[customerCompany]',
@@ -61,6 +62,7 @@ use Symfony\Component\HttpFoundation\Response;
                 // products list
                 '[products][products]' => '[items]',
                 // Map product item fields
+                '[products][products][][orderDetailId]' => '[items][][orderDetailId]',
                 '[products][products][][productId]' => '[items][][productId]',
                 '[products][products][][productAttributeId]' => '[items][][productAttributeId]',
                 '[products][products][][name]' => '[items][][name]',
@@ -118,6 +120,9 @@ class Order
     /** @var string */
     public string $customerCompany;
 
+    /** @var int */
+    public int $customerId;
+
     /** @var array */
     public array $shippingAddress;
 
@@ -127,8 +132,8 @@ class Order
     /** @var string ISO 8601 */
     public string $dateAdd;
 
-    /** @var array<int, array{productId:int, productAttributeId:?int, name:string, reference:?string, quantity:int, unitPriceTaxIncl:string}> */
+    /**
+     * @var array<int, array{orderDetailId:int, productId:int, productAttributeId:?int, name:string, reference:?string, quantity:int, unitPriceTaxIncl:string}>
+     */
     public array $items = [];
 }
-
-

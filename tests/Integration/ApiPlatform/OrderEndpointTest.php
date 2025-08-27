@@ -51,11 +51,14 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertIsArray($order);
         $this->assertArrayHasKey('totalPaidTaxExcl', $order);
         $this->assertArrayHasKey('totalProductsTaxExcl', $order);
+        $this->assertArrayHasKey('customerId', $order);
         $this->assertArrayHasKey('customerCompany', $order);
         $this->assertArrayHasKey('shippingAddress', $order);
         $this->assertIsArray($order['shippingAddress']);
         $this->assertArrayHasKey('invoiceAddress', $order);
         $this->assertIsArray($order['invoiceAddress']);
+        $this->assertIsArray($order['items']);
+        $this->assertArrayHasKey('orderDetailId', $order['items'][0]);
     }
 
     public function testGetOrderNotFound(): void
@@ -77,5 +80,3 @@ class OrderEndpointTest extends ApiTestCase
         ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
 }
-
-
