@@ -74,8 +74,8 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     exceptionToStatus: [
-        ManufacturerException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ManufacturerNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ManufacturerException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Manufacturer
