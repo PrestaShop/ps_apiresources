@@ -80,6 +80,9 @@ class OrderList
     /** @var string */
     public string $totalProductsTaxIncl;
 
+    /** @var int */
+    public int $customerId;
+
     /** @var string */
     public string $customerEmail;
 

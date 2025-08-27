@@ -61,6 +61,13 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('orderDetailId', $order['items'][0]);
     }
 
+    public function testListOrdersContainsCustomerId(): void
+    {
+        $orders = $this->listItems('/orders', ['order_read']);
+        $this->assertNotEmpty($orders['items']);
+        $this->assertArrayHasKey('customerId', $orders['items'][0]);
+    }
+
     public function testGetOrderNotFound(): void
     {
         $this->getItem('/order/999999', ['order_read'], Response::HTTP_NOT_FOUND);
