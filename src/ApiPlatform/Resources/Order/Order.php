@@ -31,7 +31,7 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGet(
             uriTemplate: '/order/{orderId}',
-            requirements: ['orderId' => '\\d+'],
+            requirements: ['orderId' => '\d+'],
             scopes: ['order_read'],
             CQRSQuery: \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderForViewing::class,
             CQRSQueryMapping: [
@@ -41,9 +41,22 @@ use Symfony\Component\HttpFoundation\Response;
                 '[history][currentOrderStatusId]' => '[statusId]',
                 '[history][statuses][0][name]' => '[status]',
                 '[prices][totalPaid]' => '[totalPaidTaxIncl]',
+                '[prices][totalPaidTaxExcluded]' => '[totalPaidTaxExcl]',
                 '[prices][productsTotal]' => '[totalProductsTaxIncl]',
+                '[prices][productsTotalTaxExcluded]' => '[totalProductsTaxExcl]',
                 '[customer][email]' => '[customerEmail]',
                 '[customer][fullName]' => '[customerName]',
+                '[customer][company]' => '[customerCompany]',
+                '[shippingAddress][address1]' => '[shippingAddress][address1]',
+                '[shippingAddress][address2]' => '[shippingAddress][address2]',
+                '[shippingAddress][postcode]' => '[shippingAddress][postcode]',
+                '[shippingAddress][city]' => '[shippingAddress][city]',
+                '[shippingAddress][country]' => '[shippingAddress][country]',
+                '[invoiceAddress][address1]' => '[invoiceAddress][address1]',
+                '[invoiceAddress][address2]' => '[invoiceAddress][address2]',
+                '[invoiceAddress][postcode]' => '[invoiceAddress][postcode]',
+                '[invoiceAddress][city]' => '[invoiceAddress][city]',
+                '[invoiceAddress][country]' => '[invoiceAddress][country]',
                 '[createdAt]' => '[dateAdd]',
                 // products list
                 '[products][products]' => '[items]',
@@ -88,13 +101,28 @@ class Order
     public string $totalPaidTaxIncl;
 
     /** @var string */
+    public string $totalPaidTaxExcl;
+
+    /** @var string */
     public string $totalProductsTaxIncl;
+
+    /** @var string */
+    public string $totalProductsTaxExcl;
 
     /** @var string */
     public string $customerEmail;
 
     /** @var string */
     public string $customerName;
+
+    /** @var string */
+    public string $customerCompany;
+
+    /** @var array */
+    public array $shippingAddress;
+
+    /** @var array */
+    public array $invoiceAddress;
 
     /** @var string ISO 8601 */
     public string $dateAdd;
