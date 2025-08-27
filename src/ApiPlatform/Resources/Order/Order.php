@@ -44,6 +44,8 @@ use Symfony\Component\HttpFoundation\Response;
                 '[prices][totalPaidTaxExcluded]' => '[totalPaidTaxExcl]',
                 '[prices][productsTotal]' => '[totalProductsTaxIncl]',
                 '[prices][productsTotalTaxExcluded]' => '[totalProductsTaxExcl]',
+                '[shopId]' => '[shopId]',
+                '[customer][languageId]' => '[langId]',
                 '[customer][id]' => '[customerId]',
                 '[shippingAddress][addressId]' => '[deliveryAddressId]',
                 '[invoiceAddress][addressId]' => '[invoiceAddressId]',
@@ -84,6 +86,12 @@ class Order
 
     /** @var int */
     public int $statusId;
+
+    /** @var int */
+    public int $shopId;
+
+    /** @var int */
+    public int $langId;
 
     /** @var string */
     public string $currencyIso;

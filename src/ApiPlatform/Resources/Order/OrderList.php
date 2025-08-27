@@ -71,6 +71,12 @@ class OrderList
     /** @var int */
     public int $statusId;
 
+    /** @var int */
+    public int $shopId;
+
+    /** @var int */
+    public int $langId;
+
     /** @var string */
     public string $currencyIso;
 
