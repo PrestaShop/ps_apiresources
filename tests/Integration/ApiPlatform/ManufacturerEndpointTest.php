@@ -79,6 +79,11 @@ class ManufacturerEndpointTest extends ApiTestCase
             '/manufacturer/1',
         ];
 
+        yield 'bulk delete endpoint' => [
+            'PUT',
+            '/manufacturers/delete',
+        ];
+
         yield 'delete endpoint' => [
             'DELETE',
             '/manufacturer/1',
