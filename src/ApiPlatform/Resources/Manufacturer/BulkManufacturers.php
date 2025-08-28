@@ -26,9 +26,9 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Manufacturer;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Command\BulkDeleteManufacturerCommand;
-use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\DeleteManufacturerException;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerException;
+use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -51,7 +51,6 @@ use Symfony\Component\Validator\Constraints as Assert;
         ManufacturerException::class => Response::HTTP_INTERNAL_SERVER_ERROR,
     ],
 )]
-
 class BulkManufacturers
 {
     /**
