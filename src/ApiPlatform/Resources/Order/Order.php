@@ -76,31 +76,18 @@ class Order
 {
     #[ApiProperty(identifier: true)]
     public int $orderId;
-
     public string $reference;
-
     public string $status;
-
     public int $statusId;
-
     public int $shopId;
-
     public int $langId;
-
     public string $currencyIso;
-
     public string $totalPaidTaxIncl;
-
     public string $totalPaidTaxExcl;
-
     public string $totalProductsTaxIncl;
-
     public string $totalProductsTaxExcl;
-
     public int $customerId;
-
     public int $deliveryAddressId;
-
     public int $invoiceAddressId;
 
     /** @var string ISO 8601 */
