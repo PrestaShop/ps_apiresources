@@ -74,47 +74,20 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class Order
 {
-    /** @var int */
     #[ApiProperty(identifier: true)]
     public int $orderId;
-
-    /** @var string */
     public string $reference;
-
-    /** @var string */
     public string $status;
-
-    /** @var int */
     public int $statusId;
-
-    /** @var int */
     public int $shopId;
-
-    /** @var int */
     public int $langId;
-
-    /** @var string */
     public string $currencyIso;
-
-    /** @var string */
     public string $totalPaidTaxIncl;
-
-    /** @var string */
     public string $totalPaidTaxExcl;
-
-    /** @var string */
     public string $totalProductsTaxIncl;
-
-    /** @var string */
     public string $totalProductsTaxExcl;
-
-    /** @var int */
     public int $customerId;
-
-    /** @var int */
     public int $deliveryAddressId;
-
-    /** @var int */
     public int $invoiceAddressId;
 
     /** @var string ISO 8601 */
