@@ -43,6 +43,10 @@ class OrderEndpointTest extends ApiTestCase
             'GET',
             '/orders',
         ];
+        yield 'create order' => [
+            'POST',
+            '/orders',
+        ];
     }
 
     public function testGetOrder(): void
@@ -71,6 +75,35 @@ class OrderEndpointTest extends ApiTestCase
     public function testGetOrderNotFound(): void
     {
         $this->getItem('/order/999999', ['order_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testCreateOrder(): void
+    {
+        $cart = new \Cart();
+        $cart->id_customer = 1;
+        $cart->id_lang = 1;
+        $cart->id_currency = 1;
+        $cart->id_shop = 1;
+        $cart->id_address_delivery = 1;
+        $cart->id_address_invoice = 1;
+        $cart->id_carrier = 1;
+        $customer = new \Customer(1);
+        $cart->secure_key = $customer->secure_key;
+        $cart->add();
+        $cart->updateQty(1, 1);
+
+        $created = $this->createItem('/orders', [
+            'cartId' => (int) $cart->id,
+            'employeeId' => 1,
+            'orderMessage' => 'Test order',
+            'paymentModuleName' => 'ps_wirepayment',
+            'orderStateId' => 2,
+        ], ['order_write']);
+
+        $this->assertArrayHasKey('orderId', $created);
+        $orderId = (int) $created['orderId'];
+        $order = $this->getItem('/order/' . $orderId, ['order_read']);
+        $this->assertEquals($orderId, $order['orderId']);
     }
 
     public function testPatchStatusOrderNotFound(): void
