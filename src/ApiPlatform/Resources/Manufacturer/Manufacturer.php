@@ -25,6 +25,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Manufacturer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Command\AddManufacturerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Command\DeleteManufacturerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Command\EditManufacturerCommand;
@@ -37,6 +39,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -83,6 +86,8 @@ class Manufacturer
     #[ApiProperty(identifier: true)]
     public int $manufacturerId;
 
+    #[Assert\NotBlank]
+    #[TypedRegex(['type' => TypedRegex::TYPE_CATALOG_NAME])]
     public string $name;
 
     #[ApiProperty(
@@ -92,23 +97,43 @@ class Manufacturer
     public ?array $logoImage = null;
 
     #[LocalizedValue]
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'shortDescriptions')]
+    #[DefaultLanguage(groups: ['Update'], fieldName: 'shortDescriptions', allowNull: true)]
     public array $shortDescriptions;
 
     #[LocalizedValue]
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'descriptions')]
+    #[DefaultLanguage(groups: ['Update'], fieldName: 'descriptions', allowNull: true)]
     public array $descriptions;
 
     #[LocalizedValue]
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'metaTitles')]
+    #[DefaultLanguage(groups: ['Update'], fieldName: 'metaTitles', allowNull: true)]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::TYPE_GENERIC_NAME,
+        ]),
+    ])]
     public array $metaTitles;
 
     #[LocalizedValue]
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'metaDescriptions')]
+    #[DefaultLanguage(groups: ['Update'], fieldName: 'metaDescriptions', allowNull: true)]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::TYPE_GENERIC_NAME,
+        ]),
+    ])]
     public array $metaDescriptions;
 
     #[LocalizedValue]
     public array $metaKeywords;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
+    #[Assert\NotBlank(allowNull: true)]
     public array $shopIds;
 
+    #[Assert\Type(['type' => 'bool'])]
     public bool $enabled;
 
     public const QUERY_MAPPING = [
