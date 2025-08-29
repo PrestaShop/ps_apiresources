@@ -88,7 +88,7 @@ class Manufacturer
     #[ApiProperty(identifier: true)]
     public int $manufacturerId;
 
-    #[Assert\NotBlank(groups: ['create'])]
+    #[Assert\NotBlank(groups: ['Create'])]
     #[TypedRegex(['type' => TypedRegex::TYPE_CATALOG_NAME])]
     public string $name;
 
@@ -135,7 +135,7 @@ class Manufacturer
     #[Assert\NotBlank(allowNull: true)]
     public array $shopIds;
 
-    #[Assert\Type(['type' => 'bool'])]
+    #[Assert\Type(type: 'bool')]
     public bool $enabled;
 
     public const QUERY_MAPPING = [
