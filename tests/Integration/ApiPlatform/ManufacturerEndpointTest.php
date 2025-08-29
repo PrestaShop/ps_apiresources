@@ -308,6 +308,22 @@ class ManufacturerEndpointTest extends ApiTestCase
         return $manufacturerId;
     }
 
+    /**
+     * @depends testListManufacturers
+     *
+     * @param int $manufacturerId
+     */
+    public function testRemoveManufacturer(int $manufacturerId): void
+    {
+        // Delete the item
+        $return = $this->deleteItem('/manufacturer/' . $manufacturerId, ['manufacturer_write']);
+        // This endpoint return empty response and 204 HTTP code
+        $this->assertNull($return);
+
+        // Getting the item should result in a 404 now
+        $this->getItem('/manufacturer/' . $manufacturerId, ['manufacturer_read'], Response::HTTP_NOT_FOUND);
+    }
+
     public function testBulkRemoveManufacturers(): void
     {
         $manufacturers = $this->listItems('/manufacturers', ['manufacturer_read']);
