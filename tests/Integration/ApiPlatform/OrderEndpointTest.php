@@ -47,6 +47,10 @@ class OrderEndpointTest extends ApiTestCase
             'POST',
             '/orders',
         ];
+        yield 'add cart rule to order' => [
+            'POST',
+            '/order/1/cart-rules',
+        ];
     }
 
     public function testGetOrder(): void
@@ -118,5 +122,30 @@ class OrderEndpointTest extends ApiTestCase
         $this->partialUpdateItem('/order/999999/tracking', [
             'number' => 'TRACK-001',
         ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testAddCartRuleToOrder(): void
+    {
+        if (!class_exists(\PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand::class)) {
+            $this->markTestSkipped('Discount domain is not available');
+        }
+
+        $discount = $this->createItem('/discount', [
+            'type' => 'order_level',
+            'names' => [
+                'en-US' => 'Order voucher',
+            ],
+        ], ['discount_write']);
+
+        $order = $this->getItem('/order/1', ['order_read']);
+        $totalBefore = (float) $order['totalPaidTaxIncl'];
+
+        $this->createItem('/order/1/cart-rules', [
+            'cartRuleId' => $discount['discountId'],
+            'amount' => '1.00',
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $orderAfter = $this->getItem('/order/1', ['order_read']);
+        $this->assertLessThan($totalBefore, (float) $orderAfter['totalPaidTaxIncl']);
     }
 }
