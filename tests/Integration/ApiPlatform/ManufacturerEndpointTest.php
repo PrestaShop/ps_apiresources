@@ -273,11 +273,13 @@ class ManufacturerEndpointTest extends ApiTestCase
     public function testListManufacturers(int $manufacturerId): int
     {
         // List by manufacturerId in descending order so the created one comes first (and test ordering at the same time)
-        $paginatedManufacturers = $this->listItems('/manufacturers?orderBy=manufacturerId&sortOrder=desc', ['manufacturer_read']);
-        $this->assertGreaterThanOrEqual(1, $paginatedManufacturers['totalItems']);
+        foreach (['manufacturerId', 'active', 'products_count', 'addresses_count', 'name'] as $orderBy) {
+            $paginatedManufacturers = $this->listItems('/manufacturers?orderBy=' . $orderBy . '&sortOrder=desc', ['manufacturer_read']);
+            $this->assertGreaterThanOrEqual(1, $paginatedManufacturers['totalItems']);
 
-        // Check the details to make sure filters mapping is correct
-        $this->assertEquals('manufacturerId', $paginatedManufacturers['orderBy']);
+            // Check the details to make sure filters mapping is correct
+            $this->assertEquals($orderBy, $paginatedManufacturers['orderBy']);
+        }
 
         // Test manufacturer should be the first returned in the list
         $testManufacturer = $paginatedManufacturers['items'][0];
@@ -332,8 +334,17 @@ class ManufacturerEndpointTest extends ApiTestCase
         $this->assertEquals(1, $this->countItems('/manufacturers', ['manufacturer_read']));
     }
 
+    public function testInvalidFilterManufacturers()
+    {
+        $orderByInvalid = 'INVALID_FILTER';
+
+        $this->requestApi('GET', '/manufacturers?orderBy=' . $orderByInvalid . '&sortOrder=desc', null, ['manufacturer_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
     public function testInvalidManufacturer(): void
     {
+        $manufacturer = $this->getItem('/manufacturer/9999', ['manufacturer_read'], Response::HTTP_NOT_FOUND);
+
         $manufacturerInvalidData = [
             'name' => 'updated manufacturer name',
             'enabled' => false,
