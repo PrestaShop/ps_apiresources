@@ -88,7 +88,7 @@ class Manufacturer
     #[ApiProperty(identifier: true)]
     public int $manufacturerId;
 
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(groups: ['create'])]
     #[TypedRegex(['type' => TypedRegex::TYPE_CATALOG_NAME])]
     public string $name;
 

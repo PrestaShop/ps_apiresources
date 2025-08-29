@@ -26,6 +26,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Manufacturer;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use Doctrine\DBAL\Exception\InvalidFieldNameException;
+use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerException;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -45,6 +47,8 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         InvalidFieldNameException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        ManufacturerConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        ManufacturerException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ManufacturerList

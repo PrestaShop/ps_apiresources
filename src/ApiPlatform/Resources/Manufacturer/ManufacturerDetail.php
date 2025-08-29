@@ -26,6 +26,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Manufacturer;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerException;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Query\GetManufacturerForViewing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -48,6 +49,7 @@ use Symfony\Component\HttpFoundation\Response;
     exceptionToStatus: [
         ManufacturerConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ManufacturerNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ManufacturerException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ManufacturerDetail
