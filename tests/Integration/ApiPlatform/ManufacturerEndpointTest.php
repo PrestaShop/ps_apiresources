@@ -324,14 +324,44 @@ class ManufacturerEndpointTest extends ApiTestCase
         $this->getItem('/manufacturer/' . $manufacturerId, ['manufacturer_read'], Response::HTTP_NOT_FOUND);
     }
 
+    /**
+     * @depends testListManufacturers
+     *
+     * @param int $manufacturerId
+     */
     public function testBulkRemoveManufacturers(): void
     {
+        // We create another manufacturer
+        $postData = [
+            'name' => 'manufacturer name',
+            'shortDescriptions' => [
+                'en-US' => 'short description en',
+                'fr-FR' => 'short description fr',
+            ],
+            'descriptions' => [
+                'en-US' => 'description en',
+                'fr-FR' => 'description fr',
+            ],
+            'metaTitles' => [
+                'en-US' => 'meta title en',
+                'fr-FR' => 'meta title fr',
+            ],
+            'metaDescriptions' => [
+                'en-US' => 'meta description en',
+                'fr-FR' => 'meta description fr',
+            ],
+            'shopIds' => [1],
+            'enabled' => true,
+        ];
+        // Create an manufacturer, the POST endpoint returns the created item as JSON
+        $manufacturer = $this->createItem('/manufacturer', $postData, ['manufacturer_write']);
+
         $manufacturers = $this->listItems('/manufacturers', ['manufacturer_read']);
 
-        // There are four manufacturers in default fixtures
+        // There are currently tree manufacturers
         $this->assertEquals(3, $manufacturers['totalItems']);
 
-        // We remove the first two manufacturers
+        // We remove two manufacturers
         $removeManufacturerIds = [
             $manufacturers['items'][0]['manufacturerId'],
             $manufacturers['items'][2]['manufacturerId'],
