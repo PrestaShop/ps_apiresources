@@ -31,6 +31,7 @@ use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Command\AddManufacturerComman
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Command\DeleteManufacturerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Command\EditManufacturerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerException;
+use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Exception\ManufacturerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Query\GetManufacturerForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -78,6 +79,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         ManufacturerNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ManufacturerConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ManufacturerException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
