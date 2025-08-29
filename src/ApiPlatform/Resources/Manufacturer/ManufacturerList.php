@@ -25,7 +25,9 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Manufacturer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use Doctrine\DBAL\Exception\InvalidFieldNameException;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
@@ -40,7 +42,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
                 '[manufacturerId]' => '[id_manufacturer]',
             ],
         ),
-    ]
+    ],
+    exceptionToStatus: [
+        InvalidFieldNameException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
 )]
 class ManufacturerList
 {
@@ -60,7 +65,7 @@ class ManufacturerList
     public const MAPPING = [
         '[id_manufacturer]' => '[manufacturerId]',
         '[name]' => '[name]',
-        '[product_count]' => '[productCount]',
+        '[products_count]' => '[productsCount]',
         '[addresses_count]' => '[addressesCount]',
         '[active]' => '[enabled]',
     ];
