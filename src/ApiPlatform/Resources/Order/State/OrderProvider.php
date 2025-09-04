@@ -56,6 +56,8 @@ class OrderProvider implements ProviderInterface
         $filters = $context['filters'] ?? [];
         $dateFrom = $filters['date_from'] ?? null;
         $dateTo = $filters['date_to'] ?? null;
+        $updatedFrom = $filters['updated_from'] ?? null;
+        $updatedTo = $filters['updated_to'] ?? null;
         $statusId = isset($filters['status_id']) ? (int) $filters['status_id'] : null;
         $query = $filters['q'] ?? null; // email or order reference
 
@@ -65,6 +67,12 @@ class OrderProvider implements ProviderInterface
         }
         if ($dateTo) {
             $where[] = "o.date_add <= '" . pSQL($dateTo) . "'";
+        }
+        if ($updatedFrom) {
+            $where[] = "o.date_upd >= '" . pSQL($updatedFrom) . "'";
+        }
+        if ($updatedTo) {
+            $where[] = "o.date_upd <= '" . pSQL($updatedTo) . "'";
         }
         if ($statusId) {
             $where[] = 'o.current_state = ' . (int) $statusId;
