@@ -37,7 +37,7 @@ class OrderEndpointTest extends ApiTestCase
     {
         yield 'get order' => [
             'GET',
-            '/order/1',
+            '/orders/1',
         ];
         yield 'list orders' => [
             'GET',
@@ -55,7 +55,7 @@ class OrderEndpointTest extends ApiTestCase
 
     public function testGetOrder(): void
     {
-        $order = $this->getItem('/order/1', ['order_read']);
+        $order = $this->getItem('/orders/1', ['order_read']);
         $this->assertIsArray($order);
         $this->assertArrayHasKey('totalPaidTaxExcl', $order);
         $this->assertArrayHasKey('totalProductsTaxExcl', $order);
@@ -78,7 +78,7 @@ class OrderEndpointTest extends ApiTestCase
 
     public function testGetOrderNotFound(): void
     {
-        $this->getItem('/order/999999', ['order_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/orders/999999', ['order_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testCreateOrder(): void
@@ -106,7 +106,7 @@ class OrderEndpointTest extends ApiTestCase
 
         $this->assertArrayHasKey('orderId', $created);
         $orderId = (int) $created['orderId'];
-        $order = $this->getItem('/order/' . $orderId, ['order_read']);
+        $order = $this->getItem('/orders/' . $orderId, ['order_read']);
         $this->assertEquals($orderId, $order['orderId']);
     }
 
@@ -137,7 +137,7 @@ class OrderEndpointTest extends ApiTestCase
             ],
         ], ['discount_write']);
 
-        $order = $this->getItem('/order/1', ['order_read']);
+        $order = $this->getItem('/orders/1', ['order_read']);
         $totalBefore = (float) $order['totalPaidTaxIncl'];
 
         $this->createItem('/order/1/cart-rules', [
@@ -145,7 +145,7 @@ class OrderEndpointTest extends ApiTestCase
             'amount' => '1.00',
         ], ['order_write'], Response::HTTP_NO_CONTENT);
 
-        $orderAfter = $this->getItem('/order/1', ['order_read']);
+        $orderAfter = $this->getItem('/orders/1', ['order_read']);
         $this->assertLessThan($totalBefore, (float) $orderAfter['totalPaidTaxIncl']);
     }
 }
