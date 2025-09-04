@@ -6,6 +6,35 @@ Includes the resources allowing using the API for the PrestaShop domain, all end
 
 This module contains no code only some resource files that are automatically scanned and integrated by the Core, these resources are in [this folder](src/ApiPlatform/Resources).
 
+## Order events
+
+When using the API to update an order, two Symfony events are dispatched:
+
+- `PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Event\OrderStatusUpdatedEvent` after the order status changes
+- `PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Event\OrderTrackingUpdatedEvent` after the tracking information changes
+
+External modules can subscribe to these events using standard Symfony listeners or subscribers. The following example shows how a subscriber can be declared:
+
+```php
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Event\OrderStatusUpdatedEvent;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+
+class MyOrderSubscriber implements EventSubscriberInterface
+{
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            OrderStatusUpdatedEvent::class => 'onStatusChange',
+        ];
+    }
+
+    public function onStatusChange(OrderStatusUpdatedEvent $event): void
+    {
+        // react to the status update
+    }
+}
+```
+
 ## Customer and address details
 
 Order resources expose only the identifiers of the customer and related addresses. Full details can be retrieved through dedicated API endpoints:
