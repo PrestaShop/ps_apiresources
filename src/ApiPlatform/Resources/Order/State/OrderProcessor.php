@@ -24,8 +24,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Event\OrderStatusUpdatedEvent;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Event\OrderTrackingUpdatedEvent;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\OrderStatus;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\OrderTracking;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * State processor handling order actions (status and tracking updates),
@@ -33,6 +36,10 @@ use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\OrderTracking;
  */
 class OrderProcessor implements ProcessorInterface
 {
+    public function __construct(private readonly EventDispatcherInterface $dispatcher)
+    {
+    }
+
     /**
      * @param mixed $data Deserialized input DTO (PatchOrderInput or TrackingInput)
      * @param Operation $operation Api Platform operation metadata
@@ -90,6 +97,10 @@ class OrderProcessor implements ProcessorInterface
         if (!$history->add()) {
             throw new \RuntimeException('Failed to change order status');
         }
+
+        $this->dispatcher->dispatch(
+            new OrderStatusUpdatedEvent($orderId, (int) $targetStatusId)
+        );
     }
 
     /**
@@ -112,7 +123,9 @@ class OrderProcessor implements ProcessorInterface
         if (false === $order->update()) {
             throw new \RuntimeException('Failed to update tracking');
         }
+
+        $this->dispatcher->dispatch(
+            new OrderTrackingUpdatedEvent($orderId, $number, $url)
+        );
     }
 }
-
-
