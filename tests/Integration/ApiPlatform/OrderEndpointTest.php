@@ -51,6 +51,10 @@ class OrderEndpointTest extends ApiTestCase
             'POST',
             '/order/1/cart-rules',
         ];
+        yield 'update order note' => [
+            'PATCH',
+            '/order/1/note',
+        ];
     }
 
     public function testGetOrder(): void
@@ -121,6 +125,24 @@ class OrderEndpointTest extends ApiTestCase
     {
         $this->partialUpdateItem('/order/999999/tracking', [
             'number' => 'TRACK-001',
+        ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testPatchOrderNote(): void
+    {
+        $note = 'Internal note';
+        $this->partialUpdateItem('/order/1/note', [
+            'note' => $note,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $order = new \Order(1);
+        $this->assertEquals($note, $order->note);
+    }
+
+    public function testPatchOrderNoteNotFound(): void
+    {
+        $this->partialUpdateItem('/order/999999/note', [
+            'note' => 'irrelevant',
         ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
 
