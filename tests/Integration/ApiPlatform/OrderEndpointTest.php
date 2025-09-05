@@ -55,6 +55,10 @@ class OrderEndpointTest extends ApiTestCase
             'PATCH',
             '/order/1/note',
         ];
+        yield 'resend order email' => [
+            'POST',
+            '/order/1/resend-email',
+        ];
     }
 
     public function testGetOrder(): void
@@ -169,5 +173,26 @@ class OrderEndpointTest extends ApiTestCase
 
         $orderAfter = $this->getItem('/orders/1', ['order_read']);
         $this->assertLessThan($totalBefore, (float) $orderAfter['totalPaidTaxIncl']);
+    }
+
+    public function testResendOrderEmail(): void
+    {
+        $orderId = 1;
+        $row = \Db::getInstance()->getRow(
+            'SELECT id_order_history, id_order_state FROM `' . _DB_PREFIX_ . "order_history` WHERE id_order = $orderId ORDER BY id_order_history DESC"
+        );
+
+        $this->createItem('/order/' . $orderId . '/resend-email', [
+            'statusId' => (int) $row['id_order_state'],
+            'historyId' => (int) $row['id_order_history'],
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+    }
+
+    public function testResendOrderEmailOrderNotFound(): void
+    {
+        $this->createItem('/order/999999/resend-email', [
+            'statusId' => 1,
+            'historyId' => 1,
+        ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
 }
