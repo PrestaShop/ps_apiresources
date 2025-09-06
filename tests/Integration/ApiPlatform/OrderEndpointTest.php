@@ -59,6 +59,10 @@ class OrderEndpointTest extends ApiTestCase
             'POST',
             '/order/1/resend-email',
         ];
+        yield 'cancel order products' => [
+            'POST',
+            '/order/1/cancellations',
+        ];
     }
 
     public function testGetOrder(): void
@@ -194,5 +198,56 @@ class OrderEndpointTest extends ApiTestCase
             'statusId' => 1,
             'historyId' => 1,
         ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testCancelOrderProductUpdatesStockAndTotals(): void
+    {
+        $productId = 1;
+        $quantity = 2;
+
+        $stockBeforeOrder = \StockAvailable::getQuantityAvailableByProduct($productId);
+
+        $cart = new \Cart();
+        $cart->id_customer = 1;
+        $cart->id_lang = 1;
+        $cart->id_currency = 1;
+        $cart->id_shop = 1;
+        $cart->id_address_delivery = 1;
+        $cart->id_address_invoice = 1;
+        $cart->id_carrier = 1;
+        $customer = new \Customer(1);
+        $cart->secure_key = $customer->secure_key;
+        $cart->add();
+        $cart->updateQty($quantity, $productId);
+
+        $created = $this->createItem('/orders', [
+            'cartId' => (int) $cart->id,
+            'employeeId' => 1,
+            'orderMessage' => 'Cancellation test order',
+            'paymentModuleName' => 'ps_wirepayment',
+            'orderStateId' => 2,
+        ], ['order_write']);
+
+        $orderId = (int) $created['orderId'];
+
+        $stockAfterOrder = \StockAvailable::getQuantityAvailableByProduct($productId);
+        $this->assertEquals($stockBeforeOrder - $quantity, $stockAfterOrder);
+
+        $order = $this->getItem('/orders/' . $orderId, ['order_read']);
+        $this->assertNotEmpty($order['items']);
+        $orderDetailId = (int) $order['items'][0]['orderDetailId'];
+        $totalBefore = (float) $order['totalPaidTaxIncl'];
+
+        $this->createItem('/order/' . $orderId . '/cancellations', [
+            'items' => [
+                $orderDetailId => 1,
+            ],
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $stockAfterCancel = \StockAvailable::getQuantityAvailableByProduct($productId);
+        $this->assertEquals($stockAfterOrder + 1, $stockAfterCancel);
+
+        $orderAfter = $this->getItem('/orders/' . $orderId, ['order_read']);
+        $this->assertLessThan($totalBefore, (float) $orderAfter['totalPaidTaxIncl']);
     }
 }

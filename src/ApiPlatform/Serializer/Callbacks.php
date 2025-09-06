@@ -35,6 +35,36 @@ final class Callbacks
     {
         return (int) $value;
     }
+
+    /**
+     * Convert associative array of order detail identifiers to cancellation payload.
+     *
+     * Example input: ["5" => 2] becomes [["orderDetailId" => 5, "quantity" => 2]].
+     *
+     * @param mixed $value
+     * @param mixed $object
+     * @param mixed $attribute
+     * @param mixed $format
+     * @param mixed $context
+     *
+     * @return array<int, array{orderDetailId:int, quantity:int}>
+     */
+    public static function toCancelledProducts($value, $object = null, $attribute = null, $format = null, $context = null): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $cancelled = [];
+        foreach ($value as $orderDetailId => $quantity) {
+            $cancelled[] = [
+                'orderDetailId' => (int) $orderDetailId,
+                'quantity' => (int) $quantity,
+            ];
+        }
+
+        return $cancelled;
+    }
 }
 
 
