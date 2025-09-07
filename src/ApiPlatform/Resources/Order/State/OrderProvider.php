@@ -61,38 +61,49 @@ class OrderProvider implements ProviderInterface
         $statusId = isset($filters['status_id']) ? (int) $filters['status_id'] : null;
         $query = $filters['q'] ?? null; // email or order reference
 
-        $where = [];
-        if ($dateFrom) {
-            $where[] = "o.date_add >= '" . pSQL($dateFrom) . "'";
-        }
-        if ($dateTo) {
-            $where[] = "o.date_add <= '" . pSQL($dateTo) . "'";
-        }
-        if ($updatedFrom) {
-            $where[] = "o.date_upd >= '" . pSQL($updatedFrom) . "'";
-        }
-        if ($updatedTo) {
-            $where[] = "o.date_upd <= '" . pSQL($updatedTo) . "'";
-        }
-        if ($statusId) {
-            $where[] = 'o.current_state = ' . (int) $statusId;
-        }
-        if ($query) {
-            $where[] = "(o.reference = '" . pSQL($query) . "' OR c.email LIKE '%" . pSQL($query) . "%')";
-        }
-        $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
-
         $page = max(1, (int) ($context['pagination']['page'] ?? 1));
         $itemsPerPage = max(1, (int) ($context['pagination']['itemsPerPage'] ?? 30));
         $offset = ($page - 1) * $itemsPerPage;
 
-        $sql = 'SELECT o.id_order FROM ' . _DB_PREFIX_ . 'orders o '
-            . 'INNER JOIN ' . _DB_PREFIX_ . 'customer c ON (c.id_customer = o.id_customer) '
-            . $whereSql . ' '
-            . 'ORDER BY o.id_order DESC '
-            . 'LIMIT ' . (int) $itemsPerPage . ' OFFSET ' . (int) $offset;
+        $connection = \Db::getInstance(_PS_USE_SQL_SLAVE_)->getConnection();
+        $qb = $connection
+            ->createQueryBuilder()
+            ->select('o.id_order')
+            ->from(_DB_PREFIX_ . 'orders', 'o')
+            ->innerJoin('o', _DB_PREFIX_ . 'customer', 'c', 'c.id_customer = o.id_customer');
 
-        $rows = \Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql) ?: [];
+        if ($dateFrom) {
+            $qb->andWhere('o.date_add >= :date_from');
+            $qb->setParameter('date_from', $dateFrom);
+        }
+        if ($dateTo) {
+            $qb->andWhere('o.date_add <= :date_to');
+            $qb->setParameter('date_to', $dateTo);
+        }
+        if ($updatedFrom) {
+            $qb->andWhere('o.date_upd >= :updated_from');
+            $qb->setParameter('updated_from', $updatedFrom);
+        }
+        if ($updatedTo) {
+            $qb->andWhere('o.date_upd <= :updated_to');
+            $qb->setParameter('updated_to', $updatedTo);
+        }
+        if ($statusId) {
+            $qb->andWhere('o.current_state = :status_id');
+            $qb->setParameter('status_id', $statusId);
+        }
+        if ($query) {
+            $qb->andWhere('(o.reference = :query_ref OR c.email LIKE :query_email)');
+            $qb->setParameter('query_ref', $query);
+            $qb->setParameter('query_email', '%' . $query . '%');
+        }
+
+        $qb
+            ->orderBy('o.id_order', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($itemsPerPage);
+
+        $rows = $qb->execute()->fetchAllAssociative();
 
         $collection = [];
         foreach ($rows as $row) {
