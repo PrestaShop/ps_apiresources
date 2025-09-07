@@ -65,6 +65,41 @@ final class Callbacks
 
         return $cancelled;
     }
+
+    /**
+     * Convert associative array of order detail identifiers into standard refund format.
+     *
+     * Example input: ["5" => 2] becomes [5 => ["quantity" => 2]].
+     *
+     * @param mixed $value
+     * @param mixed $object
+     * @param mixed $attribute
+     * @param mixed $format
+     * @param mixed $context
+     *
+     * @return array<int, array{quantity:int}>
+     */
+    public static function toOrderDetailRefunds($value, $object = null, $attribute = null, $format = null, $context = null): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $refunds = [];
+        foreach ($value as $orderDetailId => $quantity) {
+            if (is_array($quantity) && isset($quantity['quantity'])) {
+                $quantityValue = $quantity['quantity'];
+            } else {
+                $quantityValue = $quantity;
+            }
+
+            $refunds[(int) $orderDetailId] = [
+                'quantity' => (int) $quantityValue,
+            ];
+        }
+
+        return $refunds;
+    }
 }
 
 
