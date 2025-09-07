@@ -33,6 +33,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
