@@ -162,6 +162,36 @@ class OrderEndpointTest extends ApiTestCase
         ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
 
+    public function testPatchOrderCurrency(): void
+    {
+        $order = new \Order(1);
+        $originalCurrency = (int) $order->id_currency;
+        $newCurrency = $originalCurrency === 1 ? 2 : 1;
+
+        $currency = new \Currency($newCurrency);
+        if (!$currency->id) {
+            $this->markTestSkipped('Target currency not available');
+        }
+
+        $this->partialUpdateItem('/order/1/currency', [
+            'currencyId' => $newCurrency,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $updatedOrder = new \Order(1);
+        $this->assertEquals($newCurrency, (int) $updatedOrder->id_currency);
+
+        $this->partialUpdateItem('/order/1/currency', [
+            'currencyId' => $originalCurrency,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+    }
+
+    public function testPatchOrderCurrencyNotFound(): void
+    {
+        $this->partialUpdateItem('/order/999999/currency', [
+            'currencyId' => 1,
+        ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
     public function testAddCartRuleToOrder(): void
     {
         if (!class_exists(\PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand::class)) {
