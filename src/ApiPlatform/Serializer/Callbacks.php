@@ -37,6 +37,26 @@ final class Callbacks
     }
 
     /**
+     * Cast array of values to integers, signature matches Symfony Serializer callbacks.
+     *
+     * @param mixed $value
+     * @param mixed $object
+     * @param mixed $attribute
+     * @param mixed $format
+     * @param mixed $context
+     *
+     * @return int[]
+     */
+    public static function toIntArray($value, $object = null, $attribute = null, $format = null, $context = null): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_map(static fn ($item) => (int) $item, $value);
+    }
+
+    /**
      * Convert associative array of order detail identifiers to cancellation payload.
      *
      * Example input: ["5" => 2] becomes [["orderDetailId" => 5, "quantity" => 2]].
