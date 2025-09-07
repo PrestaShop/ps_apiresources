@@ -130,6 +130,33 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertEquals($orderId, $order['orderId']);
     }
 
+    public function testPatchOrderStatusUsingCode(): void
+    {
+        $orderId = 1;
+        $order = new \Order($orderId);
+        $originalStatusId = (int) $order->current_state;
+
+        $deliveredCode = 'PS_OS_DELIVERED';
+        $deliveredId = (int) \Configuration::get($deliveredCode);
+        if ($deliveredId === $originalStatusId) {
+            $deliveredCode = 'PS_OS_CANCELED';
+            $deliveredId = (int) \Configuration::get($deliveredCode);
+        }
+
+        $this->partialUpdateItem('/order/' . $orderId . '/status', [
+            'statusId' => $originalStatusId,
+            'statusCode' => $deliveredCode,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $updatedOrder = new \Order($orderId);
+        $this->assertEquals($deliveredId, (int) $updatedOrder->current_state);
+
+        // Restore original status to avoid side effects
+        $this->partialUpdateItem('/order/' . $orderId . '/status', [
+            'statusId' => $originalStatusId,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+    }
+
     public function testPatchStatusOrderNotFound(): void
     {
         $this->partialUpdateItem('/order/999999/status', [

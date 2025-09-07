@@ -24,8 +24,9 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
-use Symfony\Component\HttpFoundation\Response;
 use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -57,13 +58,58 @@ use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
 /**
  * API Resource handling the order status update action.
  */
+#[Assert\Expression(
+    "this.statusId !== null || this.statusCode !== null",
+    message: 'Either statusId or statusCode must be provided'
+)]
 class OrderStatus
 {
     /** @var int|null Target order status ID */
     public ?int $statusId = null;
 
-    /** @var string|null Optional business status code (not implemented in MVP) */
+    /** @var string|null Optional business status code */
     public ?string $statusCode = null;
+
+    public function __construct(?int $statusId = null, ?string $statusCode = null)
+    {
+        if (null !== $statusCode) {
+            $this->statusId = self::resolveStatusId($statusCode);
+            $this->statusCode = $statusCode;
+        } else {
+            $this->statusId = $statusId;
+            $this->statusCode = $statusCode;
+        }
+
+        if (null === $this->statusId) {
+            throw new \InvalidArgumentException('Either statusId or statusCode must be provided');
+        }
+    }
+
+    private static function resolveStatusId(string $statusCode): int
+    {
+        if (class_exists(\PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderStatusIdByCode::class)) {
+            $container = \PrestaShop\PrestaShop\Adapter\ContainerBuilder::getContainer();
+            $queryBus = $container->get('prestashop.core.query_bus');
+
+            try {
+                /** @var int $id */
+                $id = $queryBus->handle(
+                    new \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderStatusIdByCode($statusCode)
+                );
+
+                return $id;
+            } catch (\Throwable) {
+                // Fallback to configuration lookup below
+            }
+        }
+
+        $id = (int) \Configuration::get($statusCode);
+        if ($id <= 0) {
+            throw new \InvalidArgumentException('Unknown order status code');
+        }
+
+        return $id;
+    }
 }
 
 
