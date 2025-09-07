@@ -219,6 +219,76 @@ class OrderEndpointTest extends ApiTestCase
         ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
 
+    public function testPatchOrderAddresses(): void
+    {
+        $originalAddressId = $this->createTestAddress('original');
+        $newDeliveryAddressId = $this->createTestAddress('delivery');
+        $newInvoiceAddressId = $this->createTestAddress('invoice');
+
+        $cart = new \Cart();
+        $cart->id_customer = 1;
+        $cart->id_lang = 1;
+        $cart->id_currency = 1;
+        $cart->id_shop = 1;
+        $cart->id_address_delivery = $originalAddressId;
+        $cart->id_address_invoice = $originalAddressId;
+        $cart->id_carrier = 1;
+        $customer = new \Customer(1);
+        $cart->secure_key = $customer->secure_key;
+        $cart->add();
+        $cart->updateQty(1, 1);
+
+        $created = $this->createItem('/orders', [
+            'cartId' => (int) $cart->id,
+            'employeeId' => 1,
+            'orderMessage' => 'Address test order',
+            'paymentModuleName' => 'ps_wirepayment',
+            'orderStateId' => 2,
+        ], ['order_write']);
+
+        $orderId = (int) $created['orderId'];
+
+        $this->partialUpdateItem('/orders/' . $orderId . '/delivery-address', [
+            'addressId' => $newDeliveryAddressId,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $this->partialUpdateItem('/orders/' . $orderId . '/invoice-address', [
+            'addressId' => $newInvoiceAddressId,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $order = $this->getItem('/orders/' . $orderId, ['order_read']);
+        $this->assertEquals($newDeliveryAddressId, $order['deliveryAddressId']);
+        $this->assertEquals($newInvoiceAddressId, $order['invoiceAddressId']);
+    }
+
+    public function testPatchDeliveryAddressOrderNotFound(): void
+    {
+        $this->partialUpdateItem('/orders/999999/delivery-address', [
+            'addressId' => 1,
+        ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testPatchDeliveryAddressAddressNotFound(): void
+    {
+        $this->partialUpdateItem('/orders/1/delivery-address', [
+            'addressId' => 999999,
+        ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testPatchInvoiceAddressOrderNotFound(): void
+    {
+        $this->partialUpdateItem('/orders/999999/invoice-address', [
+            'addressId' => 1,
+        ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testPatchInvoiceAddressAddressNotFound(): void
+    {
+        $this->partialUpdateItem('/orders/1/invoice-address', [
+            'addressId' => 999999,
+        ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
     public function testAddCartRuleToOrder(): void
     {
         if (!class_exists(\PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand::class)) {
@@ -429,5 +499,22 @@ class OrderEndpointTest extends ApiTestCase
             ['propertyPath' => 'orderIds[1]'],
             ['propertyPath' => 'statusId'],
         ], $validationErrors);
+    }
+
+    private function createTestAddress(string $alias): int
+    {
+        $address = new \Address();
+        $address->id_country = 1;
+        $address->alias = $alias;
+        $address->firstname = 'John';
+        $address->lastname = 'Doe';
+        $address->address1 = $alias . ' street';
+        $address->city = 'Paris';
+        $address->postcode = '75000';
+        $address->id_customer = 1;
+        $address->phone = '0000000000';
+        $address->add();
+
+        return (int) $address->id;
     }
 }
