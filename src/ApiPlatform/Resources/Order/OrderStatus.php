@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
+use PrestaShop\PrestaShop\Core\CommandBus\CommandBusInterface;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -70,10 +71,13 @@ class OrderStatus
     /** @var string|null Optional business status code */
     public ?string $statusCode = null;
 
-    public function __construct(?int $statusId = null, ?string $statusCode = null)
-    {
+    public function __construct(
+        private CommandBusInterface $queryBus,
+        ?int $statusId = null,
+        ?string $statusCode = null,
+    ) {
         if (null !== $statusCode) {
-            $this->statusId = self::resolveStatusId($statusCode);
+            $this->statusId = $this->resolveStatusId($statusCode);
             $this->statusCode = $statusCode;
         } else {
             $this->statusId = $statusId;
@@ -85,15 +89,12 @@ class OrderStatus
         }
     }
 
-    private static function resolveStatusId(string $statusCode): int
+    private function resolveStatusId(string $statusCode): int
     {
         if (class_exists(\PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderStatusIdByCode::class)) {
-            $container = \PrestaShop\PrestaShop\Adapter\ContainerBuilder::getContainer();
-            $queryBus = $container->get('prestashop.core.query_bus');
-
             try {
                 /** @var int $id */
-                $id = $queryBus->handle(
+                $id = $this->queryBus->handle(
                     new \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderStatusIdByCode($statusCode)
                 );
 
