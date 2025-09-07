@@ -33,3 +33,7 @@ services:
   PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State\OrderProcessor:
     arguments: []
     tags: ['api_platform.state_processor']
+
+  PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\OrderStatus:
+    arguments:
+      $queryBus: '@prestashop.core.query_bus'
