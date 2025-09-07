@@ -67,6 +67,10 @@ class OrderEndpointTest extends ApiTestCase
             'POST',
             '/order/1/refunds',
         ];
+        yield 'bulk update order status' => [
+            'POST',
+            '/orders/status-bulk',
+        ];
     }
 
     public function testGetOrder(): void
@@ -316,5 +320,57 @@ class OrderEndpointTest extends ApiTestCase
             'generateVoucher' => false,
             'voucherRefundType' => 0,
         ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testBulkChangeOrderStatus(): void
+    {
+        // Create an additional order to update in the bulk request
+        $cart = new \Cart();
+        $cart->id_customer = 1;
+        $cart->id_lang = 1;
+        $cart->id_currency = 1;
+        $cart->id_shop = 1;
+        $cart->id_address_delivery = 1;
+        $cart->id_address_invoice = 1;
+        $cart->id_carrier = 1;
+        $customer = new \Customer(1);
+        $cart->secure_key = $customer->secure_key;
+        $cart->add();
+        $cart->updateQty(1, 1);
+
+        $created = $this->createItem('/orders', [
+            'cartId' => (int) $cart->id,
+            'employeeId' => 1,
+            'orderMessage' => 'Bulk status test order',
+            'paymentModuleName' => 'ps_wirepayment',
+            'orderStateId' => 2,
+        ], ['order_write']);
+
+        $secondOrderId = (int) $created['orderId'];
+
+        $this->createItem('/orders/status-bulk', [
+            'orderIds' => [1, $secondOrderId],
+            'statusId' => 2,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $order1 = $this->getItem('/orders/1', ['order_read']);
+        $order2 = $this->getItem('/orders/' . $secondOrderId, ['order_read']);
+        $this->assertEquals(2, $order1['statusId']);
+        $this->assertEquals(2, $order2['statusId']);
+    }
+
+    public function testBulkChangeOrderStatusInvalidIds(): void
+    {
+        $validationErrors = $this->createItem('/orders/status-bulk', [
+            'orderIds' => ['foo', 0],
+            'statusId' => 0,
+        ], ['order_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'orderIds[0]'],
+            ['propertyPath' => 'orderIds[1]'],
+            ['propertyPath' => 'statusId'],
+        ], $validationErrors);
     }
 }
