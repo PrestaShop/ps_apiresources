@@ -61,7 +61,7 @@ class ApiClientList
 
     public string $clientName;
 
-    public string $description;
+    public ?string $description = null;
 
     public ?string $externalIssuer;
 
