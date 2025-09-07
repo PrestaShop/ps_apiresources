@@ -63,6 +63,10 @@ class OrderEndpointTest extends ApiTestCase
             'POST',
             '/order/1/cancellations',
         ];
+        yield 'issue order refund' => [
+            'POST',
+            '/order/1/refunds',
+        ];
     }
 
     public function testGetOrder(): void
@@ -249,5 +253,68 @@ class OrderEndpointTest extends ApiTestCase
 
         $orderAfter = $this->getItem('/orders/' . $orderId, ['order_read']);
         $this->assertLessThan($totalBefore, (float) $orderAfter['totalPaidTaxIncl']);
+    }
+
+    public function testIssueOrderRefund(): void
+    {
+        $productId = 1;
+        $quantity = 1;
+
+        $stockBeforeOrder = \StockAvailable::getQuantityAvailableByProduct($productId);
+
+        $cart = new \Cart();
+        $cart->id_customer = 1;
+        $cart->id_lang = 1;
+        $cart->id_currency = 1;
+        $cart->id_shop = 1;
+        $cart->id_address_delivery = 1;
+        $cart->id_address_invoice = 1;
+        $cart->id_carrier = 1;
+        $customer = new \Customer(1);
+        $cart->secure_key = $customer->secure_key;
+        $cart->add();
+        $cart->updateQty($quantity, $productId);
+
+        $created = $this->createItem('/orders', [
+            'cartId' => (int) $cart->id,
+            'employeeId' => 1,
+            'orderMessage' => 'Refund test order',
+            'paymentModuleName' => 'ps_wirepayment',
+            'orderStateId' => 2,
+        ], ['order_write']);
+
+        $orderId = (int) $created['orderId'];
+        $order = $this->getItem('/orders/' . $orderId, ['order_read']);
+        $orderDetailId = (int) $order['items'][0]['orderDetailId'];
+
+        $stockAfterOrder = \StockAvailable::getQuantityAvailableByProduct($productId);
+        $this->assertEquals($stockBeforeOrder - $quantity, $stockAfterOrder);
+
+        $this->createItem('/order/' . $orderId . '/refunds', [
+            'orderDetailRefunds' => [
+                $orderDetailId => 1,
+            ],
+            'refundShippingCost' => false,
+            'generateCreditSlip' => true,
+            'generateVoucher' => false,
+            'voucherRefundType' => 0,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $stockAfterRefund = \StockAvailable::getQuantityAvailableByProduct($productId);
+        $this->assertEquals($stockBeforeOrder, $stockAfterRefund);
+
+        $orderSlips = \OrderSlip::getOrdersSlip($orderId);
+        $this->assertNotEmpty($orderSlips);
+    }
+
+    public function testIssueOrderRefundOrderNotFound(): void
+    {
+        $this->createItem('/order/999999/refunds', [
+            'orderDetailRefunds' => [1 => 1],
+            'refundShippingCost' => false,
+            'generateCreditSlip' => true,
+            'generateVoucher' => false,
+            'voucherRefundType' => 0,
+        ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
 }
