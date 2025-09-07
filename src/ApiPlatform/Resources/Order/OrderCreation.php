@@ -26,6 +26,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -48,14 +49,18 @@ class OrderCreation
     #[ApiProperty(identifier: true, writable: false)]
     public int $orderId;
 
+    #[Assert\NotBlank]
     public int $cartId;
 
+    #[Assert\NotBlank]
     public int $employeeId;
 
     public string $orderMessage;
 
+    #[Assert\NotBlank]
     public string $paymentModuleName;
 
+    #[Assert\NotBlank]
     public int $orderStateId;
 }
 
