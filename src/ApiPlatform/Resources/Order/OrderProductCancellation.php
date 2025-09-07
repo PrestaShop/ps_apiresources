@@ -30,7 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSPost(
-            uriTemplate: '/order/{orderId}/cancellations',
+            uriTemplate: '/orders/{orderId}/cancellations',
             requirements: ['orderId' => '\\d+'],
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\CancelOrderProductCommand::class,

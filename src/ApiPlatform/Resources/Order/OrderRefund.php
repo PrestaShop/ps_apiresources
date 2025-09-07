@@ -30,7 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSPost(
-            uriTemplate: '/order/{orderId}/refunds',
+            uriTemplate: '/orders/{orderId}/refunds',
             requirements: ['orderId' => '\\d+'],
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\IssueStandardRefundCommand::class,

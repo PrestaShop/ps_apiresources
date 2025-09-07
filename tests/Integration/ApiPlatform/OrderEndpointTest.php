@@ -49,23 +49,23 @@ class OrderEndpointTest extends ApiTestCase
         ];
         yield 'add cart rule to order' => [
             'POST',
-            '/order/1/cart-rules',
+            '/orders/1/cart-rules',
         ];
         yield 'update order note' => [
             'PATCH',
-            '/order/1/note',
+            '/orders/1/note',
         ];
         yield 'resend order email' => [
             'POST',
-            '/order/1/resend-email',
+            '/orders/1/resend-email',
         ];
         yield 'cancel order products' => [
             'POST',
-            '/order/1/cancellations',
+            '/orders/1/cancellations',
         ];
         yield 'issue order refund' => [
             'POST',
-            '/order/1/refunds',
+            '/orders/1/refunds',
         ];
         yield 'bulk update order status' => [
             'POST',
@@ -143,7 +143,7 @@ class OrderEndpointTest extends ApiTestCase
             $deliveredId = (int) \Configuration::get($deliveredCode);
         }
 
-        $this->partialUpdateItem('/order/' . $orderId . '/status', [
+        $this->partialUpdateItem('/orders/' . $orderId . '/status', [
             'statusId' => $originalStatusId,
             'statusCode' => $deliveredCode,
         ], ['order_write'], Response::HTTP_NO_CONTENT);
@@ -152,21 +152,21 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertEquals($deliveredId, (int) $updatedOrder->current_state);
 
         // Restore original status to avoid side effects
-        $this->partialUpdateItem('/order/' . $orderId . '/status', [
+        $this->partialUpdateItem('/orders/' . $orderId . '/status', [
             'statusId' => $originalStatusId,
         ], ['order_write'], Response::HTTP_NO_CONTENT);
     }
 
     public function testPatchStatusOrderNotFound(): void
     {
-        $this->partialUpdateItem('/order/999999/status', [
+        $this->partialUpdateItem('/orders/999999/status', [
             'statusId' => 1,
         ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
 
     public function testPatchTrackingOrderNotFound(): void
     {
-        $this->partialUpdateItem('/order/999999/tracking', [
+        $this->partialUpdateItem('/orders/999999/tracking', [
             'number' => 'TRACK-001',
         ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
@@ -174,7 +174,7 @@ class OrderEndpointTest extends ApiTestCase
     public function testPatchOrderNote(): void
     {
         $note = 'Internal note';
-        $this->partialUpdateItem('/order/1/note', [
+        $this->partialUpdateItem('/orders/1/note', [
             'note' => $note,
         ], ['order_write'], Response::HTTP_NO_CONTENT);
 
@@ -184,7 +184,7 @@ class OrderEndpointTest extends ApiTestCase
 
     public function testPatchOrderNoteNotFound(): void
     {
-        $this->partialUpdateItem('/order/999999/note', [
+        $this->partialUpdateItem('/orders/999999/note', [
             'note' => 'irrelevant',
         ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
@@ -200,21 +200,21 @@ class OrderEndpointTest extends ApiTestCase
             $this->markTestSkipped('Target currency not available');
         }
 
-        $this->partialUpdateItem('/order/1/currency', [
+        $this->partialUpdateItem('/orders/1/currency', [
             'currencyId' => $newCurrency,
         ], ['order_write'], Response::HTTP_NO_CONTENT);
 
         $updatedOrder = new \Order(1);
         $this->assertEquals($newCurrency, (int) $updatedOrder->id_currency);
 
-        $this->partialUpdateItem('/order/1/currency', [
+        $this->partialUpdateItem('/orders/1/currency', [
             'currencyId' => $originalCurrency,
         ], ['order_write'], Response::HTTP_NO_CONTENT);
     }
 
     public function testPatchOrderCurrencyNotFound(): void
     {
-        $this->partialUpdateItem('/order/999999/currency', [
+        $this->partialUpdateItem('/orders/999999/currency', [
             'currencyId' => 1,
         ], ['order_write'], Response::HTTP_NOT_FOUND);
     }
@@ -235,7 +235,7 @@ class OrderEndpointTest extends ApiTestCase
         $order = $this->getItem('/orders/1', ['order_read']);
         $totalBefore = (float) $order['totalPaidTaxIncl'];
 
-        $this->createItem('/order/1/cart-rules', [
+        $this->createItem('/orders/1/cart-rules', [
             'cartRuleId' => $discount['discountId'],
             'amount' => '1.00',
         ], ['order_write'], Response::HTTP_NO_CONTENT);
@@ -251,7 +251,7 @@ class OrderEndpointTest extends ApiTestCase
             'SELECT id_order_history, id_order_state FROM `' . _DB_PREFIX_ . "order_history` WHERE id_order = $orderId ORDER BY id_order_history DESC"
         );
 
-        $this->createItem('/order/' . $orderId . '/resend-email', [
+        $this->createItem('/orders/' . $orderId . '/resend-email', [
             'statusId' => (int) $row['id_order_state'],
             'historyId' => (int) $row['id_order_history'],
         ], ['order_write'], Response::HTTP_NO_CONTENT);
@@ -259,7 +259,7 @@ class OrderEndpointTest extends ApiTestCase
 
     public function testResendOrderEmailOrderNotFound(): void
     {
-        $this->createItem('/order/999999/resend-email', [
+        $this->createItem('/orders/999999/resend-email', [
             'statusId' => 1,
             'historyId' => 1,
         ], ['order_write'], Response::HTTP_NOT_FOUND);
@@ -303,7 +303,7 @@ class OrderEndpointTest extends ApiTestCase
         $orderDetailId = (int) $order['items'][0]['orderDetailId'];
         $totalBefore = (float) $order['totalPaidTaxIncl'];
 
-        $this->createItem('/order/' . $orderId . '/cancellations', [
+        $this->createItem('/orders/' . $orderId . '/cancellations', [
             'items' => [
                 $orderDetailId => 1,
             ],
@@ -351,7 +351,7 @@ class OrderEndpointTest extends ApiTestCase
         $stockAfterOrder = \StockAvailable::getQuantityAvailableByProduct($productId);
         $this->assertEquals($stockBeforeOrder - $quantity, $stockAfterOrder);
 
-        $this->createItem('/order/' . $orderId . '/refunds', [
+        $this->createItem('/orders/' . $orderId . '/refunds', [
             'orderDetailRefunds' => [
                 $orderDetailId => 1,
             ],
@@ -370,7 +370,7 @@ class OrderEndpointTest extends ApiTestCase
 
     public function testIssueOrderRefundOrderNotFound(): void
     {
-        $this->createItem('/order/999999/refunds', [
+        $this->createItem('/orders/999999/refunds', [
             'orderDetailRefunds' => [1 => 1],
             'refundShippingCost' => false,
             'generateCreditSlip' => true,
