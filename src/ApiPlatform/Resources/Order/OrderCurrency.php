@@ -30,7 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSPartialUpdate(
-            uriTemplate: '/order/{orderId}/currency',
+            uriTemplate: '/orders/{orderId}/currency',
             requirements: ['orderId' => '\\d+'],
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\ChangeOrderCurrencyCommand::class,

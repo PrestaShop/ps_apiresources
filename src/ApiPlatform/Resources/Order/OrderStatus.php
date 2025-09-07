@@ -23,15 +23,15 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSPartialUpdate(
-            uriTemplate: '/order/{orderId}/status',
+            uriTemplate: '/orders/{orderId}/status',
             requirements: ['orderId' => '\\d+'],
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\UpdateOrderStatusCommand::class,
@@ -59,7 +59,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * API Resource handling the order status update action.
  */
 #[Assert\Expression(
-    "this.statusId !== null || this.statusCode !== null",
+    'this.statusId !== null || this.statusCode !== null',
     message: 'Either statusId or statusCode must be provided'
 )]
 class OrderStatus
@@ -111,5 +111,3 @@ class OrderStatus
         return $id;
     }
 }
-
-

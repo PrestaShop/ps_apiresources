@@ -30,7 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSPost(
-            uriTemplate: '/order/{orderId}/resend-email',
+            uriTemplate: '/orders/{orderId}/resend-email',
             requirements: ['orderId' => '\\d+'],
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\ResendOrderEmailCommand::class,

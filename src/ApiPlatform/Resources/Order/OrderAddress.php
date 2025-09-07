@@ -30,7 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSPartialUpdate(
-            uriTemplate: '/order/{orderId}/delivery-address',
+            uriTemplate: '/orders/{orderId}/delivery-address',
             requirements: ['orderId' => '\\d+'],
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\ChangeOrderDeliveryAddressCommand::class,
@@ -41,7 +41,7 @@ use Symfony\Component\HttpFoundation\Response;
             allowEmptyBody: false,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/order/{orderId}/invoice-address',
+            uriTemplate: '/orders/{orderId}/invoice-address',
             requirements: ['orderId' => '\\d+'],
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\ChangeOrderInvoiceAddressCommand::class,

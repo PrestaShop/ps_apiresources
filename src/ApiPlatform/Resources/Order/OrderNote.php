@@ -23,14 +23,14 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
-use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
 
 #[ApiResource(
     operations: [
         new CQRSPartialUpdate(
-            uriTemplate: '/order/{orderId}/note',
+            uriTemplate: '/orders/{orderId}/note',
             requirements: ['orderId' => '\\d+'],
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\SetInternalOrderNoteCommand::class,
