@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Event\OrderTrackingUpdatedEvent;
 
 class OrderEndpointTest extends ApiTestCase
 {
@@ -169,6 +170,41 @@ class OrderEndpointTest extends ApiTestCase
         $this->partialUpdateItem('/orders/999999/tracking', [
             'number' => 'TRACK-001',
         ], ['order_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testPatchOrderTracking(): void
+    {
+        $orderId = 1;
+        $order = new \Order($orderId);
+        $originalCarrierId = (int) $order->id_carrier;
+
+        $newCarrierId = $originalCarrierId === 1 ? 2 : 1;
+        $carrier = new \Carrier($newCarrierId);
+        if (!$carrier->id) {
+            $this->markTestSkipped('Target carrier not available');
+        }
+
+        $trackingNumber = 'TRACK-123456';
+        $event = null;
+        static::getContainer()->get('event_dispatcher')->addListener(
+            OrderTrackingUpdatedEvent::class,
+            function (OrderTrackingUpdatedEvent $e) use (&$event) {
+                $event = $e;
+            }
+        );
+
+        $this->partialUpdateItem('/orders/' . $orderId . '/tracking', [
+            'newCarrierId' => $newCarrierId,
+            'trackingNumber' => $trackingNumber,
+        ], ['order_write'], Response::HTTP_NO_CONTENT);
+
+        $updatedOrder = new \Order($orderId);
+        $this->assertEquals($newCarrierId, (int) $updatedOrder->id_carrier);
+        $this->assertEquals($trackingNumber, $updatedOrder->shipping_number);
+
+        $this->assertInstanceOf(OrderTrackingUpdatedEvent::class, $event);
+        $this->assertEquals($orderId, $event->getOrderId());
+        $this->assertEquals($trackingNumber, $event->getTrackingNumber());
     }
 
     public function testPatchOrderNote(): void
