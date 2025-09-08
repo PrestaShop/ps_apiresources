@@ -90,7 +90,7 @@ class Discount
     public ?DecimalNumber $amountDiscount;
     public int $currencyId;
     public bool $isTaxIncluded;
-    public int $productId;
+    public int $giftProductId;
     public array $combinations;
     public int $reductionProduct;
 
