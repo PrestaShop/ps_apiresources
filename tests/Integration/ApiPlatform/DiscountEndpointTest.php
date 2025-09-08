@@ -123,7 +123,15 @@ class DiscountEndpointTest extends ApiTestCase
 
         $this->assertEquals($expectedDiscount, $discount);
         // Now test that the GET request returns the same expected result
-        $this->assertEquals($expectedDiscount, $this->getItem('/discount/' . $discountId, ['discount_read']));
+        $retrievedDiscount = $this->getItem('/discount/' . $discountId, ['discount_read']);
+        $this->assertEquals($expectedDiscount, $retrievedDiscount);
+
+        if (self::FREE_GIFT === $type && $data !== null) {
+            $this->assertArrayHasKey('giftProductId', $discount);
+            $this->assertArrayHasKey('giftProductId', $retrievedDiscount);
+            $this->assertSame($data['giftProductId'], $discount['giftProductId']);
+            $this->assertSame($data['giftProductId'], $retrievedDiscount['giftProductId']);
+        }
 
         return $discountId;
     }
@@ -150,17 +158,16 @@ class DiscountEndpointTest extends ApiTestCase
                     'percentDiscount' => 20.0,
                 ],
             ],
-            // todo: This one must be improved, the naming productId is not correct, it should be giftProductId
-            /*[
+            [
                 self::FREE_GIFT,
                 [
                     'en-US' => 'new free gift discount',
                     'fr-FR' => 'nouveau discount produit offert',
                 ],
                 [
-                    'productId' => 1,
+                    'giftProductId' => 1,
                 ],
-            ],*/
+            ],
             [
                 self::FREE_SHIPPING,
                 [
