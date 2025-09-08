@@ -22,8 +22,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use Symfony\Component\HttpFoundation\Response;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Event\OrderTrackingUpdatedEvent;
+use Symfony\Component\HttpFoundation\Response;
 
 class OrderEndpointTest extends ApiTestCase
 {
