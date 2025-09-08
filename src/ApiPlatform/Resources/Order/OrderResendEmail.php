@@ -24,7 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPost;
+use PrestaShop\Module\APIResources\ApiPlatform\Metadata\CQRSPost;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
