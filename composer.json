@@ -20,7 +20,8 @@
     },
     "autoload": {
         "psr-4": {
-            "PrestaShop\\Module\\APIResources\\": "src/"
+            "PrestaShop\\Module\\APIResources\\": "src/",
+            "PrestaShop\\Module\\APIResources\\ApiPlatform\\Metadata\\": "src/ApiPlatform/Metadata/"
         },
         "classmap": [
             "ps_apiresources.php"
