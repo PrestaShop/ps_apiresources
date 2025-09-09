@@ -35,7 +35,7 @@ class ApiClientEndpointTest extends ApiTestCase
         self::createApiClient(['api_client_write', 'api_client_read']);
     }
 
-    public function getProtectedEndpoints(): iterable
+    public static function getProtectedEndpoints(): iterable
     {
         yield 'get endpoint' => [
             'GET',

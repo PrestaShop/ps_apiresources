@@ -145,7 +145,7 @@ class ProductEndpointTest extends ApiTestCase
         (new ResourceResetter())->resetTestModules();
     }
 
-    public function getProtectedEndpoints(): iterable
+    public static function getProtectedEndpoints(): iterable
     {
         yield 'get endpoint' => [
             'GET',

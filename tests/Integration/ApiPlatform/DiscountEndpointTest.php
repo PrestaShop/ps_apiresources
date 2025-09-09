@@ -211,7 +211,7 @@ class DiscountEndpointTest extends ApiTestCase
         self::assertResponseStatusCodeSame(204);
     }
 
-    public function getProtectedEndpoints(): iterable
+    public static function getProtectedEndpoints(): iterable
     {
         yield 'get endpoint' => [
             'GET',
