@@ -88,6 +88,25 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertIsInt($order['invoiceAddressId']);
         $this->assertIsArray($order['items']);
         $this->assertArrayHasKey('orderDetailId', $order['items'][0]);
+
+        $this->assertArrayHasKey('vatBreakdown', $order);
+        $this->assertArrayHasKey('vatSummary', $order);
+        $this->assertIsArray($order['vatBreakdown']);
+        $this->assertIsArray($order['vatSummary']);
+        $this->assertNotEmpty($order['vatBreakdown']);
+        $firstBreakdown = $order['vatBreakdown'][array_key_first($order['vatBreakdown'])];
+        $this->assertArrayHasKey('vatRate', $firstBreakdown);
+        $this->assertArrayHasKey('taxableAmount', $firstBreakdown);
+        $this->assertArrayHasKey('vatAmount', $firstBreakdown);
+
+        $breakdownTaxable = 0.0;
+        $breakdownVat = 0.0;
+        foreach ($order['vatBreakdown'] as $entry) {
+            $breakdownTaxable += (float) $entry['taxableAmount'];
+            $breakdownVat += (float) $entry['vatAmount'];
+        }
+        $this->assertEquals($breakdownTaxable, (float) $order['vatSummary']['taxableAmount']);
+        $this->assertEquals($breakdownVat, (float) $order['vatSummary']['vatAmount']);
     }
 
     public function testListOrdersContainsCustomerId(): void
