@@ -44,6 +44,8 @@ use Symfony\Component\HttpFoundation\Response;
                 '[prices][totalPaidTaxExcluded]' => '[totalPaidTaxExcl]',
                 '[prices][productsTotal]' => '[totalProductsTaxIncl]',
                 '[prices][productsTotalTaxExcluded]' => '[totalProductsTaxExcl]',
+                '[prices][vatBreakdown]' => '[vatBreakdown]',
+                '[prices][vatSummary]' => '[vatSummary]',
                 '[shopId]' => '[shopId]',
                 '[customer][languageId]' => '[langId]',
                 '[customer][id]' => '[customerId]',
@@ -86,6 +88,47 @@ class Order
     public string $totalPaidTaxExcl;
     public string $totalProductsTaxIncl;
     public string $totalProductsTaxExcl;
+    /**
+     * @var array<int, array{rate:string,totalTaxExcl:string,totalTaxIncl:string,taxAmount:string}>
+     */
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'rate' => ['type' => 'string'],
+                'totalTaxExcl' => ['type' => 'string'],
+                'totalTaxIncl' => ['type' => 'string'],
+                'taxAmount' => ['type' => 'string'],
+            ],
+        ],
+        'example' => [
+            [
+                'rate' => '20.00',
+                'totalTaxExcl' => '100.00',
+                'totalTaxIncl' => '120.00',
+                'taxAmount' => '20.00',
+            ],
+        ],
+    ])]
+    public array $vatBreakdown = [];
+    /**
+     * @var array{totalTaxExcl:string,totalTaxIncl:string,taxAmount:string}
+     */
+    #[ApiProperty(openapiContext: [
+        'type' => 'object',
+        'properties' => [
+            'totalTaxExcl' => ['type' => 'string'],
+            'totalTaxIncl' => ['type' => 'string'],
+            'taxAmount' => ['type' => 'string'],
+        ],
+        'example' => [
+            'totalTaxExcl' => '100.00',
+            'totalTaxIncl' => '120.00',
+            'taxAmount' => '20.00',
+        ],
+    ])]
+    public array $vatSummary = [];
     public int $customerId;
     public int $deliveryAddressId;
     public int $invoiceAddressId;
