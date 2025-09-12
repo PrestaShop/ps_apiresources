@@ -163,8 +163,51 @@ class OrderProvider implements ProviderInterface
                     'unitPriceTaxIncl' => (string) ($p['unit_price_tax_incl'] ?? '0'),
                 ];
             }
+
+            $view->vatBreakdown = $this->calculateVatBreakdown($order);
+            $summaryTaxable = 0.0;
+            $summaryVat = 0.0;
+            foreach ($view->vatBreakdown as $row) {
+                $summaryTaxable += (float) $row['taxableAmount'];
+                $summaryVat += (float) $row['vatAmount'];
+            }
+            $view->vatSummary = [
+                'taxableAmount' => (string) $summaryTaxable,
+                'vatAmount' => (string) $summaryVat,
+            ];
         }
 
         return $view;
+    }
+
+    /**
+     * Calculate VAT breakdown for the given order.
+     *
+     * @return array<string, array{taxRate: float, taxableAmount: string, vatAmount: string}>
+     */
+    private function calculateVatBreakdown(\Order $order): array
+    {
+        $breakdown = [];
+
+        foreach ($order->getOrderDetailList() as $detail) {
+            $rateKey = (string) $detail->tax_rate;
+            if (!isset($breakdown[$rateKey])) {
+                $breakdown[$rateKey] = [
+                    'taxRate' => (float) $detail->tax_rate,
+                    'taxableAmount' => 0.0,
+                    'vatAmount' => 0.0,
+                ];
+            }
+
+            $breakdown[$rateKey]['taxableAmount'] += (float) $detail->total_price_tax_excl;
+            $breakdown[$rateKey]['vatAmount'] += (float) ($detail->total_price_tax_incl - $detail->total_price_tax_excl);
+        }
+
+        foreach ($breakdown as &$row) {
+            $row['taxableAmount'] = (string) $row['taxableAmount'];
+            $row['vatAmount'] = (string) $row['vatAmount'];
+        }
+
+        return $breakdown;
     }
 }

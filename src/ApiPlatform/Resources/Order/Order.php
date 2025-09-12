@@ -46,6 +46,8 @@ use Symfony\Component\HttpFoundation\Response;
                 '[prices][productsTotalTaxExcluded]' => '[totalProductsTaxExcl]',
                 '[prices][vatBreakdown]' => '[vatBreakdown]',
                 '[prices][vatSummary]' => '[vatSummary]',
+                '[taxes][breakdown]' => '[vatBreakdown]',
+                '[taxes][summary]' => '[vatSummary]',
                 '[shopId]' => '[shopId]',
                 '[customer][languageId]' => '[langId]',
                 '[customer][id]' => '[customerId]',
@@ -128,6 +130,18 @@ class Order
             'taxAmount' => '20.00',
         ],
     ])]
+     * VAT breakdown per rate.
+     *
+     * @var array<int, array{vatRate:string, taxableAmount:string, vatAmount:string}>
+     */
+    #[ApiProperty]
+    public array $vatBreakdown = [];
+    /**
+     * VAT summary totals.
+     *
+     * @var array{totalTaxableAmount:string, totalVatAmount:string}
+     */
+    #[ApiProperty]
     public array $vatSummary = [];
     public int $customerId;
     public int $deliveryAddressId;
