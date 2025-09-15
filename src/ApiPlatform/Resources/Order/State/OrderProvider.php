@@ -38,9 +38,9 @@ class OrderProvider implements ProviderInterface
      * @param array $uriVariables URI variables (expects 'orderId' for item)
      * @param array $context Api Platform context (uses 'filters' and 'pagination')
      *
-     * @return iterable|OrderView|null
+     * @return iterable|OrderResource|null
      */
-    public function provide(Operation $operation, array $uriVariables = [], array $context = []): iterable|OrderResource|null
+    public function provide(Operation $operation, array $uriVariables = [], array $context = [])
     {
         if (isset($uriVariables['orderId'])) {
             $orderId = (int) $uriVariables['orderId'];
@@ -118,8 +118,10 @@ class OrderProvider implements ProviderInterface
 
     /**
      * Map legacy Order into API View.
+     *
+     * @return OrderResource|OrderListResource
      */
-    private function mapOrder(\Order $order, bool $forList): OrderResource|OrderListResource
+    private function mapOrder(\Order $order, bool $forList)
     {
         $view = $forList ? new OrderListResource() : new OrderResource();
         // Use id property name consistent with DTO
