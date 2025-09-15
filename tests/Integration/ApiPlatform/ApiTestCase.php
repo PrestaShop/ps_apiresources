@@ -120,7 +120,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
      *
      * @return iterable
      */
-    abstract public function getProtectedEndpoints(): iterable;
+    abstract public static function getProtectedEndpoints(): iterable;
 
     protected static function createClient(array $kernelOptions = [], array $defaultOptions = []): Client
     {
