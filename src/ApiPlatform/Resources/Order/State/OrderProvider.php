@@ -69,8 +69,12 @@ class OrderProvider implements ProviderInterface
         $qb = $connection
             ->createQueryBuilder()
             ->select('o.id_order')
-            ->from(_DB_PREFIX_ . 'orders', 'o')
-            ->innerJoin('o', _DB_PREFIX_ . 'customer', 'c', 'c.id_customer = o.id_customer');
+            ->from(_DB_PREFIX_ . 'orders', 'o');
+
+        // Only join customer table when searching by email to optimize performance
+        if ($query && !is_numeric($query)) {
+            $qb->innerJoin('o', _DB_PREFIX_ . 'customer', 'c', 'c.id_customer = o.id_customer');
+        }
 
         if ($dateFrom) {
             $qb->andWhere('o.date_add >= :date_from');
@@ -93,9 +97,16 @@ class OrderProvider implements ProviderInterface
             $qb->setParameter('status_id', $statusId);
         }
         if ($query) {
-            $qb->andWhere('(o.reference = :query_ref OR c.email LIKE :query_email)');
-            $qb->setParameter('query_ref', $query);
-            $qb->setParameter('query_email', '%' . $query . '%');
+            if (is_numeric($query)) {
+                // Search by order ID or reference
+                $qb->andWhere('o.id_order = :query_id OR o.reference = :query_ref');
+                $qb->setParameter('query_id', (int) $query);
+                $qb->setParameter('query_ref', $query);
+            } else {
+                // Search by customer email (requires join)
+                $qb->andWhere('c.email LIKE :query_email');
+                $qb->setParameter('query_email', '%' . $query . '%');
+            }
         }
 
         $qb

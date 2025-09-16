@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use Symfony\Component\Serializer\Annotation\Groups;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -67,7 +68,10 @@ use Symfony\Component\HttpFoundation\Response;
             ],
         ),
     ],
-    normalizationContext: ['skip_null_values' => false],
+    normalizationContext: [
+        'skip_null_values' => false,
+        'groups' => ['order:read'],
+    ],
     exceptionToStatus: [
         \RuntimeException::class => Response::HTTP_NOT_FOUND,
         \InvalidArgumentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -79,16 +83,37 @@ use Symfony\Component\HttpFoundation\Response;
 class Order
 {
     #[ApiProperty(identifier: true)]
+    #[Groups(['order:read'])]
     public int $orderId;
+
+    #[Groups(['order:read'])]
     public string $reference;
+
+    #[Groups(['order:read'])]
     public string $status;
+
+    #[Groups(['order:read'])]
     public int $statusId;
+
+    #[Groups(['order:read'])]
     public int $shopId;
+
+    #[Groups(['order:read'])]
     public int $langId;
+
+    #[Groups(['order:read'])]
     public string $currencyIso;
+
+    #[Groups(['order:read'])]
     public string $totalPaidTaxIncl;
+
+    #[Groups(['order:read'])]
     public string $totalPaidTaxExcl;
+
+    #[Groups(['order:read'])]
     public string $totalProductsTaxIncl;
+
+    #[Groups(['order:read'])]
     public string $totalProductsTaxExcl;
     /**
      * @var array<int, array{rate:string,totalTaxExcl:string,totalTaxIncl:string,taxAmount:string}>
@@ -113,6 +138,7 @@ class Order
             ],
         ],
     ])]
+    #[Groups(['order:read'])]
     public array $vatBreakdown = [];
     /**
      * @var array{totalTaxExcl:string,totalTaxIncl:string,taxAmount:string}
@@ -130,16 +156,24 @@ class Order
             'taxAmount' => '20.00',
         ],
     ])]
+    #[Groups(['order:read'])]
     public array $vatSummary = [];
+    #[Groups(['order:read'])]
     public int $customerId;
+
+    #[Groups(['order:read'])]
     public int $deliveryAddressId;
+
+    #[Groups(['order:read'])]
     public int $invoiceAddressId;
 
     /** @var string ISO 8601 */
+    #[Groups(['order:read'])]
     public string $dateAdd;
 
     /**
      * @var array<int, array{orderDetailId:int, productId:int, productAttributeId:?int, name:string, reference:?string, quantity:int, unitPriceTaxIncl:string}>
      */
+    #[Groups(['order:read'])]
     public array $items = [];
 }

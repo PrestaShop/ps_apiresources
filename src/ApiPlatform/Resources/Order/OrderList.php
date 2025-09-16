@@ -98,7 +98,10 @@ use Symfony\Component\HttpFoundation\Response;
             ],
         ),
     ],
-    normalizationContext: ['skip_null_values' => false],
+    normalizationContext: [
+        'skip_null_values' => false,
+        'groups' => ['order:read'],
+    ],
     exceptionToStatus: [
         \InvalidArgumentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],

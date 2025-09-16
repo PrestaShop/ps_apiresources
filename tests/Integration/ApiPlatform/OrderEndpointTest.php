@@ -77,7 +77,10 @@ class OrderEndpointTest extends ApiTestCase
     public function testGetOrder(): void
     {
         $order = $this->getItem('/orders/1', ['order_read']);
+
         $this->assertIsArray($order);
+        $this->assertArrayHasKey('orderId', $order);
+        $this->assertArrayHasKey('reference', $order);
         $this->assertArrayHasKey('totalPaidTaxExcl', $order);
         $this->assertArrayHasKey('totalProductsTaxExcl', $order);
         $this->assertArrayHasKey('customerId', $order);
@@ -87,6 +90,7 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('invoiceAddressId', $order);
         $this->assertIsInt($order['invoiceAddressId']);
         $this->assertIsArray($order['items']);
+        $this->assertNotEmpty($order['items']);
         $this->assertArrayHasKey('orderDetailId', $order['items'][0]);
 
         $this->assertArrayHasKey('vatBreakdown', $order);
