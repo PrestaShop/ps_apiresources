@@ -22,7 +22,7 @@ namespace PrestaShop\Module\APIResources\Validation;
 
 use PrestaShop\PrestaShop\Adapter\Configuration;
 
-final class CategoryValidationGroupsResolver
+final class IframeValidationGroupsResolver
 {
     public function __construct(private Configuration $config)
     {

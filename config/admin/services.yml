@@ -25,6 +25,6 @@ services:
       - '@prestashop.core.grid.query.doctrine_query_parser'
       - 'module'
 
-  PrestaShop\Module\APIResources\Validation\CategoryValidationGroupsResolver:
+  PrestaShop\Module\APIResources\Validation\IframeValidationGroupsResolver:
     arguments:
       - '@prestashop.adapter.legacy.configuration'

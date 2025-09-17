@@ -22,7 +22,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Category;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\Module\APIResources\Validation\CategoryValidationGroupsResolver;
+use PrestaShop\Module\APIResources\Validation\IframeValidationGroupsResolver;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddCategoryCommand;
@@ -52,7 +52,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSCreate(
             uriTemplate: '/category',
-            validationContext: [CategoryValidationGroupsResolver::class, 'create'],
+            validationContext: [IframeValidationGroupsResolver::class, 'create'],
             CQRSCommand: AddCategoryCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
             scopes: [
@@ -63,7 +63,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/category/{categoryId}',
-            validationContext: [CategoryValidationGroupsResolver::class, 'update'],
+            validationContext: [IframeValidationGroupsResolver::class, 'update'],
             CQRSCommand: EditCategoryCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
             scopes: [
@@ -110,7 +110,7 @@ class Category
             'groups' => ['NoIframe'],
         ]),
         new TypedRegex([
-            'type' => TypedRegex::CLEAN_HTML_NO_IFRAME,
+            'type' => TypedRegex::CLEAN_HTML_ALLOW_IFRAME,
             'groups' => ['AllowIframe'],
         ]),
     ])]
