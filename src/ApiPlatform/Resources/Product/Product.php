@@ -317,30 +317,30 @@ class Product
     #[Assert\Callback]
     public function validateBusinessRules(ExecutionContextInterface $context): void
     {
-        // Vérifier cohérence prix HT/TTC
+        // Check price consistency (tax included vs tax excluded)
         if ($this->priceTaxIncluded < $this->priceTaxExcluded) {
-            $context->buildViolation('Le prix TTC doit être supérieur ou égal au prix HT')
+            $context->buildViolation('The price with tax must be greater than or equal to the price without tax')
                 ->atPath('priceTaxIncluded')
                 ->addViolation();
         }
 
-        // Vérifier cohérence prix unitaires HT/TTC
+        // Check unit price consistency (tax included vs tax excluded)
         if ($this->unitPriceTaxIncluded < $this->unitPriceTaxExcluded) {
-            $context->buildViolation('Le prix unitaire TTC doit être supérieur ou égal au prix unitaire HT')
+            $context->buildViolation('The unit price with tax must be greater than or equal to the unit price without tax')
                 ->atPath('unitPriceTaxIncluded')
                 ->addViolation();
         }
 
-        // Vérifier cohérence écotaxe HT/TTC
+        // Check ecotax consistency (tax included vs tax excluded)
         if ($this->ecotaxTaxIncluded < $this->ecotaxTaxExcluded) {
-            $context->buildViolation('L\'écotaxe TTC doit être supérieure ou égale à l\'écotaxe HT')
+            $context->buildViolation('The ecotax with tax must be greater than or equal to the ecotax without tax')
                 ->atPath('ecotaxTaxIncluded')
                 ->addViolation();
         }
 
-        // Vérifier cohérence quantités
+        // Check quantity consistency
         if ($this->quantity < $this->minimalQuantity) {
-            $context->buildViolation('La quantité doit être supérieure ou égale à la quantité minimale')
+            $context->buildViolation('The quantity must be greater than or equal to the minimal quantity')
                 ->atPath('quantity')
                 ->addViolation();
         }

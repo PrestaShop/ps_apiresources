@@ -155,7 +155,7 @@ class Callbacks
     }
 
     /**
-     * Convert to DecimalNumber
+     * Convert value to DecimalNumber
      */
     public static function toDecimalNumber($value): ?\PrestaShop\Decimal\DecimalNumber
     {

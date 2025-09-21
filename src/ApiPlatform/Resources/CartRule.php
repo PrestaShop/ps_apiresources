@@ -86,41 +86,41 @@ class CartRule
     #[Assert\Callback]
     public function validateBusinessRules(ExecutionContextInterface $context): void
     {
-        // Vérifier cohérence dates de validité
+        // Check validity date range consistency
         if (isset($this->validityDateRange['from']) && isset($this->validityDateRange['to'])) {
             $from = $this->validityDateRange['from'];
             $to = $this->validityDateRange['to'];
 
             if ($from instanceof \DateTimeInterface && $to instanceof \DateTimeInterface) {
                 if ($from > $to) {
-                    $context->buildViolation('La date de début de validité doit être antérieure à la date de fin')
+                    $context->buildViolation('The start validity date must be before the end validity date')
                         ->atPath('validityDateRange')
                         ->addViolation();
                 }
             }
         }
 
-        // Vérifier montants minimum (si array avec clés de devise)
+        // Check minimum amounts (if array with currency keys)
         if (is_array($this->minimumAmount)) {
             foreach ($this->minimumAmount as $currency => $amount) {
-                // Valider le format de la devise (3 lettres majuscules)
+                // Validate currency code format (3 uppercase letters)
                 if (!preg_match('/^[A-Z]{3}$/', $currency)) {
-                    $context->buildViolation('Le code devise doit être composé de 3 lettres majuscules')
+                    $context->buildViolation('Currency code must consist of 3 uppercase letters')
                         ->atPath('minimumAmount')
                         ->addViolation();
                     break;
                 }
 
-                // Valider que le montant est un DecimalNumber positif ou nul
+                // Validate that amount is a positive or zero DecimalNumber
                 if (!$amount instanceof \PrestaShop\Decimal\DecimalNumber) {
-                    $context->buildViolation('Les montants minimum doivent être des DecimalNumber')
+                    $context->buildViolation('Minimum amounts must be DecimalNumber instances')
                         ->atPath('minimumAmount')
                         ->addViolation();
                     break;
                 }
 
                 if ($amount->isNegative()) {
-                    $context->buildViolation('Les montants minimum ne peuvent pas être négatifs')
+                    $context->buildViolation('Minimum amounts cannot be negative')
                         ->atPath('minimumAmount')
                         ->addViolation();
                     break;

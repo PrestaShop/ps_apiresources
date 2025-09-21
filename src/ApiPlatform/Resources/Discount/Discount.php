@@ -111,29 +111,29 @@ class Discount
     #[Assert\Callback]
     public function validateBusinessRules(ExecutionContextInterface $context): void
     {
-        // Vérifier cohérence dates de validité
+        // Check validity date range consistency
         if ($this->validFrom > $this->validTo) {
-            $context->buildViolation('La date de début de validité doit être antérieure à la date de fin')
+            $context->buildViolation('The start validity date must be before the end validity date')
                 ->atPath('validFrom')
                 ->addViolation();
         }
 
-        // Vérifier logique des types de réduction
+        // Check discount type logic
         if ($this->type === 'percent' && $this->percentDiscount === null) {
-            $context->buildViolation('Un pourcentage de réduction est requis pour le type "percent"')
+            $context->buildViolation('A discount percentage is required for the "percent" type')
                 ->atPath('percentDiscount')
                 ->addViolation();
         }
 
         if ($this->type === 'amount' && $this->amountDiscount === null) {
-            $context->buildViolation('Un montant de réduction est requis pour le type "amount"')
+            $context->buildViolation('A discount amount is required for the "amount" type')
                 ->atPath('amountDiscount')
                 ->addViolation();
         }
 
-        // Vérifier que seulement un type de réduction est défini
+        // Check that only one discount type is defined
         if ($this->percentDiscount !== null && $this->amountDiscount !== null) {
-            $context->buildViolation('Vous ne pouvez définir qu\'un seul type de réduction (pourcentage ou montant)')
+            $context->buildViolation('You can only define one discount type (percentage or amount)')
                 ->atPath('percentDiscount')
                 ->addViolation();
         }

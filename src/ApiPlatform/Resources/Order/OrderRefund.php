@@ -127,22 +127,22 @@ class OrderRefund
     #[Assert\Callback]
     public function validateRefundConsistency(ExecutionContextInterface $context): void
     {
-        // Validation de cohérence des montants de remboursement
+        // Validate refund amount consistency
         if ($this->refundAmount !== null && $this->shippingRefundAmount !== null) {
-            // Vérifier que les montants individuels sont cohérents avec le total
-            // Cette validation nécessiterait de connaître le montant total de la commande
-            // Pour l'instant, on valide seulement que les montants sont positifs
+            // Check that individual amounts are consistent with the total
+            // This validation would require knowing the order total amount
+            // For now, we only validate that amounts are positive
         }
 
-        // Validation du montant d'expédition si demandé
+        // Validate shipping amount when requested
         if ($this->refundShippingCost === true && $this->shippingRefundAmount === null) {
-            $context->buildViolation('Le montant de remboursement des frais de port est requis quand refundShippingCost est true')
+            $context->buildViolation('Shipping refund amount is required when refundShippingCost is true')
                 ->atPath('shippingRefundAmount')
                 ->addViolation();
         }
 
         if ($this->refundShippingCost === false && $this->shippingRefundAmount !== null) {
-            $context->buildViolation('Le montant de remboursement des frais de port ne doit pas être fourni quand refundShippingCost est false')
+            $context->buildViolation('Shipping refund amount should not be provided when refundShippingCost is false')
                 ->atPath('shippingRefundAmount')
                 ->addViolation();
         }

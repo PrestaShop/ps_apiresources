@@ -105,20 +105,20 @@ class FoundProduct
     #[Assert\Callback]
     public function validatePriceConsistency(ExecutionContextInterface $context): void
     {
-        // Vérifier cohérence prix HT/TTC
+        // Check price consistency (tax included vs tax excluded)
         if ($this->priceTaxIncl < $this->priceTaxExcl) {
-            $context->buildViolation('Le prix TTC doit être supérieur ou égal au prix HT')
+            $context->buildViolation('The price with tax must be greater than or equal to the price without tax')
                 ->atPath('priceTaxIncl')
                 ->addViolation();
         }
 
-        // Vérifier cohérence avec le taux de taxe
+        // Check consistency with tax rate
         if ($this->taxRate > 0 && $this->priceTaxExcl > 0) {
             $expectedTaxIncl = $this->priceTaxExcl->plus(
                 $this->priceTaxExcl->times($this->taxRate->dividedBy(100))
             );
             if (!$this->priceTaxIncl->equals($expectedTaxIncl)) {
-                $context->buildViolation('Le prix TTC ne correspond pas au calcul avec le taux de taxe')
+                $context->buildViolation('The price with tax does not match the calculation with the tax rate')
                     ->atPath('priceTaxIncl')
                     ->addViolation();
             }

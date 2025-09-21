@@ -180,46 +180,46 @@ class Order
     #[Assert\Callback]
     public function validateFinancialConsistency(ExecutionContextInterface $context): void
     {
-        // Convertir les montants string en DecimalNumber pour les calculs
+        // Convert string amounts to DecimalNumber for calculations
         try {
             $totalPaidTaxIncl = !empty($this->totalPaidTaxIncl) ? new \PrestaShop\Decimal\DecimalNumber($this->totalPaidTaxIncl) : null;
             $totalPaidTaxExcl = !empty($this->totalPaidTaxExcl) ? new \PrestaShop\Decimal\DecimalNumber($this->totalPaidTaxExcl) : null;
             $totalProductsTaxIncl = !empty($this->totalProductsTaxIncl) ? new \PrestaShop\Decimal\DecimalNumber($this->totalProductsTaxIncl) : null;
             $totalProductsTaxExcl = !empty($this->totalProductsTaxExcl) ? new \PrestaShop\Decimal\DecimalNumber($this->totalProductsTaxExcl) : null;
         } catch (\InvalidArgumentException $e) {
-            $context->buildViolation('Format de montant invalide')
+            $context->buildViolation('Invalid amount format')
                 ->atPath('totalPaidTaxIncl')
                 ->addViolation();
             return;
         }
 
-        // Vérifier que les montants ne sont pas négatifs
+        // Check that amounts are not negative
         if ($totalPaidTaxIncl && $totalPaidTaxIncl->isNegative()) {
-            $context->buildViolation('Le total payé TTC ne peut pas être négatif')
+            $context->buildViolation('The total paid with tax cannot be negative')
                 ->atPath('totalPaidTaxIncl')
                 ->addViolation();
         }
 
         if ($totalPaidTaxExcl && $totalPaidTaxExcl->isNegative()) {
-            $context->buildViolation('Le total payé HT ne peut pas être négatif')
+            $context->buildViolation('The total paid without tax cannot be negative')
                 ->atPath('totalPaidTaxExcl')
                 ->addViolation();
         }
 
-        // Vérifier cohérence HT/TTC
+        // Check tax included/excluded consistency
         if ($totalPaidTaxIncl && $totalPaidTaxExcl && $totalPaidTaxIncl->isLessThan($totalPaidTaxExcl)) {
-            $context->buildViolation('Le total payé TTC doit être supérieur ou égal au total payé HT')
+            $context->buildViolation('The total paid with tax must be greater than or equal to the total paid without tax')
                 ->atPath('totalPaidTaxIncl')
                 ->addViolation();
         }
 
         if ($totalProductsTaxIncl && $totalProductsTaxExcl && $totalProductsTaxIncl->isLessThan($totalProductsTaxExcl)) {
-            $context->buildViolation('Le total produits TTC doit être supérieur ou égal au total produits HT')
+            $context->buildViolation('The total products with tax must be greater than or equal to the total products without tax')
                 ->atPath('totalProductsTaxIncl')
                 ->addViolation();
         }
 
-        // Calcul du total des items pour vérifier la cohérence
+        // Calculate total from items to check consistency
         if (!empty($this->items)) {
             $calculatedTotal = new \PrestaShop\Decimal\DecimalNumber('0');
             foreach ($this->items as $item) {
@@ -229,16 +229,16 @@ class Order
                         $quantity = new \PrestaShop\Decimal\DecimalNumber((string)$item['quantity']);
                         $calculatedTotal = $calculatedTotal->plus($unitPrice->times($quantity));
                     } catch (\InvalidArgumentException $e) {
-                        // Ignorer les items malformés pour cette validation
+                        // Skip malformed items for this validation
                     }
                 }
             }
 
-            // Vérifier que le total calculé est proche du total indiqué (avec une tolérance pour les arrondis)
+            // Check that calculated total is close to indicated total (with tolerance for rounding)
             if ($totalProductsTaxIncl && !$calculatedTotal->equals($totalProductsTaxIncl)) {
                 $difference = $calculatedTotal->minus($totalProductsTaxIncl)->abs();
                 if ($difference->isGreaterThan(new \PrestaShop\Decimal\DecimalNumber('0.01'))) {
-                    $context->buildViolation('Le total des produits ne correspond pas à la somme des items')
+                    $context->buildViolation('The total products does not match the sum of the items')
                         ->atPath('totalProductsTaxIncl')
                         ->addViolation();
                 }
