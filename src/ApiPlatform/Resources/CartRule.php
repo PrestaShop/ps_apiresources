@@ -25,12 +25,12 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\CartRule\Command\EditCartRuleCommand;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
+        new CQRSPartialUpdate(
             uriTemplate: '/cart-rule/{cartRuleId}',
             CQRSCommand: EditCartRuleCommand::class,
             scopes: [
