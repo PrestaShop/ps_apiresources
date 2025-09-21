@@ -120,6 +120,8 @@ class EnvironmentBuilder
         if ($buildDbNeeded || $arguments['build-db']) {
             static::log('Build test DB');
             passthru('cd ' . $prestashopDir . ' && composer run create-test-db');
+            // Ensure required modules exist and are installed for tests (e.g. payment module)
+            self::ensureTestModulesInstalled($prestashopDir);
         }
     }
 
@@ -192,6 +194,44 @@ class EnvironmentBuilder
             $fs = new Filesystem();
             $fs->remove($cacheFolder);
         }
+    }
+
+    private static function ensureTestModulesInstalled(string $prestashopDir): void
+    {
+        $modulesDir = $prestashopDir . '/tests/Resources/modules';
+        $fs = new Filesystem();
+        if (!is_dir($modulesDir)) {
+            $fs->mkdir($modulesDir);
+        }
+
+        $requiredModules = [
+            // Payment module used by Order tests
+            'ps_wirepayment' => 'https://github.com/PrestaShop/ps_wirepayment.git',
+            // Used by Module tests
+            'ps_emailsubscription' => 'https://github.com/PrestaShop/ps_emailsubscription.git',
+        ];
+
+        foreach ($requiredModules as $technicalName => $gitRepo) {
+            $targetPath = $modulesDir . '/' . $technicalName;
+            if (!is_dir($targetPath)) {
+                static::log('Cloning required test module ' . $technicalName . ' into ' . $targetPath);
+                passthru('git clone --depth 1 ' . escapeshellarg($gitRepo) . ' ' . escapeshellarg($targetPath));
+            }
+        }
+
+        // Clear cache before (re)install
+        self::clearTestCache($prestashopDir);
+
+        // Install/enable modules via Symfony console in test env (idempotent)
+        foreach (array_keys($requiredModules) as $technicalName) {
+            static::log('Installing/enabling test module ' . $technicalName);
+            // Try install (will enable too); ignore failures (already installed)
+            passthru('cd ' . $prestashopDir . ' && php bin/console --env=test prestashop:module install ' . escapeshellarg($technicalName) . ' | cat');
+            // Ensure enabled
+            passthru('cd ' . $prestashopDir . ' && php bin/console --env=test prestashop:module enable ' . escapeshellarg($technicalName) . ' | cat');
+        }
+
+        self::clearTestCache($prestashopDir);
     }
 
     private static function log(string $message): void

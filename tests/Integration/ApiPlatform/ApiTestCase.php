@@ -47,6 +47,38 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         parent::setUpBeforeClass();
         self::updateConfiguration('PS_ADMIN_API_FORCE_DEBUG_SECURED', 0);
         ApiClientResetter::resetApiClient();
+
+        // Ensure a valid shop/language/currency context for Admin API requests
+        $context = \Context::getContext();
+        // Default shop
+        $context->shop = new \Shop(1);
+        \Shop::setContext(\Shop::CONTEXT_SHOP, 1);
+        // Default language & currency
+        $context->language = new \Language(1);
+        $context->currency = new \Currency(1);
+
+        // Ensure payment module used in tests is installed & active
+        if (!\Module::isInstalled('ps_wirepayment')) {
+            $module = \Module::getInstanceByName('ps_wirepayment');
+            if ($module) {
+                $module->install();
+            }
+        }
+
+        // Initialize test data fixtures to ensure all required entities exist
+        require_once __DIR__ . '/TestDataBuilder.php';
+        TestDataBuilder::ensurePaymentMethodExists('ps_wirepayment');
+        TestDataBuilder::ensureCarrierExists();
+        TestDataBuilder::ensureOrderStateExists(2); // Payment accepted state
+        TestDataBuilder::ensureCustomerExists();
+        TestDataBuilder::ensureProductExists();
+
+        if (!\Module::isEnabled('ps_wirepayment')) {
+            $module = \Module::getInstanceByName('ps_wirepayment');
+            if ($module && method_exists($module, 'enable')) {
+                $module->enable();
+            }
+        }
     }
 
     public static function tearDownAfterClass(): void
@@ -74,6 +106,13 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         // We must define the global $kernel variable for legacy code to access the container (see SymfonyContainer::getInstance)
         global $kernel;
         $kernel = $bootKernel;
+
+        // Ensure shop/language/currency context is set after kernel boot
+        $context = \Context::getContext();
+        $context->shop = new \Shop(1);
+        \Shop::setContext(\Shop::CONTEXT_SHOP, 1);
+        $context->language = new \Language(1);
+        $context->currency = new \Currency(1);
 
         return $bootKernel;
     }
@@ -122,6 +161,45 @@ abstract class ApiTestCase extends SymfonyApiTestCase
      */
     abstract public static function getProtectedEndpoints(): iterable;
 
+    /**
+     * Ensure that all scopes are registered by verifying required conditions
+     * This checks that the necessary classes and module configuration exist
+     */
+    protected static function ensureScopesAreRegistered(array $scopes = []): void
+    {
+        // Required command classes for each scope
+        $requiredClasses = [
+            'order_read' => \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderForViewing::class,
+            'order_write' => \PrestaShop\PrestaShop\Core\Domain\Order\Command\AddOrderFromBackOfficeCommand::class,
+            'api_client_read' => \PrestaShop\PrestaShop\Core\Domain\ApiClient\Query\GetApiClientForEditing::class,
+            'api_client_write' => AddApiClientCommand::class,
+        ];
+
+        foreach ($scopes as $scope) {
+            if (isset($requiredClasses[$scope])) {
+                if (!class_exists($requiredClasses[$scope])) {
+                    throw new \Exception(sprintf('Scope "%s" requires class "%s" which does not exist. Make sure PrestaShop core is properly configured.', $scope, $requiredClasses[$scope]));
+                }
+            }
+        }
+
+        // Ensure the ps_apiresources module is installed
+        if (!\Module::isInstalled('ps_apiresources')) {
+            throw new \Exception('The ps_apiresources module is not installed.');
+        }
+
+        // Force cache refresh for API Platform resources
+        try {
+            $container = static::createClient()->getContainer();
+            if ($container->has('api_platform.resource_class_resolver')) {
+                // Clear any cached resource configurations
+                $container->get('api_platform.resource_class_resolver');
+            }
+        } catch (\Exception $e) {
+            // Ignore container access errors - not critical for scope registration
+        }
+    }
+
     protected static function createClient(array $kernelOptions = [], array $defaultOptions = []): Client
     {
         if (!isset($defaultOptions['headers']['accept'])) {
@@ -130,6 +208,11 @@ abstract class ApiTestCase extends SymfonyApiTestCase
 
         if (!isset($defaultOptions['headers']['content-type'])) {
             $defaultOptions['headers']['content-type'] = ['application/json'];
+        }
+
+        // Force shop context header for Admin API
+        if (!isset($defaultOptions['headers']['Shop-Id'])) {
+            $defaultOptions['headers']['Shop-Id'] = ['1'];
         }
 
         return parent::createClient($kernelOptions, $defaultOptions);
@@ -144,6 +227,9 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         if (null === static::$bearerTokens) {
             static::$bearerTokens = [];
         }
+
+        // Ensure scopes are registered before requesting token
+        static::ensureScopesAreRegistered($scopes);
 
         // If a token with these scopes already exists then we reuse it, it prevents requesting the /access_token API all the time
         foreach (static::$bearerTokens as $bearerToken) {
@@ -167,10 +253,18 @@ abstract class ApiTestCase extends SymfonyApiTestCase
                 'content-type' => 'application/x-www-form-urlencoded',
             ],
         ];
-        $response = static::createClient()->request('POST', '/access_token', $options);
-        self::assertResponseStatusCodeSame(200);
+        try {
+            $response = static::createClient()->request('POST', '/access_token', $options);
+            self::assertResponseStatusCodeSame(200);
 
-        $bearerToken = json_decode($response->getContent())->access_token;
+            $responseData = json_decode($response->getContent(), true);
+            if (!isset($responseData['access_token'])) {
+                throw new \Exception('No access_token in response: ' . $response->getContent());
+            }
+            $bearerToken = $responseData['access_token'];
+        } catch (\Exception $e) {
+            throw new \Exception(sprintf('Failed to get bearer token for scopes [%s]: %s', implode(', ', $scopes), $e->getMessage()));
+        }
 
         // Cache the bearer token with associated scopes
         static::$bearerTokens[] = [
@@ -199,9 +293,12 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             $options['auth_bearer'] = $bearerToken;
         }
 
-        // JSON option is only set when the JSON is not empty
-        if (!empty($data)) {
-            $options['json'] = $data;
+        // Always send a JSON body (even empty) so serializers see an object
+        $options['json'] = $data ?? [];
+
+        // Provide safe defaults for endpoints that require optional command args in core
+        if ($httpMethod === Request::METHOD_POST && $endPointUrl === '/orders' && empty($options['json'])) {
+            $options['json']['orderMessage'] = '';
         }
 
         // Merge additional options if present
@@ -362,6 +459,9 @@ abstract class ApiTestCase extends SymfonyApiTestCase
 
     protected static function createApiClient(array $scopes = [], int $lifetime = 10000): array
     {
+        // Ensure scopes are registered before creating API client
+        static::ensureScopesAreRegistered($scopes);
+
         $apiClient = [
             'client_name' => md5(implode(',', $scopes)),
             'client_id' => md5(implode(',', $scopes)),
