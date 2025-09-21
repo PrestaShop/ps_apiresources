@@ -53,8 +53,10 @@ class CartRule
     #[Assert\Length(max: 254)]
     public string $code;
 
-    // minimumAmount est un array qui peut contenir des montants par devise
-    // Validation sera faite via callback pour gérer la complexité
+    /**
+     * @var array<string, DecimalNumber>|null Minimum amounts per currency (e.g. ['EUR' => '50.00', 'USD' => '60.00'])
+     */
+    public ?array $minimumAmount = null;
 
     public bool $minimumAmountShippingIncluded;
 
@@ -101,7 +103,23 @@ class CartRule
         // Vérifier montants minimum (si array avec clés de devise)
         if (is_array($this->minimumAmount)) {
             foreach ($this->minimumAmount as $currency => $amount) {
-                if (is_numeric($amount) && $amount < 0) {
+                // Valider le format de la devise (3 lettres majuscules)
+                if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+                    $context->buildViolation('Le code devise doit être composé de 3 lettres majuscules')
+                        ->atPath('minimumAmount')
+                        ->addViolation();
+                    break;
+                }
+
+                // Valider que le montant est un DecimalNumber positif ou nul
+                if (!$amount instanceof \PrestaShop\Decimal\DecimalNumber) {
+                    $context->buildViolation('Les montants minimum doivent être des DecimalNumber')
+                        ->atPath('minimumAmount')
+                        ->addViolation();
+                    break;
+                }
+
+                if ($amount->isNegative()) {
                     $context->buildViolation('Les montants minimum ne peuvent pas être négatifs')
                         ->atPath('minimumAmount')
                         ->addViolation();

@@ -23,10 +23,12 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
     operations: [
@@ -38,6 +40,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: [
                 '[orderId]' => '[orderId]',
                 '[orderDetailRefunds]' => '[orderDetailRefunds]',
+                '[refundAmount]' => '[refundAmount]',
+                '[shippingRefundAmount]' => '[shippingRefundAmount]',
                 '[refundShippingCost]' => '[refundShippingCost]',
                 '[generateCreditSlip]' => '[generateCreditSlip]',
                 '[generateVoucher]' => '[generateVoucher]',
@@ -56,6 +60,8 @@ use Symfony\Component\Validator\Constraints as Assert;
         'callbacks' => [
             'orderId' => [Callbacks::class, 'toInt'],
             'orderDetailRefunds' => [Callbacks::class, 'toOrderDetailRefunds'],
+            'refundAmount' => [Callbacks::class, 'toDecimalNumber'],
+            'shippingRefundAmount' => [Callbacks::class, 'toDecimalNumber'],
             'voucherRefundType' => [Callbacks::class, 'toInt'],
         ],
     ],
@@ -85,6 +91,18 @@ class OrderRefund
     public ?array $orderDetailRefunds = null;
 
     /**
+     * @var DecimalNumber|null Total amount to refund (calculated from orderDetailRefunds)
+     */
+    #[Assert\GreaterThanOrEqual(0)]
+    public ?DecimalNumber $refundAmount = null;
+
+    /**
+     * @var DecimalNumber|null Shipping cost refund amount
+     */
+    #[Assert\GreaterThanOrEqual(0)]
+    public ?DecimalNumber $shippingRefundAmount = null;
+
+    /**
      * @var bool|null Whether the shipping cost should be refunded
      */
     public ?bool $refundShippingCost = null;
@@ -105,4 +123,28 @@ class OrderRefund
     #[Assert\Type('int')]
     #[Assert\GreaterThanOrEqual(0)]
     public ?int $voucherRefundType = null;
+
+    #[Assert\Callback]
+    public function validateRefundConsistency(ExecutionContextInterface $context): void
+    {
+        // Validation de cohérence des montants de remboursement
+        if ($this->refundAmount !== null && $this->shippingRefundAmount !== null) {
+            // Vérifier que les montants individuels sont cohérents avec le total
+            // Cette validation nécessiterait de connaître le montant total de la commande
+            // Pour l'instant, on valide seulement que les montants sont positifs
+        }
+
+        // Validation du montant d'expédition si demandé
+        if ($this->refundShippingCost === true && $this->shippingRefundAmount === null) {
+            $context->buildViolation('Le montant de remboursement des frais de port est requis quand refundShippingCost est true')
+                ->atPath('shippingRefundAmount')
+                ->addViolation();
+        }
+
+        if ($this->refundShippingCost === false && $this->shippingRefundAmount !== null) {
+            $context->buildViolation('Le montant de remboursement des frais de port ne doit pas être fourni quand refundShippingCost est false')
+                ->atPath('shippingRefundAmount')
+                ->addViolation();
+        }
+    }
 }

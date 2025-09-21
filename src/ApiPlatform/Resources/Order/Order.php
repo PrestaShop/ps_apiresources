@@ -27,6 +27,8 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
     operations: [
@@ -174,4 +176,73 @@ class Order
      */
     #[Groups(['order:read'])]
     public array $items = [];
+
+    #[Assert\Callback]
+    public function validateFinancialConsistency(ExecutionContextInterface $context): void
+    {
+        // Convertir les montants string en DecimalNumber pour les calculs
+        try {
+            $totalPaidTaxIncl = !empty($this->totalPaidTaxIncl) ? new \PrestaShop\Decimal\DecimalNumber($this->totalPaidTaxIncl) : null;
+            $totalPaidTaxExcl = !empty($this->totalPaidTaxExcl) ? new \PrestaShop\Decimal\DecimalNumber($this->totalPaidTaxExcl) : null;
+            $totalProductsTaxIncl = !empty($this->totalProductsTaxIncl) ? new \PrestaShop\Decimal\DecimalNumber($this->totalProductsTaxIncl) : null;
+            $totalProductsTaxExcl = !empty($this->totalProductsTaxExcl) ? new \PrestaShop\Decimal\DecimalNumber($this->totalProductsTaxExcl) : null;
+        } catch (\InvalidArgumentException $e) {
+            $context->buildViolation('Format de montant invalide')
+                ->atPath('totalPaidTaxIncl')
+                ->addViolation();
+            return;
+        }
+
+        // Vérifier que les montants ne sont pas négatifs
+        if ($totalPaidTaxIncl && $totalPaidTaxIncl->isNegative()) {
+            $context->buildViolation('Le total payé TTC ne peut pas être négatif')
+                ->atPath('totalPaidTaxIncl')
+                ->addViolation();
+        }
+
+        if ($totalPaidTaxExcl && $totalPaidTaxExcl->isNegative()) {
+            $context->buildViolation('Le total payé HT ne peut pas être négatif')
+                ->atPath('totalPaidTaxExcl')
+                ->addViolation();
+        }
+
+        // Vérifier cohérence HT/TTC
+        if ($totalPaidTaxIncl && $totalPaidTaxExcl && $totalPaidTaxIncl->isLessThan($totalPaidTaxExcl)) {
+            $context->buildViolation('Le total payé TTC doit être supérieur ou égal au total payé HT')
+                ->atPath('totalPaidTaxIncl')
+                ->addViolation();
+        }
+
+        if ($totalProductsTaxIncl && $totalProductsTaxExcl && $totalProductsTaxIncl->isLessThan($totalProductsTaxExcl)) {
+            $context->buildViolation('Le total produits TTC doit être supérieur ou égal au total produits HT')
+                ->atPath('totalProductsTaxIncl')
+                ->addViolation();
+        }
+
+        // Calcul du total des items pour vérifier la cohérence
+        if (!empty($this->items)) {
+            $calculatedTotal = new \PrestaShop\Decimal\DecimalNumber('0');
+            foreach ($this->items as $item) {
+                if (isset($item['unitPriceTaxIncl']) && isset($item['quantity'])) {
+                    try {
+                        $unitPrice = new \PrestaShop\Decimal\DecimalNumber($item['unitPriceTaxIncl']);
+                        $quantity = new \PrestaShop\Decimal\DecimalNumber((string)$item['quantity']);
+                        $calculatedTotal = $calculatedTotal->plus($unitPrice->times($quantity));
+                    } catch (\InvalidArgumentException $e) {
+                        // Ignorer les items malformés pour cette validation
+                    }
+                }
+            }
+
+            // Vérifier que le total calculé est proche du total indiqué (avec une tolérance pour les arrondis)
+            if ($totalProductsTaxIncl && !$calculatedTotal->equals($totalProductsTaxIncl)) {
+                $difference = $calculatedTotal->minus($totalProductsTaxIncl)->abs();
+                if ($difference->isGreaterThan(new \PrestaShop\Decimal\DecimalNumber('0.01'))) {
+                    $context->buildViolation('Le total des produits ne correspond pas à la somme des items')
+                        ->atPath('totalProductsTaxIncl')
+                        ->addViolation();
+                }
+            }
+        }
+    }
 }

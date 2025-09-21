@@ -155,6 +155,26 @@ class Callbacks
     }
 
     /**
+     * Convert to DecimalNumber
+     */
+    public static function toDecimalNumber($value): ?\PrestaShop\Decimal\DecimalNumber
+    {
+        if (null === $value || '' === $value) {
+            return null;
+        }
+
+        if ($value instanceof \PrestaShop\Decimal\DecimalNumber) {
+            return $value;
+        }
+
+        try {
+            return new \PrestaShop\Decimal\DecimalNumber((string) $value);
+        } catch (\InvalidArgumentException $e) {
+            throw new \InvalidArgumentException('Invalid decimal number format: ' . $value);
+        }
+    }
+
+    /**
      * Convert cart rule name, providing default if null
      */
     public static function toCartRuleName($value): string

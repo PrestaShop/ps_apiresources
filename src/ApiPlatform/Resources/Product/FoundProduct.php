@@ -24,8 +24,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\SearchProducts;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
     operations: [
@@ -80,13 +83,16 @@ class FoundProduct
 
     public string $name;
 
-    public float $taxRate;
+    #[Assert\Range(min: 0, max: 100)]
+    public DecimalNumber $taxRate;
 
     public string $formattedPrice;
 
-    public float $priceTaxIncl;
+    #[Assert\GreaterThanOrEqual(0)]
+    public DecimalNumber $priceTaxIncl;
 
-    public float $priceTaxExcl;
+    #[Assert\GreaterThanOrEqual(0)]
+    public DecimalNumber $priceTaxExcl;
 
     public int $stock;
 
@@ -95,4 +101,27 @@ class FoundProduct
     public array $combinations;
 
     public array $customizationFields;
+
+    #[Assert\Callback]
+    public function validatePriceConsistency(ExecutionContextInterface $context): void
+    {
+        // Vérifier cohérence prix HT/TTC
+        if ($this->priceTaxIncl < $this->priceTaxExcl) {
+            $context->buildViolation('Le prix TTC doit être supérieur ou égal au prix HT')
+                ->atPath('priceTaxIncl')
+                ->addViolation();
+        }
+
+        // Vérifier cohérence avec le taux de taxe
+        if ($this->taxRate > 0 && $this->priceTaxExcl > 0) {
+            $expectedTaxIncl = $this->priceTaxExcl->plus(
+                $this->priceTaxExcl->times($this->taxRate->dividedBy(100))
+            );
+            if (!$this->priceTaxIncl->equals($expectedTaxIncl)) {
+                $context->buildViolation('Le prix TTC ne correspond pas au calcul avec le taux de taxe')
+                    ->atPath('priceTaxIncl')
+                    ->addViolation();
+            }
+        }
+    }
 }
