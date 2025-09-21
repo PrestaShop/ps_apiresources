@@ -34,6 +34,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
     operations: [
@@ -77,16 +78,22 @@ class Discount
     public bool $active;
     public \DateTimeImmutable $validFrom;
     public \DateTimeImmutable $validTo;
+    #[Assert\GreaterThanOrEqual(0)]
     public int $totalQuantity;
+    #[Assert\GreaterThanOrEqual(0)]
     public int $quantityPerUser;
     public string $description;
+    #[Assert\Regex(pattern: '/^[A-Z0-9\-_]+$/i')]
+    #[Assert\Length(max: 254)]
     public string $code;
     public int $customerId;
     public bool $highlightInCart;
     public bool $allowPartialUse;
     #[Assert\NotBlank(groups: ['Create'])]
     public string $type;
+    #[Assert\Range(min: 0, max: 100)]
     public ?DecimalNumber $percentDiscount;
+    #[Assert\GreaterThanOrEqual(0)]
     public ?DecimalNumber $amountDiscount;
     public int $currencyId;
     public bool $isTaxIncluded;
@@ -100,4 +107,35 @@ class Discount
     protected const COMMAND_MAPPING = [
         '[names]' => '[localizedNames]',
     ];
+
+    #[Assert\Callback]
+    public function validateBusinessRules(ExecutionContextInterface $context): void
+    {
+        // Vérifier cohérence dates de validité
+        if ($this->validFrom > $this->validTo) {
+            $context->buildViolation('La date de début de validité doit être antérieure à la date de fin')
+                ->atPath('validFrom')
+                ->addViolation();
+        }
+
+        // Vérifier logique des types de réduction
+        if ($this->type === 'percent' && $this->percentDiscount === null) {
+            $context->buildViolation('Un pourcentage de réduction est requis pour le type "percent"')
+                ->atPath('percentDiscount')
+                ->addViolation();
+        }
+
+        if ($this->type === 'amount' && $this->amountDiscount === null) {
+            $context->buildViolation('Un montant de réduction est requis pour le type "amount"')
+                ->atPath('amountDiscount')
+                ->addViolation();
+        }
+
+        // Vérifier que seulement un type de réduction est défini
+        if ($this->percentDiscount !== null && $this->amountDiscount !== null) {
+            $context->buildViolation('Vous ne pouvez définir qu\'un seul type de réduction (pourcentage ou montant)')
+                ->atPath('percentDiscount')
+                ->addViolation();
+        }
+    }
 }

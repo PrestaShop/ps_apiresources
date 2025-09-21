@@ -37,6 +37,8 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
     operations: [
@@ -109,22 +111,29 @@ class Product
     #[LocalizedValue]
     public array $tags;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $priceTaxExcluded;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $priceTaxIncluded;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $ecotaxTaxExcluded;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $ecotaxTaxIncluded;
 
     public int $taxRulesGroupId;
 
     public bool $onSale;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $wholesalePrice;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $unitPriceTaxExcluded;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $unitPriceTaxIncluded;
 
     public string $unity;
@@ -145,24 +154,35 @@ class Product
 
     public int $manufacturerId;
 
+    #[Assert\Length(max: 13)]
     public string $isbn;
 
+    #[Assert\Length(max: 12)]
     public string $upc;
 
+    #[Assert\Length(max: 14)]
     public string $gtin;
 
+    #[Assert\Length(max: 40)]
     public string $mpn;
 
+    #[Assert\Regex(pattern: '/^[A-Z0-9\-_\.]+$/i')]
+    #[Assert\Length(max: 64)]
     public string $reference;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $width;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $height;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $depth;
 
+    #[Assert\GreaterThan(0)]
     public DecimalNumber $weight;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public DecimalNumber $additionalShippingCost;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
@@ -193,10 +213,13 @@ class Product
 
     public int $outOfStockType;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public int $quantity;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public int $minimalQuantity;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public int $lowStockThreshold;
 
     public bool $lowStockAlertEnabled;
@@ -211,6 +234,7 @@ class Product
 
     public ?\DateTimeImmutable $availableDate = null;
 
+    #[Assert\Url]
     public string $coverThumbnailUrl;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
@@ -289,4 +313,36 @@ class Product
         '[unitPriceTaxExcluded]' => '[unitPrice]',
         '[ecotaxTaxExcluded]' => '[ecotax]',
     ];
+
+    #[Assert\Callback]
+    public function validateBusinessRules(ExecutionContextInterface $context): void
+    {
+        // Vérifier cohérence prix HT/TTC
+        if ($this->priceTaxIncluded < $this->priceTaxExcluded) {
+            $context->buildViolation('Le prix TTC doit être supérieur ou égal au prix HT')
+                ->atPath('priceTaxIncluded')
+                ->addViolation();
+        }
+
+        // Vérifier cohérence prix unitaires HT/TTC
+        if ($this->unitPriceTaxIncluded < $this->unitPriceTaxExcluded) {
+            $context->buildViolation('Le prix unitaire TTC doit être supérieur ou égal au prix unitaire HT')
+                ->atPath('unitPriceTaxIncluded')
+                ->addViolation();
+        }
+
+        // Vérifier cohérence écotaxe HT/TTC
+        if ($this->ecotaxTaxIncluded < $this->ecotaxTaxExcluded) {
+            $context->buildViolation('L\'écotaxe TTC doit être supérieure ou égale à l\'écotaxe HT')
+                ->atPath('ecotaxTaxIncluded')
+                ->addViolation();
+        }
+
+        // Vérifier cohérence quantités
+        if ($this->quantity < $this->minimalQuantity) {
+            $context->buildViolation('La quantité doit être supérieure ou égale à la quantité minimale')
+                ->atPath('quantity')
+                ->addViolation();
+        }
+    }
 }

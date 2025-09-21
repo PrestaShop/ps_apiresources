@@ -27,6 +27,8 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\CartRule\Command\EditCartRuleCommand;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
     operations: [
@@ -47,9 +49,12 @@ class CartRule
 
     public string $description;
 
+    #[Assert\Regex(pattern: '/^[A-Z0-9\-_]+$/i')]
+    #[Assert\Length(max: 254)]
     public string $code;
 
-    public array $minimumAmount;
+    // minimumAmount est un array qui peut contenir des montants par devise
+    // Validation sera faite via callback pour gérer la complexité
 
     public bool $minimumAmountShippingIncluded;
 
@@ -68,9 +73,41 @@ class CartRule
 
     public array $validityDateRange;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public int $totalQuantity;
 
+    #[Assert\GreaterThanOrEqual(0)]
     public int $quantityPerUser;
 
     public array $cartRuleAction;
+
+    #[Assert\Callback]
+    public function validateBusinessRules(ExecutionContextInterface $context): void
+    {
+        // Vérifier cohérence dates de validité
+        if (isset($this->validityDateRange['from']) && isset($this->validityDateRange['to'])) {
+            $from = $this->validityDateRange['from'];
+            $to = $this->validityDateRange['to'];
+
+            if ($from instanceof \DateTimeInterface && $to instanceof \DateTimeInterface) {
+                if ($from > $to) {
+                    $context->buildViolation('La date de début de validité doit être antérieure à la date de fin')
+                        ->atPath('validityDateRange')
+                        ->addViolation();
+                }
+            }
+        }
+
+        // Vérifier montants minimum (si array avec clés de devise)
+        if (is_array($this->minimumAmount)) {
+            foreach ($this->minimumAmount as $currency => $amount) {
+                if (is_numeric($amount) && $amount < 0) {
+                    $context->buildViolation('Les montants minimum ne peuvent pas être négatifs')
+                        ->atPath('minimumAmount')
+                        ->addViolation();
+                    break;
+                }
+            }
+        }
+    }
 }

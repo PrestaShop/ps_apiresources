@@ -32,6 +32,7 @@ use PrestaShop\PrestaShop\Core\Domain\Module\Query\GetModuleInfos;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -78,6 +79,8 @@ class Module
 {
     public ?int $moduleId;
 
+    #[Assert\Regex(pattern: '/^[a-zA-Z][a-zA-Z0-9\-_]*$/')]
+    #[Assert\Length(min: 1, max: 64)]
     public string $technicalName;
 
     public string $moduleVersion;

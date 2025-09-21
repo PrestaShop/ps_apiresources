@@ -36,6 +36,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -106,6 +107,7 @@ class CustomerGroup
     #[LocalizedValue]
     public array $localizedNames;
 
+    #[Assert\Range(min: 0, max: 100)]
     public DecimalNumber $reductionPercent;
 
     public bool $displayPriceTaxExcluded;
