@@ -38,6 +38,7 @@ use Symfony\Component\HttpFoundation\Response;
                 '[orderId]' => '[orderId]',
                 '[internalNote]' => '[note]',
             ],
+            output: false,
             denormalizationContext: [
                 'disable_type_enforcement' => true,
                 'callbacks' => [

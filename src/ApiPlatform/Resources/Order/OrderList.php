@@ -102,10 +102,23 @@ use Symfony\Component\HttpFoundation\Response;
                 ],
             ],
         ),
-        new \PrestaShopBundle\ApiPlatform\Metadata\CQRSGet(
+        new PaginatedList(
             uriTemplate: '/orders/_write-scope',
             provider: OrderProvider::class,
             scopes: ['order_write'],
+            ApiResourceMapping: [
+                '[id_order]' => '[orderId]',
+                '[reference]' => '[reference]',
+                '[id_shop]' => '[shopId]',
+                '[id_customer]' => '[customerId]',
+                '[current_state]' => '[statusId]',
+                '[date_add]' => '[dateAdd]',
+                '[order_state][name]' => '[status]',
+                '[id_lang]' => '[langId]',
+                '[id_currency]' => '[currencyIso]',
+                '[total_paid_tax_incl]' => '[totalPaidTaxIncl]',
+                '[total_products_wt]' => '[totalProductsTaxIncl]',
+            ],
             openapiContext: [
                 'summary' => '[internal] Orders write scope registration',
                 'deprecated' => true,

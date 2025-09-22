@@ -39,6 +39,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                 '[orderId]' => '[orderId:int]',
                 '[statusId]' => '[newOrderStatusId:int]',
             ],
+            output: false,
             allowEmptyBody: false,
         ),
     ],
@@ -48,6 +49,11 @@ use Symfony\Component\Validator\Constraints as Assert;
         'callbacks' => [
             'orderId' => [Callbacks::class, 'toInt'],
             'statusId' => [Callbacks::class, 'toInt'],
+        ],
+        'default_constructor_arguments' => [
+            \PrestaShop\PrestaShop\Core\Domain\Order\Command\UpdateOrderStatusCommand::class => [
+                'newOrderStatusId' => 0,
+            ],
         ],
     ],
     exceptionToStatus: [

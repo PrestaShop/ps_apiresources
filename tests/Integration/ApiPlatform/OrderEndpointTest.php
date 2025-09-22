@@ -34,6 +34,12 @@ class OrderEndpointTest extends ApiTestCase
         self::ensureScopesAreRegistered(['order_read', 'order_write']);
         // Pre-create an API Client with needed scopes to reduce token creations
         self::createApiClient(['order_read', 'order_write']);
+
+        // Ensure payment modules are properly installed and enabled before tests
+        TestDataBuilder::ensurePaymentMethodExists('ps_wirepayment');
+        TestDataBuilder::ensurePaymentMethodExists('ps_checkpayment');
+        TestDataBuilder::ensurePaymentMethodExists('ps_cashondelivery');
+
         // Ensure test order exists for the tests
         TestDataBuilder::ensureOrderExists();
         // Enable product returns and cancellations for the tests
@@ -250,10 +256,27 @@ class OrderEndpointTest extends ApiTestCase
         $order = new \Order($orderId);
         $originalCarrierId = (int) $order->id_carrier;
 
-        $newCarrierId = $originalCarrierId === 1 ? 2 : 1;
+        // Ensure we have a valid carrier different from the original
+        $availableCarrierId = TestDataBuilder::ensureCarrierExists();
+        $newCarrierId = $originalCarrierId === $availableCarrierId ? ($availableCarrierId + 1) : $availableCarrierId;
+
+        // Create a second carrier if needed
         $carrier = new \Carrier($newCarrierId);
         if (!$carrier->id) {
-            $this->markTestSkipped('Target carrier not available');
+            // Try to get any other available carrier
+            $carriers = \Carrier::getCarriers(1, true, false, false, null, \Carrier::ALL_CARRIERS);
+            $foundCarrier = false;
+            foreach ($carriers as $carrierData) {
+                if ((int) $carrierData['id_carrier'] !== $originalCarrierId) {
+                    $newCarrierId = (int) $carrierData['id_carrier'];
+                    $foundCarrier = true;
+                    break;
+                }
+            }
+
+            if (!$foundCarrier) {
+                $this->markTestSkipped('No alternative carrier available for tracking test');
+            }
         }
 
         $trackingNumber = 'TRACK-123456';
@@ -904,11 +927,14 @@ class OrderEndpointTest extends ApiTestCase
         $cart->add();
         $cart->updateQty($quantity, $productId);
 
+        // Use working payment method from TestDataBuilder
+        $paymentMethod = TestDataBuilder::getWorkingPaymentMethod();
+
         $created = $this->createItem('/orders', [
             'cartId' => (int) $cart->id,
             'employeeId' => 1,
             'orderMessage' => 'Insufficient stock test order',
-            'paymentModuleName' => 'ps_wirepayment',
+            'paymentModuleName' => $paymentMethod,
             'orderStateId' => 2,
         ], ['order_write']);
 

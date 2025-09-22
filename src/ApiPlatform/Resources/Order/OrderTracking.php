@@ -45,6 +45,7 @@ use Symfony\Component\HttpFoundation\Response;
                 '[carrierId]' => '[newCarrierId]',
                 '[number]' => '[number]',
             ],
+            output: false,
             allowEmptyBody: false,
             denormalizationContext: [
                 'disable_type_enforcement' => true,

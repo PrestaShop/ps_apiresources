@@ -47,6 +47,8 @@ class TestDataBuilder
                 $module = \Module::getInstanceByName($moduleName);
                 if ($module) {
                     $success = $module->install();
+                    // Force refresh module cache after install
+                    \Module::clearStaticCache();
                 }
             } else {
                 $success = true;
@@ -56,7 +58,15 @@ class TestDataBuilder
                 $module = \Module::getInstanceByName($moduleName);
                 if ($module && method_exists($module, 'enable')) {
                     $success = $module->enable();
+                    // Force refresh module cache after enable
+                    \Module::clearStaticCache();
                 }
+            }
+
+            // Additional validation: check if module is really working
+            if ($success) {
+                $module = \Module::getInstanceByName($moduleName);
+                $success = ($module && \Module::isInstalled($moduleName) && \Module::isEnabled($moduleName));
             }
 
             self::$createdData['payment_method'][$moduleName] = $success;
@@ -79,22 +89,44 @@ class TestDataBuilder
         }
 
         try {
-            // Use PrestaShop Carrier class
+            // First try to find active carriers
             $carriers = \Carrier::getCarriers(1, true, false, false, null, \Carrier::PS_CARRIERS_AND_CARRIER_MODULES_NEED_RANGE);
 
             if (!empty($carriers)) {
                 $carrierId = (int) $carriers[0]['id_carrier'];
-            } else {
-                // Try to get any carrier
-                $carrierId = 1; // Default carrier ID - should exist in most PrestaShop installations
+                // Verify the carrier is valid by loading it
+                $carrier = new \Carrier($carrierId);
+                if (\Validate::isLoadedObject($carrier) && $carrier->active && !$carrier->deleted) {
+                    self::$createdData['carrier'] = $carrierId;
+                    return $carrierId;
+                }
             }
 
-            self::$createdData['carrier'] = $carrierId;
+            // Try ID 1 as fallback
+            $carrier = new \Carrier(1);
+            if (\Validate::isLoadedObject($carrier) && $carrier->active && !$carrier->deleted) {
+                self::$createdData['carrier'] = 1;
+                return 1;
+            }
 
-            return $carrierId;
+            // Last resort: try to get any carrier
+            $allCarriers = \Carrier::getCarriers(1, false, false, false, null, \Carrier::ALL_CARRIERS);
+            if (!empty($allCarriers)) {
+                foreach ($allCarriers as $carrierData) {
+                    $carrier = new \Carrier($carrierData['id_carrier']);
+                    if (\Validate::isLoadedObject($carrier) && $carrier->active && !$carrier->deleted) {
+                        self::$createdData['carrier'] = (int) $carrierData['id_carrier'];
+                        return (int) $carrierData['id_carrier'];
+                    }
+                }
+            }
+
+            error_log('TestDataBuilder: Warning - No valid carrier found, falling back to ID 1');
+            self::$createdData['carrier'] = 1;
+            return 1;
         } catch (\Exception $e) {
             error_log('TestDataBuilder: Could not ensure carrier exists: ' . $e->getMessage());
-
+            self::$createdData['carrier'] = 1;
             return 1; // Fallback carrier ID
         }
     }
@@ -285,25 +317,45 @@ class TestDataBuilder
             foreach ($paymentMethods as $method) {
                 // First ensure the module exists
                 if (self::ensurePaymentMethodExists($method)) {
-                    return $method;
+                    // Double-check if module is really available for payment processing
+                    try {
+                        $module = \Module::getInstanceByName($method);
+                        if ($module && is_object($module) && $module->active) {
+                            return $method;
+                        }
+                    } catch (\Exception $moduleException) {
+                        error_log("TestDataBuilder: Module $method failed validation: " . $moduleException->getMessage());
+                        continue;
+                    }
                 }
             }
 
             // If none of the common ones work, try to find any active payment module
-            $modules = \Module::getPaymentModules();
-            if (!empty($modules)) {
-                $firstModule = $modules[0]['name'];
-                if (self::ensurePaymentMethodExists($firstModule)) {
-                    return $firstModule;
+            try {
+                $modules = \Module::getPaymentModules();
+                if (!empty($modules)) {
+                    foreach ($modules as $module) {
+                        $firstModule = $module['name'];
+                        if (self::ensurePaymentMethodExists($firstModule)) {
+                            return $firstModule;
+                        }
+                    }
                 }
+            } catch (\Exception $e) {
+                error_log("TestDataBuilder: Error getting payment modules: " . $e->getMessage());
             }
 
-            // Last resort - ensure ps_wirepayment exists as fallback
-            self::ensurePaymentMethodExists('ps_wirepayment');
+            // Last resort - force ps_wirepayment to exist as fallback
+            if (self::ensurePaymentMethodExists('ps_wirepayment')) {
+                return 'ps_wirepayment';
+            }
 
+            // If everything fails, return ps_wirepayment anyway (test will probably fail but gracefully)
+            error_log('TestDataBuilder: WARNING - No working payment method found, falling back to ps_wirepayment');
             return 'ps_wirepayment';
         } catch (\Exception $e) {
             // Ensure fallback exists even if there are errors
+            error_log('TestDataBuilder: Exception in getWorkingPaymentMethod: ' . $e->getMessage());
             self::ensurePaymentMethodExists('ps_wirepayment');
 
             return 'ps_wirepayment';
