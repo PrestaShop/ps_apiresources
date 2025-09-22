@@ -384,6 +384,7 @@ class TestDataBuilder
             $order = new \Order(1);
             if (\Validate::isLoadedObject($order)) {
                 self::$createdData['order'] = 1;
+
                 return 1;
             }
 
@@ -448,12 +449,14 @@ class TestDataBuilder
                 $orderHistory->add();
 
                 self::$createdData['order'] = $orderId;
+
                 return $orderId;
             } else {
                 return 1; // Fallback order ID
             }
         } catch (\Exception $e) {
             error_log('TestDataBuilder: Could not ensure order exists: ' . $e->getMessage());
+
             return 1; // Fallback order ID
         }
     }

@@ -190,6 +190,7 @@ class Order
             $context->buildViolation('Invalid amount format')
                 ->atPath('totalPaidTaxIncl')
                 ->addViolation();
+
             return;
         }
 
@@ -226,7 +227,7 @@ class Order
                 if (isset($item['unitPriceTaxIncl']) && isset($item['quantity'])) {
                     try {
                         $unitPrice = new \PrestaShop\Decimal\DecimalNumber($item['unitPriceTaxIncl']);
-                        $quantity = new \PrestaShop\Decimal\DecimalNumber((string)$item['quantity']);
+                        $quantity = new \PrestaShop\Decimal\DecimalNumber((string) $item['quantity']);
                         $calculatedTotal = $calculatedTotal->plus($unitPrice->times($quantity));
                     } catch (\InvalidArgumentException $e) {
                         // Skip malformed items for this validation

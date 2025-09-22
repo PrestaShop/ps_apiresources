@@ -26,7 +26,6 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\State\OrderProvider;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
-use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
