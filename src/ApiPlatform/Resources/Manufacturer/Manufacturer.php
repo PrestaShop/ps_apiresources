@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Manufacturer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Module\APIResources\Validation\IframeValidationGroupsResolver;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Manufacturer\Command\AddManufacturerCommand;
@@ -55,6 +56,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         // POST /manufacturer
         new CQRSCreate(
             uriTemplate: '/manufacturer',
+            validationContext: [IframeValidationGroupsResolver::class, 'create'],
             CQRSCommand: AddManufacturerCommand::class,
             CQRSQuery: GetManufacturerForEditing::class,
             scopes: ['manufacturer_write'],
@@ -63,6 +65,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/manufacturer/{manufacturerId}',
+            validationContext: [IframeValidationGroupsResolver::class, 'create'],
             requirements: ['manufacturerId' => '\d+'],
             CQRSCommand: EditManufacturerCommand::class,
             CQRSQuery: GetManufacturerForEditing::class,
@@ -101,11 +104,31 @@ class Manufacturer
     #[LocalizedValue]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'shortDescriptions')]
     #[DefaultLanguage(groups: ['Update'], fieldName: 'shortDescriptions', allowNull: true)]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::CLEAN_HTML_NO_IFRAME,
+            'groups' => ['NoIframe'],
+        ]),
+        new TypedRegex([
+            'type' => TypedRegex::CLEAN_HTML_ALLOW_IFRAME,
+            'groups' => ['AllowIframe'],
+        ]),
+    ])]
     public array $shortDescriptions;
 
     #[LocalizedValue]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'descriptions')]
     #[DefaultLanguage(groups: ['Update'], fieldName: 'descriptions', allowNull: true)]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::CLEAN_HTML_NO_IFRAME,
+            'groups' => ['NoIframe'],
+        ]),
+        new TypedRegex([
+            'type' => TypedRegex::CLEAN_HTML_ALLOW_IFRAME,
+            'groups' => ['AllowIframe'],
+        ]),
+    ])]
     public array $descriptions;
 
     #[LocalizedValue]
