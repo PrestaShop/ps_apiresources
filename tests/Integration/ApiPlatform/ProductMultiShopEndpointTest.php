@@ -155,7 +155,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         $featureFlagManager->enable(FeatureFlagSettings::FEATURE_FLAG_ADMIN_API_MULTISTORE);
     }
 
-    public function getProtectedEndpoints(): iterable
+    public static function getProtectedEndpoints(): iterable
     {
         yield 'get endpoint' => [
             'GET',
