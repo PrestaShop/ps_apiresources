@@ -76,6 +76,11 @@ class CategoryEndpointTest extends ApiTestCase
             '/category/10',
         ];
 
+        yield 'bulk toggle endpoint' => [
+            'PUT',
+            '/categories/toggle-status',
+        ];
+
         yield 'delete endpoint' => [
             'DELETE',
             '/category/10',
@@ -83,7 +88,7 @@ class CategoryEndpointTest extends ApiTestCase
 
         yield 'update status endpoint' => [
             'PATCH',
-            '/category/s/status',
+            '/category/3/status',
         ];
 
         yield 'delete thumbnail endpoint' => [
@@ -94,6 +99,11 @@ class CategoryEndpointTest extends ApiTestCase
         yield 'delete cover endpoint' => [
             'DELETE',
             '/category/4/thumbnail',
+        ];
+
+        yield 'bulk delete endpoint' => [
+            'PUT',
+            '/categories/delete',
         ];
     }
 
@@ -241,5 +251,75 @@ class CategoryEndpointTest extends ApiTestCase
             ['category_write'],
             Response::HTTP_NO_CONTENT
         );
+    }
+
+    public function testBulkUpdateStatus(): array
+    {
+        $bulkCategories = $this->createTemporaryCategories();
+
+        // Perform bulk disable on the selected categories
+        $this->updateItem('/categories/toggle-status', [
+            'categoryIds' => $bulkCategories,
+            'enabled' => false,
+        ], ['category_write'], Response::HTTP_NO_CONTENT);
+
+        // Assert that the selected categories have been successfully disabled
+        foreach ($bulkCategories as $categoryId) {
+            $category = $this->getItem('/category/' . $categoryId, ['category_read']);
+            $this->assertEquals(false, $category['enabled']);
+        }
+
+        // Return IDs so they can be reused by testBulkDelete
+        return $bulkCategories;
+    }
+
+    /**
+     * @depends testBulkUpdateStatus
+     */
+    public function testBulkDelete(array $bulkCategories): void
+    {
+        // Bulk delete with deleteMode
+        $this->updateItem('/categories/delete', [
+            'categoryIds' => $bulkCategories,
+            'enabled' => false,
+            'mode' => 'associate_and_disable',
+        ], ['category_write'], Response::HTTP_NO_CONTENT);
+
+        // Assert the provided categories have been removed
+        foreach ($bulkCategories as $categoryId) {
+            $this->getItem('/category/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    /**
+     * Create two temporary categories for bulk operation tests.
+     *
+     * @return int[] The IDs of the created categories
+     */
+    private function createTemporaryCategories(): array
+    {
+        $cat1 = $this->createItem('/category', [
+            'names' => ['en-US' => 'TempCat 1'],
+            'linkRewrites' => [
+                'en-US' => 'temp-cat-2',
+                'fr-FR' => 'temp-cat-2',
+            ],
+            'isActive' => true,
+            'parentCategoryId' => 2,
+            'shopIds' => [1],
+        ], ['category_write']);
+
+        $cat2 = $this->createItem('/category', [
+            'names' => ['en-US' => 'TempCat 2'],
+            'linkRewrites' => [
+                'en-US' => 'temp-cat-2',
+                'fr-FR' => 'temp-cat-2',
+            ],
+            'isActive' => true,
+            'parentCategoryId' => 2,
+            'shopIds' => [1],
+        ], ['category_write']);
+
+        return [$cat1['categoryId'], $cat2['categoryId']];
     }
 }
