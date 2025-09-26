@@ -52,7 +52,7 @@ class HookEndpointTest extends ApiTestCase
 
         yield 'put endpoint' => [
             'PUT',
-            '/hook-status/1',
+            '/hook/1/status',
         ];
 
         yield 'list endpoint' => [
@@ -89,7 +89,7 @@ class HookEndpointTest extends ApiTestCase
      */
     public function testUpdateHookStatus(int $hookId): int
     {
-        $updatedHook = $this->updateItem('/hook-status/' . $hookId, ['active' => false], ['hook_write']);
+        $updatedHook = $this->updateItem('/hook/' . $hookId . '/status', ['active' => false], ['hook_write']);
         $expectedHook = [
             'hookId' => $hookId,
             'name' => 'testHook',
@@ -100,7 +100,7 @@ class HookEndpointTest extends ApiTestCase
         $this->assertEquals($expectedHook, $updatedHook);
         $this->assertEquals($expectedHook, $this->getItem('/hook/' . $hookId, ['hook_read']));
 
-        $updatedHook = $this->updateItem('/hook-status/' . $hookId, ['active' => true], ['hook_write']);
+        $updatedHook = $this->updateItem('/hook/' . $hookId . '/status', ['active' => true], ['hook_write']);
         $expectedHook['active'] = true;
         $this->assertEquals($expectedHook, $updatedHook);
         $this->assertEquals($expectedHook, $this->getItem('/hook/' . $hookId, ['hook_read']));
