@@ -22,8 +22,6 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\Command;
 
-use Exception;
-use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
@@ -101,7 +99,7 @@ class GenerateApiTrackingTableCommand extends Command
             ]);
 
             return Command::SUCCESS;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $io->error('Failed to generate API tracking table: ' . $e->getMessage());
 
             return Command::FAILURE;
@@ -318,7 +316,7 @@ class GenerateApiTrackingTableCommand extends Command
                     ];
                 }
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $io->warning('GitHub API analysis failed: ' . $e->getMessage());
             $io->text('Continuing without PR status detection...');
         }
@@ -443,7 +441,7 @@ class GenerateApiTrackingTableCommand extends Command
                 if (!empty($endpoint['assignee'])) {
                     $assigneeInfo = $endpoint['assignee'];
                     if ($endpoint['pr_info'] && !empty($endpoint['pr_info']['pr_url'])) {
-                        $assigneeInfo = "[{$endpoint['assignee']}]({$endpoint['pr_info']['pr_url']})";
+                        $assigneeInfo = "[{$endpoint['assignee']}](https://github.com/{$endpoint['assignee']}) / [PR]({$endpoint['pr_info']['pr_url']})";
                     }
                 }
 
@@ -484,7 +482,7 @@ class GenerateApiTrackingTableCommand extends Command
 
         $response = file_get_contents($url, false, $context);
         if (false === $response) {
-            throw new RuntimeException('Failed to fetch PRs from GitHub API');
+            throw new \RuntimeException('Failed to fetch PRs from GitHub API');
         }
 
         return json_decode($response, true) ?: [];
@@ -531,7 +529,7 @@ class GenerateApiTrackingTableCommand extends Command
                     $endpoints = array_merge($endpoints, $foundEndpoints);
                 }
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             // Silently continue if we can't analyze PR changes
         }
 
