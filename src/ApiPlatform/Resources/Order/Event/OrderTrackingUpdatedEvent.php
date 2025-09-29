@@ -20,46 +20,35 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Serializer;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Event;
+
+use Symfony\Contracts\EventDispatcher\Event;
 
 /**
- * Utility class for API Platform serialization callbacks
+ * Event triggered when order tracking information is updated.
  */
-class Callbacks
+class OrderTrackingUpdatedEvent extends Event
 {
-    /**
-     * Convert value to integer
-     *
-     * @param mixed $value
-     *
-     * @return int
-     */
-    public static function toInt($value): int
-    {
-        return (int) $value;
+    public function __construct(
+        private readonly int $orderId,
+        private readonly string $trackingNumber,
+    ) {
     }
 
     /**
-     * Convert value to float
-     *
-     * @param mixed $value
-     *
-     * @return float
+     * Get the order ID.
      */
-    public static function toFloat($value): float
+    public function getOrderId(): int
     {
-        return (float) $value;
+        return $this->orderId;
     }
 
     /**
-     * Convert value to string
-     *
-     * @param mixed $value
-     *
-     * @return string
+     * Get the tracking number.
      */
-    public static function toString($value): string
+    public function getTrackingNumber(): string
     {
-        return (string) $value;
+        return $this->trackingNumber;
     }
 }
+

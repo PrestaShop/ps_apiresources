@@ -24,98 +24,15 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\Module\APIResources\ApiPlatform\Serializer\Callbacks;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
-use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
-use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
     operations: [
-        new PaginatedList(
-            uriTemplate: '/orders',
-            provider: QueryListProvider::class,
-            scopes: ['order_read'],
-            ApiResourceMapping: [
-                '[id_order]' => '[orderId]',
-                '[reference]' => '[reference]',
-                '[id_shop]' => '[shopId]',
-                '[id_customer]' => '[customerId]',
-                '[current_state]' => '[statusId]',
-                '[date_add]' => '[dateAdd]',
-                // Status information
-                '[osname]' => '[status]',
-                '[id_lang]' => '[langId]',
-                '[iso_code]' => '[currencyIso]',
-                '[total_paid_tax_incl]' => '[totalPaidTaxIncl:float]',
-                '[total_products_wt]' => '[totalProductsTaxIncl:float]',
-            ],
-            gridDataFactory: 'prestashop.core.grid.data.factory.order_decorator',
-            filtersClass: \PrestaShop\PrestaShop\Core\Search\Filters\OrderFilters::class,
-            normalizationContext: [
-                'callbacks' => [
-                    'totalPaidTaxIncl' => [Callbacks::class, 'toFloat'],
-                    'totalProductsTaxIncl' => [Callbacks::class, 'toFloat'],
-                ],
-            ],
-            openapiContext: [
-                'summary' => 'List orders',
-                'parameters' => [
-                    [
-                        'name' => 'date_from',
-                        'in' => 'query',
-                        'required' => false,
-                        'schema' => [
-                            'type' => 'string',
-                        ],
-                    ],
-                    [
-                        'name' => 'date_to',
-                        'in' => 'query',
-                        'required' => false,
-                        'schema' => [
-                            'type' => 'string',
-                        ],
-                    ],
-                    [
-                        'name' => 'updated_from',
-                        'in' => 'query',
-                        'required' => false,
-                        'schema' => [
-                            'type' => 'string',
-                        ],
-                    ],
-                    [
-                        'name' => 'updated_to',
-                        'in' => 'query',
-                        'required' => false,
-                        'schema' => [
-                            'type' => 'string',
-                        ],
-                    ],
-                    [
-                        'name' => 'status_id',
-                        'in' => 'query',
-                        'required' => false,
-                        'schema' => [
-                            'type' => 'int',
-                        ],
-                    ],
-                    [
-                        'name' => 'q',
-                        'in' => 'query',
-                        'required' => false,
-                        'schema' => [
-                            'type' => 'string',
-                        ],
-                    ],
-                ],
-            ],
-        ),
         new CQRSGet(
             uriTemplate: '/orders/{orderId}',
             requirements: ['orderId' => '\d+'],
@@ -148,10 +65,8 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
         ),
         new CQRSCreate(
             uriTemplate: '/orders',
-            allowEmptyBody: true,
             scopes: ['order_write'],
             CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\AddOrderFromBackOfficeCommand::class,
-            CQRSQuery: \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderForViewing::class,
             CQRSCommandMapping: [
                 '[cartId]' => '[cartId]',
                 '[employeeId]' => '[employeeId]',
@@ -159,14 +74,47 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
                 '[orderStateId]' => '[orderStateId]',
                 '[orderMessage]' => '[orderMessage]',
             ],
-            CQRSQueryMapping: [
-                '[orderId]' => '[orderId]',
-                '[reference]' => '[reference]',
-                '[history][currentOrderStatusId]' => '[statusId]',
-                '[history][statuses][0][name]' => '[status]',
-                '[shopId]' => '[shopId]',
-                '[customer][id]' => '[customerId]',
-                '[createdAt]' => '[dateAdd]',
+            openapiContext: [
+                'summary' => 'Create a new order',
+                'description' => 'Create a new order from an existing cart using CQRS command pattern.',
+                'requestBody' => [
+                    'required' => true,
+                    'content' => [
+                        'application/json' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'required' => ['cartId', 'employeeId'],
+                                'properties' => [
+                                    'cartId' => [
+                                        'type' => 'integer',
+                                        'minimum' => 1,
+                                        'description' => 'ID of the cart to convert to order',
+                                    ],
+                                    'employeeId' => [
+                                        'type' => 'integer',
+                                        'minimum' => 1,
+                                        'description' => 'ID of the employee creating the order',
+                                    ],
+                                    'paymentModuleName' => [
+                                        'type' => 'string',
+                                        'maxLength' => 255,
+                                        'description' => 'Name of the payment module',
+                                    ],
+                                    'orderStateId' => [
+                                        'type' => 'integer',
+                                        'minimum' => 1,
+                                        'description' => 'Initial order status ID',
+                                    ],
+                                    'orderMessage' => [
+                                        'type' => 'string',
+                                        'maxLength' => 1000,
+                                        'description' => 'Optional message for the order',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ],
         ),
         new CQRSPartialUpdate(
@@ -177,19 +125,6 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
             CQRSQuery: \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderForViewing::class,
             CQRSCommandMapping: [
                 '[statusId]' => '[newOrderStatusId]',
-            ],
-            denormalizationContext: [
-                'disable_type_enforcement' => true,
-                'callbacks' => [
-                    'orderId' => [Callbacks::class, 'toInt'],
-                    'statusId' => [Callbacks::class, 'toInt'],
-                ],
-                'default_constructor_arguments' => [
-                    \PrestaShop\PrestaShop\Core\Domain\Order\Command\UpdateOrderStatusCommand::class => [
-                        'orderId' => 0,
-                        'newOrderStatusId' => 0,
-                    ],
-                ],
             ],
             CQRSQueryMapping: [
                 '[orderId]' => '[orderId]',
@@ -202,7 +137,25 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
             ],
             openapiContext: [
                 'summary' => 'Update order status',
-                'description' => 'Update the status of an order by providing statusId',
+                'description' => 'Update the status of an order by providing a new status ID. This operation follows CQRS patterns for safe order state transitions.',
+                'requestBody' => [
+                    'required' => true,
+                    'content' => [
+                        'application/json' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'required' => ['statusId'],
+                                'properties' => [
+                                    'statusId' => [
+                                        'type' => 'integer',
+                                        'minimum' => 1,
+                                        'description' => 'New status ID for the order',
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ],
         ),
     ],
@@ -257,19 +210,54 @@ class Order
     public array $items = [];
 
     // Fields for order creation
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Positive(groups: ['Create'])]
     public int $cartId = 0;
 
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Positive(groups: ['Create'])]
     public int $employeeId = 0;
 
+    #[Assert\Length(max: 1000, groups: ['Create'])]
     public string $orderMessage = '';
 
+    #[Assert\Length(max: 255, groups: ['Create'])]
     public string $paymentModuleName = '';
 
+    #[Assert\Positive(groups: ['Create', 'Update'])]
     public int $orderStateId = 0;
 
     #[Assert\Callback]
     public function validate(ExecutionContextInterface $context): void
     {
-        // Custom validation logic if needed
+        // Validate cart exists and is valid for order creation
+        if ($this->cartId > 0) {
+            if (!\Validate::isLoadedObject(new \Cart($this->cartId))) {
+                $context->buildViolation('The cart with ID {{ cart_id }} does not exist or is invalid.')
+                    ->setParameter('{{ cart_id }}', (string) $this->cartId)
+                    ->atPath('cartId')
+                    ->addViolation();
+            }
+        }
+
+        // Validate employee exists
+        if ($this->employeeId > 0) {
+            if (!\Validate::isLoadedObject(new \Employee($this->employeeId))) {
+                $context->buildViolation('The employee with ID {{ employee_id }} does not exist or is invalid.')
+                    ->setParameter('{{ employee_id }}', (string) $this->employeeId)
+                    ->atPath('employeeId')
+                    ->addViolation();
+            }
+        }
+
+        // Validate order state exists
+        if ($this->orderStateId > 0) {
+            if (!\Validate::isLoadedObject(new \OrderState($this->orderStateId))) {
+                $context->buildViolation('The order state with ID {{ state_id }} does not exist or is invalid.')
+                    ->setParameter('{{ state_id }}', (string) $this->orderStateId)
+                    ->atPath('orderStateId')
+                    ->addViolation();
+            }
+        }
     }
 }
