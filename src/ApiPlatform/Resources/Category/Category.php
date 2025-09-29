@@ -27,6 +27,8 @@ use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCoverImageCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryThumbnailImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\EditCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
@@ -75,6 +77,20 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSDelete(
             uriTemplate: '/category/{categoryId}',
             CQRSCommand: DeleteCategoryCommand::class,
+            scopes: [
+                'category_write',
+            ],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/category/{categoryId}/delete_cover',
+            CQRSCommand: DeleteCategoryCoverImageCommand::class,
+            scopes: [
+                'category_write',
+            ],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/category/{categoryId}/delete_thumbnail',
+            CQRSCommand: DeleteCategoryThumbnailImageCommand::class,
             scopes: [
                 'category_write',
             ],
