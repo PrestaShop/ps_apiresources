@@ -47,22 +47,22 @@ class OrderEndpointTest extends ApiTestCase
     {
         yield 'get order list endpoint' => [
             'GET',
-            '/orders',
+            '/order',
         ];
 
         yield 'get order endpoint' => [
             'GET',
-            '/orders/1',
+            '/order/1',
         ];
 
         yield 'create order endpoint' => [
             'POST',
-            '/orders',
+            '/order',
         ];
 
         yield 'update order status endpoint' => [
             'PATCH',
-            '/orders/1',
+            '/order/1',
         ];
     }
 
@@ -113,7 +113,7 @@ class OrderEndpointTest extends ApiTestCase
      */
     public function testGetOrder(int $orderId): int
     {
-        $order = $this->getItem('/orders/' . $orderId, ['order_read']);
+        $order = $this->getItem('/order/' . $orderId, ['order_read']);
 
         $this->assertArrayHasKey('orderId', $order);
         $this->assertArrayHasKey('reference', $order);
@@ -139,11 +139,11 @@ class OrderEndpointTest extends ApiTestCase
     public function testUpdateOrderStatus(int $orderId): int
     {
         // Get the current order to check initial status
-        $order = $this->getItem('/orders/' . $orderId, ['order_read']);
+        $order = $this->getItem('/order/' . $orderId, ['order_read']);
         $initialStatusId = $order['statusId'];
 
         // Update order status to "Payment accepted" (status ID 2)
-        $updatedOrder = $this->partialUpdateItem('/orders/' . $orderId, [
+        $updatedOrder = $this->partialUpdateItem('/order/' . $orderId, [
             'statusId' => 2,
         ], ['order_write']);
 
@@ -154,7 +154,7 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertNotEquals($initialStatusId, $updatedOrder['statusId']);
 
         // Verify the status change persisted
-        $verifyOrder = $this->getItem('/orders/' . $orderId, ['order_read']);
+        $verifyOrder = $this->getItem('/order/' . $orderId, ['order_read']);
         $this->assertEquals(2, $verifyOrder['statusId']);
 
         return $orderId;
@@ -242,7 +242,7 @@ class OrderEndpointTest extends ApiTestCase
 
     public function testGetNonExistentOrder(): void
     {
-        $this->getItem('/orders/99999', ['order_read'], 404);
+        $this->getItem('/order/99999', ['order_read'], 404);
     }
 
     public function testUpdateOrderStatusWithInvalidStatus(): void
@@ -268,14 +268,14 @@ class OrderEndpointTest extends ApiTestCase
         $orderId = $createdOrder['orderId'];
 
         // Try to update with invalid status
-        $this->partialUpdateItem('/orders/' . $orderId, [
+        $this->partialUpdateItem('/order/' . $orderId, [
             'statusId' => 99999,
         ], ['order_write'], 422);
     }
 
     public function testUpdateNonExistentOrder(): void
     {
-        $this->partialUpdateItem('/orders/99999', [
+        $this->partialUpdateItem('/order/99999', [
             'statusId' => 2,
         ], ['order_write'], 404);
     }

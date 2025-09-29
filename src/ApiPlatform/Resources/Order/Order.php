@@ -24,148 +24,62 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Order\Command\AddOrderFromBackOfficeCommand;
+use PrestaShop\PrestaShop\Core\Domain\Order\Command\UpdateOrderStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderForViewing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\Serializer\Exception\NotNormalizableValueException;
 use Symfony\Component\Validator\Constraints as Assert;
-use Symfony\Component\Validator\Context\ExecutionContextInterface;
+use Symfony\Component\Validator\Exception\ValidationFailedException;
 
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/orders/{orderId}',
+            uriTemplate: '/order/{orderId}',
             requirements: ['orderId' => '\d+'],
             scopes: ['order_read'],
-            CQRSQuery: \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderForViewing::class,
-            CQRSQueryMapping: [
-                '[orderId]' => '[orderId]',
-                '[reference]' => '[reference]',
-                // status id and a best-effort status label
-                '[history][currentOrderStatusId]' => '[statusId]',
-                '[history][statuses][0][name]' => '[status]',
-                '[prices][totalPaid]' => '[totalPaidTaxIncl:float]',
-                '[prices][totalPaidTaxExcluded]' => '[totalPaidTaxExcl:float]',
-                '[prices][productsTotal]' => '[totalProductsTaxIncl:float]',
-                '[prices][productsTotalTaxExcluded]' => '[totalProductsTaxExcl:float]',
-                '[prices][vatBreakdown]' => '[vatBreakdown]',
-                '[prices][vatSummary]' => '[vatSummary]',
-                '[taxes][breakdown]' => '[vatBreakdown]',
-                '[taxes][summary]' => '[vatSummary]',
-                '[shopId]' => '[shopId]',
-                '[customer][languageId]' => '[langId]',
-                '[customer][id]' => '[customerId]',
-                '[shippingAddress][addressId]' => '[deliveryAddressId]',
-                '[invoiceAddress][addressId]' => '[invoiceAddressId]',
-                '[shipping][carrierId]' => '[carrierId]',
-                '[createdAt]' => '[dateAdd]',
-                // products list mapping - accessing the products collection directly
-                '[products]' => '[items]',
+            CQRSQuery: GetOrderForViewing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            openapiContext: [
+                'summary' => 'Get order details',
+                'description' => 'Retrieve detailed information about a specific order',
             ],
         ),
         new CQRSCreate(
-            uriTemplate: '/orders',
+            uriTemplate: '/order',
             scopes: ['order_write'],
-            CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\AddOrderFromBackOfficeCommand::class,
-            CQRSCommandMapping: [
-                '[cartId]' => '[cartId]',
-                '[employeeId]' => '[employeeId]',
-                '[paymentModuleName]' => '[paymentModuleName]',
-                '[orderStateId]' => '[orderStateId]',
-                '[orderMessage]' => '[orderMessage]',
-            ],
+            CQRSCommand: AddOrderFromBackOfficeCommand::class,
             openapiContext: [
                 'summary' => 'Create a new order',
-                'description' => 'Create a new order from an existing cart using CQRS command pattern.',
-                'requestBody' => [
-                    'required' => true,
-                    'content' => [
-                        'application/json' => [
-                            'schema' => [
-                                'type' => 'object',
-                                'required' => ['cartId', 'employeeId'],
-                                'properties' => [
-                                    'cartId' => [
-                                        'type' => 'integer',
-                                        'minimum' => 1,
-                                        'description' => 'ID of the cart to convert to order',
-                                    ],
-                                    'employeeId' => [
-                                        'type' => 'integer',
-                                        'minimum' => 1,
-                                        'description' => 'ID of the employee creating the order',
-                                    ],
-                                    'paymentModuleName' => [
-                                        'type' => 'string',
-                                        'maxLength' => 255,
-                                        'description' => 'Name of the payment module',
-                                    ],
-                                    'orderStateId' => [
-                                        'type' => 'integer',
-                                        'minimum' => 1,
-                                        'description' => 'Initial order status ID',
-                                    ],
-                                    'orderMessage' => [
-                                        'type' => 'string',
-                                        'maxLength' => 1000,
-                                        'description' => 'Optional message for the order',
-                                    ],
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
+                'description' => 'Create a new order from an existing cart',
             ],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/orders/{orderId}',
+            uriTemplate: '/order/{orderId}',
             requirements: ['orderId' => '\d+'],
             scopes: ['order_write'],
-            CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Order\Command\UpdateOrderStatusCommand::class,
-            CQRSQuery: \PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderForViewing::class,
-            CQRSCommandMapping: [
-                '[statusId]' => '[newOrderStatusId]',
-            ],
-            CQRSQueryMapping: [
-                '[orderId]' => '[orderId]',
-                '[reference]' => '[reference]',
-                '[history][currentOrderStatusId]' => '[statusId]',
-                '[history][statuses][0][name]' => '[status]',
-                '[shopId]' => '[shopId]',
-                '[customer][id]' => '[customerId]',
-                '[createdAt]' => '[dateAdd]',
-            ],
+            CQRSCommand: UpdateOrderStatusCommand::class,
+            CQRSQuery: GetOrderForViewing::class,
+            CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
+            CQRSQueryMapping: self::UPDATE_QUERY_MAPPING,
             openapiContext: [
                 'summary' => 'Update order status',
-                'description' => 'Update the status of an order by providing a new status ID. This operation follows CQRS patterns for safe order state transitions.',
-                'requestBody' => [
-                    'required' => true,
-                    'content' => [
-                        'application/json' => [
-                            'schema' => [
-                                'type' => 'object',
-                                'required' => ['statusId'],
-                                'properties' => [
-                                    'statusId' => [
-                                        'type' => 'integer',
-                                        'minimum' => 1,
-                                        'description' => 'New status ID for the order',
-                                    ],
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
+                'description' => 'Update the status of an order',
             ],
         ),
     ],
     exceptionToStatus: [
-        \PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
-        \PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException::class => Response::HTTP_FORBIDDEN,
-        \Symfony\Component\Validator\Exception\ValidationFailedException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        \Symfony\Component\Serializer\Exception\NotNormalizableValueException::class => Response::HTTP_BAD_REQUEST,
-        \RuntimeException::class => Response::HTTP_NOT_FOUND,
+        OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
+        OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        AccessDeniedHttpException::class => Response::HTTP_FORBIDDEN,
+        ValidationFailedException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        NotNormalizableValueException::class => Response::HTTP_BAD_REQUEST,
     ],
 )]
 class Order
@@ -227,37 +141,35 @@ class Order
     #[Assert\Positive(groups: ['Create', 'Update'])]
     public int $orderStateId = 0;
 
-    #[Assert\Callback]
-    public function validate(ExecutionContextInterface $context): void
-    {
-        // Validate cart exists and is valid for order creation
-        if ($this->cartId > 0) {
-            if (!\Validate::isLoadedObject(new \Cart($this->cartId))) {
-                $context->buildViolation('The cart with ID {{ cart_id }} does not exist or is invalid.')
-                    ->setParameter('{{ cart_id }}', (string) $this->cartId)
-                    ->atPath('cartId')
-                    ->addViolation();
-            }
-        }
+    // Validation is handled by CQRS commands and domain services
+    // No direct PrestaShop entity validation in API resources
 
-        // Validate employee exists
-        if ($this->employeeId > 0) {
-            if (!\Validate::isLoadedObject(new \Employee($this->employeeId))) {
-                $context->buildViolation('The employee with ID {{ employee_id }} does not exist or is invalid.')
-                    ->setParameter('{{ employee_id }}', (string) $this->employeeId)
-                    ->atPath('employeeId')
-                    ->addViolation();
-            }
-        }
+    public const QUERY_MAPPING = [
+        '[history][currentOrderStatusId]' => '[statusId]',
+        '[history][statuses][0][name]' => '[status]',
+        '[prices][totalPaid]' => '[totalPaidTaxIncl:float]',
+        '[prices][totalPaidTaxExcluded]' => '[totalPaidTaxExcl:float]',
+        '[prices][productsTotal]' => '[totalProductsTaxIncl:float]',
+        '[prices][productsTotalTaxExcluded]' => '[totalProductsTaxExcl:float]',
+        '[prices][vatBreakdown]' => '[vatBreakdown]',
+        '[prices][vatSummary]' => '[vatSummary]',
+        '[customer][languageId]' => '[langId]',
+        '[customer][id]' => '[customerId]',
+        '[shippingAddress][addressId]' => '[deliveryAddressId]',
+        '[invoiceAddress][addressId]' => '[invoiceAddressId]',
+        '[shipping][carrierId]' => '[carrierId]',
+        '[createdAt]' => '[dateAdd]',
+        '[products]' => '[items]',
+    ];
 
-        // Validate order state exists
-        if ($this->orderStateId > 0) {
-            if (!\Validate::isLoadedObject(new \OrderState($this->orderStateId))) {
-                $context->buildViolation('The order state with ID {{ state_id }} does not exist or is invalid.')
-                    ->setParameter('{{ state_id }}', (string) $this->orderStateId)
-                    ->atPath('orderStateId')
-                    ->addViolation();
-            }
-        }
-    }
+    public const UPDATE_QUERY_MAPPING = [
+        '[history][currentOrderStatusId]' => '[statusId]',
+        '[history][statuses][0][name]' => '[status]',
+        '[customer][id]' => '[customerId]',
+        '[createdAt]' => '[dateAdd]',
+    ];
+
+    public const UPDATE_COMMAND_MAPPING = [
+        '[statusId]' => '[newOrderStatusId]',
+    ];
 }

@@ -24,81 +24,55 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Cart;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\AddProductToCartCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\CreateEmptyCustomerCartCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartException;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Query\GetCartForViewing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/carts/{cartId}',
+            uriTemplate: '/cart/{cartId}',
             requirements: ['cartId' => '\d+'],
             scopes: ['cart_read'],
-            CQRSQuery: \PrestaShop\PrestaShop\Core\Domain\Cart\Query\GetCartForViewing::class,
-            CQRSQueryMapping: [
-                '[cartId]' => '[cartId]',
-                '[customer][id]' => '[customerId]',
-                '[customer][firstname]' => '[customerFirstname]',
-                '[customer][lastname]' => '[customerLastname]',
-                '[customer][email]' => '[customerEmail]',
-                '[shop][id]' => '[shopId]',
-                '[currency][id]' => '[currencyId]',
-                '[currency][iso_code]' => '[currencyIso]',
-                '[language][id]' => '[langId]',
-                '[language][name]' => '[langName]',
-                '[deliveryAddress][id]' => '[deliveryAddressId]',
-                '[invoiceAddress][id]' => '[invoiceAddressId]',
-                '[carrier][id]' => '[carrierId]',
-                '[carrier][name]' => '[carrierName]',
-                '[products]' => '[products]',
-                '[totals][total_products]' => '[totalProducts]',
-                '[totals][total_products_tax_incl]' => '[totalProductsTaxIncl]',
-                '[totals][total_products_tax_excl]' => '[totalProductsTaxExcl]',
-                '[totals][total_discounts]' => '[totalDiscounts]',
-                '[totals][total_discounts_tax_incl]' => '[totalDiscountsTaxIncl]',
-                '[totals][total_discounts_tax_excl]' => '[totalDiscountsTaxExcl]',
-                '[totals][total_shipping]' => '[totalShipping]',
-                '[totals][total_shipping_tax_incl]' => '[totalShippingTaxIncl]',
-                '[totals][total_shipping_tax_excl]' => '[totalShippingTaxExcl]',
-                '[totals][total_tax]' => '[totalTax]',
-                '[totals][total_tax_incl]' => '[totalTaxIncl]',
-                '[totals][total_tax_excl]' => '[totalTaxExcl]',
-                '[createdAt]' => '[dateAdd]',
-                '[updatedAt]' => '[dateUpd]',
+            CQRSQuery: GetCartForViewing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            openapiContext: [
+                'summary' => 'Get cart details',
+                'description' => 'Retrieve detailed information about a specific cart',
             ],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/carts/{cartId}/products',
+            uriTemplate: '/cart/{cartId}/products',
             requirements: ['cartId' => '\d+'],
             scopes: ['cart_write'],
-            CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Cart\Command\AddProductToCartCommand::class,
-            CQRSCommandMapping: [
-                '[cartId]' => '[cartId]',
-                '[productId]' => '[productId]',
-                '[quantity]' => '[quantity]',
-                '[combinationId]' => '[combinationId]',
-                '[customizationsByFieldIds]' => '[customizationsByFieldIds]',
-            ],
+            CQRSCommand: AddProductToCartCommand::class,
             openapiContext: [
                 'summary' => 'Add product to cart',
                 'description' => 'Add a product to an existing cart',
             ],
         ),
         new CQRSCreate(
-            uriTemplate: '/carts',
+            uriTemplate: '/cart',
             allowEmptyBody: true,
             scopes: ['cart_write'],
-            CQRSCommand: \PrestaShop\PrestaShop\Core\Domain\Cart\Command\CreateEmptyCustomerCartCommand::class,
-            CQRSCommandMapping: [
-                '[customerId]' => '[customerId]',
+            CQRSCommand: CreateEmptyCustomerCartCommand::class,
+            openapiContext: [
+                'summary' => 'Create a new cart',
+                'description' => 'Create a new empty customer cart',
             ],
         ),
     ],
     exceptionToStatus: [
-        \PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartNotFoundException::class => Response::HTTP_NOT_FOUND,
-        \PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException::class => Response::HTTP_FORBIDDEN,
+        CartNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CartException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        AccessDeniedHttpException::class => Response::HTTP_FORBIDDEN,
     ],
 )]
 class Cart
@@ -194,4 +168,37 @@ class Cart
     public ?int $combinationId = null;
 
     public array $customizationsByFieldIds = [];
+
+    public const QUERY_MAPPING = [
+        '[customer][id]' => '[customerId]',
+        '[customer][firstname]' => '[customerFirstname]',
+        '[customer][lastname]' => '[customerLastname]',
+        '[customer][email]' => '[customerEmail]',
+        '[shop][id]' => '[shopId]',
+        '[currency][id]' => '[currencyId]',
+        '[currency][iso_code]' => '[currencyIso]',
+        '[language][id]' => '[langId]',
+        '[language][name]' => '[langName]',
+        '[deliveryAddress][id]' => '[deliveryAddressId]',
+        '[invoiceAddress][id]' => '[invoiceAddressId]',
+        '[carrier][id]' => '[carrierId]',
+        '[carrier][name]' => '[carrierName]',
+        '[totals][total_products]' => '[totalProducts]',
+        '[totals][total_products_tax_incl]' => '[totalProductsTaxIncl]',
+        '[totals][total_products_tax_excl]' => '[totalProductsTaxExcl]',
+        '[totals][total_discounts]' => '[totalDiscounts]',
+        '[totals][total_discounts_tax_incl]' => '[totalDiscountsTaxIncl]',
+        '[totals][total_discounts_tax_excl]' => '[totalDiscountsTaxExcl]',
+        '[totals][total_shipping]' => '[totalShipping]',
+        '[totals][total_shipping_tax_incl]' => '[totalShippingTaxIncl]',
+        '[totals][total_shipping_tax_excl]' => '[totalShippingTaxExcl]',
+        '[totals][total_tax]' => '[totalTax]',
+        '[totals][total_tax_incl]' => '[totalTaxIncl]',
+        '[totals][total_tax_excl]' => '[totalTaxExcl]',
+        '[createdAt]' => '[dateAdd]',
+        '[updatedAt]' => '[dateUpd]',
+    ];
+
+    // No custom mapping needed - API Platform handles automatic mapping
+    // when property names match between API resource and command parameters
 }

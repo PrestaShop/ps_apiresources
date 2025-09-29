@@ -91,7 +91,7 @@ class OrderListEndpointTest extends ApiTestCase
         $orderId = $this->createTestOrder();
 
         // Update its status to 2 (Payment accepted)
-        $this->partialUpdateItem('/orders/' . $orderId, [
+        $this->partialUpdateItem('/order/' . $orderId, [
             'statusId' => 2,
         ], ['order_write']);
 
@@ -154,7 +154,7 @@ class OrderListEndpointTest extends ApiTestCase
         $orderId = $this->createTestOrder();
 
         // Get the order to find its reference
-        $order = $this->getItem('/orders/' . $orderId, ['order_read']);
+        $order = $this->getItem('/order/' . $orderId, ['order_read']);
         $reference = $order['reference'];
 
         // Search by reference
@@ -178,7 +178,7 @@ class OrderListEndpointTest extends ApiTestCase
     public function testListOrdersPagination(): void
     {
         // Create several test orders
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 5; ++$i) {
             $this->createTestOrder();
         }
 
@@ -237,7 +237,7 @@ class OrderListEndpointTest extends ApiTestCase
             'orderMessage' => 'Test order created via API for list testing',
         ];
 
-        $createdOrder = $this->createItem('/orders', $orderData, ['order_write']);
+        $createdOrder = $this->createItem('/order', $orderData, ['order_write']);
 
         return $createdOrder['orderId'];
     }

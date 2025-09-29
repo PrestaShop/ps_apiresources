@@ -24,10 +24,13 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
 use PrestaShop\PrestaShop\Core\Search\Filters\OrderFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 #[ApiResource(
     operations: [
@@ -60,102 +63,36 @@ use Symfony\Component\HttpFoundation\Response;
                 '[updatedFrom]' => '[date_upd_from]',
                 '[updatedTo]' => '[date_upd_to]',
             ],
-            openapiContext: [
-                'summary' => 'List orders',
-                'description' => 'Retrieve a paginated list of orders with filtering capabilities.',
-                'parameters' => [
-                    [
-                        'name' => 'dateFrom',
-                        'in' => 'query',
-                        'required' => false,
-                        'description' => 'Filter orders created after this date (YYYY-MM-DD format)',
-                        'schema' => [
-                            'type' => 'string',
-                            'format' => 'date',
-                        ],
-                    ],
-                    [
-                        'name' => 'dateTo',
-                        'in' => 'query',
-                        'required' => false,
-                        'description' => 'Filter orders created before this date (YYYY-MM-DD format)',
-                        'schema' => [
-                            'type' => 'string',
-                            'format' => 'date',
-                        ],
-                    ],
-                    [
-                        'name' => 'updatedFrom',
-                        'in' => 'query',
-                        'required' => false,
-                        'description' => 'Filter orders updated after this date (YYYY-MM-DD format)',
-                        'schema' => [
-                            'type' => 'string',
-                            'format' => 'date',
-                        ],
-                    ],
-                    [
-                        'name' => 'updatedTo',
-                        'in' => 'query',
-                        'required' => false,
-                        'description' => 'Filter orders updated before this date (YYYY-MM-DD format)',
-                        'schema' => [
-                            'type' => 'string',
-                            'format' => 'date',
-                        ],
-                    ],
-                    [
-                        'name' => 'statusId',
-                        'in' => 'query',
-                        'required' => false,
-                        'description' => 'Filter orders by status ID',
-                        'schema' => [
-                            'type' => 'integer',
-                            'minimum' => 1,
-                        ],
-                    ],
-                    [
-                        'name' => 'q',
-                        'in' => 'query',
-                        'required' => false,
-                        'description' => 'Search term for order reference or customer information',
-                        'schema' => [
-                            'type' => 'string',
-                            'maxLength' => 255,
-                        ],
-                    ],
-                ],
-            ],
         ),
     ],
     exceptionToStatus: [
-        \PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
-        \PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException::class => Response::HTTP_FORBIDDEN,
+        OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
+        OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        AccessDeniedHttpException::class => Response::HTTP_FORBIDDEN,
     ],
 )]
 class OrderList
 {
     #[ApiProperty(identifier: true)]
-    public int $orderId;
+    public int $orderId = 0;
 
-    public string $reference;
+    public string $reference = '';
 
-    public string $status;
+    public string $status = '';
 
-    public int $statusId;
+    public int $statusId = 0;
 
-    public int $shopId;
+    public int $shopId = 0;
 
-    public int $langId;
+    public int $langId = 0;
 
-    public int $customerId;
+    public int $customerId = 0;
 
-    public string $currencyIso;
+    public string $currencyIso = '';
 
-    public string $dateAdd;
+    public string $dateAdd = '';
 
-    public float $totalPaidTaxIncl;
+    public float $totalPaidTaxIncl = 0.0;
 
-    public float $totalProductsTaxIncl;
+    public float $totalProductsTaxIncl = 0.0;
 }
