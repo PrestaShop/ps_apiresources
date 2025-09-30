@@ -80,6 +80,21 @@ class CategoryEndpointTest extends ApiTestCase
             'DELETE',
             '/category/10',
         ];
+
+        yield 'update status endpoint' => [
+            'PATCH',
+            '/category/s/status',
+        ];
+
+        yield 'delete thumbnail endpoint' => [
+            'DELETE',
+            '/category/3/thumbnail',
+        ];
+
+        yield 'delete cover endpoint' => [
+            'DELETE',
+            '/category/4/thumbnail',
+        ];
     }
 
     public function testAddCategory(): int
@@ -170,5 +185,61 @@ class CategoryEndpointTest extends ApiTestCase
 
         // Fetching the item returns a 404 indicatjng it no longer exists
         $this->getItem('/category/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testUpdateCategoryStatus(): void
+    {
+        // Disable the category and assert the change is effective
+        $this->requestApi(
+            Request::METHOD_PATCH,
+            '/category/3/status',
+            ['isEnabled' => false],
+            ['category_write'],
+            Response::HTTP_OK
+        );
+
+        $category = $this->getItem('/category/3', ['category_read']);
+
+        $this->assertFalse($category['isActive']);
+
+        // Re-enable the category to avoid leaving side effects for other tests
+        $this->requestApi(
+            Request::METHOD_PATCH,
+            '/category/3/status',
+            ['isEnabled' => true],
+            ['category_write'],
+            Response::HTTP_OK
+        );
+
+        $category = $this->getItem('/category/3', ['category_read']);
+        $this->assertTrue($category['isActive']);
+    }
+
+    public function testDeleteCategoryThumbnail(): void
+    {
+        // This test checks the happy path of the "delete thumbnail" endpoint.
+        // We use a predefined category (ID 3) that is known
+        // to have a cover image, so the DELETE request must succeed and return 200.
+        $this->requestApi(
+            Request::METHOD_DELETE,
+            '/category/3/thumbnail',
+            [],
+            ['category_write'],
+            Response::HTTP_NO_CONTENT
+        );
+    }
+
+    public function testDeleteCategoryCover(): void
+    {
+        // This test checks the happy path of the "delete cover" endpoint.
+        // We use a predefined category (ID 4) that is known
+        // to have a cover image, so the DELETE request must succeed and return 200.
+        $this->requestApi(
+            Request::METHOD_DELETE,
+            '/category/4/cover',
+            [],
+            ['category_write'],
+            Response::HTTP_NO_CONTENT
+        );
     }
 }
