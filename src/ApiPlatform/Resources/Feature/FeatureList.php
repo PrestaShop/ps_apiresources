@@ -28,7 +28,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 #[ApiResource(
     operations: [
         new PaginatedList(
-            uriTemplate: '/features/features',
+            uriTemplate: '/features',
             scopes: [
                 'feature_read',
             ],

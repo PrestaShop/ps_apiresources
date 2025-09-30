@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
@@ -57,31 +58,31 @@ class FeatureEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/features/feature/1',
+            '/features/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/features/feature',
+            '/features',
         ];
 
         yield 'patch endpoint' => [
             'PATCH',
-            '/features/feature/1',
+            '/features/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/features/feature/1',
+            '/features/1',
         ];
 
         yield 'list endpoint' => [
             'GET',
-            '/features/features',
+            '/features',
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
+            'DELETE',
             '/features/batch',
         ];
     }
@@ -96,7 +97,7 @@ class FeatureEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ];
 
-        $feature = $this->createItem('/features/feature', $postData, ['feature_write']);
+        $feature = $this->createItem('/features', $postData, ['feature_write']);
         $this->assertArrayHasKey('featureId', $feature);
         $featureId = $feature['featureId'];
 
@@ -110,7 +111,7 @@ class FeatureEndpointTest extends ApiTestCase
      */
     public function testGetFeature(int $featureId): int
     {
-        $feature = $this->getItem('/features/feature/' . $featureId, ['feature_read']);
+        $feature = $this->getItem('/features/' . $featureId, ['feature_read']);
         $this->assertEquals($featureId, $feature['featureId']);
         $this->assertArrayHasKey('names', $feature);
 
@@ -130,7 +131,7 @@ class FeatureEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ];
 
-        $updatedFeature = $this->partialUpdateItem('/features/feature/' . $featureId, $patchData, ['feature_write']);
+        $updatedFeature = $this->partialUpdateItem('/features/' . $featureId, $patchData, ['feature_write']);
         $this->assertSame($patchData['names'], $updatedFeature['names']);
 
         return $featureId;
@@ -141,7 +142,7 @@ class FeatureEndpointTest extends ApiTestCase
      */
     public function testListFeatures(int $featureId): int
     {
-        $paginatedFeatures = $this->listItems('/features/features?orderBy=featureId&sortOrder=desc', ['feature_read']);
+        $paginatedFeatures = $this->listItems('/features?orderBy=featureId&sortOrder=desc', ['feature_read']);
         $this->assertGreaterThanOrEqual(1, $paginatedFeatures['totalItems']);
         $this->assertEquals('featureId', $paginatedFeatures['orderBy']);
 
@@ -156,13 +157,13 @@ class FeatureEndpointTest extends ApiTestCase
      */
     public function testRemoveFeature(int $featureId): void
     {
-        $this->deleteItem('/features/feature/' . $featureId, ['feature_write']);
-        $this->getItem('/features/feature/' . $featureId, ['feature_read'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/features/' . $featureId, ['feature_write']);
+        $this->getItem('/features/' . $featureId, ['feature_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkRemoveFeatures(): void
     {
-        $features = $this->listItems('/features/features', ['feature_read']);
+        $features = $this->listItems('/features', ['feature_read']);
 
         $this->assertGreaterThanOrEqual(2, $features['totalItems']);
 
@@ -170,12 +171,12 @@ class FeatureEndpointTest extends ApiTestCase
             $features['items'][0]['featureId'],
         ];
 
-        $this->updateItem('/features/batch', [
+        $this->deleteBatch('/features/batch', [
             'featureIds' => $removeFeatureIds,
         ], ['feature_write'], Response::HTTP_NO_CONTENT);
 
         foreach ($removeFeatureIds as $featureId) {
-            $this->getItem('/features/feature/' . $featureId, ['feature_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/features/' . $featureId, ['feature_read'], Response::HTTP_NOT_FOUND);
         }
     }
 
@@ -188,7 +189,7 @@ class FeatureEndpointTest extends ApiTestCase
             'shopIds' => [],
         ];
 
-        $validationErrorsResponse = $this->createItem('/features/feature', $invalidData, ['feature_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/features', $invalidData, ['feature_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
 
         $this->assertValidationErrors([
@@ -205,5 +206,10 @@ class FeatureEndpointTest extends ApiTestCase
                 'message' => 'This value should not be blank.',
             ],
         ], $validationErrorsResponse);
+    }
+
+    protected function deleteBatch(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
 }
