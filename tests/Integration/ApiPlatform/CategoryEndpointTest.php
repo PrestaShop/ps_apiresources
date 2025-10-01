@@ -219,7 +219,7 @@ class CategoryEndpointTest extends ApiTestCase
     {
         // This test checks the happy path of the "delete thumbnail" endpoint.
         // We use a predefined category (ID 3) that is known
-        // to have a cover image, so the DELETE request must succeed and return 200.
+        // to have a cover image, so the DELETE request must succeed and return 204 (No Content).
         $this->requestApi(
             Request::METHOD_DELETE,
             '/category/3/thumbnail',
@@ -233,7 +233,7 @@ class CategoryEndpointTest extends ApiTestCase
     {
         // This test checks the happy path of the "delete cover" endpoint.
         // We use a predefined category (ID 4) that is known
-        // to have a cover image, so the DELETE request must succeed and return 200.
+        // to have a cover image, so the DELETE request must succeed and return 204 (No Content).
         $this->requestApi(
             Request::METHOD_DELETE,
             '/category/4/cover',
