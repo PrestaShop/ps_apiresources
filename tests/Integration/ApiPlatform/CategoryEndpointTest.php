@@ -200,7 +200,7 @@ class CategoryEndpointTest extends ApiTestCase
 
         $category = $this->getItem('/category/3', ['category_read']);
 
-        $this->assertFalse($category['isActive']);
+        $this->assertFalse($category['active']);
 
         // Re-enable the category to avoid leaving side effects for other tests
         $this->requestApi(
@@ -212,7 +212,7 @@ class CategoryEndpointTest extends ApiTestCase
         );
 
         $category = $this->getItem('/category/3', ['category_read']);
-        $this->assertTrue($category['isActive']);
+        $this->assertTrue($category['active']);
     }
 
     public function testDeleteCategoryThumbnail(): void

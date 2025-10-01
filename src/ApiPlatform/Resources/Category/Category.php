@@ -116,6 +116,9 @@ class Category
     #[SerializedName('id')]
     public int $categoryId;
 
+    #[SerializedName('active')]
+    public bool $isActive;
+
     #[LocalizedValue]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
     #[DefaultLanguage(groups: ['Update'], fieldName: 'names', allowNull: true)]
