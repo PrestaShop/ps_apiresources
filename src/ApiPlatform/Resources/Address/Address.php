@@ -47,5 +47,4 @@ class Address
 {
     #[ApiProperty(identifier: true)]
     public int $addressId;
-
 }

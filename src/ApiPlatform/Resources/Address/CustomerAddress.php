@@ -67,7 +67,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             validationContext: ['groups' => ['Default', 'Update']],
-        )
+        ),
     ],
     exceptionToStatus: [
         AddressConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,

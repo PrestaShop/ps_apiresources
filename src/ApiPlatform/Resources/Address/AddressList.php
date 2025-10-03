@@ -33,7 +33,7 @@ use Symfony\Component\HttpFoundation\Response;
         new PaginatedList(
             uriTemplate: '/addresses',
             scopes: [
-                'address_read'
+                'address_read',
             ],
             ApiResourceMapping: self::MAPPING,
             gridDataFactory: 'prestashop.core.grid.data.factory.address',
@@ -44,7 +44,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     exceptionToStatus: [
-        AddressNotFoundException::class => Response::HTTP_NOT_FOUND
+        AddressNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class AddressList
@@ -63,7 +63,6 @@ class AddressList
     public string $city;
 
     public string $country_name;
-
 
     public const MAPPING = [
         '[id_address]' => '[addressId]',
