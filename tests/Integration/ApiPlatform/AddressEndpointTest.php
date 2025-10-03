@@ -265,6 +265,6 @@ class AddressEndpointTest extends ApiTestCase
         ];
 
         // Use the createItem method but expect it to fail with validation error
-        $this->createItem('/addresses/customer', $invalidData, ['address_write'], 500);
+        $this->createItem('/addresses/customer', $invalidData, ['address_write'], 422);
     }
 }

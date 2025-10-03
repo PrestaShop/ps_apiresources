@@ -34,6 +34,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -54,6 +55,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            validationContext: ['groups' => ['Default', 'Create']],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/addresses/customer/{addressId}',
@@ -64,6 +66,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            validationContext: ['groups' => ['Default', 'Update']],
         )
     ],
     exceptionToStatus: [
@@ -78,12 +81,16 @@ class CustomerAddress
 
     public int $customerId;
 
+    #[Assert\NotBlank(groups: ['Create'])]
     public string $addressAlias;
 
+    #[Assert\NotBlank(groups: ['Create'])]
     public string $firstName;
 
+    #[Assert\NotBlank(groups: ['Create'])]
     public string $lastName;
 
+    #[Assert\NotBlank(groups: ['Create'])]
     #[TypedRegex([
         'type' => TypedRegex::TYPE_ADDRESS,
     ])]
@@ -94,6 +101,7 @@ class CustomerAddress
     ])]
     public ?string $address2;
 
+    #[Assert\NotBlank(groups: ['Create'])]
     #[TypedRegex([
         'type' => TypedRegex::TYPE_CITY_NAME,
     ])]
@@ -104,6 +112,7 @@ class CustomerAddress
     ])]
     public string $postCode;
 
+    #[Assert\NotBlank(groups: ['Create'])]
     public CountryId $countryId;
 
     #[TypedRegex([
