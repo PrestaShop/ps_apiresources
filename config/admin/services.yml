@@ -28,3 +28,11 @@ services:
   PrestaShop\Module\APIResources\Validation\IframeValidationGroupsResolver:
     arguments:
       - '@prestashop.adapter.legacy.configuration'
+
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\StateIdInterfaceNormalizer:
+    tags:
+      - { name: 'serializer.normalizer', priority: 100 }
+
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\CountryIdNormalizer:
+    tags:
+      - { name: 'serializer.normalizer', priority: 100 }
