@@ -36,7 +36,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/hook-status/{hookId}',
+            uriTemplate: '/hook/{hookId}/status',
             CQRSCommand: UpdateHookStatusCommand::class,
             CQRSQuery: GetHook::class,
             scopes: ['hook_write'],
