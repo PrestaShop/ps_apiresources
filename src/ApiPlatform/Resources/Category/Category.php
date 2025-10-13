@@ -27,7 +27,10 @@ use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCoverImageCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryThumbnailImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\EditCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\SetCategoryIsEnabledCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Query\GetCategoryForEditing;
@@ -72,9 +75,31 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/category/{categoryId}/status',
+            CQRSCommand: SetCategoryIsEnabledCommand::class,
+            CQRSQuery: GetCategoryForEditing::class,
+            scopes: [
+                'category_write',
+            ],
+        ),
         new CQRSDelete(
             uriTemplate: '/category/{categoryId}',
             CQRSCommand: DeleteCategoryCommand::class,
+            scopes: [
+                'category_write',
+            ],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/category/{categoryId}/cover',
+            CQRSCommand: DeleteCategoryCoverImageCommand::class,
+            scopes: [
+                'category_write',
+            ],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/category/{categoryId}/thumbnail',
+            CQRSCommand: DeleteCategoryThumbnailImageCommand::class,
             scopes: [
                 'category_write',
             ],
@@ -90,6 +115,9 @@ class Category
     #[ApiProperty(identifier: true)]
     #[SerializedName('id')]
     public int $categoryId;
+
+    #[SerializedName('active')]
+    public bool $isActive;
 
     #[LocalizedValue]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
@@ -162,6 +190,8 @@ class Category
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank(allowNull: true)]
     public array $shopIds;
+
+    public ?bool $isEnabled;
 
     public const QUERY_MAPPING = [
         '[id]' => '[categoryId]',
