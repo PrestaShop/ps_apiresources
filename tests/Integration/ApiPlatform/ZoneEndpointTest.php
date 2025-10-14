@@ -308,7 +308,6 @@ class ZoneEndpointTest extends ApiTestCase
             'enabled' => false,
         ], ['zone_write'], Response::HTTP_NO_CONTENT);
 
-        // Assert the provided zones have been removed
         foreach ($bulkZones as $zoneId) {
             $zone = $this->getItem('/zone/' . $zoneId, ['zone_read']);
             $this->assertEquals(false, $zone['enabled']);
