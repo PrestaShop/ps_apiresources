@@ -84,12 +84,11 @@ class SupplierEndpointTest extends ApiTestCase
             'GET',
             '/suppliers',
         ];
-        /*
-                yield 'bulk delete endpoint' => [
-                    'PUT',
-                    '/suppliers/delete',
-                ];
-                */
+
+        yield 'bulk delete endpoint' => [
+            'PUT',
+            '/suppliers/delete',
+        ];
 
         yield 'bulk disable endpoint' => [
             'PUT',
