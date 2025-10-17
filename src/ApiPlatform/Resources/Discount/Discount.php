@@ -25,14 +25,17 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DeleteDiscountCommand;
+use PrestaShop\PrestaShop\Core\Domain\Discount\Command\UpdateDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Query\GetDiscountForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -47,6 +50,15 @@ use Symfony\Component\HttpFoundation\Response;
             uriTemplate: '/discount',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddDiscountCommand::class,
+            CQRSQuery: GetDiscountForEditing::class,
+            scopes: ['discount_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/discount/{discountId}',
+            requirements: ['discountId' => '\d+'],
+            CQRSCommand: UpdateDiscountCommand::class,
             CQRSQuery: GetDiscountForEditing::class,
             scopes: ['discount_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
