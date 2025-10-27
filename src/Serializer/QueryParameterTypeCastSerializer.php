@@ -26,9 +26,6 @@ use PrestaShopBundle\ApiPlatform\ContextParametersProvider;
 use PrestaShopBundle\ApiPlatform\LocalizedValueUpdater;
 use PrestaShopBundle\ApiPlatform\NormalizationMapper;
 use PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer;
-use ReflectionClass;
-use ReflectionException;
-use ReflectionNamedType;
 use Symfony\Component\Serializer\Mapping\Factory\ClassMetadataFactoryInterface;
 use Symfony\Component\Serializer\Serializer;
 
@@ -65,7 +62,7 @@ class QueryParameterTypeCastSerializer extends CQRSApiSerializer
     private function castQueryParametersToExpectedTypes(array $data, string $queryClass): array
     {
         try {
-            $reflection = new ReflectionClass($queryClass);
+            $reflection = new \ReflectionClass($queryClass);
             $constructor = $reflection->getConstructor();
 
             if (!$constructor) {
@@ -81,7 +78,7 @@ class QueryParameterTypeCastSerializer extends CQRSApiSerializer
 
                 $type = $parameter->getType();
 
-                if (!$type instanceof ReflectionNamedType || !$type->isBuiltin()) {
+                if (!$type instanceof \ReflectionNamedType || !$type->isBuiltin()) {
                     continue;
                 }
 
@@ -92,11 +89,10 @@ class QueryParameterTypeCastSerializer extends CQRSApiSerializer
                     default => $data[$paramName],
                 };
             }
-        } catch (ReflectionException $e) {
+        } catch (\ReflectionException $e) {
             return $data;
         }
 
         return $data;
     }
 }
-
