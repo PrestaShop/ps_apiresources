@@ -219,6 +219,7 @@ class Product
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[_context][langId]' => '[displayLanguageId]',
+        '[isActive]' => '[active]',
         '[basicInformation][localizedNames]' => '[names]',
         '[basicInformation][localizedDescriptions]' => '[descriptions]',
         '[basicInformation][localizedShortDescriptions]' => '[shortDescriptions]',
