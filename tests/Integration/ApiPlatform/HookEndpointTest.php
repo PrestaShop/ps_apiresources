@@ -59,6 +59,11 @@ class HookEndpointTest extends ApiTestCase
             'GET',
             '/hooks',
         ];
+
+        yield 'get status endpoint' => [
+            'GET',
+            '/hook/1/status',
+        ];
     }
 
     public function testGetHook(): int
@@ -109,7 +114,20 @@ class HookEndpointTest extends ApiTestCase
     }
 
     /**
-     * @depends testUpdateHookStatus
+     * @depends testGetHook
+     */
+    public function testGetHookStatus(int $hookId): int
+    {
+        $hookStatus = $this->getItem('/hook/' . $hookId . '/status', ['hook_read']);
+
+        $this->assertArrayHasKey('active', $hookStatus);
+        $this->assertTrue($hookStatus['active'], 'Expected hook to be active');
+
+        return $hookId;
+    }
+
+    /**
+     * @depends testGetHookStatus
      */
     public function testListHooks(int $hookId): void
     {
