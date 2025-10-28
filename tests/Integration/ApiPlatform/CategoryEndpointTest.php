@@ -83,7 +83,7 @@ class CategoryEndpointTest extends ApiTestCase
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/category/10',
+            '/category/10/associate_and_disable',
         ];
 
         yield 'update status endpoint' => [
@@ -102,8 +102,8 @@ class CategoryEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/categories/delete',
+            'DELETE',
+            '/categories/batch/associate_and_disable',
         ];
     }
 
@@ -186,10 +186,8 @@ class CategoryEndpointTest extends ApiTestCase
     public function testDeleteCategory(int $categoryId): void
     {
         // Delete the item
-        $this->requestApi(
-            Request::METHOD_DELETE,
-            '/category/' . $categoryId,
-            ['mode' => 'associate_and_disable'],
+        $this->deleteItem(
+            '/category/' . $categoryId . '/associate_and_disable',
             ['category_write']
         );
 
@@ -279,16 +277,18 @@ class CategoryEndpointTest extends ApiTestCase
     public function testBulkDelete(array $bulkCategories): void
     {
         // Bulk delete with deleteMode
-        $this->updateItem('/categories/delete', [
+        $this->deleteBatch('/categories/batch/associate_and_disable', [
             'categoryIds' => $bulkCategories,
-            'enabled' => false,
-            'mode' => 'associate_and_disable',
         ], ['category_write'], Response::HTTP_NO_CONTENT);
 
-        // Assert the provided categories have been removed
         foreach ($bulkCategories as $categoryId) {
             $this->getItem('/category/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
         }
+    }
+
+    protected function deleteBatch(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
 
     /**

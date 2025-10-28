@@ -22,26 +22,29 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Category;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Category\Command\BulkDeleteCategoriesCommand;
-use PrestaShop\PrestaShop\Core\Domain\Category\Command\BulkUpdateCategoriesStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\SerializedName;
 
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/categories/batch/{mode}',
-            output: false,
-            CQRSCommand: BulkDeleteCategoriesCommand::class,
-            CQRSCommandMapping: [
-                '[mode]' => '[deleteMode]',
-            ],
+            uriTemplate: '/category/{categoryId}/{mode}',
+            CQRSCommand: DeleteCategoryCommand::class,
+            scopes: ['category_write'],
             openapiContext: [
-                'summary' => 'Delete a categories using a specific mode',
+                'summary' => 'Delete a category using a specific mode',
                 'parameters' => [
+                    [
+                        'name' => 'categoryId',
+                        'in' => 'path',
+                        'required' => true,
+                        'schema' => ['type' => 'integer'],
+                        'description' => 'Category ID to delete',
+                    ],
                     [
                         'name' => 'mode',
                         'in' => 'path',
@@ -54,34 +57,19 @@ use Symfony\Component\Validator\Constraints as Assert;
                     ],
                 ],
             ],
-            scopes: [
-                'category_write',
-            ],
-        ),
-        new CQRSUpdate(
-            uriTemplate: '/categories/toggle-status',
-            output: false,
-            CQRSCommand: BulkUpdateCategoriesStatusCommand::class,
-            CQRSCommandMapping: [
-                '[enabled]' => '[newStatus]',
-            ],
-            scopes: [
-                'category_write',
-            ],
         ),
     ],
     exceptionToStatus: [
+        CategoryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkCategories
+class CategoryDelete
 {
-    /**
-     * @var int[]
-     */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
-    #[Assert\NotBlank]
-    public array $categoryIds;
+    #[ApiProperty(identifier: true)]
+    #[SerializedName('id')]
+    public int $categoryId;
 
-    public bool $enabled;
+    #[SerializedName('deleteMode')]
+    public string $mode;
 }
