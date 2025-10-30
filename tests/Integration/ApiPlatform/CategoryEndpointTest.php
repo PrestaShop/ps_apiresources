@@ -266,7 +266,7 @@ class CategoryEndpointTest extends ApiTestCase
         // Assert that the selected categories have been successfully disabled
         foreach ($bulkCategories as $categoryId) {
             $category = $this->getItem('/category/' . $categoryId, ['category_read']);
-            $this->assertEquals(false, $category['enabled']);
+            $this->assertEquals(false, $category['active']);
         }
 
         // Return IDs so they can be reused by testBulkDelete
