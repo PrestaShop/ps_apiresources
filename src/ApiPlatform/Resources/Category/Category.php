@@ -86,6 +86,28 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSDelete(
             uriTemplate: '/category/{categoryId}',
             CQRSCommand: DeleteCategoryCommand::class,
+            input: ['class' => DeleteCategoryCommand::class],
+            openapiContext: [
+                'requestBody' => [
+                    'required' => true,
+                    'content' => [
+                        'application/json' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'mode' => [
+                                        'type' => 'string',
+                                        'enum' => ['associate_and_disable', 'associate_only', 'remove_associated'],
+                                        'description' => 'Delete mode: associate_and_disable (associate products with parent and disable), associate_only (associate products with parent only), remove_associated (remove products only associated with this category)',
+                                        'example' => 'associate_only',
+                                    ],
+                                ],
+                                'required' => ['mode'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
             scopes: [
                 'category_write',
             ],
@@ -192,6 +214,20 @@ class Category
     public array $shopIds;
 
     public ?bool $isEnabled;
+
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'string',
+            'enum' => [
+                'associate_and_disable',
+                'associate_only',
+                'remove_associated',
+            ],
+            'example' => 'associate_only',
+            'description' => 'Delete mode: associate_and_disable (associate products with parent and disable), associate_only (associate products with parent only), remove_associated (remove products only associated with this category)',
+        ]
+    )]
+    public ?string $mode = null;
 
     public const QUERY_MAPPING = [
         '[id]' => '[categoryId]',
