@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\Module\APIResources\ApiPlatform\Processor\ProductCreateAndUpdateProcessor;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AddProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\DeleteProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
@@ -62,6 +63,7 @@ use Symfony\Component\HttpFoundation\Response;
                 '[type]' => '[productType]',
                 '[names]' => '[localizedNames]',
             ],
+            processor: ProductCreateAndUpdateProcessor::class,
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/products/{productId}',
