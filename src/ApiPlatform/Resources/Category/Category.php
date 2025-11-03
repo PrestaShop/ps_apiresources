@@ -26,7 +26,6 @@ use PrestaShop\Module\APIResources\Validation\IframeValidationGroupsResolver;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddCategoryCommand;
-use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCoverImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryThumbnailImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\EditCategoryCommand;
@@ -79,13 +78,6 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/category/{categoryId}/status',
             CQRSCommand: SetCategoryIsEnabledCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
-            scopes: [
-                'category_write',
-            ],
-        ),
-        new CQRSDelete(
-            uriTemplate: '/category/{categoryId}',
-            CQRSCommand: DeleteCategoryCommand::class,
             scopes: [
                 'category_write',
             ],
