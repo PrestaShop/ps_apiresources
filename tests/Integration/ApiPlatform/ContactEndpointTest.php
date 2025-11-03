@@ -131,7 +131,13 @@ class ContactEndpointTest extends ApiTestCase
         $updatedContact = $this->partialUpdateItem('/contacts/' . $contactId, $patchData, ['contact_write']);
         $this->assertSame($patchData['names'], $updatedContact['names']);
         $this->assertSame($patchData['email'], $updatedContact['email']);
-        $this->assertSame((bool) $patchData['messagesSavingEnabled'], (bool) $updatedContact['messagesSavingEnabled']);
+
+        // We check that when we GET the item it is updated as expected
+        $contact = $this->getItem('/contacts/' . $contactId, ['contact_read']);
+        $this->assertSame($patchData['names'], $contact['names']);
+        $this->assertSame($patchData['email'], $contact['email']);
+        $this->assertArrayHasKey('messagesSavingEnabled', $contact);
+        $this->assertSame((bool) $patchData['messagesSavingEnabled'], (bool) $contact['messagesSavingEnabled']);
 
         return $contactId;
     }
