@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Normalizer;
 
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\GenerateProductCombinationsCommand;
@@ -25,6 +27,9 @@ use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use PrestaShopBundle\ApiPlatform\Normalizer\ShopConstraintNormalizer;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
+// Needed because JSON always delivers object keys as strings (e.g. {"1": [2,3]}),
+// but GenerateProductCombinationsCommand requires array<int, int[]> with integer keys.
+// Standard CQRSCommandMapping passes the array as-is and cannot coerce key types.
 class GenerateCombinationsSerializer implements DenormalizerInterface
 {
     public function __construct(
@@ -35,10 +40,10 @@ class GenerateCombinationsSerializer implements DenormalizerInterface
     public function denormalize(mixed $data, string $type, ?string $format = null, array $context = [])
     {
         $groupedAttributes = [];
-        foreach ($data['groupedAttributes'] as $attributeGroup) {
-            $groupedAttributes[$attributeGroup['attributeGroupId']] = array_map(static function ($attributeId): int {
+        foreach (($data['groupedAttributeIds'] ?? []) as $attributeGroupId => $attributeIds) {
+            $groupedAttributes[(int) $attributeGroupId] = array_map(static function ($attributeId): int {
                 return (int) $attributeId;
-            }, $attributeGroup['attributeIds']);
+            }, is_array($attributeIds) ? $attributeIds : []);
         }
 
         return new GenerateProductCombinationsCommand(

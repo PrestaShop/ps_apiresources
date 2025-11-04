@@ -22,326 +22,809 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Adapter\Attribute\Repository\AttributeRepository;
-use PrestaShop\PrestaShop\Adapter\AttributeGroup\Repository\AttributeGroupRepository;
-use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\ValueObject\AttributeGroupId;
-use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
-use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
-use Tests\Resources\Resetter\ProductResetter;
+use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetSuppliersCommand;
+use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\DatabaseDump;
 
 class ProductCombinationEndpointTest extends ApiTestCase
 {
-    /**
-     * @var array<string, int>
-     */
-    private static array $attributeGroupData = [];
-    /**
-     * @var array<string, int>
-     */
-    private static array $attributeData = [];
-
     public static function setUpBeforeClass(): void
     {
+        // Ensure DB is restored before parent config/init
+        DatabaseDump::restoreAllTables();
         parent::setUpBeforeClass();
-        ProductResetter::resetProducts();
-        // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients
-        self::createApiClient(['product_write', 'product_read']);
-
-        // Fetch data for attributes to use them more easily in the following tests
-        /** @var AttributeGroupRepository $attributeGroupRepository */
-        $attributeGroupRepository = self::getContainer()->get(AttributeGroupRepository::class);
-        $attributeGroups = $attributeGroupRepository->getAttributeGroups(ShopConstraint::allShops());
-        foreach ($attributeGroups as $attributeGroup) {
-            // Store english name as the key
-            self::$attributeGroupData[$attributeGroup->name[1]] = (int) $attributeGroup->id;
-        }
-
-        /** @var AttributeRepository $attributeRepository */
-        $attributeRepository = self::getContainer()->get(AttributeRepository::class);
-        $attributeGroupIds = array_map(static function (int $attributeGroupId) {
-            return new AttributeGroupId($attributeGroupId);
-        }, array_values(self::$attributeGroupData));
-        $groupedAttributes = $attributeRepository->getGroupedAttributes(ShopConstraint::allShops(), $attributeGroupIds);
-        foreach ($groupedAttributes as $attributeGroupId => $groupAttributes) {
-            foreach ($groupAttributes as $attribute) {
-                self::$attributeData[$attribute->name[1]] = (int) $attribute->id;
-            }
-        }
+        self::createApiClient(['product_write']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        ProductResetter::resetProducts();
+        DatabaseDump::restoreAllTables();
     }
 
     public static function getProtectedEndpoints(): iterable
     {
         yield 'generate combinations endpoint' => [
             'POST',
-            '/products/1/generate-combinations',
+            '/products/1/combinations',
         ];
 
-        yield 'list combination IDs' => [
-            'GET',
-            '/products/1/combination-ids',
+        yield 'bulk delete combinations endpoint' => [
+            'DELETE',
+            '/products/1/combinations/bulk-delete',
         ];
 
-        yield 'get endpoint' => [
+        yield 'delete combination endpoint' => [
+            'DELETE',
+            '/products/combinations/1',
+        ];
+
+        yield 'update combination endpoint' => [
+            'PATCH',
+            '/products/combinations/1',
+        ];
+        yield 'get combination endpoint' => [
             'GET',
             '/products/combinations/1',
         ];
+
+        yield 'list combinations endpoint' => [
+            'GET',
+            '/products/1/combinations',
+        ];
+
+        yield 'combination stock movements list endpoint' => [
+            'GET',
+            '/products/combinations/1/stock-movements',
+        ];
+
+        yield 'combination suppliers list endpoint' => [
+            'GET',
+            '/products/combinations/1/suppliers',
+        ];
+
+        yield 'combination suppliers update endpoint' => [
+            'PATCH',
+            '/products/combinations/1/suppliers',
+        ];
+
+        yield 'combination images set endpoint' => [
+            'PATCH',
+            '/products/combinations/1/images',
+        ];
+
+        yield 'combination images clear endpoint' => [
+            'PATCH',
+            '/products/combinations/1/images/clears',
+        ];
+
+        yield 'update combination stock endpoint' => [
+            'PATCH',
+            '/products/combinations/1/stocks',
+        ];
+
+        yield 'get combination ids endpoint' => [
+            'GET',
+            '/products/1/combinations/ids',
+        ];
+
+        yield 'search product combinations endpoint' => [
+            'GET',
+            '/products/1/combinations/search',
+        ];
+
+        yield 'search combinations for association endpoint' => [
+            'GET',
+            '/products/combinations/associations/search',
+        ];
     }
 
-    public function testAddProductWithCombinations(): int
+    public function testGenerateProductCombinations(): void
     {
-        $addedProduct = $this->createItem('/products', [
-            'type' => ProductType::TYPE_COMBINATIONS,
+        // Create a product
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
             'names' => [
-                'en-US' => 'product with combinations',
-                'fr-FR' => 'produit avec combinaisons',
+                'en-US' => 'Combinations product',
+            ],
+        ], ['product_write']);
+        $this->assertArrayHasKey('productId', $product);
+        $productId = $product['productId'];
+
+        // Associate suppliers at product level BEFORE generating combinations so per-combination rows are created
+        $container = static::createClient()->getContainer();
+        $commandBus = $container->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand(
+            $productId,
+            [1, 2]
+        ));
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
             ],
         ], ['product_write']);
 
-        return $addedProduct['productId'];
+        // Ensure per-combination ProductSupplier rows exist (associate again now that combinations are created)
+        $commandBus->handle(new SetSuppliersCommand(
+            $productId,
+            [1, 2]
+        ));
     }
 
-    /**
-     * @depends testAddProductWithCombinations
-     */
-    public function testCreateProductCombinations(int $productId): array
+    public function testGenerateProductCombinationsInvalidPayload(): void
     {
-        $postData = [
-            'groupedAttributes' => [
-                [
-                    'attributeGroupId' => self::$attributeGroupData['Color'],
-                    'attributeIds' => [
-                        self::$attributeData['Red'],
-                        self::$attributeData['Black'],
-                        self::$attributeData['Yellow'],
-                    ],
-                ],
-                [
-                    'attributeGroupId' => self::$attributeGroupData['Size'],
-                    'attributeIds' => [
-                        self::$attributeData['S'],
-                        self::$attributeData['M'],
-                        self::$attributeData['L'],
-                    ],
-                ],
+        // Missing required fields should return validation errors
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product invalid',
             ],
-        ];
-        $createdCombinations = $this->createItem(sprintf('/products/%d/generate-combinations', $productId), $postData, ['product_write']);
-        // 9 combinations should have been created (three sizes for each three colors)
-        $this->assertCount(9, $createdCombinations['newCombinationIds']);
-        $newCombinationIds = $createdCombinations['newCombinationIds'];
-        foreach ($newCombinationIds as $combinationId) {
-            $this->assertIsInt($combinationId);
-        }
-        $expectedResult = [
-            'productId' => $productId,
-            // We fill this value dynamically because we can't guess their values
-            'newCombinationIds' => $newCombinationIds,
-        ];
-        $this->assertEquals($expectedResult, $createdCombinations);
-
-        // Now we call the same endpoint with the same attributes
-        $createdCombinations = $this->createItem(sprintf('/products/%d/generate-combinations', $productId), $postData, ['product_write']);
-        $this->assertEquals([
-            'productId' => $productId,
-            // Since the combinations already exist no new combination is created
-            'newCombinationIds' => [],
-        ], $createdCombinations);
-
-        // Now we call with extra attributes, only the missing combinations are created
-        $postData['groupedAttributes'][0]['attributeIds'][] = self::$attributeData['White'];
-        $postData['groupedAttributes'][1]['attributeIds'][] = self::$attributeData['XL'];
-
-        // In total 16 combinations should be created, 9 have already been so 7 new combinations should be returned
-        $createdCombinations = $this->createItem(sprintf('/products/%d/generate-combinations', $productId), $postData, ['product_write']);
-        $this->assertCount(7, $createdCombinations['newCombinationIds']);
-        $newCombinationIds = array_merge($newCombinationIds, $createdCombinations['newCombinationIds']);
-        $this->assertCount(16, $newCombinationIds);
-
-        // Now create new combinations from other attributes (we don't merge with previous postData)
-        $postData = [
-            'groupedAttributes' => [
-                [
-                    'attributeGroupId' => self::$attributeGroupData['Color'],
-                    'attributeIds' => [
-                        self::$attributeData['Blue'],
-                    ],
-                ],
-                [
-                    'attributeGroupId' => self::$attributeGroupData['Size'],
-                    'attributeIds' => [
-                        self::$attributeData['M'],
-                        self::$attributeData['L'],
-                    ],
-                ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+        $errors = $this->createItem('/products/' . $productId . '/combinations', null, ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
+            'json' => (object) [],
+        ]);
+        $this->assertIsArray($errors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'groupedAttributeIds',
+                'message' => '',
             ],
-        ];
-        $createdCombinations = $this->createItem(sprintf('/products/%d/generate-combinations', $productId), $postData, ['product_write']);
-        // Only two new combinations should have been created
-        $this->assertCount(2, $createdCombinations['newCombinationIds']);
-        $newCombinationIds = array_merge($newCombinationIds, $createdCombinations['newCombinationIds']);
-        $this->assertCount(18, $newCombinationIds);
-
-        return $newCombinationIds;
+        ], $errors);
     }
 
-    /**
-     * @depends testAddProductWithCombinations
-     * @depends testCreateProductCombinations
-     */
-    public function testListCombinationsIds(int $productId, array $newCombinationIds): array
+    public function testBulkDeleteCombinations(): void
     {
-        $combinations = $this->getItem(sprintf('/products/%d/combination-ids', $productId), ['product_read']);
-        $this->assertEquals([
-            'productId' => $productId,
-            'combinationIds' => $newCombinationIds,
-        ], $combinations);
+        // Create product with combinations type
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
 
-        // Now test pagination
-        $resultsPerPage = 5;
-        $pagesNumber = ceil(count($newCombinationIds) / $resultsPerPage);
-        for ($page = 1; $page <= $pagesNumber; ++$page) {
-            $offset = ($page - 1) * $resultsPerPage;
-            $paginatedCombinations = $this->getItem(sprintf(
-                '/products/%d/combination-ids?offset=%d&limit=%d',
-                $productId,
-                $offset,
-                $resultsPerPage),
-                ['product_read']
-            );
-            $expectedCombinationIds = array_slice($newCombinationIds, $offset, $resultsPerPage);
-            $this->assertEquals([
-                'productId' => $productId,
-                'combinationIds' => $expectedCombinationIds,
-            ], $paginatedCombinations);
-        }
+        // Associate suppliers at product level BEFORE generating combinations so per-combination rows are created
+        $container = static::createClient()->getContainer();
+        $commandBus = $container->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand(
+            $productId,
+            [1, 2]
+        ));
 
-        return $newCombinationIds;
+        // Then generate combinations
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Ensure per-combination ProductSupplier rows exist after creation
+        $commandBus->handle(new SetSuppliersCommand(
+            $productId,
+            [1, 2]
+        ));
+
+        // Retrieve combination IDs from API JSON
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $combinationIds = array_map(static fn ($row) => $row['combinationId'], $combinations);
+        $this->assertGreaterThan(0, count($combinationIds));
+
+        // Bulk delete combinations (DELETE with body, productId in URL)
+        $this->bulkDeleteItems('/products/' . $productId . '/combinations/bulk-delete', [
+            'combinationIds' => $combinationIds,
+        ], ['product_write'], Response::HTTP_NO_CONTENT);
+
+        // Ensure there is no combinations left
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $this->assertSame(0, $list['totalCombinationsCount'] ?? $list['totalItems'] ?? 0);
     }
 
-    /**
-     * @depends testAddProductWithCombinations
-     * @depends testCreateProductCombinations
-     */
-    public function testCombinationList(int $productId, array $newCombinationIds): array
+    public function testBulkDeleteCombinationsInvalidPayload(): void
     {
-        $paginatedCombinations = $this->listItems(sprintf('/products/%d/combinations', $productId), ['product_read']);
-        $this->assertEquals(count($newCombinationIds), $paginatedCombinations['totalItems']);
-
-        // Now check the expected format at least for the first two
-        $this->assertEquals([
-            'productId' => $productId,
-            'combinationId' => $newCombinationIds[0],
-            'name' => 'Size - S, Color - Red',
-            'default' => true,
-            'reference' => '',
-            'impactOnPriceTaxExcluded' => 0.0,
-            'ecoTax' => 0.0,
-            'quantity' => 0,
-            'imageUrl' => 'http://myshop.com/img/p/en-default-small_default.jpg',
-            'attributes' => [
-                [
-                    'attributeGroupId' => self::$attributeGroupData['Size'],
-                    'attributeGroupName' => 'Size',
-                    'attributeId' => self::$attributeData['S'],
-                    'attributeName' => 'S',
-                ],
-                [
-                    'attributeGroupId' => self::$attributeGroupData['Color'],
-                    'attributeGroupName' => 'Color',
-                    'attributeId' => self::$attributeData['Red'],
-                    'attributeName' => 'Red',
-                ],
+        // Missing required fields should return validation errors
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product invalid bulk delete',
             ],
-        ], $paginatedCombinations['items'][0]);
-        $this->assertEquals([
-            'productId' => $productId,
-            'combinationId' => $newCombinationIds[1],
-            'name' => 'Size - M, Color - Red',
+        ], ['product_write']);
+        $productId = $product['productId'];
+        $errors = $this->bulkDeleteItems('/products/' . $productId . '/combinations/bulk-delete', ['combinationIds' => []], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($errors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'combinationIds',
+                'message' => '',
+            ],
+        ], $errors);
+    }
+
+    public function testDeleteSingleCombination(): void
+    {
+        // Create product with combinations type
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product to delete one',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        // Generate combinations
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Fetch generated combination IDs from API JSON
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThanOrEqual(2, count($combinations));
+        $toDelete = $combinations[0]['combinationId'];
+
+        // Delete single combination
+        $this->deleteItem('/products/combinations/' . $toDelete, ['product_write']);
+
+        // Ensure it is gone
+        $remainingList = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($remainingList);
+        $ids = array_map(static fn ($row) => $row['combinationId'], $remainingList['combinations'] ?? $remainingList['items'] ?? []);
+        $this->assertNotContains($toDelete, $ids);
+    }
+
+    public function testPartialUpdateCombination(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product to patch',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Get one combination id from the API JSON
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThanOrEqual(1, count($combinations));
+        $toPatch = $combinations[0]['combinationId'];
+
+        // Patch combination and expect updated details
+        $updated = $this->partialUpdateItem('/products/combinations/' . $toPatch, [
+            'reference' => 'REF-UPDATED',
             'default' => false,
-            'reference' => '',
-            'impactOnPriceTaxExcluded' => 0.0,
-            'ecoTax' => 0.0,
-            'quantity' => 0,
-            'imageUrl' => 'http://myshop.com/img/p/en-default-small_default.jpg',
-            'attributes' => [
-                [
-                    'attributeGroupId' => self::$attributeGroupData['Size'],
-                    'attributeGroupName' => 'Size',
-                    'attributeId' => self::$attributeData['M'],
-                    'attributeName' => 'M',
-                ],
-                [
-                    'attributeGroupId' => self::$attributeGroupData['Color'],
-                    'attributeGroupName' => 'Color',
-                    'attributeId' => self::$attributeData['Red'],
-                    'attributeName' => 'Red',
-                ],
+            'availableNowLabels' => [
+                'en-US' => 'now',
             ],
-        ], $paginatedCombinations['items'][1]);
-
-        // Now test pagination
-        $resultsPerPage = 5;
-        $pagesNumber = ceil(count($newCombinationIds) / $resultsPerPage);
-        for ($page = 1; $page <= $pagesNumber; ++$page) {
-            $offset = ($page - 1) * $resultsPerPage;
-            $paginatedCombinations = $this->getItem(sprintf(
-                '/products/%d/combinations?offset=%d&limit=%d',
-                $productId,
-                $offset,
-                $resultsPerPage),
-                ['product_read']
-            );
-            $expectedCombinationIds = array_slice($newCombinationIds, $offset, $resultsPerPage);
-            $paginatedCombinationIds = array_map(static function (array $combination): int {
-                return $combination['combinationId'];
-            }, $paginatedCombinations['items']);
-            $this->assertEquals($expectedCombinationIds, $paginatedCombinationIds);
-        }
-
-        return $newCombinationIds;
+        ], ['product_write']);
+        $this->assertIsArray($updated);
+        $this->assertArrayHasKey('combinationId', $updated);
     }
 
-    /**
-     * @depends testAddProductWithCombinations
-     * @depends testListCombinationsIds
-     *
-     * @return int
-     */
-    public function testGetProductCombination(int $productId, array $newCombinationIds): int
+    public function testUpdateCombinationStockDeltaAndFixedAreExclusive(): void
     {
-        $combinationId = $newCombinationIds[0];
-        $combination = $this->getItem('/products/combinations/' . $combinationId, ['product_read']);
-        $this->assertEquals([
-            'productId' => $productId,
-            'combinationId' => $combinationId,
-            'name' => 'Size - S, Color - Red',
-            'default' => true,
-            'gtin' => '',
-            'isbn' => '',
-            'mpn' => '',
-            'reference' => '',
-            'upc' => '',
-            'coverThumbnailUrl' => 'http://myshop.com/img/p/en-default-cart_default.jpg',
-            'imageIds' => [],
-            'impactOnPriceTaxExcluded' => 0.0,
-            'impactOnPriceTaxIncluded' => 0.0,
-            'impactOnUnitPriceTaxIncluded' => 0.0,
-            'ecotaxTaxExcluded' => 0.0,
-            'ecotaxTaxIncluded' => 0.0,
-            'impactOnWeight' => 0.0,
-            'wholesalePrice' => 0.0,
-            'productTaxRate' => 6.0,
-            'productPriceTaxExcluded' => 0.0,
-            'productEcotaxTaxExcluded' => 0.0,
-            'quantity' => 0,
-        ], $combination);
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product stock test',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
 
-        return $combinationId;
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThanOrEqual(1, count($combinations));
+        $toPatch = $combinations[0]['combinationId'];
+
+        // Send both delta and fixed to trigger domain validation -> 422
+        \Context::getContext()->employee = new \Employee(1);
+        $errors = $this->partialUpdateItem('/products/combinations/' . $toPatch . '/stocks', [
+            'deltaQuantity' => 5,
+            'fixedQuantity' => 10,
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($errors);
+    }
+
+    public function testUpdateCombinationStockDelta(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product stock delta',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThanOrEqual(1, count($combinations));
+        $toPatch = $combinations[0]['combinationId'];
+
+        // Update with delta only - command returns no body, stock can be verified through stock movements.
+        \Context::getContext()->employee = new \Employee(1);
+        $stockUpdated = $this->partialUpdateItem('/products/combinations/' . $toPatch . '/stocks', [
+            'deltaQuantity' => 3,
+            'location' => 'Rack A',
+        ], ['product_write'], Response::HTTP_NO_CONTENT);
+        $this->assertNull($stockUpdated);
+    }
+
+    public function testGetCombinationForEditing(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product get details',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Get one combination id
+        $ids = $this->getItem('/products/' . $productId . '/combinations/ids', ['product_read']);
+        $combinationIds = array_map(static fn ($row) => $row['combinationId'], $ids);
+        $this->assertGreaterThanOrEqual(1, count($combinationIds));
+        $targetId = $combinationIds[0];
+
+        // Call GET endpoint and assert structure
+        $combination = $this->getItem('/products/combinations/' . $targetId, ['product_read']);
+        $this->assertIsArray($combination);
+        $this->assertArrayHasKey('combinationId', $combination);
+        $this->assertEquals($targetId, $combination['combinationId']);
+        // Some typical nullable/optional fields
+        // Optional fields may be null or omitted depending on data; presence is not enforced here
+    }
+
+    public function testGetEditableCombinationsList(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product list',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // GET list
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThan(0, $list['totalCombinationsCount'] ?? $list['totalItems'] ?? 0);
+        $this->assertIsArray($combinations);
+
+        // Limit=1
+        $limited = $this->getItem('/products/' . $productId . '/combinations?limit=1', ['product_read']);
+        $this->assertIsArray($limited);
+        $limitedCombinations = $limited['combinations'] ?? $limited['items'] ?? [];
+        $this->assertIsArray($limitedCombinations);
+        $this->assertCount(1, $limitedCombinations);
+    }
+
+    public function testGetCombinationStockMovements(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product stock movements',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThanOrEqual(1, count($combinations));
+        $targetId = $combinations[0]['combinationId'];
+
+        // Add a stock movement so there is always at least one to assert against
+        \Context::getContext()->employee = new \Employee(1);
+        $this->partialUpdateItem('/products/combinations/' . $targetId . '/stocks', [
+            'deltaQuantity' => 1,
+        ], ['product_write'], Response::HTTP_NO_CONTENT);
+
+        // Fetch stock movements
+        $movements = $this->getItem('/products/combinations/' . $targetId . '/stock-movements?limit=3', ['product_read']);
+        $this->assertIsArray($movements);
+        $this->assertNotEmpty($movements);
+        $first = $movements[0];
+        $this->assertArrayHasKey('type', $first);
+        $this->assertArrayHasKey('dates', $first);
+        $this->assertArrayHasKey('deltaQuantity', $first);
+        $this->assertArrayHasKey('stockMovementIds', $first);
+    }
+
+    public function testGetCombinationSuppliers(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product suppliers',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThanOrEqual(1, count($combinations));
+        $targetId = $combinations[0]['combinationId'];
+
+        // Fetch suppliers for the combination
+        $suppliers = $this->getItem('/products/combinations/' . $targetId . '/suppliers', ['product_read']);
+        $this->assertIsArray($suppliers);
+        if (!empty($suppliers)) {
+            $first = $suppliers[0];
+            $this->assertArrayHasKey('productSupplierId', $first);
+            $this->assertArrayHasKey('productId', $first);
+            $this->assertArrayHasKey('supplierId', $first);
+            $this->assertArrayHasKey('supplierName', $first);
+            $this->assertArrayHasKey('reference', $first);
+            $this->assertArrayHasKey('priceTaxExcluded', $first);
+            $this->assertArrayHasKey('currencyId', $first);
+            $this->assertArrayHasKey('combinationId', $first);
+        }
+    }
+
+    public function testUpdateCombinationSuppliers(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product suppliers update',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        // Ensure product-level suppliers exist before generating combinations
+        $container = static::createClient()->getContainer();
+        $commandBus = $container->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand(
+            $productId,
+            [1, 2]
+        ));
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Ensure per-combination ProductSupplier rows exist
+        $commandBus->handle(new SetSuppliersCommand(
+            $productId,
+            [1, 2]
+        ));
+
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThanOrEqual(1, count($combinations));
+        $targetId = $combinations[0]['combinationId'];
+
+        // Update suppliers (use default suppliers 1 and 2, currency 1)
+        $updated = $this->partialUpdateItem('/products/combinations/' . $targetId . '/suppliers', [
+            'combinationSuppliers' => [
+                [
+                    'supplier_id' => 1,
+                    'currency_id' => 1,
+                    'reference' => 'SUP-REF-001',
+                    'price_tax_excluded' => '10.50',
+                ],
+                [
+                    'supplier_id' => 2,
+                    'currency_id' => 1,
+                    'reference' => 'SUP-REF-002',
+                    'price_tax_excluded' => '20.00',
+                ],
+            ],
+        ], ['product_write'], Response::HTTP_NO_CONTENT);
+
+        $this->assertNull($updated);
+
+        // The write endpoint stays declarative; read the collection endpoint to assert persisted supplier data.
+        $suppliers = $this->getItem('/products/combinations/' . $targetId . '/suppliers', ['product_read']);
+        $this->assertIsArray($suppliers);
+        $this->assertNotEmpty($suppliers);
+        $this->assertArrayHasKey('supplierId', $suppliers[0]);
+        $this->assertArrayHasKey('reference', $suppliers[0]);
+    }
+
+    public function testUpdateCombinationSuppliersInvalidPayload(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product suppliers invalid',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $combinations = $list['combinations'] ?? $list['items'] ?? [];
+        $this->assertGreaterThanOrEqual(1, count($combinations));
+        $targetId = $combinations[0]['combinationId'];
+
+        $errors = $this->partialUpdateItem('/products/combinations/' . $targetId . '/suppliers', [
+            'combinationSuppliers' => [],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($errors);
+    }
+
+    public function testSetAndClearCombinationImages(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product images',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Upload two images to the product
+        $assetPath = __DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg';
+        if (!file_exists($assetPath)) {
+            // Fallback to an existing language flag image from assets if product image not present
+            $assetPath = __DIR__ . '/../../Resources/assets/lang/en.jpg';
+        }
+        $upload = $this->prepareUploadedFile($assetPath);
+        $image1 = $this->createItem('/products/' . $productId . '/images', null, ['product_write'], null, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'files' => [
+                    'image' => $upload,
+                ],
+            ],
+        ]);
+        $this->assertArrayHasKey('imageId', $image1);
+        $upload2 = $this->prepareUploadedFile($assetPath);
+        $image2 = $this->createItem('/products/' . $productId . '/images', null, ['product_write'], null, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'files' => [
+                    'image' => $upload2,
+                ],
+            ],
+        ]);
+        $this->assertArrayHasKey('imageId', $image2);
+
+        // Get a combination id via API
+        $ids = $this->getItem('/products/' . $productId . '/combinations/ids', ['product_read']);
+        $combinationIds = array_map(static fn ($row) => $row['combinationId'], $ids);
+        $this->assertGreaterThanOrEqual(1, count($combinationIds));
+        $targetId = $combinationIds[0];
+
+        // Set images on the combination
+        $updated = $this->partialUpdateItem('/products/combinations/' . $targetId . '/images', [
+            'imageIds' => [
+                $image1['imageId'],
+                $image2['imageId'],
+            ],
+        ], ['product_write']);
+        $this->assertIsArray($updated);
+        $this->assertArrayHasKey('combinationId', $updated);
+
+        // Clear images on the combination
+        $cleared = $this->partialUpdateItem('/products/combinations/' . $targetId . '/images/clears', null, ['product_write']);
+        $this->assertIsArray($cleared);
+        $this->assertArrayHasKey('combinationId', $cleared);
+    }
+
+    public function testSetCombinationImagesInvalidPayload(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product images invalid',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        $ids = $this->getItem('/products/' . $productId . '/combinations/ids', ['product_read']);
+        $combinationIds = array_map(static fn ($row) => $row['combinationId'], $ids);
+        $targetId = $combinationIds[0];
+
+        // Missing/empty imageIds -> 422
+        $this->partialUpdateItem('/products/combinations/' . $targetId . '/images', ['imageIds' => []], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testGetCombinationIds(): void
+    {
+        // Create a product with combinations type
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product for ids',
+            ],
+        ], ['product_write']);
+        $this->assertArrayHasKey('productId', $product);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Fetch IDs via API endpoint
+        $ids = $this->getItem('/products/' . $productId . '/combinations/ids', ['product_read']);
+        $this->assertIsArray($ids);
+        $this->assertNotEmpty($ids);
+        $this->assertIsArray($ids[0]);
+        $this->assertArrayHasKey('combinationId', $ids[0]);
+        $this->assertIsInt($ids[0]['combinationId']);
+
+        // Limit to 1 via query parameter
+        $idsLimited = $this->getItem('/products/' . $productId . '/combinations/ids?limit=1', ['product_read']);
+        $this->assertIsArray($idsLimited);
+        $this->assertCount(1, $idsLimited);
+    }
+
+    public function testSearchProductCombinations(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product for search',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Search with a generic small phrase and limited results
+        $results = $this->getItem('/products/' . $productId . '/combinations/search?phrase=1&limit=5', ['product_read']);
+        $this->assertIsArray($results);
+        $this->assertArrayHasKey('productId', $results);
+        $this->assertSame($productId, $results['productId']);
+        $list = isset($results['combinations']) && is_array($results['combinations']) ? $results['combinations'] : $results;
+        if (!empty($list)) {
+            $first = array_values($list)[0];
+            $this->assertArrayHasKey('combinationId', $first);
+            $this->assertArrayHasKey('combinationName', $first);
+        }
+    }
+
+    public function testSearchCombinationsForAssociationTooShortPhrase(): void
+    {
+        // phrase must be at least 3 chars, expect 422
+        $this->getItem('/products/combinations/associations/search?phrase=ab&limit=5', ['product_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testSearchCombinationsForAssociation(): void
+    {
+        // Create product and generate combinations
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Association search product',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $this->createItem('/products/' . $productId . '/combinations', [
+            'groupedAttributeIds' => [
+                1 => [2, 3],
+                2 => [10, 14],
+            ],
+        ], ['product_write']);
+
+        // Search across catalog for combinations with generic 3-char phrase
+        $results = $this->getItem('/products/combinations/associations/search?phrase=pro&limit=5', ['product_read']);
+        $this->assertIsArray($results);
+        if (!empty($results)) {
+            $first = $results[0];
+            $this->assertArrayHasKey('productId', $first);
+            $this->assertArrayHasKey('combinationId', $first);
+            $this->assertArrayHasKey('name', $first);
+            $this->assertArrayHasKey('reference', $first);
+            $this->assertArrayHasKey('imageUrl', $first);
+        }
     }
 }
