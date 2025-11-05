@@ -205,6 +205,21 @@ class ProductEndpointTest extends ApiTestCase
             'GET',
             '/products/1/images',
         ];
+
+        yield 'create product_category endpoint' => [
+            'POST',
+            '/product/category',
+        ];
+
+        yield 'create product_categories endpoint' => [
+            'POST',
+            '/product/categories',
+        ];
+
+        yield 'delete product_category endpoint' => [
+            'DELETE',
+            '/product/category/1',
+        ];
     }
 
     public function testAddProduct(): int
@@ -801,6 +816,39 @@ class ProductEndpointTest extends ApiTestCase
             ];
             $this->assertEquals($expectedProduct, $paginatedProducts['items'][0]);
         }
+    }
+
+    public function testAssignProductToCategory(): void
+    {
+        $productId = 1;
+
+        $payload = [
+            'productId' => $productId,
+            'categoryId' => 3,
+        ];
+
+        $this->createItem('/product/category', $payload, ['product_write']);
+    }
+
+    public function testSetAssociatedProductCategories(): void
+    {
+        $productId = 1;
+        $categoryIds = [3, 4, 5];
+
+        $payload = [
+            'productId' => $productId,
+            'categoryIds' => $categoryIds,
+            'defaultCategoryId' => 5,
+        ];
+
+        $this->createItem('/product/categories', $payload, ['product_write']);
+    }
+
+    public function testRemoveAllAssociatedProductCategories(): void
+    {
+        $productId = 1;
+
+        $this->deleteItem('/product/category/' . $productId, ['product_write']);
     }
 
     protected function getImagePath(int $imageId, bool $isThumbnail): string
