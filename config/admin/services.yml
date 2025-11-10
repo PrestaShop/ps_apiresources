@@ -37,6 +37,10 @@ services:
     tags:
       - { name: 'serializer.normalizer', priority: 100 }
 
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\AttributeGroupListNormalizer:
+    tags:
+      - { name: 'serializer.normalizer', priority: 100 }
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'
