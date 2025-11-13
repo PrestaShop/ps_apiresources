@@ -26,6 +26,7 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AssignProductToCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\RemoveAllAssociatedProductCategoriesCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\SetAssociatedProductCategoriesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,34 +34,35 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/product/category',
+            uriTemplate: '/product/{productId}/category',
+            requirements: ['productId' => '\d+'],
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AssignProductToCategoryCommand::class,
-            status: Response::HTTP_CREATED,
+            CQRSQueryMapping: ProductCategory::QUERY_MAPPING,
+            CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_write',
             ],
         ),
         new CQRSCreate(
-            uriTemplate: '/product/categories',
+            uriTemplate: '/product/{productId}/categories',
+            requirements: ['productId' => '\d+'],
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: SetAssociatedProductCategoriesCommand::class,
-            status: Response::HTTP_CREATED,
+            CQRSCommandMapping: ProductCategory::COMMAND_MAPPING,
+            CQRSQueryMapping: ProductCategory::QUERY_MAPPING,
+            CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_write',
             ],
-            CQRSCommandMapping: [
-                '[_context][shopConstraint]' => '[shopConstraint]',
-            ],
         ),
         new CQRSDelete(
-            uriTemplate: '/product/category/{productId}',
+            uriTemplate: '/product/{productId}/categories',
+            requirements: ['productId' => '\d+'],
             CQRSCommand: RemoveAllAssociatedProductCategoriesCommand::class,
+            CQRSCommandMapping: ProductCategory::COMMAND_MAPPING,
             status: Response::HTTP_NO_CONTENT,
             output: false,
-            CQRSCommandMapping: [
-                '[_context][shopConstraint]' => '[shopConstraint]',
-            ],
             scopes: [
                 'product_write',
             ],
@@ -74,4 +76,18 @@ class ProductCategory
     public int $productId;
 
     public ?int $defaultCategoryId;
+
+    public ?array $categories;
+
+    public const QUERY_MAPPING = [
+        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[_context][langId]' => '[displayLanguageId]',
+        // Enables the ProductCategoryOutputNormalizer
+        // for serializing the response of CQRS category endpoints.
+        'use_product_category_normalizer' => true,
+    ];
+
+    public const COMMAND_MAPPING = [
+        '[_context][shopConstraint]' => '[shopConstraint]',
+    ];
 }
