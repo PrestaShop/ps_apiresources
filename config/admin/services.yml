@@ -47,3 +47,9 @@ services:
     autowire: true
     arguments:
       $decorated: '@.inner'
+
+  PrestaShop\Module\APIResources\Serializer\ProductCategoryOutputNormalizer:
+    public: true
+    autowire: true
+    tags:
+      - { name: 'serializer.normalizer', priority: 100 }
