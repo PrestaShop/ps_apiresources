@@ -201,7 +201,7 @@ class CategoryEndpointTest extends ApiTestCase
         $this->requestApi(
             Request::METHOD_PATCH,
             '/category/3/status',
-            ['isEnabled' => false],
+            ['active' => false],
             ['category_write'],
             Response::HTTP_OK
         );
@@ -214,7 +214,7 @@ class CategoryEndpointTest extends ApiTestCase
         $this->requestApi(
             Request::METHOD_PATCH,
             '/category/3/status',
-            ['isEnabled' => true],
+            ['active' => true],
             ['category_write'],
             Response::HTTP_OK
         );

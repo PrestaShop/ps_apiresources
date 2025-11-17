@@ -22,42 +22,14 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Category;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Category\Command\BulkDeleteCategoriesCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\BulkUpdateCategoriesStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSDelete(
-            uriTemplate: '/categories/batch/{mode}',
-            output: false,
-            CQRSCommand: BulkDeleteCategoriesCommand::class,
-            CQRSCommandMapping: [
-                '[mode]' => '[deleteMode]',
-            ],
-            openapiContext: [
-                'summary' => 'Delete a categories using a specific mode',
-                'parameters' => [
-                    [
-                        'name' => 'mode',
-                        'in' => 'path',
-                        'required' => true,
-                        'schema' => [
-                            'type' => 'string',
-                            'enum' => ['associate_and_disable', 'associate_only', 'remove_associated'],
-                        ],
-                        'description' => 'Delete mode: "associate_and_disable" associate products with parent category and disable them, "associate_only" associate products with parent and do not change their status, "remove_associated" remove products that are associated only with category that is being deleted',
-                    ],
-                ],
-            ],
-            scopes: [
-                'category_write',
-            ],
-        ),
         new CQRSUpdate(
             uriTemplate: '/categories/toggle-status',
             output: false,
@@ -74,7 +46,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         CategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkCategories
+class BulkToggleStatusCategories
 {
     /**
      * @var int[]

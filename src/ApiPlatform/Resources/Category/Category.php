@@ -39,7 +39,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\Annotation\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -81,6 +80,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'category_write',
             ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: [
+                '[active]' => '[isEnabled]',
+            ],
         ),
         new CQRSDelete(
             uriTemplate: '/category/{categoryId}/cover',
@@ -105,11 +108,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 class Category
 {
     #[ApiProperty(identifier: true)]
-    #[SerializedName('id')]
     public int $categoryId;
 
-    #[SerializedName('active')]
-    public bool $isActive;
+    public bool $active;
 
     #[LocalizedValue]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
@@ -182,8 +183,6 @@ class Category
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank(allowNull: true)]
     public array $shopIds;
-
-    public ?bool $isEnabled;
 
     public const QUERY_MAPPING = [
         '[id]' => '[categoryId]',

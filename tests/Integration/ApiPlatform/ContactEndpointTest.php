@@ -88,7 +88,7 @@ class ContactEndpointTest extends ApiTestCase
                 'fr-FR' => 'Description FR',
             ],
             'email' => 'test@test.com',
-            'saveMessages' => true,
+            'messagesSavingEnabled' => true,
             'shopIds' => [1],
         ];
 
@@ -124,14 +124,14 @@ class ContactEndpointTest extends ApiTestCase
                 'fr-FR' => 'Updated Contact FR',
             ],
             'email' => 'updated@test.com',
-            'saveMessages' => false,
+            'messagesSavingEnabled' => false,
             'shopIds' => [1],
         ];
 
         $updatedContact = $this->partialUpdateItem('/contacts/' . $contactId, $patchData, ['contact_write']);
         $this->assertSame($patchData['names'], $updatedContact['names']);
         $this->assertSame($patchData['email'], $updatedContact['email']);
-        $this->assertSame((bool) $patchData['saveMessages'], (bool) $updatedContact['saveMessages']);
+        $this->assertSame((bool) $patchData['messagesSavingEnabled'], (bool) $updatedContact['messagesSavingEnabled']);
 
         return $contactId;
     }
@@ -158,7 +158,7 @@ class ContactEndpointTest extends ApiTestCase
                 'fr-FR' => 'Invalid<',
             ],
             'email' => 'invalidemail@',
-            'saveMessages' => true,
+            'messagesSavingEnabled' => true,
             'shopIds' => [],
         ];
 
