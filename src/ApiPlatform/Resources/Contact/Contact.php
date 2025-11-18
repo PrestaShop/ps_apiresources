@@ -34,7 +34,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\Annotation\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -103,8 +102,7 @@ class Contact
     ])]
     public array $descriptions;
 
-    #[SerializedName('saveMessages')]
-    public bool $isMessagesSavingEnabled;
+    public bool $messagesSavingEnabled;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank(allowNull: true)]
@@ -120,12 +118,12 @@ class Contact
     public const CREATE_COMMAND_MAPPING = [
         '[names]' => '[localisedTitles]',
         '[descriptions]' => '[localisedDescription]',
-        '[saveMessages]' => '[isMessageSavingEnabled]',
+        '[messagesSavingEnabled]' => '[isMessageSavingEnabled]',
     ];
 
     public const UPDATE_COMMAND_MAPPING = [
         '[names]' => '[localisedTitles]',
         '[descriptions]' => '[localisedDescription]',
-        '[saveMessages]' => '[isMessagesSavingEnabled]',
+        '[messagesSavingEnabled]' => '[isMessagesSavingEnabled]',
     ];
 }

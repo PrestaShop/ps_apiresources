@@ -22,28 +22,24 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Category;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCommand;
-use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\BulkDeleteCategoriesCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/category/{categoryId}/{mode}',
-            CQRSCommand: DeleteCategoryCommand::class,
-            scopes: ['category_write'],
+            uriTemplate: '/categories/batch/{mode}',
+            output: false,
+            CQRSCommand: BulkDeleteCategoriesCommand::class,
+            CQRSCommandMapping: [
+                '[mode]' => '[deleteMode]',
+            ],
             openapiContext: [
-                'summary' => 'Delete a category using a specific mode',
+                'summary' => 'Delete a categories using a specific mode',
                 'parameters' => [
-                    [
-                        'name' => 'categoryId',
-                        'in' => 'path',
-                        'required' => true,
-                        'schema' => ['type' => 'integer'],
-                        'description' => 'Category ID to delete',
-                    ],
                     [
                         'name' => 'mode',
                         'in' => 'path',
@@ -56,20 +52,23 @@ use Symfony\Component\HttpFoundation\Response;
                     ],
                 ],
             ],
-            CQRSCommandMapping: [
-                '[deleteMode]' => '[mode]',
+            scopes: [
+                'category_write',
             ],
         ),
     ],
     exceptionToStatus: [
-        CategoryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class CategoryDelete
+class BulkDeleteCategories
 {
-    #[ApiProperty(identifier: true)]
-    public int $categoryId;
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[Assert\NotBlank]
+    public array $categoryIds;
 
     public string $deleteMode;
 }
