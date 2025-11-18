@@ -109,9 +109,12 @@ class AttributeGroupEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('attributeGroupId', $attributeGroup);
         $attributeGroupId = $attributeGroup['attributeGroupId'];
 
-        // We assert the returned data matches what was posted (plus the ID)
+        // We assert the returned data matches what was posted (plus the ID and position)
+        $this->assertArrayHasKey('position', $attributeGroup);
+        $position = $attributeGroup['position'];
+        $this->assertIsInt($position);
         $this->assertEquals(
-            ['attributeGroupId' => $attributeGroupId] + $postData,
+            ['attributeGroupId' => $attributeGroupId, 'position' => $position] + $postData,
             $attributeGroup
         );
 
@@ -131,6 +134,9 @@ class AttributeGroupEndpointTest extends ApiTestCase
     public function testGetAttributeGroup(int $attributeGroupId): int
     {
         $attributeGroup = $this->getItem('/attributes/group/' . $attributeGroupId, ['attribute_group_read']);
+        $this->assertArrayHasKey('position', $attributeGroup);
+        $position = $attributeGroup['position'];
+        $this->assertIsInt($position);
         $this->assertEquals([
             'attributeGroupId' => $attributeGroupId,
             'names' => [
@@ -143,6 +149,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
             ],
             'type' => 'select',
             'shopIds' => [1],
+            'position' => $position,
         ], $attributeGroup);
 
         return $attributeGroupId;
@@ -171,11 +178,14 @@ class AttributeGroupEndpointTest extends ApiTestCase
         ];
 
         $updatedAttributeGroup = $this->partialUpdateItem('/attributes/group/' . $attributeGroupId, $patchData, ['attribute_group_write']);
-        $this->assertEquals(['attributeGroupId' => $attributeGroupId] + $patchData, $updatedAttributeGroup);
+        $this->assertArrayHasKey('position', $updatedAttributeGroup);
+        $position = $updatedAttributeGroup['position'];
+        $this->assertIsInt($position);
+        $this->assertEquals(['attributeGroupId' => $attributeGroupId, 'position' => $position] + $patchData, $updatedAttributeGroup);
 
         // We check that when we GET the item it is updated as expected
         $attributeGroup = $this->getItem('/attributes/group/' . $attributeGroupId, ['attribute_group_read']);
-        $this->assertEquals(['attributeGroupId' => $attributeGroupId] + $patchData, $attributeGroup);
+        $this->assertEquals(['attributeGroupId' => $attributeGroupId, 'position' => $position] + $patchData, $attributeGroup);
 
         // Test partial update
         $partialUpdateData = [
@@ -198,6 +208,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
             ],
             'type' => 'radio',
             'shopIds' => [1],
+            'position' => $position,
         ];
         $updatedAttributeGroup = $this->partialUpdateItem('/attributes/group/' . $attributeGroupId, $partialUpdateData, ['attribute_group_write']);
         $this->assertEquals($expectedUpdatedData, $updatedAttributeGroup);
@@ -267,6 +278,9 @@ class AttributeGroupEndpointTest extends ApiTestCase
         $this->getItem('/attributes/group/' . $attributeGroupId, ['attribute_group_read'], Response::HTTP_NOT_FOUND);
     }
 
+    /**
+     * @depends testRemoveAttributeGroup
+     */
     public function testBulkRemoveAttributeGroups(): void
     {
         $attributeGroups = $this->listItems('/attributes/groups', ['attribute_group_read']);
