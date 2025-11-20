@@ -110,7 +110,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
      *
      *  yield 'get endpoint' => [
      *      'GET',
-     *      '/product/1',
+     *      '/products/1',
      *  ];
      *
      * Since all Api Platform resources should likely have some protected endpoints this provider

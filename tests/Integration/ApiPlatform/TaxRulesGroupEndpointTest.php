@@ -45,22 +45,22 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => [
             'POST',
-            '/tax-rules-group',
+            '/tax-rules-groups',
         ];
 
         yield 'get endpoint' => [
             'GET',
-            '/tax-rules-group/1',
+            '/tax-rules-groups/1',
         ];
 
         yield 'update endpoint' => [
             'PATCH',
-            '/tax-rules-group/1',
+            '/tax-rules-groups/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/tax-rules-group/1',
+            '/tax-rules-groups/1',
         ];
 
         yield 'list endpoint' => [
@@ -83,7 +83,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/tax-rules-groups', ['tax_rules_group_read']);
 
-        $taxRulesGroup = $this->createItem('/tax-rules-group', [
+        $taxRulesGroup = $this->createItem('/tax-rules-groups', [
             'name' => 'My Tax Rules Group',
             'enabled' => false,
             'shopIds' => [1],
@@ -112,7 +112,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
      */
     public function testGetTaxRulesGroup(int $taxRulesGroupId): int
     {
-        $taxRulesGroup = $this->getItem('/tax-rules-group/' . $taxRulesGroupId, ['tax_rules_group_read']);
+        $taxRulesGroup = $this->getItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_read']);
         $this->assertEquals(
             [
                 'taxRulesGroupId' => $taxRulesGroupId,
@@ -135,7 +135,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
      */
     public function testUpdateTaxRulesGroup(int $taxRulesGroupId): int
     {
-        $updatedTaxRulesGroup = $this->partialUpdateItem('/tax-rules-group/' . $taxRulesGroupId, [
+        $updatedTaxRulesGroup = $this->partialUpdateItem('/tax-rules-groups/' . $taxRulesGroupId, [
             'name' => 'My Tax Rules Group updated',
         ], ['tax_rules_group_write']);
         $this->assertEquals(
@@ -148,7 +148,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
             $updatedTaxRulesGroup
         );
 
-        $updatedTaxRulesGroup = $this->partialUpdateItem('/tax-rules-group/' . $taxRulesGroupId, [
+        $updatedTaxRulesGroup = $this->partialUpdateItem('/tax-rules-groups/' . $taxRulesGroupId, [
             'enabled' => true,
         ], ['tax_rules_group_write']);
         $this->assertEquals(
@@ -173,7 +173,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedTaxRulesGroup(int $taxRulesGroupId): int
     {
-        $taxRulesGroup = $this->getItem('/tax-rules-group/' . $taxRulesGroupId, ['tax_rules_group_read']);
+        $taxRulesGroup = $this->getItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_read']);
         $this->assertEquals(
             [
                 'taxRulesGroupId' => $taxRulesGroupId,
@@ -232,12 +232,12 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
      */
     public function testDeleteTaxRulesGroup(int $taxRulesGroupId): void
     {
-        $return = $this->deleteItem('/tax-rules-group/' . $taxRulesGroupId, ['tax_rules_group_write']);
+        $return = $this->deleteItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/tax-rules-group/' . $taxRulesGroupId, ['tax_rules_group_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -260,7 +260,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
             $taxRulesGroups['items'][3]['taxRulesGroupId'],
         ];
         foreach ($bulkTaxRulesGroups as $taxRulesGroupId) {
-            $taxRulesGroup = $this->getItem('/tax-rules-group/' . $taxRulesGroupId, ['tax_rules_group_read']);
+            $taxRulesGroup = $this->getItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_read']);
 
             $this->assertEquals(true, $taxRulesGroup['enabled']);
         }
@@ -272,7 +272,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
 
         // Assert the provided taxRulesGroups have been removed
         foreach ($bulkTaxRulesGroups as $taxRulesGroupId) {
-            $taxRulesGroup = $this->getItem('/tax-rules-group/' . $taxRulesGroupId, ['tax_rules_group_read']);
+            $taxRulesGroup = $this->getItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_read']);
 
             $this->assertEquals(false, $taxRulesGroup['enabled']);
         }
@@ -306,7 +306,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
 
         // Assert the provided taxRulesGroups have been removed
         foreach ($bulkTaxRulesGroups as $taxRulesGroupId) {
-            $this->getItem('/tax-rules-group/' . $taxRulesGroupId, ['tax_rules_group_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_read'], Response::HTTP_NOT_FOUND);
         }
 
         $this->assertEquals(50, $this->countItems('/tax-rules-groups', ['tax_rules_group_read']));
@@ -315,7 +315,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
     public function testCreateInvalidTaxRulesGroup(): void
     {
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
-        $validationErrorsResponse = $this->createItem('/tax-rules-group', [
+        $validationErrorsResponse = $this->createItem('/tax-rules-groups', [
             'name' => '',
         ], ['tax_rules_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);

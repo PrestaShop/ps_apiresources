@@ -78,22 +78,22 @@ class SearchAliasEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/search-alias/dress',
+            '/search-aliases/dress',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/search-alias',
+            '/search-aliases',
         ];
 
         yield 'update endpoint' => [
             'PUT',
-            '/search-alias/dress',
+            '/search-aliases/dress',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/search-alias/dress',
+            '/search-aliases/dress',
         ];
 
         yield 'list endpoint' => [
@@ -127,7 +127,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             ],
         ];
 
-        $response = $this->createItem('/search-alias', $postData, ['search_alias_write']);
+        $response = $this->createItem('/search-aliases', $postData, ['search_alias_write']);
 
         // CREATE returns 201 with empty resource confirmation (as per our implementation)
         $this->assertEquals('', $response['search']);
@@ -152,7 +152,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             ],
         ];
 
-        $validationErrorsResponse = $this->createItem('/search-alias', $postData, ['search_alias_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
         $this->assertValidationErrors([
             [
@@ -171,7 +171,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             'aliases' => [],
         ];
 
-        $validationErrorsResponse = $this->createItem('/search-alias', $postData, ['search_alias_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
         $this->assertValidationErrors([
             [
@@ -194,7 +194,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             ],
         ];
 
-        $validationErrorsResponse = $this->createItem('/search-alias', $postData, ['search_alias_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
 
         // The response is a direct array of violations
@@ -218,7 +218,7 @@ class SearchAliasEndpointTest extends ApiTestCase
         $this->createTestSearchAlias();
 
         // Now get it
-        $response = $this->getItem('/search-alias/' . self::$testSearchTerm, ['search_alias_read']);
+        $response = $this->getItem('/search-aliases/' . self::$testSearchTerm, ['search_alias_read']);
 
         $this->assertEquals(self::$testSearchTerm, $response['search']);
         $this->assertIsArray($response['aliases']);
@@ -241,7 +241,7 @@ class SearchAliasEndpointTest extends ApiTestCase
     public function testGetNonExistentSearchAlias(): void
     {
         // In PrestaShop, non-existent search terms return 200 with empty aliases array
-        $response = $this->getItem('/search-alias/non-existent-term', ['search_alias_read']);
+        $response = $this->getItem('/search-aliases/non-existent-term', ['search_alias_read']);
 
         $this->assertEquals('non-existent-term', $response['search']);
         $this->assertEquals([], $response['aliases']);
@@ -266,10 +266,10 @@ class SearchAliasEndpointTest extends ApiTestCase
             ],
         ];
 
-        $this->updateItem('/search-alias/' . self::$testSearchTerm, $updateData, ['search_alias_write']);
+        $this->updateItem('/search-aliases/' . self::$testSearchTerm, $updateData, ['search_alias_write']);
 
         // Verify the update
-        $response = $this->getItem('/search-alias/' . self::$testSearchTerm, ['search_alias_read']);
+        $response = $this->getItem('/search-aliases/' . self::$testSearchTerm, ['search_alias_read']);
         $this->assertCount(2, $response['aliases']);
 
         // Check that the aliases were updated (order might vary)
@@ -284,13 +284,13 @@ class SearchAliasEndpointTest extends ApiTestCase
         $this->createTestSearchAlias();
 
         // Verify it exists
-        $this->getItem('/search-alias/' . self::$testSearchTerm, ['search_alias_read']);
+        $this->getItem('/search-aliases/' . self::$testSearchTerm, ['search_alias_read']);
 
         // Delete it
-        $this->deleteItem('/search-alias/' . self::$testSearchTerm, ['search_alias_write']);
+        $this->deleteItem('/search-aliases/' . self::$testSearchTerm, ['search_alias_write']);
 
         // Verify it's deleted (returns empty aliases, not 404)
-        $response = $this->getItem('/search-alias/' . self::$testSearchTerm, ['search_alias_read']);
+        $response = $this->getItem('/search-aliases/' . self::$testSearchTerm, ['search_alias_read']);
         $this->assertEquals([], $response['aliases']);
     }
 
@@ -338,8 +338,8 @@ class SearchAliasEndpointTest extends ApiTestCase
         $this->createTestSearchAlias2();
 
         // Verify they exist
-        $this->getItem('/search-alias/' . self::$testSearchTerm, ['search_alias_read']);
-        $this->getItem('/search-alias/' . self::$testSearchTerm2, ['search_alias_read']);
+        $this->getItem('/search-aliases/' . self::$testSearchTerm, ['search_alias_read']);
+        $this->getItem('/search-aliases/' . self::$testSearchTerm2, ['search_alias_read']);
 
         // Bulk delete
         $bulkDeleteData = [
@@ -351,8 +351,8 @@ class SearchAliasEndpointTest extends ApiTestCase
         ]);
 
         // Verify they're deleted (return empty aliases, not 404)
-        $response1 = $this->getItem('/search-alias/' . self::$testSearchTerm, ['search_alias_read']);
-        $response2 = $this->getItem('/search-alias/' . self::$testSearchTerm2, ['search_alias_read']);
+        $response1 = $this->getItem('/search-aliases/' . self::$testSearchTerm, ['search_alias_read']);
+        $response2 = $this->getItem('/search-aliases/' . self::$testSearchTerm2, ['search_alias_read']);
         $this->assertEquals([], $response1['aliases']);
         $this->assertEquals([], $response2['aliases']);
     }
@@ -360,10 +360,10 @@ class SearchAliasEndpointTest extends ApiTestCase
     public function testSearchAliasPermissions(): void
     {
         // Test that endpoints require proper authentication (401 without token)
-        $this->getItem('/search-alias/test', [], Response::HTTP_UNAUTHORIZED);
-        $this->createItem('/search-alias', [], [], Response::HTTP_UNAUTHORIZED);
-        $this->updateItem('/search-alias/test', [], [], Response::HTTP_UNAUTHORIZED);
-        $this->deleteItem('/search-alias/test', [], Response::HTTP_UNAUTHORIZED);
+        $this->getItem('/search-aliases/test', [], Response::HTTP_UNAUTHORIZED);
+        $this->createItem('/search-aliases', [], [], Response::HTTP_UNAUTHORIZED);
+        $this->updateItem('/search-aliases/test', [], [], Response::HTTP_UNAUTHORIZED);
+        $this->deleteItem('/search-aliases/test', [], Response::HTTP_UNAUTHORIZED);
 
         // Test list endpoint with insufficient scope returns 403
         try {
@@ -391,7 +391,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             ],
         ];
 
-        $this->createItem('/search-alias', $postData, ['search_alias_write']);
+        $this->createItem('/search-aliases', $postData, ['search_alias_write']);
     }
 
     private function createTestSearchAlias2(): void
@@ -410,7 +410,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             ],
         ];
 
-        $this->createItem('/search-alias', $postData, ['search_alias_write']);
+        $this->createItem('/search-aliases', $postData, ['search_alias_write']);
     }
 
     private function assertSearchAliasExistsInDatabase(string $searchTerm, string $alias, bool $active): void

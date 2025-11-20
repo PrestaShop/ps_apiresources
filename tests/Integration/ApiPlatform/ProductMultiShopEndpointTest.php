@@ -159,7 +159,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/product/1',
+            '/products/1',
         ];
     }
 
@@ -177,7 +177,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
 
     public function testShopContextIsRequired(): void
     {
-        $errorResponse = $this->createItem('/product', [
+        $errorResponse = $this->createItem('/products', [
             'type' => ProductType::TYPE_STANDARD,
             'names' => [
                 'en-US' => 'product name',
@@ -189,7 +189,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
 
     public function testCreateProductForFirstShop(): int
     {
-        $product = $this->createItem('/product', [
+        $product = $this->createItem('/products', [
             'type' => ProductType::TYPE_STANDARD,
             'names' => [
                 'en-US' => 'product name',
@@ -218,7 +218,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
      */
     public function testGetProductForFirstShopIsSuccessful(int $productId): int
     {
-        $product = $this->getItem('/product/' . $productId, ['product_read'], Response::HTTP_OK, [
+        $product = $this->getItem('/products/' . $productId, ['product_read'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::DEFAULT_SHOP_ID,
@@ -239,7 +239,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
      */
     public function testGetProductForSecondShopIsFailing(int $productId): int
     {
-        $errorResponse = $this->getItem('/product/' . $productId, ['product_read'], Response::HTTP_NOT_FOUND, [
+        $errorResponse = $this->getItem('/products/' . $productId, ['product_read'], Response::HTTP_NOT_FOUND, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::$secondShopId,
@@ -270,7 +270,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
             self::$thirdShopId,
             self::$fourthShopId,
         ];
-        $updatedProduct = $this->partialUpdateItem('/product/' . $productId . '/shops', [
+        $updatedProduct = $this->partialUpdateItem('/products/' . $productId . '/shops', [
             'sourceShopId' => self::DEFAULT_SHOP_ID,
             'associatedShopIds' => $allShopIds,
         ], ['product_write'], Response::HTTP_OK, [
@@ -297,7 +297,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     {
         $bearerToken = $this->getBearerToken(['product_write']);
         // Modify name for all shops
-        $this->partialUpdateItem('/product/' . $productId, [
+        $this->partialUpdateItem('/products/' . $productId, [
             'names' => [
                 'en-US' => 'global product name',
             ],
@@ -316,7 +316,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         }
 
         // Modify names for second group shop
-        $this->partialUpdateItem('/product/' . $productId, [
+        $this->partialUpdateItem('/products/' . $productId, [
             'names' => [
                 'en-US' => 'second group product name',
             ],
@@ -329,7 +329,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         ]);
 
         // Modify names for first shop
-        $this->partialUpdateItem('/product/' . $productId, [
+        $this->partialUpdateItem('/products/' . $productId, [
             'names' => [
                 'en-US' => 'first shop product name',
             ],
@@ -342,7 +342,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         ]);
 
         // Modify names for shop2 and shop4
-        $this->partialUpdateItem('/product/' . $productId, [
+        $this->partialUpdateItem('/products/' . $productId, [
             'names' => [
                 'en-US' => 'even shops product name',
             ],
@@ -369,7 +369,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
 
     protected function getProduct(int $productId, int $shopId): array
     {
-        return $this->getItem('/product/' . $productId, ['product_read'], Response::HTTP_OK, [
+        return $this->getItem('/products/' . $productId, ['product_read'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopId' => $shopId,

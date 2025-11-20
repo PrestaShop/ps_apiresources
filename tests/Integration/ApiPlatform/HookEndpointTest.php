@@ -47,12 +47,12 @@ class HookEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/hook/1',
+            '/hooks/1',
         ];
 
         yield 'put endpoint' => [
             'PUT',
-            '/hook/1/status',
+            '/hooks/1/status',
         ];
 
         yield 'list endpoint' => [
@@ -62,7 +62,7 @@ class HookEndpointTest extends ApiTestCase
 
         yield 'get status endpoint' => [
             'GET',
-            '/hook/1/status',
+            '/hooks/1/status',
         ];
     }
 
@@ -77,7 +77,7 @@ class HookEndpointTest extends ApiTestCase
         $testHook->add();
         $hookId = (int) $testHook->id;
 
-        $hook = $this->getItem('/hook/' . $hookId, ['hook_read']);
+        $hook = $this->getItem('/hooks/' . $hookId, ['hook_read']);
         $this->assertEquals([
             'hookId' => $hookId,
             'name' => 'testHook',
@@ -94,7 +94,7 @@ class HookEndpointTest extends ApiTestCase
      */
     public function testUpdateHookStatus(int $hookId): int
     {
-        $updatedHook = $this->updateItem('/hook/' . $hookId . '/status', ['active' => false], ['hook_write']);
+        $updatedHook = $this->updateItem('/hooks/' . $hookId . '/status', ['active' => false], ['hook_write']);
         $expectedHook = [
             'hookId' => $hookId,
             'name' => 'testHook',
@@ -103,12 +103,12 @@ class HookEndpointTest extends ApiTestCase
             'active' => false,
         ];
         $this->assertEquals($expectedHook, $updatedHook);
-        $this->assertEquals($expectedHook, $this->getItem('/hook/' . $hookId, ['hook_read']));
+        $this->assertEquals($expectedHook, $this->getItem('/hooks/' . $hookId, ['hook_read']));
 
-        $updatedHook = $this->updateItem('/hook/' . $hookId . '/status', ['active' => true], ['hook_write']);
+        $updatedHook = $this->updateItem('/hooks/' . $hookId . '/status', ['active' => true], ['hook_write']);
         $expectedHook['active'] = true;
         $this->assertEquals($expectedHook, $updatedHook);
-        $this->assertEquals($expectedHook, $this->getItem('/hook/' . $hookId, ['hook_read']));
+        $this->assertEquals($expectedHook, $this->getItem('/hooks/' . $hookId, ['hook_read']));
 
         return $hookId;
     }
@@ -118,7 +118,7 @@ class HookEndpointTest extends ApiTestCase
      */
     public function testGetHookStatus(int $hookId): int
     {
-        $hookStatus = $this->getItem('/hook/' . $hookId . '/status', ['hook_read']);
+        $hookStatus = $this->getItem('/hooks/' . $hookId . '/status', ['hook_read']);
 
         $this->assertArrayHasKey('active', $hookStatus);
         $this->assertTrue($hookStatus['active'], 'Expected hook to be active');

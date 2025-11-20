@@ -46,17 +46,17 @@ class AddressEndpointTest extends ApiTestCase
     {
         yield 'get customer address endpoint' => [
             'GET',
-            '/addresses/customer/1',
+            '/addresses/customers/1',
         ];
 
         yield 'create customer address endpoint' => [
             'POST',
-            '/addresses/customer',
+            '/addresses/customers',
         ];
 
         yield 'update customer address endpoint' => [
             'PATCH',
-            '/addresses/customer/1',
+            '/addresses/customers/1',
         ];
 
         yield 'delete address endpoint' => [
@@ -96,7 +96,7 @@ class AddressEndpointTest extends ApiTestCase
             'other' => 'Test Other',
         ];
 
-        $customerAddress = $this->createItem('/addresses/customer', $postData, ['address_write']);
+        $customerAddress = $this->createItem('/addresses/customers', $postData, ['address_write']);
         $this->assertArrayHasKey('addressId', $customerAddress);
         $addressId = $customerAddress['addressId'];
 
@@ -156,7 +156,7 @@ class AddressEndpointTest extends ApiTestCase
             'company' => 'Updated Company',
         ];
 
-        $updatedAddress = $this->partialUpdateItem('/addresses/customer/' . $addressId, $updatedData, ['address_write']);
+        $updatedAddress = $this->partialUpdateItem('/addresses/customers/' . $addressId, $updatedData, ['address_write']);
 
         // Check that the data was updated correctly
         $this->assertEquals($addressId, $updatedAddress['addressId']);
@@ -186,7 +186,7 @@ class AddressEndpointTest extends ApiTestCase
             'company' => 'Updated Company',
         ];
 
-        $customerAddress = $this->getItem('/addresses/customer/' . $addressId, ['address_read']);
+        $customerAddress = $this->getItem('/addresses/customers/' . $addressId, ['address_read']);
 
         $this->assertEquals($addressId, $customerAddress['addressId']);
         foreach ($expectedData as $key => $value) {
@@ -213,7 +213,7 @@ class AddressEndpointTest extends ApiTestCase
             'countryId' => 8,
             'stateId' => 0,
         ];
-        $secondAddress = $this->createItem('/addresses/customer', $postData, ['address_write']);
+        $secondAddress = $this->createItem('/addresses/customers', $postData, ['address_write']);
         $secondAddressId = $secondAddress['addressId'];
 
         // Test bulk delete
@@ -223,8 +223,8 @@ class AddressEndpointTest extends ApiTestCase
         $this->updateItem('/addresses/delete', $bulkDeleteData, ['address_write'], 204);
 
         // Verify addresses were deleted
-        $this->getItem('/addresses/customer/' . $addressId, ['address_read'], Response::HTTP_NOT_FOUND);
-        $this->getItem('/addresses/customer/' . $secondAddressId, ['address_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/addresses/customers/' . $addressId, ['address_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/addresses/customers/' . $secondAddressId, ['address_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testDeleteSingleAddress(): void
@@ -241,12 +241,12 @@ class AddressEndpointTest extends ApiTestCase
             'countryId' => 8,
             'stateId' => 0,
         ];
-        $address = $this->createItem('/addresses/customer', $postData, ['address_write']);
+        $address = $this->createItem('/addresses/customers', $postData, ['address_write']);
         $addressId = $address['addressId'];
 
         // Delete and check
         $this->deleteItem('/addresses/' . $addressId, ['address_write']);
-        $this->getItem('/addresses/customer/' . $addressId, ['address_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/addresses/customers/' . $addressId, ['address_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testAddressValidation(): void
@@ -265,6 +265,6 @@ class AddressEndpointTest extends ApiTestCase
         ];
 
         // Use the createItem method but expect it to fail with validation error
-        $this->createItem('/addresses/customer', $invalidData, ['address_write'], 422);
+        $this->createItem('/addresses/customers', $invalidData, ['address_write'], 422);
     }
 }

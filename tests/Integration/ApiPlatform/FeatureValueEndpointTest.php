@@ -57,22 +57,22 @@ class FeatureValueEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/features/value/1',
+            '/features/values/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/features/value',
+            '/features/values',
         ];
 
         yield 'patch endpoint' => [
             'PATCH',
-            '/features/value/1',
+            '/features/values/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/features/value/1',
+            '/features/values/1',
         ];
 
         yield 'list endpoint' => [
@@ -96,7 +96,7 @@ class FeatureValueEndpointTest extends ApiTestCase
             'featureId' => 1,
         ];
 
-        $featureValue = $this->createItem('/features/value', $postData, ['feature_value_write']);
+        $featureValue = $this->createItem('/features/values', $postData, ['feature_value_write']);
         $this->assertArrayHasKey('featureValueId', $featureValue);
 
         $featureValueId = $featureValue['featureValueId'];
@@ -110,7 +110,7 @@ class FeatureValueEndpointTest extends ApiTestCase
      */
     public function testGetFeatureValue(int $featureValueId): int
     {
-        $feature = $this->getItem('/features/value/' . $featureValueId, ['feature_value_read']);
+        $feature = $this->getItem('/features/values/' . $featureValueId, ['feature_value_read']);
         $this->assertEquals($featureValueId, $feature['featureValueId']);
         $this->assertArrayHasKey('values', $feature);
 
@@ -129,7 +129,7 @@ class FeatureValueEndpointTest extends ApiTestCase
             ],
         ];
 
-        $updatedFeature = $this->partialUpdateItem('/features/value/' . $featureValueId, $patchData, ['feature_value_write']);
+        $updatedFeature = $this->partialUpdateItem('/features/values/' . $featureValueId, $patchData, ['feature_value_write']);
         $this->assertSame($patchData['values'], $updatedFeature['values']);
 
         return $featureValueId;
@@ -156,8 +156,8 @@ class FeatureValueEndpointTest extends ApiTestCase
      */
     public function testRemoveFeatureValue(int $featureValueId): void
     {
-        $this->deleteItem('/features/value/' . $featureValueId, ['feature_value_write']);
-        $this->getItem('/features/value/' . $featureValueId, ['feature_value_read'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/features/values/' . $featureValueId, ['feature_value_write']);
+        $this->getItem('/features/values/' . $featureValueId, ['feature_value_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkRemoveFeatureValues(): void
@@ -175,7 +175,7 @@ class FeatureValueEndpointTest extends ApiTestCase
         ], ['feature_value_write'], Response::HTTP_NO_CONTENT);
 
         foreach ($removeFeatureIds as $featureValueId) {
-            $this->getItem('/features/value/' . $featureValueId, ['feature_value_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/features/values/' . $featureValueId, ['feature_value_read'], Response::HTTP_NOT_FOUND);
         }
     }
 
@@ -187,7 +187,7 @@ class FeatureValueEndpointTest extends ApiTestCase
             ],
         ];
 
-        $validationErrorsResponse = $this->createItem('/features/value', $invalidData, ['feature_value_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/features/values', $invalidData, ['feature_value_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
 
         $this->assertValidationErrors([

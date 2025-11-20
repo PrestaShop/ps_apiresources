@@ -149,57 +149,57 @@ class ProductEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/product/1',
+            '/products/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/product',
+            '/products',
         ];
 
         yield 'update endpoint' => [
             'PATCH',
-            '/product/1',
+            '/products/1',
         ];
 
         yield 'update endpoint with merge content type' => [
             'PATCH',
-            '/product/1',
+            '/products/1',
             'application/merge-patch+json',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/product/1',
+            '/products/1',
         ];
 
         yield 'upload image endpoint' => [
             'POST',
-            '/product/1/image',
+            '/products/1/images',
             'multipart/form-data',
         ];
 
         yield 'get image endpoint' => [
             'GET',
-            '/product/image/1',
+            '/products/images/1',
         ];
 
         yield 'update image endpoint' => [
             'POST',
-            '/product/image/1',
+            '/products/images/1',
             'multipart/form-data',
         ];
 
         yield 'list images endpoint' => [
             'GET',
-            '/product/1/images',
+            '/products/1/images',
         ];
     }
 
     public function testAddProduct(): int
     {
         $productsNumber = $this->countItems('/products', ['product_read']);
-        $addedProduct = $this->createItem('/product', [
+        $addedProduct = $this->createItem('/products', [
             'type' => ProductType::TYPE_STANDARD,
             'names' => [
                 'en-US' => 'product name',
@@ -247,7 +247,7 @@ class ProductEndpointTest extends ApiTestCase
     public function testPartialUpdateProduct(int $productId): int
     {
         $productsNumber = $this->countItems('/products', ['product_read']);
-        $patchedProduct = $this->partialUpdateItem('/product/' . $productId, [
+        $patchedProduct = $this->partialUpdateItem('/products/' . $productId, [
             'names' => [
                 'fr-FR' => 'nouveau nom',
             ],
@@ -286,7 +286,7 @@ class ProductEndpointTest extends ApiTestCase
         );
 
         // Update product with partial data, only name default language the other names are not impacted
-        $patchedProduct2 = $this->partialUpdateItem('/product/' . $productId, [
+        $patchedProduct2 = $this->partialUpdateItem('/products/' . $productId, [
             'names' => [
                 'en-US' => 'new product name',
             ],
@@ -328,7 +328,7 @@ class ProductEndpointTest extends ApiTestCase
     public function testGetProduct(int $productId): int
     {
         // Returned data has modified fields, the others haven't changed
-        $product = $this->getItem('/product/' . $productId, ['product_read']);
+        $product = $this->getItem('/products/' . $productId, ['product_read']);
         $this->assertEquals(
             [
                 'type' => ProductType::TYPE_STANDARD,
@@ -444,7 +444,7 @@ class ProductEndpointTest extends ApiTestCase
         ];
 
         // Update the product
-        $updatedProduct = $this->partialUpdateItem('/product/' . $productId, $updateProductData, ['product_write']);
+        $updatedProduct = $this->partialUpdateItem('/products/' . $productId, $updateProductData, ['product_write']);
 
         // Build expected data
         $expectedUpdateProduct = [
@@ -463,7 +463,7 @@ class ProductEndpointTest extends ApiTestCase
 
         $this->assertEquals($expectedUpdateProduct, $updatedProduct);
         // Now check the result when we GET the product
-        $this->assertEquals($expectedUpdateProduct, $this->getItem('/product/' . $productId, ['product_read']));
+        $this->assertEquals($expectedUpdateProduct, $this->getItem('/products/' . $productId, ['product_read']));
 
         return $productId;
     }
@@ -478,7 +478,7 @@ class ProductEndpointTest extends ApiTestCase
         $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
 
         // Special type of request, requires multipart/form-data content-type and upload a file via the request
-        $createdImage = $this->requestApi('POST', '/product/' . $productId . '/image', null, ['product_write'], Response::HTTP_CREATED, [
+        $createdImage = $this->requestApi('POST', '/products/' . $productId . '/images', null, ['product_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -535,7 +535,7 @@ class ProductEndpointTest extends ApiTestCase
                 1,
             ],
         ];
-        $image = $this->getItem('/product/image/' . $imageId, ['product_read']);
+        $image = $this->getItem('/products/images/' . $imageId, ['product_read']);
         $this->assertEquals($expectedImage, $image);
 
         return $this->getImageMD5($image);
@@ -552,7 +552,7 @@ class ProductEndpointTest extends ApiTestCase
         $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Brown_bear_cushion.jpg');
 
         // We have to force POST request, because we cannot use PUT with files AND data
-        $updatedImage = $this->requestApi('POST', '/product/image/' . $imageId, null, ['product_write'], Response::HTTP_OK, [
+        $updatedImage = $this->requestApi('POST', '/products/images/' . $imageId, null, ['product_write'], Response::HTTP_OK, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -606,7 +606,7 @@ class ProductEndpointTest extends ApiTestCase
     {
         // First add a new image so that we have at least to images
         $uploadedImage = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
-        $newImage = $this->requestApi('POST', '/product/' . $productId . '/image', null, ['product_write'], Response::HTTP_CREATED, [
+        $newImage = $this->requestApi('POST', '/products/' . $productId . '/images', null, ['product_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -620,7 +620,7 @@ class ProductEndpointTest extends ApiTestCase
 
         // Get the whole list of images (we don't use the usual listItems helper because this is a custom endpoint based on a CQRS query
         // and a different response format)
-        $productImages = $this->getItem('/product/' . $productId . '/images', ['product_read']);
+        $productImages = $this->getItem('/products/' . $productId . '/images', ['product_read']);
         $this->assertEquals(2, count($productImages));
         $this->assertEquals([
             [
@@ -654,7 +654,7 @@ class ProductEndpointTest extends ApiTestCase
         ], $productImages);
 
         // Now update the second image to be the cover and have position 1
-        $this->requestApi('POST', '/product/image/' . $newImageId, null, ['product_write'], Response::HTTP_OK, [
+        $this->requestApi('POST', '/products/images/' . $newImageId, null, ['product_write'], Response::HTTP_OK, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -669,7 +669,7 @@ class ProductEndpointTest extends ApiTestCase
         ]);
 
         // Now check the updated list, the content is changed but so is the order because images are sorted by position
-        $productImages = $this->getItem('/product/' . $productId . '/images', ['product_read']);
+        $productImages = $this->getItem('/products/' . $productId . '/images', ['product_read']);
         $this->assertEquals(2, count($productImages));
 
         // The images are sorted differently (since they are automatically order by position) and the cover has been updated
@@ -713,13 +713,13 @@ class ProductEndpointTest extends ApiTestCase
     public function testDeleteImage(int $imageId, int $productId): void
     {
         // Image exists
-        $this->assertIsArray($this->getItem('/product/image/' . $imageId, ['product_read']));
+        $this->assertIsArray($this->getItem('/products/images/' . $imageId, ['product_read']));
         // Now delete the image
-        $this->deleteItem('/product/image/' . $imageId, ['product_write']);
+        $this->deleteItem('/products/images/' . $imageId, ['product_write']);
 
         // The image single endpoint returns a 404, and the image is not in the list anymore
-        $this->getItem('/product/image/' . $imageId, ['product_read'], Response::HTTP_NOT_FOUND);
-        $productImages = $this->getItem('/product/' . $productId . '/images', ['product_read']);
+        $this->getItem('/products/images/' . $imageId, ['product_read'], Response::HTTP_NOT_FOUND);
+        $productImages = $this->getItem('/products/' . $productId . '/images', ['product_read']);
         $this->assertEquals(1, count($productImages));
     }
 
@@ -734,17 +734,17 @@ class ProductEndpointTest extends ApiTestCase
         $productsNumber = $this->countItems('/products', ['product_read']);
 
         // Delete product with token without write permission
-        $this->deleteItem('/product/' . $productId, ['product_read'], Response::HTTP_FORBIDDEN);
+        $this->deleteItem('/products/' . $productId, ['product_read'], Response::HTTP_FORBIDDEN);
         // The product should still exist
-        $this->assertIsArray($this->getItem('/product/' . $productId, ['product_read']));
+        $this->assertIsArray($this->getItem('/products/' . $productId, ['product_read']));
 
         // Delete product with proper token
-        $this->deleteItem('/product/' . $productId, ['product_write']);
+        $this->deleteItem('/products/' . $productId, ['product_write']);
 
         // One less products
         $this->assertEquals($productsNumber - 1, $this->countItems('/products', ['product_read']));
         // The product is not accessible anymore
-        $this->getItem('/product/' . $productId, ['product_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/products/' . $productId, ['product_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**

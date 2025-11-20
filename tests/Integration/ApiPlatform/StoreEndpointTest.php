@@ -98,17 +98,17 @@ class StoreEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/store/1',
+            '/stores/1',
         ];
 
         yield 'toggle status endpoint' => [
             'PUT',
-            '/store/1/toggle-status',
+            '/stores/1/toggle-status',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/store/1',
+            '/stores/1',
         ];
 
         yield 'bulk set status endpoint' => [
@@ -126,7 +126,7 @@ class StoreEndpointTest extends ApiTestCase
     {
         $storeId = (int) self::$store1->id;
 
-        $store = $this->getItem('/store/' . $storeId, ['store_read']);
+        $store = $this->getItem('/stores/' . $storeId, ['store_read']);
         $this->assertEquals(
             [
                 'storeId' => $storeId,
@@ -143,8 +143,8 @@ class StoreEndpointTest extends ApiTestCase
      */
     public function testToggleStatusStore(int $storeId): int
     {
-        $this->updateItem('/store/' . $storeId . '/toggle-status', [], ['store_write'], Response::HTTP_NO_CONTENT);
-        $updatedStore = $this->getItem('/store/' . $storeId, ['store_read']);
+        $this->updateItem('/stores/' . $storeId . '/toggle-status', [], ['store_write'], Response::HTTP_NO_CONTENT);
+        $updatedStore = $this->getItem('/stores/' . $storeId, ['store_read']);
         $this->assertEquals(
             [
                 'storeId' => $storeId,
@@ -161,12 +161,12 @@ class StoreEndpointTest extends ApiTestCase
      */
     public function testDeleteStore(int $storeId): void
     {
-        $return = $this->deleteItem('/store/' . $storeId, ['store_write']);
+        $return = $this->deleteItem('/stores/' . $storeId, ['store_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/store/' . $storeId, ['store_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/stores/' . $storeId, ['store_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -187,7 +187,7 @@ class StoreEndpointTest extends ApiTestCase
         ], ['store_write'], Response::HTTP_NO_CONTENT);
 
         foreach ($bulkStoresId as $storeId) {
-            $store = $this->getItem('/store/' . $storeId, ['store_read']);
+            $store = $this->getItem('/stores/' . $storeId, ['store_read']);
             $this->assertEquals(false, $store['enabled']);
         }
 
