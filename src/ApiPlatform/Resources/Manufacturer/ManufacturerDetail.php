@@ -67,7 +67,8 @@ class ManufacturerDetail
     public array $addresses = [];
 
     public const QUERY_MAPPING = [
-        'manufacturerProducts' => 'products',
-        'manufacturerAddresses' => 'addresses',
+        '[name]' => '[name]',
+        '[manufacturerProducts]' => '[products]',
+        '[manufacturerAddresses]' => '[addresses]',
     ];
 }
