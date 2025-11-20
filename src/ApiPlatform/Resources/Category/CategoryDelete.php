@@ -31,7 +31,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/category/{categoryId}/{mode}',
+            uriTemplate: '/categories/{categoryId}/{mode}',
             CQRSCommand: DeleteCategoryCommand::class,
             scopes: ['category_write'],
             openapiContext: [

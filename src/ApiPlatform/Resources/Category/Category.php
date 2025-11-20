@@ -44,7 +44,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/category/{categoryId}',
+            uriTemplate: '/categories/{categoryId}',
             CQRSQuery: GetCategoryForEditing::class,
             scopes: [
                 'category_read',
@@ -52,7 +52,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/category',
+            uriTemplate: '/categories',
             validationContext: [IframeValidationGroupsResolver::class, 'create'],
             CQRSCommand: AddCategoryCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
@@ -63,7 +63,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/category/{categoryId}',
+            uriTemplate: '/categories/{categoryId}',
             validationContext: [IframeValidationGroupsResolver::class, 'update'],
             CQRSCommand: EditCategoryCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
@@ -74,7 +74,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/category/{categoryId}/status',
+            uriTemplate: '/categories/{categoryId}/status',
             CQRSCommand: SetCategoryIsEnabledCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
             scopes: [
@@ -86,14 +86,14 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
         new CQRSDelete(
-            uriTemplate: '/category/{categoryId}/cover',
+            uriTemplate: '/categories/{categoryId}/cover',
             CQRSCommand: DeleteCategoryCoverImageCommand::class,
             scopes: [
                 'category_write',
             ],
         ),
         new CQRSDelete(
-            uriTemplate: '/category/{categoryId}/thumbnail',
+            uriTemplate: '/categories/{categoryId}/thumbnail',
             CQRSCommand: DeleteCategoryThumbnailImageCommand::class,
             scopes: [
                 'category_write',

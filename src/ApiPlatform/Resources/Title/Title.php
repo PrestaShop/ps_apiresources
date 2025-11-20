@@ -42,7 +42,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/title',
+            uriTemplate: '/titles',
             CQRSCommand: AddTitleCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             scopes: ['title_write'],
@@ -51,21 +51,21 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
             denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
         ),
         new CQRSDelete(
-            uriTemplate: '/title/{titleId}',
+            uriTemplate: '/titles/{titleId}',
             requirements: ['titleId' => '\d+'],
             output: false,
             CQRSCommand: DeleteTitleCommand::class,
             scopes: ['title_write']
         ),
         new CQRSGet(
-            uriTemplate: '/title/{titleId}',
+            uriTemplate: '/titles/{titleId}',
             requirements: ['titleId' => '\d+'],
             CQRSQuery: GetTitleForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['title_read'],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/title/{titleId}',
+            uriTemplate: '/titles/{titleId}',
             requirements: ['titleId' => '\d+'],
             read: false,
             CQRSCommand: EditTitleCommand::class,

@@ -40,28 +40,28 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/tax-rules-group',
+            uriTemplate: '/tax-rules-groups',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddTaxRulesGroupCommand::class,
             scopes: ['tax_rules_group_write'],
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/tax-rules-group/{taxRulesGroupId}',
+            uriTemplate: '/tax-rules-groups/{taxRulesGroupId}',
             requirements: ['taxRulesGroupId' => '\d+'],
             output: false,
             CQRSCommand: DeleteTaxRulesGroupCommand::class,
             scopes: ['tax_rules_group_write']
         ),
         new CQRSGet(
-            uriTemplate: '/tax-rules-group/{taxRulesGroupId}',
+            uriTemplate: '/tax-rules-groups/{taxRulesGroupId}',
             requirements: ['taxRulesGroupId' => '\d+'],
             CQRSQuery: GetTaxRulesGroupForEditing::class,
             scopes: ['tax_rules_group_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/tax-rules-group/{taxRulesGroupId}',
+            uriTemplate: '/tax-rules-groups/{taxRulesGroupId}',
             requirements: ['taxRulesGroupId' => '\d+'],
             read: false,
             CQRSCommand: EditTaxRulesGroupCommand::class,

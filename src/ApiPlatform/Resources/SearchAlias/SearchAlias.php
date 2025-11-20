@@ -41,21 +41,21 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/search-alias/{search}',
+            uriTemplate: '/search-aliases/{search}',
             CQRSQuery: GetAliasesBySearchTermForEditing::class,
             scopes: ['search_alias_read'],
             exceptionToStatus: [AliasNotFoundException::class => 404],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/search-alias',
+            uriTemplate: '/search-aliases',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddSearchTermAliasesCommand::class,
             scopes: ['search_alias_write'],
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSUpdate(
-            uriTemplate: '/search-alias/{search}',
+            uriTemplate: '/search-aliases/{search}',
             CQRSCommand: UpdateSearchTermAliasesCommand::class,
             CQRSQuery: GetAliasesBySearchTermForEditing::class,
             scopes: ['search_alias_write'],
@@ -63,7 +63,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/search-alias/{search}',
+            uriTemplate: '/search-aliases/{search}',
             CQRSCommand: DeleteSearchTermAliasesCommand::class,
             scopes: ['search_alias_write'],
             CQRSCommandMapping: self::DELETE_COMMAND_MAPPING,

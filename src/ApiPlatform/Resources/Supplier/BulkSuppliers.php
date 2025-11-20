@@ -33,7 +33,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/suppliers/delete',
+            uriTemplate: '/suppliers/bulk-delete',
             // No output 204 code
             output: false,
             CQRSCommand: BulkDeleteSupplierCommand::class,
@@ -42,7 +42,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/suppliers/disable',
+            uriTemplate: '/suppliers/bulk-disable',
             // No output 204 code
             output: false,
             CQRSCommand: BulkDisableSupplierCommand::class,
@@ -51,7 +51,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/suppliers/enable',
+            uriTemplate: '/suppliers/bulk-enable',
             // No output 204 code
             output: false,
             CQRSCommand: BulkEnableSupplierCommand::class,

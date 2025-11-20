@@ -36,14 +36,14 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/discount/{discountId}/conditions',
+            uriTemplate: '/discounts/{discountId}/conditions',
             requirements: ['discountId' => '\d+'],
             CQRSQuery: GetDiscountForEditing::class,
             scopes: ['discount_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/discount/{discountId}/conditions',
+            uriTemplate: '/discounts/{discountId}/conditions',
             requirements: ['discountId' => '\d+'],
             CQRSCommand: UpdateDiscountConditionsCommand::class,
             CQRSQuery: GetDiscountForEditing::class,

@@ -34,7 +34,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/product/{productId}/image',
+            uriTemplate: '/products/{productId}/images',
             inputFormats: ['multipart' => ['multipart/form-data']],
             read: false,
             CQRSCommand: AddProductImageCommand::class,

@@ -31,7 +31,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/cart-rule/{cartRuleId}',
+            uriTemplate: '/cart-rules/{cartRuleId}',
             CQRSCommand: EditCartRuleCommand::class,
             scopes: [
                 'cart_rule_write',

@@ -39,7 +39,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/webservice-key',
+            uriTemplate: '/webservice-keys',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddWebserviceKeyCommand::class,
             scopes: ['webservice_key_write'],
@@ -49,14 +49,14 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
         new CQRSGet(
-            uriTemplate: '/webservice-key/{webserviceKeyId}',
+            uriTemplate: '/webservice-keys/{webserviceKeyId}',
             requirements: ['webserviceKeyId' => '\d+'],
             CQRSQuery: GetWebserviceKeyForEditing::class,
             scopes: ['webservice_key_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/webservice-key/{webserviceKeyId}',
+            uriTemplate: '/webservice-keys/{webserviceKeyId}',
             read: false,
             CQRSCommand: EditWebserviceKeyCommand::class,
             CQRSQuery: GetWebserviceKeyForEditing::class,

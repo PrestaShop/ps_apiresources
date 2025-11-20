@@ -37,7 +37,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/hook/{hookId}/status',
+            uriTemplate: '/hooks/{hookId}/status',
             CQRSCommand: UpdateHookStatusCommand::class,
             CQRSQuery: GetHook::class,
             scopes: ['hook_write'],
@@ -45,7 +45,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             CQRSCommandMapping: self::MAPPING,
         ),
         new CQRSGet(
-            uriTemplate: '/hook/{hookId}',
+            uriTemplate: '/hooks/{hookId}',
             requirements: ['hookId' => '\d+'],
             exceptionToStatus: [HookNotFoundException::class => 404],
             CQRSQuery: GetHook::class,
@@ -53,7 +53,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             CQRSQueryMapping: self::MAPPING,
         ),
         new CQRSGet(
-            uriTemplate: '/hook/{hookId}/status',
+            uriTemplate: '/hooks/{hookId}/status',
             requirements: ['hookId' => '\d+'],
             exceptionToStatus: [HookNotFoundException::class => 404],
             CQRSQuery: GetHookStatus::class,

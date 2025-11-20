@@ -43,35 +43,35 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/supplier',
+            uriTemplate: '/suppliers',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddSupplierCommand::class,
             scopes: ['supplier_write'],
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/supplier/{supplierId}',
+            uriTemplate: '/suppliers/{supplierId}',
             requirements: ['supplierId' => '\d+'],
             output: false,
             CQRSCommand: DeleteSupplierCommand::class,
             scopes: ['supplier_write']
         ),
         new CQRSDelete(
-            uriTemplate: '/supplier/{supplierId}/logo',
+            uriTemplate: '/suppliers/{supplierId}/logo',
             requirements: ['supplierId' => '\d+'],
             output: false,
             CQRSCommand: DeleteSupplierLogoImageCommand::class,
             scopes: ['supplier_write']
         ),
         new CQRSGet(
-            uriTemplate: '/supplier/{supplierId}',
+            uriTemplate: '/suppliers/{supplierId}',
             requirements: ['supplierId' => '\d+'],
             CQRSQuery: GetSupplierForEditing::class,
             scopes: ['supplier_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/supplier/{supplierId}',
+            uriTemplate: '/suppliers/{supplierId}',
             requirements: ['supplierId' => '\d+'],
             read: false,
             CQRSCommand: EditSupplierCommand::class,
@@ -81,7 +81,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['supplier_write'],
         ),
         new CQRSUpdate(
-            uriTemplate: '/supplier/{supplierId}/toggle-status',
+            uriTemplate: '/suppliers/{supplierId}/toggle-status',
             requirements: ['supplierId' => '\d+'],
             output: false,
             allowEmptyBody: true,

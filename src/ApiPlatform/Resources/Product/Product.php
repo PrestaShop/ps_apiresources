@@ -42,7 +42,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/product/{productId}',
+            uriTemplate: '/products/{productId}',
             CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_read',
@@ -50,7 +50,7 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQueryMapping: Product::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/product',
+            uriTemplate: '/products',
             CQRSCommand: AddProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
@@ -64,7 +64,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/product/{productId}',
+            uriTemplate: '/products/{productId}',
             CQRSCommand: UpdateProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
@@ -74,7 +74,7 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSCommandMapping: Product::UPDATE_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/product/{productId}',
+            uriTemplate: '/products/{productId}',
             CQRSCommand: DeleteProductCommand::class,
             scopes: [
                 'product_write',
