@@ -29,6 +29,10 @@ services:
     arguments:
       - '@prestashop.adapter.legacy.configuration'
 
+  PrestaShop\Module\APIResources\Command\GenerateApiTrackingTableCommand:
+    tags:
+      - { name: 'console.command' }
+
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\StateIdInterfaceNormalizer:
     tags:
       - { name: 'serializer.normalizer', priority: 100 }
