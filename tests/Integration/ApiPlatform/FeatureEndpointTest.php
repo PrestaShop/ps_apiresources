@@ -22,7 +22,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
@@ -83,7 +82,7 @@ class FeatureEndpointTest extends ApiTestCase
 
         yield 'bulk delete endpoint' => [
             'DELETE',
-            '/features/batch',
+            '/features/bulk-delete',
         ];
     }
 
@@ -161,7 +160,7 @@ class FeatureEndpointTest extends ApiTestCase
         $this->getItem('/features/' . $featureId, ['feature_read'], Response::HTTP_NOT_FOUND);
     }
 
-    public function testBulkRemoveFeatures(): void
+    public function testBulkDeleteFeatures(): void
     {
         $features = $this->listItems('/features', ['feature_read']);
 
@@ -171,9 +170,9 @@ class FeatureEndpointTest extends ApiTestCase
             $features['items'][0]['featureId'],
         ];
 
-        $this->deleteBatch('/features/batch', [
+        $this->bulkDeleteItems('/features/bulk-delete', [
             'featureIds' => $removeFeatureIds,
-        ], ['feature_write'], Response::HTTP_NO_CONTENT);
+        ], ['feature_write']);
 
         foreach ($removeFeatureIds as $featureId) {
             $this->getItem('/features/' . $featureId, ['feature_read'], Response::HTTP_NOT_FOUND);
@@ -206,10 +205,5 @@ class FeatureEndpointTest extends ApiTestCase
                 'message' => 'This value should not be blank.',
             ],
         ], $validationErrorsResponse);
-    }
-
-    protected function deleteBatch(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
-    {
-        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
 }

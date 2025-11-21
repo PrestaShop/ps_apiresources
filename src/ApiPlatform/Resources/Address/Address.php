@@ -32,6 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSDelete(
             uriTemplate: '/addresses/{addressId}',
+            requirements: ['addressId' => '\d+'],
             CQRSCommand: DeleteAddressCommand::class,
             scopes: [
                 'address_write',

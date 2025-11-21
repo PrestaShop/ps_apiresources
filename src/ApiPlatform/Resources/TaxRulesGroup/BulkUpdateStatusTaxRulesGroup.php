@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -19,39 +18,43 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-declare(strict_types=1);
-
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchAlias;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\TaxRulesGroup;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Alias\Command\BulkDeleteSearchTermsAliasesCommand;
-use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Command\BulkSetTaxRulesGroupStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSDelete(
-            uriTemplate: '/search-aliases/delete',
-            CQRSCommand: BulkDeleteSearchTermsAliasesCommand::class,
-            scopes: ['search_alias_write'],
+        new CQRSUpdate(
+            uriTemplate: '/tax-rules-groups/bulk-update-status',
+            // No output 204 code
+            output: false,
+            CQRSCommand: BulkSetTaxRulesGroupStatusCommand::class,
             CQRSCommandMapping: [
-                '[searchTerms]' => '[searchTerms]',
+                '[enabled]' => '[expectedStatus]',
+            ],
+            scopes: [
+                'tax_rules_group_write',
             ],
         ),
     ],
     exceptionToStatus: [
-        AliasNotFoundException::class => Response::HTTP_NOT_FOUND,
+        TaxRulesGroupException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkSearchAliasesDelete
+class BulkUpdateStatusTaxRulesGroup
 {
-    #[ApiProperty(
-        openapiContext: [
-            'type' => 'array',
-            'items' => ['type' => 'string'],
-        ]
-    )]
-    public array $searchTerms = [];
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[Assert\NotBlank]
+    public array $taxRulesGroupIds;
+
+    public bool $enabled;
 }

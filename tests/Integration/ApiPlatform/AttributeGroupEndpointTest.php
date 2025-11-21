@@ -82,8 +82,8 @@ class AttributeGroupEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/attributes/groups/delete',
+            'DELETE',
+            '/attributes/groups/bulk-delete',
         ];
     }
 
@@ -280,9 +280,9 @@ class AttributeGroupEndpointTest extends ApiTestCase
             $attributeGroups['items'][2]['attributeGroupId'],
         ];
 
-        $this->updateItem('/attributes/groups/delete', [
+        $this->bulkDeleteItems('/attributes/groups/bulk-delete', [
             'attributeGroupIds' => $removeAttributeGroupIds,
-        ], ['attribute_group_write'], Response::HTTP_NO_CONTENT);
+        ], ['attribute_group_write']);
 
         // Assert the provided attribute groups have been removed
         foreach ($removeAttributeGroupIds as $attributeGroupId) {

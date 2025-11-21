@@ -18,38 +18,39 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Zone;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Store;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Exception\ZoneNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\Zone\Command\BulkDeleteZoneCommand;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\Store\Command\BulkDeleteStoreCommand;
+use PrestaShop\PrestaShop\Core\Domain\Store\Exception\StoreNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/zones/delete',
-            // No output 204 code
-            output: false,
-            CQRSCommand: BulkDeleteZoneCommand::class,
+        new CQRSDelete(
+            uriTemplate: '/stores/bulk-delete',
+            CQRSCommand: BulkDeleteStoreCommand::class,
             scopes: [
-                'zone_write',
+                'store_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
-        ZoneNotFoundException::class => Response::HTTP_NOT_FOUND,
+        StoreNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkZonesDelete
+class BulkDeleteStores
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $zoneIds;
+    public array $storeIds;
 }

@@ -18,12 +18,12 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Title;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Category;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Title\Command\BulkDeleteTitleCommand;
-use PrestaShop\PrestaShop\Core\Domain\Title\Exception\TitleNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\BulkUpdateCategoriesStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -31,25 +31,29 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/titles/delete',
-            // No output 204 code
+            uriTemplate: '/categories/bulk-update-status',
             output: false,
-            CQRSCommand: BulkDeleteTitleCommand::class,
+            CQRSCommand: BulkUpdateCategoriesStatusCommand::class,
+            CQRSCommandMapping: [
+                '[enabled]' => '[newStatus]',
+            ],
             scopes: [
-                'title_write',
+                'category_write',
             ],
         ),
     ],
     exceptionToStatus: [
-        TitleNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkTitlesDelete
+class BulkUpdateStatusCategories
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $titleIds;
+    public array $categoryIds;
+
+    public bool $enabled;
 }

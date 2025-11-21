@@ -73,6 +73,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSDelete(
             uriTemplate: '/attributes/groups/{attributeGroupId}',
+            requirements: ['attributeGroupId' => '\d+'],
             CQRSCommand: DeleteAttributeGroupCommand::class,
             scopes: [
                 'attribute_group_write',

@@ -78,7 +78,7 @@ class CategoryEndpointTest extends ApiTestCase
 
         yield 'bulk toggle endpoint' => [
             'PUT',
-            '/categories/toggle-status',
+            '/categories/bulk-update-status',
         ];
 
         yield 'delete endpoint' => [
@@ -103,7 +103,7 @@ class CategoryEndpointTest extends ApiTestCase
 
         yield 'bulk delete endpoint' => [
             'DELETE',
-            '/categories/batch/associate_and_disable',
+            '/categories/bulk-delete/associate_and_disable',
         ];
     }
 
@@ -256,7 +256,7 @@ class CategoryEndpointTest extends ApiTestCase
         $bulkCategories = $this->createTemporaryCategories();
 
         // Perform bulk disable on the selected categories
-        $this->updateItem('/categories/toggle-status', [
+        $this->updateItem('/categories/bulk-update-status', [
             'categoryIds' => $bulkCategories,
             'enabled' => false,
         ], ['category_write'], Response::HTTP_NO_CONTENT);
@@ -277,18 +277,13 @@ class CategoryEndpointTest extends ApiTestCase
     public function testBulkDelete(array $bulkCategories): void
     {
         // Bulk delete with deleteMode
-        $this->deleteBatch('/categories/batch/associate_and_disable', [
+        $this->bulkDeleteItems('/categories/bulk-delete/associate_and_disable', [
             'categoryIds' => $bulkCategories,
-        ], ['category_write'], Response::HTTP_NO_CONTENT);
+        ], ['category_write']);
 
         foreach ($bulkCategories as $categoryId) {
             $this->getItem('/categories/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
         }
-    }
-
-    protected function deleteBatch(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
-    {
-        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
 
     /**

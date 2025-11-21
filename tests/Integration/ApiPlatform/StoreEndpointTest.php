@@ -113,12 +113,12 @@ class StoreEndpointTest extends ApiTestCase
 
         yield 'bulk set status endpoint' => [
             'PUT',
-            '/stores/set-status',
+            '/stores/bulk-update-status',
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/stores/delete',
+            'DELETE',
+            '/stores/bulk-delete',
         ];
     }
 
@@ -181,7 +181,7 @@ class StoreEndpointTest extends ApiTestCase
             self::$store3->id,
         ];
 
-        $this->updateItem('/stores/set-status', [
+        $this->updateItem('/stores/bulk-update-status', [
             'storeIds' => $bulkStoresId,
             'enabled' => false,
         ], ['store_write'], Response::HTTP_NO_CONTENT);
@@ -201,9 +201,9 @@ class StoreEndpointTest extends ApiTestCase
      */
     public function testBulkDeleteStore(array $bulkStoresId): void
     {
-        $this->updateItem('/stores/delete', [
+        $this->bulkDeleteItems('/stores/bulk-delete', [
             'storeIds' => $bulkStoresId,
-        ], ['store_write'], Response::HTTP_NO_CONTENT);
+        ], ['store_write']);
 
         // Assert the provided stores have been removed
         foreach ($bulkStoresId as $storeId) {

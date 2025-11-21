@@ -31,8 +31,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/categories/batch/{mode}',
-            output: false,
+            uriTemplate: '/categories/bulk-delete/{deleteMode}',
             CQRSCommand: BulkDeleteCategoriesCommand::class,
             CQRSCommandMapping: [
                 '[mode]' => '[deleteMode]',
@@ -55,6 +54,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'category_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [

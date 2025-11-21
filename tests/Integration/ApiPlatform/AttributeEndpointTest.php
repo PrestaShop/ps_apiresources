@@ -82,8 +82,8 @@ class AttributeEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/attributes/attributes/delete',
+            'DELETE',
+            '/attributes/attributes/bulk-delete',
         ];
     }
 
@@ -267,9 +267,9 @@ class AttributeEndpointTest extends ApiTestCase
             $attributes['items'][2]['attributeId'],
         ];
 
-        $this->updateItem('/attributes/attributes/delete', [
+        $this->bulkDeleteItems('/attributes/attributes/bulk-delete', [
             'attributeIds' => $removeAttributeIds,
-        ], ['attribute_write'], Response::HTTP_NO_CONTENT);
+        ], ['attribute_write']);
 
         // Assert the provided attributes have been removed
         foreach ($removeAttributeIds as $attributeId) {

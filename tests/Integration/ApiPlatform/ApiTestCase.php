@@ -278,6 +278,14 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     }
 
     /**
+     * Performs a DELETE request to delete multiple items, which requires passing some data
+     */
+    protected function bulkDeleteItems(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
+    }
+
+    /**
      * Performs a GET request to list some items, returned data is paginated
      */
     protected function listItems(string $listUrl, array $scopes = [], array $filters = []): array

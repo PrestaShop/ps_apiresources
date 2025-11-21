@@ -70,8 +70,8 @@ class AddressEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete addresses endpoint' => [
-            'PUT',
-            '/addresses/delete',
+            'DELETE',
+            '/addresses/bulk-delete',
         ];
     }
 
@@ -220,7 +220,7 @@ class AddressEndpointTest extends ApiTestCase
         $bulkDeleteData = [
             'addressIds' => [$addressId, $secondAddressId],
         ];
-        $this->updateItem('/addresses/delete', $bulkDeleteData, ['address_write'], 204);
+        $this->bulkDeleteItems('/addresses/bulk-delete', $bulkDeleteData, ['address_write']);
 
         // Verify addresses were deleted
         $this->getItem('/addresses/customers/' . $addressId, ['address_read'], Response::HTTP_NOT_FOUND);

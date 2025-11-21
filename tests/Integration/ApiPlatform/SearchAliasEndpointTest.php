@@ -103,7 +103,7 @@ class SearchAliasEndpointTest extends ApiTestCase
 
         yield 'bulk delete endpoint' => [
             'DELETE',
-            '/search-aliases/delete',
+            '/search-aliases/bulk-delete',
         ];
     }
 
@@ -346,9 +346,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             'searchTerms' => [self::$testSearchTerm, self::$testSearchTerm2],
         ];
 
-        $this->deleteItem('/search-aliases/delete', ['search_alias_write'], Response::HTTP_NO_CONTENT, [
-            'json' => $bulkDeleteData,
-        ]);
+        $this->bulkDeleteItems('/search-aliases/bulk-delete', $bulkDeleteData, ['search_alias_write']);
 
         // Verify they're deleted (return empty aliases, not 404)
         $response1 = $this->getItem('/search-aliases/' . self::$testSearchTerm, ['search_alias_read']);

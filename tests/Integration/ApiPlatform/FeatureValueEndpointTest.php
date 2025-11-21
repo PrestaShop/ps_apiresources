@@ -22,7 +22,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
@@ -170,9 +169,9 @@ class FeatureValueEndpointTest extends ApiTestCase
             $features['items'][0]['featureValueId'],
         ];
 
-        $this->deleteBatch('/features/values/batch', [
+        $this->bulkDeleteItems('/features/values/bulk-delete', [
             'featureValueIds' => $removeFeatureIds,
-        ], ['feature_value_write'], Response::HTTP_NO_CONTENT);
+        ], ['feature_value_write']);
 
         foreach ($removeFeatureIds as $featureValueId) {
             $this->getItem('/features/values/' . $featureValueId, ['feature_value_read'], Response::HTTP_NOT_FOUND);
@@ -200,10 +199,5 @@ class FeatureValueEndpointTest extends ApiTestCase
                 'message' => '"Invalid<" is invalid',
             ],
         ], $validationErrorsResponse);
-    }
-
-    protected function deleteBatch(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
-    {
-        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
 }

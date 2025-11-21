@@ -76,8 +76,8 @@ class TitleEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/titles/delete',
+            'DELETE',
+            '/titles/bulk-delete',
         ];
     }
 
@@ -329,9 +329,9 @@ class TitleEndpointTest extends ApiTestCase
             $titleNew2['titleId'],
         ];
 
-        $this->updateItem('/titles/delete', [
+        $this->bulkDeleteItems('/titles/bulk-delete', [
             'titleIds' => $bulkTitles,
-        ], ['title_write'], Response::HTTP_NO_CONTENT);
+        ], ['title_write']);
 
         // Assert the provided titles have been removed
         foreach ($bulkTitles as $titleId) {

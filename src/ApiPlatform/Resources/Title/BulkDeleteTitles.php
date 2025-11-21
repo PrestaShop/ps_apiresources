@@ -18,43 +18,37 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\TaxRulesGroup;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Title;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Command\BulkSetTaxRulesGroupStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\Title\Command\BulkDeleteTitleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Title\Exception\TitleNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/tax-rules-groups/set-status',
-            // No output 204 code
-            output: false,
-            CQRSCommand: BulkSetTaxRulesGroupStatusCommand::class,
-            CQRSCommandMapping: [
-                '[enabled]' => '[expectedStatus]',
-            ],
+        new CQRSDelete(
+            uriTemplate: '/titles/bulk-delete',
+            CQRSCommand: BulkDeleteTitleCommand::class,
             scopes: [
-                'tax_rules_group_write',
+                'title_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
-        TaxRulesGroupException::class => Response::HTTP_NOT_FOUND,
+        TitleNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkTaxRulesGroupSetStatus
+class BulkDeleteTitles
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $taxRulesGroupIds;
-
-    public bool $enabled;
+    public array $titleIds;
 }

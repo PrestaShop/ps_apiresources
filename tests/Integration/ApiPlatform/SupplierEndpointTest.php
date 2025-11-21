@@ -86,7 +86,7 @@ class SupplierEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
+            'DELETE',
             '/suppliers/bulk-delete',
         ];
 
@@ -926,9 +926,9 @@ class SupplierEndpointTest extends ApiTestCase
      */
     public function testBulkDelete(array $bulkSuppliers): void
     {
-        $this->updateItem('/suppliers/bulk-delete', [
+        $this->bulkDeleteItems('/suppliers/bulk-delete', [
             'supplierIds' => $bulkSuppliers,
-        ], ['supplier_write'], Response::HTTP_NO_CONTENT);
+        ], ['supplier_write']);
 
         // Assert the provided zones have been removed
         foreach ($bulkSuppliers as $supplierId) {

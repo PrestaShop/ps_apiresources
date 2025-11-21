@@ -72,6 +72,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSDelete(
             uriTemplate: '/features/{featureId}',
+            requirements: ['featureId' => '\d+'],
             CQRSCommand: DeleteFeatureCommand::class,
             scopes: [
                 'feature_write',

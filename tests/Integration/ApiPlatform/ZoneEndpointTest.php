@@ -74,13 +74,13 @@ class ZoneEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/zones/delete',
+            'DELETE',
+            '/zones/bulk-delete',
         ];
 
         yield 'bulk toggle status endpoint' => [
             'PUT',
-            '/zones/toggle-status',
+            '/zones/bulk-update-status',
         ];
     }
 
@@ -273,9 +273,9 @@ class ZoneEndpointTest extends ApiTestCase
             $zones['items'][3]['zoneId'],
         ];
 
-        $this->updateItem('/zones/delete', [
+        $this->bulkDeleteItems('/zones/bulk-delete', [
             'zoneIds' => $bulkZones,
-        ], ['zone_write'], Response::HTTP_NO_CONTENT);
+        ], ['zone_write']);
 
         // Assert the provided zones have been removed
         foreach ($bulkZones as $zoneId) {
@@ -303,7 +303,7 @@ class ZoneEndpointTest extends ApiTestCase
             $zones['items'][1]['zoneId'],
         ];
 
-        $this->updateItem('/zones/toggle-status', [
+        $this->updateItem('/zones/bulk-update-status', [
             'zoneIds' => $bulkZones,
             'enabled' => false,
         ], ['zone_write'], Response::HTTP_NO_CONTENT);

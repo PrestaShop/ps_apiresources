@@ -67,7 +67,7 @@ class ModuleEndpointTest extends ApiTestCase
 
         yield 'bulk toggle status' => [
             'PUT',
-            '/modules/toggle-status',
+            '/modules/bulk-update-status',
         ];
 
         yield 'toggle module status' => [
@@ -103,7 +103,7 @@ class ModuleEndpointTest extends ApiTestCase
 
         yield 'bulk uninstall' => [
             'PUT',
-            '/modules/uninstall',
+            '/modules/bulk-uninstall',
         ];
     }
 
@@ -118,7 +118,7 @@ class ModuleEndpointTest extends ApiTestCase
         ], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT bulk status on non existent module returns a 404
-        $this->updateItem('/modules/toggle-status', [
+        $this->updateItem('/modules/bulk-update-status', [
             'modules' => ['ps_falsemodule'],
             'enabled' => true,
         ], ['module_write'], Response::HTTP_NOT_FOUND);
@@ -191,7 +191,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(0, $disabledModules['totalItems']);
 
         // Bulk disable on one module
-        $this->updateItem('/modules/toggle-status', [
+        $this->updateItem('/modules/bulk-update-status', [
             'modules' => [
                 $module['technicalName'],
             ],
@@ -207,7 +207,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(1, $disabledModules['totalItems']);
 
         // Bulk enable on one module
-        $this->updateItem('/modules/toggle-status', [
+        $this->updateItem('/modules/bulk-update-status', [
             'modules' => [
                 $module['technicalName'],
             ],
@@ -535,7 +535,7 @@ class ModuleEndpointTest extends ApiTestCase
         }
 
         // Uninstall specific module deleteFiles true
-        $this->updateItem('/modules/uninstall', [
+        $this->updateItem('/modules/bulk-uninstall', [
             'modules' => $modules,
             // Force removal of the files
             'deleteFiles' => true,

@@ -24,20 +24,19 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\Command\BulkDeleteAttributeCommand;
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\Exception\AttributeNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/attributes/attributes/delete',
-            // No output 204 code
-            output: false,
+        new CQRSDelete(
+            uriTemplate: '/attributes/attributes/bulk-delete',
             CQRSCommand: BulkDeleteAttributeCommand::class,
             scopes: [
                 'attribute_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [

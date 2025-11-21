@@ -18,14 +18,12 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-declare(strict_types=1);
-
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Store;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Zone;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Store\Command\BulkUpdateStoreStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Store\Exception\StoreNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Exception\ZoneNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Zone\Command\BulkToggleZoneStatusCommand;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -33,30 +31,29 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/stores/set-status',
-            // No output 204 code
+            uriTemplate: '/zones/bulk-update-status',
             output: false,
-            CQRSCommand: BulkUpdateStoreStatusCommand::class,
+            CQRSCommand: BulkToggleZoneStatusCommand::class,
             CQRSCommandMapping: [
                 '[enabled]' => '[expectedStatus]',
             ],
             scopes: [
-                'store_write',
+                'zone_write',
             ],
         ),
     ],
     exceptionToStatus: [
-        StoreNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ZoneNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkStoresSetStatus
+class BulkUpdateStatusZone
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $storeIds;
+    public array $zoneIds;
 
     public bool $enabled;
 }

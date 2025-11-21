@@ -69,13 +69,13 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/tax-rules-groups/delete',
+            'DELETE',
+            '/tax-rules-groups/bulk-delete',
         ];
 
         yield 'bulk toggle status endpoint' => [
             'PUT',
-            '/tax-rules-groups/set-status',
+            '/tax-rules-groups/bulk-update-status',
         ];
     }
 
@@ -265,7 +265,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
             $this->assertEquals(true, $taxRulesGroup['enabled']);
         }
 
-        $this->updateItem('/tax-rules-groups/set-status', [
+        $this->updateItem('/tax-rules-groups/bulk-update-status', [
             'taxRulesGroupIds' => $bulkTaxRulesGroups,
             'enabled' => false,
         ], ['tax_rules_group_write'], Response::HTTP_NO_CONTENT);
@@ -300,9 +300,9 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
             $taxRulesGroups['items'][3]['taxRulesGroupId'],
         ];
 
-        $this->updateItem('/tax-rules-groups/delete', [
+        $this->bulkDeleteItems('/tax-rules-groups/bulk-delete', [
             'taxRulesGroupIds' => $bulkTaxRulesGroups,
-        ], ['tax_rules_group_write'], Response::HTTP_NO_CONTENT);
+        ], ['tax_rules_group_write']);
 
         // Assert the provided taxRulesGroups have been removed
         foreach ($bulkTaxRulesGroups as $taxRulesGroupId) {

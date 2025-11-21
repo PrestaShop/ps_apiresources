@@ -18,42 +18,37 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Category;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Zone;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Category\Command\BulkUpdateCategoriesStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Exception\ZoneNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Zone\Command\BulkDeleteZoneCommand;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/categories/toggle-status',
-            output: false,
-            CQRSCommand: BulkUpdateCategoriesStatusCommand::class,
-            CQRSCommandMapping: [
-                '[enabled]' => '[newStatus]',
-            ],
+        new CQRSDelete(
+            uriTemplate: '/zones/bulk-delete',
+            CQRSCommand: BulkDeleteZoneCommand::class,
             scopes: [
-                'category_write',
+                'zone_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
-        CategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ZoneNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkToggleStatusCategories
+class BulkDeleteZones
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $categoryIds;
-
-    public bool $enabled;
+    public array $zoneIds;
 }
