@@ -29,7 +29,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/module/{technicalName}/uninstall',
+            uriTemplate: '/modules/{technicalName}/uninstall',
             output: false,
             CQRSCommand: UninstallModuleCommand::class,
             scopes: [

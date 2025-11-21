@@ -37,21 +37,21 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/store/{storeId}',
+            uriTemplate: '/stores/{storeId}',
             requirements: ['storeId' => '\d+'],
             output: false,
             CQRSCommand: DeleteStoreCommand::class,
             scopes: ['store_write']
         ),
         new CQRSGet(
-            uriTemplate: '/store/{storeId}',
+            uriTemplate: '/stores/{storeId}',
             requirements: ['storeId' => '\d+'],
             CQRSQuery: GetStoreForEditing::class,
             scopes: ['store_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSUpdate(
-            uriTemplate: '/store/{storeId}/toggle-status',
+            uriTemplate: '/stores/{storeId}/toggle-status',
             requirements: ['storeId' => '\d+'],
             output: false,
             allowEmptyBody: true,

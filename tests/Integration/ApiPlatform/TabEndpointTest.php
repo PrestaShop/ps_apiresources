@@ -46,7 +46,7 @@ class TabEndpointTest extends ApiTestCase
     {
         yield 'update endpoint' => [
             'PUT',
-            '/tab/string',
+            '/tabs/string',
         ];
     }
 
@@ -55,7 +55,7 @@ class TabEndpointTest extends ApiTestCase
         $className = 'AdminShopGroup';
 
         self::assertEquals(0, $this->isActiveTabClassName($className));
-        $this->updateItem('/tab/' . $className, [
+        $this->updateItem('/tabs/' . $className, [
             'enabled' => true,
         ], ['tab_write']);
         self::assertEquals(1, $this->isActiveTabClassName($className));

@@ -41,7 +41,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/attributes/attribute/{attributeId}',
+            uriTemplate: '/attributes/attributes/{attributeId}',
             CQRSQuery: GetAttributeForEditing::class,
             scopes: [
                 'attribute_read',
@@ -49,7 +49,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/attributes/attribute',
+            uriTemplate: '/attributes/attributes',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddAttributeCommand::class,
             CQRSQuery: GetAttributeForEditing::class,
@@ -60,7 +60,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/attributes/attribute/{attributeId}',
+            uriTemplate: '/attributes/attributes/{attributeId}',
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditAttributeCommand::class,
             CQRSQuery: GetAttributeForEditing::class,
@@ -71,7 +71,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/attributes/attribute/{attributeId}',
+            uriTemplate: '/attributes/attributes/{attributeId}',
+            requirements: ['attributeId' => '\d+'],
             CQRSCommand: DeleteAttributeCommand::class,
             scopes: [
                 'attribute_write',

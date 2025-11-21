@@ -41,7 +41,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/features/value/{featureValueId}',
+            uriTemplate: '/features/values/{featureValueId}',
             CQRSQuery: GetFeatureValueForEditing::class,
             scopes: [
                 'feature_value_read',
@@ -49,7 +49,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/features/value',
+            uriTemplate: '/features/values',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddFeatureValueCommand::class,
             CQRSQuery: GetFeatureValueForEditing::class,
@@ -60,7 +60,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/features/value/{featureValueId}',
+            uriTemplate: '/features/values/{featureValueId}',
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditFeatureValueCommand::class,
             CQRSQuery: GetFeatureValueForEditing::class,
@@ -71,7 +71,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/features/value/{featureValueId}',
+            uriTemplate: '/features/values/{featureValueId}',
             CQRSCommand: DeleteFeatureValueCommand::class,
             scopes: [
                 'feature_value_write',

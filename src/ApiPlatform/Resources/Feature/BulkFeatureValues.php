@@ -31,12 +31,12 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/features/values/batch',
-            output: false,
+            uriTemplate: '/features/values/bulk-delete',
             CQRSCommand: BulkDeleteFeatureValueCommand::class,
             scopes: [
                 'feature_value_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [

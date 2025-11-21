@@ -18,12 +18,14 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\TaxRulesGroup;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Store;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Command\BulkDeleteTaxRulesGroupCommand;
-use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupException;
+use PrestaShop\PrestaShop\Core\Domain\Store\Command\BulkUpdateStoreStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Store\Exception\StoreNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -31,25 +33,30 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/tax-rules-groups/delete',
+            uriTemplate: '/stores/bulk-update-status',
             // No output 204 code
             output: false,
-            CQRSCommand: BulkDeleteTaxRulesGroupCommand::class,
+            CQRSCommand: BulkUpdateStoreStatusCommand::class,
+            CQRSCommandMapping: [
+                '[enabled]' => '[expectedStatus]',
+            ],
             scopes: [
-                'tax_rules_group_write',
+                'store_write',
             ],
         ),
     ],
     exceptionToStatus: [
-        TaxRulesGroupException::class => Response::HTTP_NOT_FOUND,
+        StoreNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkTaxRulesGroupDelete
+class BulkUpdateStatusStores
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $taxRulesGroupIds;
+    public array $storeIds;
+
+    public bool $enabled;
 }

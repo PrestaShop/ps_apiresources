@@ -51,23 +51,23 @@ class TitleEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => [
             'POST',
-            '/title',
+            '/titles',
             'multipart/form-data',
         ];
 
         yield 'get endpoint' => [
             'GET',
-            '/title/1',
+            '/titles/1',
         ];
 
         yield 'update endpoint' => [
             'PATCH',
-            '/title/1',
+            '/titles/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/title/1',
+            '/titles/1',
         ];
 
         yield 'list endpoint' => [
@@ -76,8 +76,8 @@ class TitleEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/titles/delete',
+            'DELETE',
+            '/titles/bulk-delete',
         ];
     }
 
@@ -86,7 +86,7 @@ class TitleEndpointTest extends ApiTestCase
         $itemsCount = $this->countItems('/titles', ['title_read']);
         $uploadTitle = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Brown_bear_cushion.jpg');
 
-        $title = $this->requestApi('POST', '/title', null, ['title_write'], Response::HTTP_CREATED, [
+        $title = $this->requestApi('POST', '/titles', null, ['title_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -126,7 +126,7 @@ class TitleEndpointTest extends ApiTestCase
      */
     public function testGetTitle(int $titleId): int
     {
-        $title = $this->getItem('/title/' . $titleId, ['title_read']);
+        $title = $this->getItem('/titles/' . $titleId, ['title_read']);
         $this->assertEquals(
             [
                 'titleId' => $titleId,
@@ -153,7 +153,7 @@ class TitleEndpointTest extends ApiTestCase
      */
     public function testPartialUpdateTitle(int $titleId): int
     {
-        $updatedTitle = $this->partialUpdateItem('/title/' . $titleId, [
+        $updatedTitle = $this->partialUpdateItem('/titles/' . $titleId, [
             'names' => [
                 'en-US' => 'name en Updated',
                 'fr-FR' => 'name fr Updated',
@@ -173,7 +173,7 @@ class TitleEndpointTest extends ApiTestCase
             $updatedTitle
         );
 
-        $updatedTitle = $this->partialUpdateItem('/title/' . $titleId, [
+        $updatedTitle = $this->partialUpdateItem('/titles/' . $titleId, [
             'gender' => 2,
         ], ['title_write']);
         $this->assertEquals(
@@ -202,7 +202,7 @@ class TitleEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedTitle(int $titleId): int
     {
-        $title = $this->getItem('/title/' . $titleId, ['title_read']);
+        $title = $this->getItem('/titles/' . $titleId, ['title_read']);
         $this->assertEquals(
             [
                 'titleId' => $titleId,
@@ -261,12 +261,12 @@ class TitleEndpointTest extends ApiTestCase
      */
     public function testDeleteTitle(int $titleId): void
     {
-        $return = $this->deleteItem('/title/' . $titleId, ['title_write']);
+        $return = $this->deleteItem('/titles/' . $titleId, ['title_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/title/' . $titleId, ['title_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/titles/' . $titleId, ['title_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -283,7 +283,7 @@ class TitleEndpointTest extends ApiTestCase
         $this->assertEquals(2, $titles['totalItems']);
 
         // We create two new titles
-        $titleNew1 = $this->requestApi('POST', '/title', null, ['title_write'], Response::HTTP_CREATED, [
+        $titleNew1 = $this->requestApi('POST', '/titles', null, ['title_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -301,7 +301,7 @@ class TitleEndpointTest extends ApiTestCase
         ]);
         $this->assertArrayHasKey('titleId', $titleNew1);
 
-        $titleNew2 = $this->requestApi('POST', '/title', null, ['title_write'], Response::HTTP_CREATED, [
+        $titleNew2 = $this->requestApi('POST', '/titles', null, ['title_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -329,13 +329,13 @@ class TitleEndpointTest extends ApiTestCase
             $titleNew2['titleId'],
         ];
 
-        $this->updateItem('/titles/delete', [
+        $this->bulkDeleteItems('/titles/bulk-delete', [
             'titleIds' => $bulkTitles,
-        ], ['title_write'], Response::HTTP_NO_CONTENT);
+        ], ['title_write']);
 
         // Assert the provided titles have been removed
         foreach ($bulkTitles as $titleId) {
-            $this->getItem('/title/' . $titleId, ['title_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/titles/' . $titleId, ['title_read'], Response::HTTP_NOT_FOUND);
         }
 
         $this->assertEquals(2, $this->countItems('/titles', ['title_read']));

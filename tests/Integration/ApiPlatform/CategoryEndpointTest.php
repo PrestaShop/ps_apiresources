@@ -63,47 +63,47 @@ class CategoryEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/category/3',
+            '/categories/3',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/category',
+            '/categories',
         ];
 
         yield 'patch endpoint' => [
             'PATCH',
-            '/category/10',
+            '/categories/10',
         ];
 
         yield 'bulk toggle endpoint' => [
             'PUT',
-            '/categories/toggle-status',
+            '/categories/bulk-update-status',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/category/10/associate_and_disable',
+            '/categories/10/associate_and_disable',
         ];
 
         yield 'update status endpoint' => [
             'PATCH',
-            '/category/3/status',
+            '/categories/3/status',
         ];
 
         yield 'delete thumbnail endpoint' => [
             'DELETE',
-            '/category/3/thumbnail',
+            '/categories/3/thumbnail',
         ];
 
         yield 'delete cover endpoint' => [
             'DELETE',
-            '/category/4/thumbnail',
+            '/categories/4/thumbnail',
         ];
 
         yield 'bulk delete endpoint' => [
             'DELETE',
-            '/categories/batch/associate_and_disable',
+            '/categories/bulk-delete/associate_and_disable',
         ];
     }
 
@@ -123,7 +123,7 @@ class CategoryEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ];
 
-        $category = $this->createItem('/category', $postData, ['category_write']);
+        $category = $this->createItem('/categories', $postData, ['category_write']);
         $categoryId = $category['categoryId'];
 
         $this->assertArrayHasKey('categoryId', $category);
@@ -139,7 +139,7 @@ class CategoryEndpointTest extends ApiTestCase
      */
     public function testGetCategory(int $categoryId): int
     {
-        $category = $this->getItem('/category/' . $categoryId, ['category_read']);
+        $category = $this->getItem('/categories/' . $categoryId, ['category_read']);
 
         $this->assertSame(
             $category['names'],
@@ -187,12 +187,12 @@ class CategoryEndpointTest extends ApiTestCase
     {
         // Delete the item
         $this->deleteItem(
-            '/category/' . $categoryId . '/associate_and_disable',
+            '/categories/' . $categoryId . '/associate_and_disable',
             ['category_write']
         );
 
         // Fetching the item returns a 404 indicatjng it no longer exists
-        $this->getItem('/category/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/categories/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testUpdateCategoryStatus(): void
@@ -200,26 +200,26 @@ class CategoryEndpointTest extends ApiTestCase
         // Disable the category and assert the change is effective
         $this->requestApi(
             Request::METHOD_PATCH,
-            '/category/3/status',
+            '/categories/3/status',
             ['active' => false],
             ['category_write'],
             Response::HTTP_OK
         );
 
-        $category = $this->getItem('/category/3', ['category_read']);
+        $category = $this->getItem('/categories/3', ['category_read']);
 
         $this->assertFalse($category['active']);
 
         // Re-enable the category to avoid leaving side effects for other tests
         $this->requestApi(
             Request::METHOD_PATCH,
-            '/category/3/status',
+            '/categories/3/status',
             ['active' => true],
             ['category_write'],
             Response::HTTP_OK
         );
 
-        $category = $this->getItem('/category/3', ['category_read']);
+        $category = $this->getItem('/categories/3', ['category_read']);
         $this->assertTrue($category['active']);
     }
 
@@ -230,7 +230,7 @@ class CategoryEndpointTest extends ApiTestCase
         // to have a cover image, so the DELETE request must succeed and return 204 (No Content).
         $this->requestApi(
             Request::METHOD_DELETE,
-            '/category/3/thumbnail',
+            '/categories/3/thumbnail',
             [],
             ['category_write'],
             Response::HTTP_NO_CONTENT
@@ -244,7 +244,7 @@ class CategoryEndpointTest extends ApiTestCase
         // to have a cover image, so the DELETE request must succeed and return 204 (No Content).
         $this->requestApi(
             Request::METHOD_DELETE,
-            '/category/4/cover',
+            '/categories/4/cover',
             [],
             ['category_write'],
             Response::HTTP_NO_CONTENT
@@ -256,14 +256,14 @@ class CategoryEndpointTest extends ApiTestCase
         $bulkCategories = $this->createTemporaryCategories();
 
         // Perform bulk disable on the selected categories
-        $this->updateItem('/categories/toggle-status', [
+        $this->updateItem('/categories/bulk-update-status', [
             'categoryIds' => $bulkCategories,
             'enabled' => false,
         ], ['category_write'], Response::HTTP_NO_CONTENT);
 
         // Assert that the selected categories have been successfully disabled
         foreach ($bulkCategories as $categoryId) {
-            $category = $this->getItem('/category/' . $categoryId, ['category_read']);
+            $category = $this->getItem('/categories/' . $categoryId, ['category_read']);
             $this->assertEquals(false, $category['active']);
         }
 
@@ -277,18 +277,13 @@ class CategoryEndpointTest extends ApiTestCase
     public function testBulkDelete(array $bulkCategories): void
     {
         // Bulk delete with deleteMode
-        $this->deleteBatch('/categories/batch/associate_and_disable', [
+        $this->bulkDeleteItems('/categories/bulk-delete/associate_and_disable', [
             'categoryIds' => $bulkCategories,
-        ], ['category_write'], Response::HTTP_NO_CONTENT);
+        ], ['category_write']);
 
         foreach ($bulkCategories as $categoryId) {
-            $this->getItem('/category/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/categories/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
         }
-    }
-
-    protected function deleteBatch(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
-    {
-        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
 
     /**
@@ -298,7 +293,7 @@ class CategoryEndpointTest extends ApiTestCase
      */
     private function createTemporaryCategories(): array
     {
-        $cat1 = $this->createItem('/category', [
+        $cat1 = $this->createItem('/categories', [
             'names' => ['en-US' => 'TempCat 1'],
             'linkRewrites' => [
                 'en-US' => 'temp-cat-2',
@@ -309,7 +304,7 @@ class CategoryEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ], ['category_write']);
 
-        $cat2 = $this->createItem('/category', [
+        $cat2 = $this->createItem('/categories', [
             'names' => ['en-US' => 'TempCat 2'],
             'linkRewrites' => [
                 'en-US' => 'temp-cat-2',

@@ -39,22 +39,22 @@ class ApiClientEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/api-client/1',
+            '/api-clients/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/api-client',
+            '/api-clients',
         ];
 
         yield 'update endpoint' => [
             'PATCH',
-            '/api-client/1',
+            '/api-clients/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/api-client/1',
+            '/api-clients/1',
         ];
 
         yield 'list endpoint' => [
@@ -67,7 +67,7 @@ class ApiClientEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/api-clients', ['api_client_read']);
 
-        $apiClient = $this->createItem('/api-client', [
+        $apiClient = $this->createItem('/api-clients', [
             'clientId' => 'client_id_test',
             'clientName' => 'Client name test',
             'description' => 'Client description test',
@@ -106,7 +106,7 @@ class ApiClientEndpointTest extends ApiTestCase
      */
     public function testGetApiClient(int $apiClientId): int
     {
-        $apiClient = $this->getItem('/api-client/' . $apiClientId, ['api_client_read']);
+        $apiClient = $this->getItem('/api-clients/' . $apiClientId, ['api_client_read']);
         $this->assertEquals(
             [
                 'apiClientId' => $apiClientId,
@@ -137,7 +137,7 @@ class ApiClientEndpointTest extends ApiTestCase
     public function testUpdateApiClient(int $apiClientId): int
     {
         // Update API client
-        $updatedApiClient = $this->partialUpdateItem('/api-client/' . $apiClientId, [
+        $updatedApiClient = $this->partialUpdateItem('/api-clients/' . $apiClientId, [
             'clientId' => 'client_id_test_updated',
             'clientName' => 'Client name test updated',
             'description' => 'Client description test updated',
@@ -166,7 +166,7 @@ class ApiClientEndpointTest extends ApiTestCase
         );
 
         // Update partially API client
-        $updatedApiClient = $this->partialUpdateItem('/api-client/' . $apiClientId, [
+        $updatedApiClient = $this->partialUpdateItem('/api-clients/' . $apiClientId, [
             'description' => 'Client description test partially updated',
             'lifetime' => 900,
             // Even if we try to modify the external issuer it is an immutable/internal field anyway
@@ -200,7 +200,7 @@ class ApiClientEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedApiClient(int $apiClientId): int
     {
-        $apiClient = $this->getItem('/api-client/' . $apiClientId, ['api_client_read']);
+        $apiClient = $this->getItem('/api-clients/' . $apiClientId, ['api_client_read']);
         $this->assertEquals(
             [
                 'apiClientId' => $apiClientId,
@@ -266,32 +266,32 @@ class ApiClientEndpointTest extends ApiTestCase
     public function testDeleteApiClient(int $apiClientId): void
     {
         // Delete API client without token is unauthorized (401)
-        $errorMessage = $this->deleteItem('/api-client/' . $apiClientId, [], Response::HTTP_UNAUTHORIZED);
+        $errorMessage = $this->deleteItem('/api-clients/' . $apiClientId, [], Response::HTTP_UNAUTHORIZED);
         $this->assertEquals('No Authorization header provided', $errorMessage);
 
         // Delete API client with invalid token
-        static::createClient()->request('DELETE', '/api-client/' . $apiClientId, [
+        static::createClient()->request('DELETE', '/api-clients/' . $apiClientId, [
             'auth_bearer' => 'toto',
         ]);
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
 
         // Try to delete with a token with only read scope is forbidden (403)
-        $this->deleteItem('/api-client/' . $apiClientId, ['api_client_read'], Response::HTTP_FORBIDDEN);
+        $this->deleteItem('/api-clients/' . $apiClientId, ['api_client_read'], Response::HTTP_FORBIDDEN);
 
         // Check that API client was not deleted
-        $this->assertNotNull($this->getItem('/api-client/' . $apiClientId, ['api_client_read']));
+        $this->assertNotNull($this->getItem('/api-clients/' . $apiClientId, ['api_client_read']));
 
         // Delete API client with valid token
-        $this->deleteItem('/api-client/' . $apiClientId, ['api_client_write']);
+        $this->deleteItem('/api-clients/' . $apiClientId, ['api_client_write']);
 
-        $errorResponse = $this->getItem('/api-client/' . $apiClientId, ['api_client_read'], Response::HTTP_NOT_FOUND);
+        $errorResponse = $this->getItem('/api-clients/' . $apiClientId, ['api_client_read'], Response::HTTP_NOT_FOUND);
         $this->assertEquals('Could not find Api client ' . $apiClientId, $errorResponse['detail']);
     }
 
     public function testCreateInvalidApiClient(): void
     {
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
-        $validationErrorsResponse = $this->createItem('/api-client', [
+        $validationErrorsResponse = $this->createItem('/api-clients', [
             'clientId' => '',
             'clientName' => '',
             'description' => RandomString::generate(ApiClientSettings::MAX_DESCRIPTION_LENGTH + 1),

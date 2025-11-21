@@ -18,42 +18,37 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Zone;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\TaxRulesGroup;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Exception\ZoneNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\Zone\Command\BulkToggleZoneStatusCommand;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Command\BulkDeleteTaxRulesGroupCommand;
+use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/zones/toggle-status',
-            output: false,
-            CQRSCommand: BulkToggleZoneStatusCommand::class,
-            CQRSCommandMapping: [
-                '[enabled]' => '[expectedStatus]',
-            ],
+        new CQRSDelete(
+            uriTemplate: '/tax-rules-groups/bulk-delete',
+            CQRSCommand: BulkDeleteTaxRulesGroupCommand::class,
             scopes: [
-                'zone_write',
+                'tax_rules_group_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
-        ZoneNotFoundException::class => Response::HTTP_NOT_FOUND,
+        TaxRulesGroupException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkZonesToggleStatus
+class BulkDeleteTaxRulesGroup
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $zoneIds;
-
-    public bool $enabled;
+    public array $taxRulesGroupIds;
 }

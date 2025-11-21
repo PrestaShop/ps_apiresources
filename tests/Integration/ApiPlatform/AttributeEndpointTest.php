@@ -58,38 +58,38 @@ class AttributeEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/attributes/attribute/1',
+            '/attributes/attributes/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/attributes/attribute',
+            '/attributes/attributes',
         ];
 
         yield 'patch endpoint' => [
             'PATCH',
-            '/attributes/attribute/1',
+            '/attributes/attributes/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/attributes/attribute/1',
+            '/attributes/attributes/1',
         ];
 
         yield 'list endpoint' => [
             'GET',
-            '/attributes/group/1/attributes',
+            '/attributes/groups/1/attributes',
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/attributes/attributes/delete',
+            'DELETE',
+            '/attributes/attributes/bulk-delete',
         ];
     }
 
     public function testAddAttribute(): int
     {
-        $itemsCount = $this->countItems('/attributes/group/1/attributes', ['attribute_read']);
+        $itemsCount = $this->countItems('/attributes/groups/1/attributes', ['attribute_read']);
 
         $postData = [
             'names' => [
@@ -102,7 +102,7 @@ class AttributeEndpointTest extends ApiTestCase
         ];
 
         // Create an attribute, the POST endpoint returns the created item as JSON
-        $attribute = $this->createItem('/attributes/attribute', $postData, ['attribute_write']);
+        $attribute = $this->createItem('/attributes/attributes', $postData, ['attribute_write']);
         $this->assertArrayHasKey('attributeId', $attribute);
         $attributeId = $attribute['attributeId'];
 
@@ -112,7 +112,7 @@ class AttributeEndpointTest extends ApiTestCase
             $attribute
         );
 
-        $newItemsCount = $this->countItems('/attributes/group/1/attributes', ['attribute_read']);
+        $newItemsCount = $this->countItems('/attributes/groups/1/attributes', ['attribute_read']);
         $this->assertEquals($itemsCount + 1, $newItemsCount);
 
         return $attributeId;
@@ -127,7 +127,7 @@ class AttributeEndpointTest extends ApiTestCase
      */
     public function testGetAttribute(int $attributeId): int
     {
-        $attribute = $this->getItem('/attributes/attribute/' . $attributeId, ['attribute_read']);
+        $attribute = $this->getItem('/attributes/attributes/' . $attributeId, ['attribute_read']);
         $this->assertEquals([
             'attributeId' => $attributeId,
             'names' => [
@@ -161,11 +161,11 @@ class AttributeEndpointTest extends ApiTestCase
             'color' => '',
         ];
 
-        $updatedAttribute = $this->partialUpdateItem('/attributes/attribute/' . $attributeId, $patchData, ['attribute_write']);
+        $updatedAttribute = $this->partialUpdateItem('/attributes/attributes/' . $attributeId, $patchData, ['attribute_write']);
         $this->assertEquals(['attributeId' => $attributeId] + $patchData, $updatedAttribute);
 
         // We check that when we GET the item it is updated as expected
-        $attribute = $this->getItem('/attributes/attribute/' . $attributeId, ['attribute_read']);
+        $attribute = $this->getItem('/attributes/attributes/' . $attributeId, ['attribute_read']);
         $this->assertEquals(['attributeId' => $attributeId] + $patchData, $attribute);
 
         // Test partial update
@@ -184,7 +184,7 @@ class AttributeEndpointTest extends ApiTestCase
             'shopIds' => [1],
             'color' => '',
         ];
-        $updatedAttribute = $this->partialUpdateItem('/attributes/attribute/' . $attributeId, $partialUpdateData, ['attribute_write']);
+        $updatedAttribute = $this->partialUpdateItem('/attributes/attributes/' . $attributeId, $partialUpdateData, ['attribute_write']);
         $this->assertEquals($expectedUpdatedData, $updatedAttribute);
 
         return $attributeId;
@@ -200,7 +200,7 @@ class AttributeEndpointTest extends ApiTestCase
     public function testListAttributes(int $attributeId): int
     {
         // List by attributeId in descending order so the created one comes first (and test ordering at the same time)
-        $paginatedAttributes = $this->listItems('/attributes/group/1/attributes?orderBy=attributeId&sortOrder=desc', ['attribute_read']);
+        $paginatedAttributes = $this->listItems('/attributes/groups/1/attributes?orderBy=attributeId&sortOrder=desc', ['attribute_read']);
         $this->assertGreaterThanOrEqual(1, $paginatedAttributes['totalItems']);
 
         // Check the details to make sure filters mapping is correct
@@ -219,7 +219,7 @@ class AttributeEndpointTest extends ApiTestCase
         ];
         $this->assertEquals($expectedAttribute, $testAttribute);
 
-        $filteredAttributes = $this->listItems('/attributes/group/1/attributes', ['attribute_read'], [
+        $filteredAttributes = $this->listItems('/attributes/groups/1/attributes', ['attribute_read'], [
             'attributeId' => $attributeId,
         ]);
         $this->assertEquals(1, $filteredAttributes['totalItems']);
@@ -243,12 +243,12 @@ class AttributeEndpointTest extends ApiTestCase
     public function testRemoveAttribute(int $attributeId): void
     {
         // Delete the item
-        $return = $this->deleteItem('/attributes/attribute/' . $attributeId, ['attribute_write']);
+        $return = $this->deleteItem('/attributes/attributes/' . $attributeId, ['attribute_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/attributes/attribute/' . $attributeId, ['attribute_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/attributes/attributes/' . $attributeId, ['attribute_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -256,7 +256,7 @@ class AttributeEndpointTest extends ApiTestCase
      */
     public function testBulkRemoveAttributes(): void
     {
-        $attributes = $this->listItems('/attributes/group/1/attributes', ['attribute_read']);
+        $attributes = $this->listItems('/attributes/groups/1/attributes', ['attribute_read']);
 
         // There are four attributes in group with id 1
         $this->assertEquals(4, $attributes['totalItems']);
@@ -267,17 +267,17 @@ class AttributeEndpointTest extends ApiTestCase
             $attributes['items'][2]['attributeId'],
         ];
 
-        $this->updateItem('/attributes/attributes/delete', [
+        $this->bulkDeleteItems('/attributes/attributes/bulk-delete', [
             'attributeIds' => $removeAttributeIds,
-        ], ['attribute_write'], Response::HTTP_NO_CONTENT);
+        ], ['attribute_write']);
 
         // Assert the provided attributes have been removed
         foreach ($removeAttributeIds as $attributeId) {
-            $this->getItem('/attributes/attribute/' . $attributeId, ['attribute_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/attributes/attributes/' . $attributeId, ['attribute_read'], Response::HTTP_NOT_FOUND);
         }
 
         // Only two attribute remain
-        $this->assertEquals(2, $this->countItems('/attributes/group/1/attributes', ['attribute_read']));
+        $this->assertEquals(2, $this->countItems('/attributes/groups/1/attributes', ['attribute_read']));
     }
 
     public function testInvalidAttribute(): void
@@ -295,7 +295,7 @@ class AttributeEndpointTest extends ApiTestCase
         ];
 
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
-        $validationErrorsResponse = $this->createItem('/attributes/attribute', $attributeInvalidData, ['attribute_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/attributes/attributes', $attributeInvalidData, ['attribute_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
         $this->assertValidationErrors([
             [
@@ -313,7 +313,7 @@ class AttributeEndpointTest extends ApiTestCase
         ], $validationErrorsResponse);
 
         // Now create a valid attribute to test the validation on PATCH request
-        $validAttribute = $this->createItem('/attributes/attribute', [
+        $validAttribute = $this->createItem('/attributes/attributes', [
             'names' => [
                 'en-US' => 'name en',
                 'fr-FR' => 'name fr',
@@ -385,7 +385,7 @@ class AttributeEndpointTest extends ApiTestCase
             ],
         ];
         foreach ($invalidUpdateData as $updateData) {
-            $validationErrorsResponse = $this->partialUpdateItem('/attributes/attribute/' . $attributeId, $updateData['data'], ['attribute_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $validationErrorsResponse = $this->partialUpdateItem('/attributes/attributes/' . $attributeId, $updateData['data'], ['attribute_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
             $this->assertValidationErrors($updateData['expectedErrors'], $validationErrorsResponse);
         }
     }

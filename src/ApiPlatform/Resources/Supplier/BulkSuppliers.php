@@ -26,23 +26,23 @@ use PrestaShop\PrestaShop\Core\Domain\Supplier\Command\BulkDeleteSupplierCommand
 use PrestaShop\PrestaShop\Core\Domain\Supplier\Command\BulkDisableSupplierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Supplier\Command\BulkEnableSupplierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Supplier\Exception\SupplierNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/suppliers/delete',
-            // No output 204 code
-            output: false,
+        new CQRSDelete(
+            uriTemplate: '/suppliers/bulk-delete',
             CQRSCommand: BulkDeleteSupplierCommand::class,
             scopes: [
                 'supplier_write',
             ],
+            allowEmptyBody: false,
         ),
         new CQRSUpdate(
-            uriTemplate: '/suppliers/disable',
+            uriTemplate: '/suppliers/bulk-disable',
             // No output 204 code
             output: false,
             CQRSCommand: BulkDisableSupplierCommand::class,
@@ -51,7 +51,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/suppliers/enable',
+            uriTemplate: '/suppliers/bulk-enable',
             // No output 204 code
             output: false,
             CQRSCommand: BulkEnableSupplierCommand::class,

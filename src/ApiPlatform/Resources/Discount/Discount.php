@@ -40,14 +40,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/discount/{discountId}',
+            uriTemplate: '/discounts/{discountId}',
             requirements: ['discountId' => '\d+'],
             CQRSQuery: GetDiscountForEditing::class,
             scopes: ['discount_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/discount',
+            uriTemplate: '/discounts',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddDiscountCommand::class,
             CQRSQuery: GetDiscountForEditing::class,
@@ -56,7 +56,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/discount/{discountId}',
+            uriTemplate: '/discounts/{discountId}',
             requirements: ['discountId' => '\d+'],
             CQRSCommand: UpdateDiscountCommand::class,
             CQRSQuery: GetDiscountForEditing::class,
@@ -65,7 +65,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/discount/{discountId}',
+            uriTemplate: '/discounts/{discountId}',
             CQRSCommand: DeleteDiscountCommand::class,
             scopes: [
                 'discount_write',

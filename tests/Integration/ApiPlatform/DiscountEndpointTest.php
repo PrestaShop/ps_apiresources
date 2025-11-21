@@ -94,7 +94,7 @@ class DiscountEndpointTest extends ApiTestCase
             $json = array_merge($json, $data);
         }
 
-        $discount = $this->createItem('/discount', $json, ['discount_write']);
+        $discount = $this->createItem('/discounts', $json, ['discount_write']);
         $this->assertArrayHasKey('discountId', $discount);
         $discountId = $discount['discountId'];
 
@@ -123,7 +123,7 @@ class DiscountEndpointTest extends ApiTestCase
 
         $this->assertEquals($expectedDiscount, $discount);
         // Now test that the GET request returns the same expected result
-        $this->assertEquals($expectedDiscount, $this->getItem('/discount/' . $discountId, ['discount_read']));
+        $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
 
         return $discountId;
     }
@@ -205,7 +205,7 @@ class DiscountEndpointTest extends ApiTestCase
     public function testDeleteDiscount(): void
     {
         $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('DELETE', '/discount/1', [
+        static::createClient()->request('DELETE', '/discounts/1', [
             'auth_bearer' => $bearerToken,
         ]);
         self::assertResponseStatusCodeSame(204);
@@ -215,17 +215,17 @@ class DiscountEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/discount/1',
+            '/discounts/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/discount',
+            '/discounts',
         ];
 
         yield 'update endpoint' => [
             'PATCH',
-            '/discount/1',
+            '/discounts/1',
         ];
 
         yield 'list endpoint' => [
@@ -235,17 +235,17 @@ class DiscountEndpointTest extends ApiTestCase
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/discount/1',
+            '/discounts/1',
         ];
 
         yield 'get conditions endpoint' => [
             'GET',
-            '/discount/1/conditions',
+            '/discounts/1/conditions',
         ];
 
         yield 'update conditions endpoint' => [
             'PATCH',
-            '/discount/1/conditions',
+            '/discounts/1/conditions',
         ];
     }
 
@@ -256,7 +256,7 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testCreateDiscountForUpdateTests(): int
     {
-        $discount = $this->createItem('/discount', [
+        $discount = $this->createItem('/discounts', [
             'type' => self::CART_LEVEL,
             'names' => [
                 'en-US' => 'Discount for update tests',
@@ -277,37 +277,37 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testPartialUpdateDiscount(int $discountId): int
     {
-        $updatedDiscount = $this->partialUpdateItem('/discount/' . $discountId, [
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'description' => 'Updated description',
         ], ['discount_write']);
         $this->assertEquals('Updated description', $updatedDiscount['description']);
 
-        $updatedDiscount = $this->partialUpdateItem('/discount/' . $discountId, [
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'code' => 'NEWCODE123',
         ], ['discount_write']);
         $this->assertEquals('NEWCODE123', $updatedDiscount['code']);
 
-        $updatedDiscount = $this->partialUpdateItem('/discount/' . $discountId, [
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'active' => true,
         ], ['discount_write']);
         $this->assertEquals(true, $updatedDiscount['active']);
 
-        $updatedDiscount = $this->partialUpdateItem('/discount/' . $discountId, [
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'totalQuantity' => 100,
         ], ['discount_write']);
         $this->assertEquals(100, $updatedDiscount['totalQuantity']);
 
-        $updatedDiscount = $this->partialUpdateItem('/discount/' . $discountId, [
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'quantityPerUser' => 5,
         ], ['discount_write']);
         $this->assertEquals(5, $updatedDiscount['quantityPerUser']);
 
-        $updatedDiscount = $this->partialUpdateItem('/discount/' . $discountId, [
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'highlightInCart' => true,
         ], ['discount_write']);
         $this->assertEquals(true, $updatedDiscount['highlightInCart']);
 
-        $updatedDiscount = $this->partialUpdateItem('/discount/' . $discountId, [
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'names' => [
                 'en-US' => 'Updated EN name',
                 'fr-FR' => 'Updated FR name',
@@ -328,7 +328,7 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedDiscount(int $discountId): int
     {
-        $discount = $this->getItem('/discount/' . $discountId, ['discount_read']);
+        $discount = $this->getItem('/discounts/' . $discountId, ['discount_read']);
         $this->assertEquals('Updated description', $discount['description']);
         $this->assertEquals('NEWCODE123', $discount['code']);
         $this->assertEquals(true, $discount['active']);
@@ -350,7 +350,7 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testGetDiscountConditions(int $discountId): int
     {
-        $conditions = $this->getItem('/discount/' . $discountId . '/conditions', ['discount_read']);
+        $conditions = $this->getItem('/discounts/' . $discountId . '/conditions', ['discount_read']);
         $this->assertArrayHasKey('discountId', $conditions);
         $this->assertEquals($discountId, $conditions['discountId']);
 
@@ -366,25 +366,25 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testUpdateDiscountConditions(int $discountId): int
     {
-        $updatedConditions = $this->partialUpdateItem('/discount/' . $discountId . '/conditions', [
+        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
             'minimumProductsQuantity' => 5,
         ], ['discount_write']);
         $this->assertArrayHasKey('discountId', $updatedConditions);
         $this->assertEquals($discountId, $updatedConditions['discountId']);
 
-        $updatedConditions = $this->partialUpdateItem('/discount/' . $discountId . '/conditions', [
+        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
             'carrierIds' => [1, 2],
         ], ['discount_write']);
         $this->assertArrayHasKey('discountId', $updatedConditions);
         $this->assertEquals($discountId, $updatedConditions['discountId']);
 
-        $updatedConditions = $this->partialUpdateItem('/discount/' . $discountId . '/conditions', [
+        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
             'countryIds' => [1, 2, 3],
         ], ['discount_write']);
         $this->assertArrayHasKey('discountId', $updatedConditions);
         $this->assertEquals($discountId, $updatedConditions['discountId']);
 
-        $updatedConditions = $this->partialUpdateItem('/discount/' . $discountId . '/conditions', [
+        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
             'amountDiscount' => '50.00',
             'currencyId' => 1,
             'taxIncluded' => true,
@@ -404,7 +404,7 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testUpdateDiscountProductConditions(int $discountId): int
     {
-        $updatedConditions = $this->partialUpdateItem('/discount/' . $discountId . '/conditions', [
+        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
             'productConditions' => [],
         ], ['discount_write']);
         $this->assertArrayHasKey('discountId', $updatedConditions);
@@ -422,7 +422,7 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedDiscountConditions(int $discountId): void
     {
-        $conditions = $this->getItem('/discount/' . $discountId . '/conditions', ['discount_read']);
+        $conditions = $this->getItem('/discounts/' . $discountId . '/conditions', ['discount_read']);
         $this->assertArrayHasKey('discountId', $conditions);
         $this->assertEquals($discountId, $conditions['discountId']);
 

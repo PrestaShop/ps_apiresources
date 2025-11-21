@@ -41,26 +41,26 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/api-client/{apiClientId}',
+            uriTemplate: '/api-clients/{apiClientId}',
             requirements: ['apiClientId' => '\d+'],
             CQRSQuery: GetApiClientForEditing::class,
             scopes: ['api_client_read']
         ),
         new CQRSDelete(
-            uriTemplate: '/api-client/{apiClientId}',
+            uriTemplate: '/api-clients/{apiClientId}',
             requirements: ['apiClientId' => '\d+'],
             output: false,
             CQRSCommand: DeleteApiClientCommand::class,
             scopes: ['api_client_write']
         ),
         new CQRSCreate(
-            uriTemplate: '/api-client',
+            uriTemplate: '/api-clients',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddApiClientCommand::class,
             scopes: ['api_client_write'],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/api-client/{apiClientId}',
+            uriTemplate: '/api-clients/{apiClientId}',
             read: false,
             CQRSCommand: EditApiClientCommand::class,
             CQRSQuery: GetApiClientForEditing::class,

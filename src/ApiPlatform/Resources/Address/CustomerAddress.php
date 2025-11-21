@@ -39,7 +39,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/addresses/customer/{addressId}',
+            uriTemplate: '/addresses/customers/{addressId}',
             CQRSQuery: GetCustomerAddressForEditing::class,
             scopes: [
                 'address_read',
@@ -47,7 +47,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/addresses/customer',
+            uriTemplate: '/addresses/customers',
             CQRSCommand: AddCustomerAddressCommand::class,
             CQRSQuery: GetCustomerAddressForEditing::class,
             scopes: [
@@ -58,7 +58,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             validationContext: ['groups' => ['Default', 'Create']],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/addresses/customer/{addressId}',
+            uriTemplate: '/addresses/customers/{addressId}',
             CQRSCommand: EditCustomerAddressCommand::class,
             CQRSQuery: GetCustomerAddressForEditing::class,
             scopes: [

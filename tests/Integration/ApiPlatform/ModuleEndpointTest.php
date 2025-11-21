@@ -57,7 +57,7 @@ class ModuleEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/module/ps_featureproducts',
+            '/modules/ps_featureproducts',
         ];
 
         yield 'list modules' => [
@@ -67,72 +67,72 @@ class ModuleEndpointTest extends ApiTestCase
 
         yield 'bulk toggle status' => [
             'PUT',
-            '/modules/toggle-status',
+            '/modules/bulk-update-status',
         ];
 
         yield 'toggle module status' => [
             'PUT',
-            '/module/{technicalName}/status',
+            '/modules/{technicalName}/status',
         ];
 
         yield 'reset module' => [
             'PATCH',
-            '/module/{technicalName}/reset',
+            '/modules/{technicalName}/reset',
         ];
 
         yield 'upload module by source' => [
             'POST',
-            '/module/upload-source',
+            '/modules/upload-source',
         ];
 
         yield 'upload module by archive' => [
             'POST',
-            '/module/upload-archive',
+            '/modules/upload-archive',
             'multipart/form-data',
         ];
 
         yield 'upgrade' => [
             'PUT',
-            '/module/{technicalName}/upgrade',
+            '/modules/{technicalName}/upgrade',
         ];
 
         yield 'uninstall module' => [
             'PUT',
-            '/module/{technicalName}/uninstall',
+            '/modules/{technicalName}/uninstall',
         ];
 
         yield 'bulk uninstall' => [
             'PUT',
-            '/modules/uninstall',
+            '/modules/bulk-uninstall',
         ];
     }
 
     public function testModuleNotFound(): void
     {
         // GET on non existent module returns a 404
-        $this->getItem('/module/ps_falsemodule', ['module_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/modules/ps_falsemodule', ['module_read'], Response::HTTP_NOT_FOUND);
 
         // PUT status on non existent module returns a 404
-        $this->updateItem('/module/ps_falsemodule/status', [
+        $this->updateItem('/modules/ps_falsemodule/status', [
             'enabled' => true,
         ], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT bulk status on non existent module returns a 404
-        $this->updateItem('/modules/toggle-status', [
+        $this->updateItem('/modules/bulk-update-status', [
             'modules' => ['ps_falsemodule'],
             'enabled' => true,
         ], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PATCH reset on non existent module returns a 404
-        $this->partialUpdateItem('/module/ps_falsemodule/reset', [
+        $this->partialUpdateItem('/modules/ps_falsemodule/reset', [
             'keepData' => true,
         ], ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT install on non existent module returns a 404
-        $this->updateItem('/module/ps_falsemodule/install', null, ['module_write'], Response::HTTP_NOT_FOUND);
+        $this->updateItem('/modules/ps_falsemodule/install', null, ['module_write'], Response::HTTP_NOT_FOUND);
 
         // PUT uninstall on non existent module returns a 404
-        $this->updateItem('/module/ps_falsemodule/uninstall', null, ['module_write'], Response::HTTP_NOT_FOUND);
+        $this->updateItem('/modules/ps_falsemodule/uninstall', null, ['module_write'], Response::HTTP_NOT_FOUND);
     }
 
     public function testListModules(): array
@@ -165,7 +165,7 @@ class ModuleEndpointTest extends ApiTestCase
      */
     public function testGetModuleInfos(array $module): array
     {
-        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
+        $moduleInfos = $this->getItem('/modules/' . $module['technicalName'], ['module_read']);
         $this->assertEquals(
             [
                 'moduleId' => $module['moduleId'],
@@ -191,7 +191,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(0, $disabledModules['totalItems']);
 
         // Bulk disable on one module
-        $this->updateItem('/modules/toggle-status', [
+        $this->updateItem('/modules/bulk-update-status', [
             'modules' => [
                 $module['technicalName'],
             ],
@@ -199,7 +199,7 @@ class ModuleEndpointTest extends ApiTestCase
         ], ['module_write'], Response::HTTP_NO_CONTENT);
 
         // Check updated disabled status
-        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
+        $moduleInfos = $this->getItem('/modules/' . $module['technicalName'], ['module_read']);
         $this->assertFalse($moduleInfos['enabled']);
 
         // Check number of disabled modules
@@ -207,7 +207,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(1, $disabledModules['totalItems']);
 
         // Bulk enable on one module
-        $this->updateItem('/modules/toggle-status', [
+        $this->updateItem('/modules/bulk-update-status', [
             'modules' => [
                 $module['technicalName'],
             ],
@@ -215,7 +215,7 @@ class ModuleEndpointTest extends ApiTestCase
         ], ['module_write'], Response::HTTP_NO_CONTENT);
 
         // Check updated enabled status
-        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
+        $moduleInfos = $this->getItem('/modules/' . $module['technicalName'], ['module_read']);
         $this->assertTrue($moduleInfos['enabled']);
 
         // Check number of disabled modules
@@ -235,7 +235,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(0, $disabledModules['totalItems']);
 
         // Disable specific module
-        $updatedModule = $this->updateItem(sprintf('/module/%s/status', $module['technicalName']), [
+        $updatedModule = $this->updateItem(sprintf('/modules/%s/status', $module['technicalName']), [
             'enabled' => false,
         ], ['module_write']);
 
@@ -251,7 +251,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($expectedModuleInfos, $updatedModule);
 
         // Check updated disabled status
-        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
+        $moduleInfos = $this->getItem('/modules/' . $module['technicalName'], ['module_read']);
         $this->assertEquals($expectedModuleInfos, $moduleInfos);
 
         // Check number of disabled modules
@@ -259,7 +259,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals(1, $disabledModules['totalItems']);
 
         // Enable specific module
-        $updatedModule = $this->updateItem(sprintf('/module/%s/status', $module['technicalName']), [
+        $updatedModule = $this->updateItem(sprintf('/modules/%s/status', $module['technicalName']), [
             'enabled' => true,
         ], ['module_write']);
         // Check response from status update request
@@ -267,7 +267,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($expectedModuleInfos, $updatedModule);
 
         // Check updated enabled status
-        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
+        $moduleInfos = $this->getItem('/modules/' . $module['technicalName'], ['module_read']);
         $this->assertEquals($expectedModuleInfos, $moduleInfos);
 
         // Check number of disabled modules
@@ -283,7 +283,7 @@ class ModuleEndpointTest extends ApiTestCase
     public function testResetModule(array $module): array
     {
         // Reset specific module
-        $updatedModule = $this->partialUpdateItem(sprintf('/module/%s/reset', $module['technicalName']), [
+        $updatedModule = $this->partialUpdateItem(sprintf('/modules/%s/reset', $module['technicalName']), [
             'keepData' => false,
         ], ['module_write']);
 
@@ -291,7 +291,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertNotEquals($module['moduleId'], $updatedModule['moduleId']);
 
         // Check updated module via GET endpoint
-        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
+        $moduleInfos = $this->getItem('/modules/' . $module['technicalName'], ['module_read']);
         // Initial ID has been modified
         $this->assertNotEquals($module['moduleId'], $moduleInfos['moduleId']);
         // New ID is in sync between the returned data from rest endpoint end the new data fetch via GET
@@ -318,7 +318,7 @@ class ModuleEndpointTest extends ApiTestCase
     public function testResetModuleNotActive(array $module): array
     {
         // Disable specific module
-        $updatedModule = $this->updateItem(sprintf('/module/%s/status', $module['technicalName']), [
+        $updatedModule = $this->updateItem(sprintf('/modules/%s/status', $module['technicalName']), [
             'enabled' => false,
         ], ['module_write']);
 
@@ -331,16 +331,16 @@ class ModuleEndpointTest extends ApiTestCase
             'installed' => true,
         ];
         $this->assertEquals($expectedModuleInfos, $updatedModule);
-        $this->assertEquals($expectedModuleInfos, $this->getItem('/module/' . $module['technicalName'], ['module_read']));
+        $this->assertEquals($expectedModuleInfos, $this->getItem('/modules/' . $module['technicalName'], ['module_read']));
 
         // Now try to reset a disabled module it should be reset and enabled
-        $resetModule = $this->partialUpdateItem(sprintf('/module/%s/reset', $module['technicalName']), [
+        $resetModule = $this->partialUpdateItem(sprintf('/modules/%s/reset', $module['technicalName']), [
             'keepData' => false,
         ], ['module_write']);
 
         // Module ID has been modified because the module was uninstalled the reinstalled
         $this->assertNotEquals($module['moduleId'], $resetModule['moduleId']);
-        $moduleInfos = $this->getItem('/module/' . $module['technicalName'], ['module_read']);
+        $moduleInfos = $this->getItem('/modules/' . $module['technicalName'], ['module_read']);
         $this->assertNotEquals($module['moduleId'], $moduleInfos['moduleId']);
         $this->assertEquals($moduleInfos['moduleId'], $resetModule['moduleId']);
         $module['moduleId'] = $resetModule['moduleId'];
@@ -349,7 +349,7 @@ class ModuleEndpointTest extends ApiTestCase
         $expectedModuleInfos['enabled'] = true;
         $expectedModuleInfos['moduleId'] = $module['moduleId'];
         $this->assertEquals($expectedModuleInfos, $resetModule);
-        $this->assertEquals($expectedModuleInfos, $this->getItem('/module/' . $module['technicalName'], ['module_read']));
+        $this->assertEquals($expectedModuleInfos, $this->getItem('/modules/' . $module['technicalName'], ['module_read']));
 
         return $module;
     }
@@ -360,10 +360,10 @@ class ModuleEndpointTest extends ApiTestCase
     public function testUploadModuleFromSource(): void
     {
         // Assert module dashactivity is not found and returns a 404
-        $this->getItem('/module/dashactivity', ['module_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/modules/dashactivity', ['module_read'], Response::HTTP_NOT_FOUND);
 
         // Now upload the module via a zip URL
-        $uploadedModule = $this->createItem('/module/upload-source', [
+        $uploadedModule = $this->createItem('/modules/upload-source', [
             'source' => 'https://github.com/PrestaShop/dashactivity/releases/download/v2.1.0/dashactivity.zip',
         ], ['module_write']);
 
@@ -381,7 +381,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($expectedModule, $uploadedModule);
 
         // Check result from GET API
-        $this->assertEquals($expectedModule, $this->getItem('/module/dashactivity', ['module_read']));
+        $this->assertEquals($expectedModule, $this->getItem('/modules/dashactivity', ['module_read']));
     }
 
     /**
@@ -397,7 +397,7 @@ class ModuleEndpointTest extends ApiTestCase
             'installed' => true,
         ];
 
-        $installedModule = $this->updateItem(sprintf('/module/%s/install', $expectedModule['technicalName']), null, ['module_write']);
+        $installedModule = $this->updateItem(sprintf('/modules/%s/install', $expectedModule['technicalName']), null, ['module_write']);
 
         // The ID is dynamic so we fetch it after creation
         $this->assertArrayHasKey('moduleId', $installedModule);
@@ -407,7 +407,7 @@ class ModuleEndpointTest extends ApiTestCase
         $this->assertEquals($expectedModule, $installedModule);
 
         // Check result from GET API
-        $this->assertEquals($expectedModule, $this->getItem('/module/' . $expectedModule['technicalName'], ['module_read']));
+        $this->assertEquals($expectedModule, $this->getItem('/modules/' . $expectedModule['technicalName'], ['module_read']));
     }
 
     /**
@@ -416,7 +416,7 @@ class ModuleEndpointTest extends ApiTestCase
     public function testInstallModuleAlreadyInstalled(): void
     {
         // Installing a module already installed is forbidden
-        $errorResponse = $this->updateItem('/module/dashactivity/install', [], ['module_write'], Response::HTTP_FORBIDDEN);
+        $errorResponse = $this->updateItem('/modules/dashactivity/install', [], ['module_write'], Response::HTTP_FORBIDDEN);
         $this->assertEquals('Cannot install module dashactivity since it is already installed', $errorResponse['detail']);
     }
 
@@ -438,13 +438,13 @@ class ModuleEndpointTest extends ApiTestCase
         ];
 
         // Uninstall specific module deleteFiles false
-        $this->updateItem(sprintf('/module/%s/uninstall', $expectedModule['technicalName']), [
+        $this->updateItem(sprintf('/modules/%s/uninstall', $expectedModule['technicalName']), [
             // We keep files, so we can check the module status afterward (deleted module would return a 404)
             'deleteFiles' => false,
         ], ['module_write'], Response::HTTP_NO_CONTENT);
 
         // Check result from GET API (the module is uninstalled but its files were kept so we can still provide some minimum infos)
-        $this->assertEquals($expectedModule, $this->getItem('/module/' . $expectedModule['technicalName'], ['module_read']));
+        $this->assertEquals($expectedModule, $this->getItem('/modules/' . $expectedModule['technicalName'], ['module_read']));
     }
 
     /**
@@ -453,7 +453,7 @@ class ModuleEndpointTest extends ApiTestCase
     public function testUninstallModuleNotInstalled(): void
     {
         // Uninstalling a module already installed is forbidden
-        $errorResponse = $this->updateItem('/module/dashactivity/uninstall', [
+        $errorResponse = $this->updateItem('/modules/dashactivity/uninstall', [
             // We keep files, so we can check the module status afterward (deleted module would return a 404)
             'deleteFiles' => false,
         ], ['module_write'], Response::HTTP_FORBIDDEN);
@@ -466,7 +466,7 @@ class ModuleEndpointTest extends ApiTestCase
     public function testResetModuleNotInstalled(): void
     {
         // Now try to reset a module not installed it should be forbidden
-        $errorResponse = $this->partialUpdateItem('/module/dashactivity/reset', null, ['module_write'], Response::HTTP_FORBIDDEN);
+        $errorResponse = $this->partialUpdateItem('/modules/dashactivity/reset', null, ['module_write'], Response::HTTP_FORBIDDEN);
         $this->assertEquals('Cannot reset module dashactivity since it is not installed', $errorResponse['detail']);
     }
 
@@ -476,7 +476,7 @@ class ModuleEndpointTest extends ApiTestCase
     public function testUploadModuleByArchive()
     {
         $uploadedArchive = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/archive/test_install_cqrs_command.zip');
-        $uploadedModule = $this->requestApi('POST', '/module/upload-archive', null, ['module_write'], Response::HTTP_CREATED, [
+        $uploadedModule = $this->requestApi('POST', '/modules/upload-archive', null, ['module_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -501,7 +501,7 @@ class ModuleEndpointTest extends ApiTestCase
         // The returned response contains the module details
         $this->assertEquals($expectedModule, $uploadedModule);
         // The module GET endpoint returns the same data
-        $this->assertEquals($expectedModule, $this->getItem('/module/' . $expectedModule['technicalName'], ['module_read']));
+        $this->assertEquals($expectedModule, $this->getItem('/modules/' . $expectedModule['technicalName'], ['module_read']));
     }
 
     /**
@@ -510,13 +510,13 @@ class ModuleEndpointTest extends ApiTestCase
     public function testUninstallModuleAndRemoveFiles(): void
     {
         // Uninstall specific module deleteFiles true
-        $this->updateItem('/module/test_install_cqrs_command/uninstall', [
+        $this->updateItem('/modules/test_install_cqrs_command/uninstall', [
             // We remove files, so the module no longer exists
             'deleteFiles' => true,
         ], ['module_write'], Response::HTTP_NO_CONTENT);
 
         // Check that the module no longer exists
-        $this->getItem('/module/test_install_cqrs_command', ['module_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/modules/test_install_cqrs_command', ['module_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -526,7 +526,7 @@ class ModuleEndpointTest extends ApiTestCase
     {
         $modules = ['bankwire', 'ps_emailsubscription'];
         foreach ($modules as $module) {
-            $moduleInfos = $this->getItem('/module/' . $module, ['module_read']);
+            $moduleInfos = $this->getItem('/modules/' . $module, ['module_read']);
             $this->assertGreaterThan(0, $moduleInfos['moduleId']);
             $this->assertTrue($moduleInfos['enabled']);
             $this->assertTrue($moduleInfos['installed']);
@@ -535,7 +535,7 @@ class ModuleEndpointTest extends ApiTestCase
         }
 
         // Uninstall specific module deleteFiles true
-        $this->updateItem('/modules/uninstall', [
+        $this->updateItem('/modules/bulk-uninstall', [
             'modules' => $modules,
             // Force removal of the files
             'deleteFiles' => true,
@@ -543,7 +543,7 @@ class ModuleEndpointTest extends ApiTestCase
 
         // Module files have been removed, so they don't exist at all anymore, thus requesting their info results in a 404
         foreach ($modules as $module) {
-            $this->getItem('/module/' . $module, ['module_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/modules/' . $module, ['module_read'], Response::HTTP_NOT_FOUND);
         }
     }
 
@@ -552,7 +552,7 @@ class ModuleEndpointTest extends ApiTestCase
         $bearerToken = $this->getBearerToken(['module_write']);
 
         // Upload Zip from GitHub with version 2.1.2 the module is present but not installed
-        $uploadedModule = $this->createItem('/module/upload-source', [
+        $uploadedModule = $this->createItem('/modules/upload-source', [
             'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.2/dashproducts.zip',
         ], ['module_write'], Response::HTTP_CREATED);
 
@@ -567,10 +567,10 @@ class ModuleEndpointTest extends ApiTestCase
             'installed' => false,
         ];
         $this->assertEquals($module212, $uploadedModule);
-        $this->assertEquals($module212, $this->getItem('/module/' . $module212['technicalName'], ['module_read']));
+        $this->assertEquals($module212, $this->getItem('/modules/' . $module212['technicalName'], ['module_read']));
 
         // Now we install the module
-        $installedModule = $this->updateItem(sprintf('/module/%s/install', $module212['technicalName']), null, ['module_write']);
+        $installedModule = $this->updateItem(sprintf('/modules/%s/install', $module212['technicalName']), null, ['module_write']);
 
         // The ID is dynamic, so we fetch it after creation
         $this->assertArrayHasKey('moduleId', $installedModule);
@@ -584,10 +584,10 @@ class ModuleEndpointTest extends ApiTestCase
             'installed' => true,
         ];
         $this->assertEquals($installedModule212, $installedModule);
-        $this->assertEquals($installedModule212, $this->getItem('/module/' . $installedModule212['technicalName'], ['module_read']));
+        $this->assertEquals($installedModule212, $this->getItem('/modules/' . $installedModule212['technicalName'], ['module_read']));
 
         // Now upload the source for version 2.1.3, the module version is updated but not the installed one (not upgraded yet)
-        $reUploadedModule = $this->createItem('/module/upload-source', [
+        $reUploadedModule = $this->createItem('/modules/upload-source', [
             'source' => 'https://github.com/PrestaShop/dashproducts/releases/download/v2.1.3/dashproducts.zip',
         ], ['module_write'], Response::HTTP_CREATED);
 
@@ -603,14 +603,14 @@ class ModuleEndpointTest extends ApiTestCase
             'installed' => true,
         ];
         $this->assertEquals($module213, $reUploadedModule);
-        $this->assertEquals($module213, $this->getItem('/module/' . $module213['technicalName'], ['module_read']));
+        $this->assertEquals($module213, $this->getItem('/modules/' . $module213['technicalName'], ['module_read']));
 
         // Now perform the upgrade action
-        $upgradedModule = $this->updateItem(sprintf('/module/%s/upgrade', $installedModule212['technicalName']), null, ['module_write']);
+        $upgradedModule = $this->updateItem(sprintf('/modules/%s/upgrade', $installedModule212['technicalName']), null, ['module_write']);
 
         // Check response from status upgrade request (the installedVersion field should have been updated)
         $upgradedModule213 = ['installedVersion' => '2.1.3'] + $module213;
         $this->assertEquals($upgradedModule213, $upgradedModule);
-        $this->assertEquals($upgradedModule213, $this->getItem('/module/' . $upgradedModule213['technicalName'], ['module_read']));
+        $this->assertEquals($upgradedModule213, $this->getItem('/modules/' . $upgradedModule213['technicalName'], ['module_read']));
     }
 }

@@ -24,20 +24,19 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Address\Command\BulkDeleteAddressCommand;
 use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/addresses/delete',
-            // No output 204 code
-            output: false,
+        new CQRSDelete(
+            uriTemplate: '/addresses/bulk-delete',
             CQRSCommand: BulkDeleteAddressCommand::class,
             scopes: [
                 'address_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [

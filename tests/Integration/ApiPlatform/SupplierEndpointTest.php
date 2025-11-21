@@ -57,27 +57,27 @@ class SupplierEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => [
             'POST',
-            '/supplier',
+            '/suppliers',
         ];
 
         yield 'get endpoint' => [
             'GET',
-            '/supplier/1',
+            '/suppliers/1',
         ];
 
         yield 'update endpoint' => [
             'PATCH',
-            '/supplier/1',
+            '/suppliers/1',
         ];
 
         yield 'toggle status endpoint' => [
             'PUT',
-            '/supplier/1/toggle-status',
+            '/suppliers/1/toggle-status',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/supplier/1',
+            '/suppliers/1',
         ];
 
         yield 'list endpoint' => [
@@ -86,18 +86,18 @@ class SupplierEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/suppliers/delete',
+            'DELETE',
+            '/suppliers/bulk-delete',
         ];
 
         yield 'bulk disable endpoint' => [
             'PUT',
-            '/suppliers/disable',
+            '/suppliers/bulk-disable',
         ];
 
         yield 'bulk enable endpoint' => [
             'PUT',
-            '/suppliers/enable',
+            '/suppliers/bulk-enable',
         ];
     }
 
@@ -105,7 +105,7 @@ class SupplierEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/suppliers', ['supplier_read']);
 
-        $supplier = $this->createItem('/supplier', [
+        $supplier = $this->createItem('/suppliers', [
             'name' => 'My Supplier',
             'address' => 'My address',
             'address2' => 'My address 2',
@@ -156,7 +156,7 @@ class SupplierEndpointTest extends ApiTestCase
      */
     public function testGetSupplier(int $supplierId): int
     {
-        $supplier = $this->getItem('/supplier/' . $supplierId, ['supplier_read']);
+        $supplier = $this->getItem('/suppliers/' . $supplierId, ['supplier_read']);
         $this->assertEquals(
             [
                 'supplierId' => $supplierId,
@@ -202,7 +202,7 @@ class SupplierEndpointTest extends ApiTestCase
     public function testPartialUpdateSupplier(int $supplierId): int
     {
         // name
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'name' => 'My Supplier Updated',
         ], ['supplier_write']);
         $this->assertEquals(
@@ -238,7 +238,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // address
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'address' => 'My address Updated',
         ], ['supplier_write']);
         $this->assertEquals(
@@ -274,7 +274,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // address2
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'address2' => 'My address 2 Updated',
         ], ['supplier_write']);
         $this->assertEquals(
@@ -310,7 +310,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // postCode
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'postCode' => '67890',
         ], ['supplier_write']);
         $this->assertEquals(
@@ -346,7 +346,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // city
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'city' => 'MyCityUpdated',
         ], ['supplier_write']);
         $this->assertEquals(
@@ -382,7 +382,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // countryId
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'countryId' => self::$countryIdGB,
         ], ['supplier_write']);
         $this->assertEquals(
@@ -418,7 +418,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // phone
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'phone' => '0145123456',
         ], ['supplier_write']);
         $this->assertEquals(
@@ -454,7 +454,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // mobilePhone
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'mobilePhone' => '0656789012',
         ], ['supplier_write']);
         $this->assertEquals(
@@ -490,7 +490,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // enabled
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'enabled' => true,
         ], ['supplier_write']);
         $this->assertEquals(
@@ -526,7 +526,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // descriptions
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'descriptions' => [
                 'en-US' => 'Description EN Updated',
                 'fr-FR' => 'Description FR Updated',
@@ -565,7 +565,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // metaTitles
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'metaTitles' => [
                 'en-US' => 'MetaTitle EN Updated',
                 'fr-FR' => 'MetaTitle FR Updated',
@@ -604,7 +604,7 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         // metaDescriptions
-        $updatedSupplier = $this->partialUpdateItem('/supplier/' . $supplierId, [
+        $updatedSupplier = $this->partialUpdateItem('/suppliers/' . $supplierId, [
             'metaDescriptions' => [
                 'en-US' => 'MetaDescription EN Updated',
                 'fr-FR' => 'MetaDescription FR Updated',
@@ -654,7 +654,7 @@ class SupplierEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedSupplier(int $supplierId): int
     {
-        $supplier = $this->getItem('/supplier/' . $supplierId, ['supplier_read']);
+        $supplier = $this->getItem('/suppliers/' . $supplierId, ['supplier_read']);
         $this->assertEquals(
             [
                 'supplierId' => $supplierId,
@@ -699,8 +699,8 @@ class SupplierEndpointTest extends ApiTestCase
      */
     public function testToggleStatusSupplier(int $supplierId): int
     {
-        $this->updateItem('/supplier/' . $supplierId . '/toggle-status', [], ['supplier_write'], Response::HTTP_NO_CONTENT);
-        $supplier = $this->getItem('/supplier/' . $supplierId, ['supplier_read']);
+        $this->updateItem('/suppliers/' . $supplierId . '/toggle-status', [], ['supplier_write'], Response::HTTP_NO_CONTENT);
+        $supplier = $this->getItem('/suppliers/' . $supplierId, ['supplier_read']);
         $this->assertEquals(
             [
                 'supplierId' => $supplierId,
@@ -778,11 +778,11 @@ class SupplierEndpointTest extends ApiTestCase
      */
     public function testDeleteSupplierLogo(int $supplierId): int
     {
-        $return = $this->deleteItem('/supplier/' . $supplierId . '/logo', ['supplier_write']);
+        $return = $this->deleteItem('/suppliers/' . $supplierId . '/logo', ['supplier_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
-        $supplier = $this->getItem('/supplier/' . $supplierId, ['supplier_read']);
+        $supplier = $this->getItem('/suppliers/' . $supplierId, ['supplier_read']);
 
         return $supplierId;
     }
@@ -796,12 +796,12 @@ class SupplierEndpointTest extends ApiTestCase
      */
     public function testDeleteSupplier(int $supplierId): void
     {
-        $return = $this->deleteItem('/supplier/' . $supplierId, ['supplier_write']);
+        $return = $this->deleteItem('/suppliers/' . $supplierId, ['supplier_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/supplier/' . $supplierId, ['supplier_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/suppliers/' . $supplierId, ['supplier_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -816,7 +816,7 @@ class SupplierEndpointTest extends ApiTestCase
         $suppliers = $this->listItems('/suppliers', ['supplier_read']);
         $this->assertGreaterThanOrEqual(2, $suppliers['totalItems']);
 
-        $supplier1 = $this->createItem('/supplier', [
+        $supplier1 = $this->createItem('/suppliers', [
             'name' => 'My Supplier 1',
             'address' => 'My address',
             'address2' => 'My address 2',
@@ -846,7 +846,7 @@ class SupplierEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('supplierId', $supplier1);
         $supplierId1 = $supplier1['supplierId'];
 
-        $supplier2 = $this->createItem('/supplier', [
+        $supplier2 = $this->createItem('/suppliers', [
             'name' => 'My Supplier 2',
             'address' => 'My address',
             'address2' => 'My address 2',
@@ -884,12 +884,12 @@ class SupplierEndpointTest extends ApiTestCase
             $supplierId2,
         ];
 
-        $this->updateItem('/suppliers/enable', [
+        $this->updateItem('/suppliers/bulk-enable', [
             'supplierIds' => $bulkSuppliers,
         ], ['supplier_write'], Response::HTTP_NO_CONTENT);
 
         foreach ($bulkSuppliers as $supplierId) {
-            $supplier = $this->getItem('/supplier/' . $supplierId, ['supplier_read']);
+            $supplier = $this->getItem('/suppliers/' . $supplierId, ['supplier_read']);
             $this->assertEquals(true, $supplier['enabled']);
         }
 
@@ -905,12 +905,12 @@ class SupplierEndpointTest extends ApiTestCase
      */
     public function testBulkDisable(array $bulkSuppliers): array
     {
-        $this->updateItem('/suppliers/disable', [
+        $this->updateItem('/suppliers/bulk-disable', [
             'supplierIds' => $bulkSuppliers,
         ], ['supplier_write'], Response::HTTP_NO_CONTENT);
 
         foreach ($bulkSuppliers as $supplierId) {
-            $supplier = $this->getItem('/supplier/' . $supplierId, ['supplier_read']);
+            $supplier = $this->getItem('/suppliers/' . $supplierId, ['supplier_read']);
             $this->assertEquals(false, $supplier['enabled']);
         }
 
@@ -926,13 +926,13 @@ class SupplierEndpointTest extends ApiTestCase
      */
     public function testBulkDelete(array $bulkSuppliers): void
     {
-        $this->updateItem('/suppliers/delete', [
+        $this->bulkDeleteItems('/suppliers/bulk-delete', [
             'supplierIds' => $bulkSuppliers,
-        ], ['supplier_write'], Response::HTTP_NO_CONTENT);
+        ], ['supplier_write']);
 
         // Assert the provided zones have been removed
         foreach ($bulkSuppliers as $supplierId) {
-            $this->getItem('/supplier/' . $supplierId, ['supplier_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/suppliers/' . $supplierId, ['supplier_read'], Response::HTTP_NOT_FOUND);
         }
 
         $this->assertEquals(2, $this->countItems('/suppliers', ['supplier_read']));
@@ -941,7 +941,7 @@ class SupplierEndpointTest extends ApiTestCase
     public function testCreateInvalidSupplier(): void
     {
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
-        $validationErrorsResponse = $this->createItem('/supplier', [
+        $validationErrorsResponse = $this->createItem('/suppliers', [
             'name' => '',
         ], ['supplier_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);

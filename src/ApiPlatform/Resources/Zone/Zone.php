@@ -40,28 +40,28 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/zone',
+            uriTemplate: '/zones',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddZoneCommand::class,
             scopes: ['zone_write'],
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/zone/{zoneId}',
+            uriTemplate: '/zones/{zoneId}',
             requirements: ['zoneId' => '\d+'],
             output: false,
             CQRSCommand: DeleteZoneCommand::class,
             scopes: ['zone_write']
         ),
         new CQRSGet(
-            uriTemplate: '/zone/{zoneId}',
+            uriTemplate: '/zones/{zoneId}',
             requirements: ['zoneId' => '\d+'],
             CQRSQuery: GetZoneForEditing::class,
             scopes: ['zone_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSUpdate(
-            uriTemplate: '/zone/{zoneId}/toggle-status',
+            uriTemplate: '/zones/{zoneId}/toggle-status',
             requirements: ['zoneId' => '\d+'],
             output: false,
             allowEmptyBody: true,
@@ -69,7 +69,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['zone_write'],
         ),
         new CQRSUpdate(
-            uriTemplate: '/zone/{zoneId}',
+            uriTemplate: '/zones/{zoneId}',
             requirements: ['zoneId' => '\d+'],
             read: false,
             CQRSCommand: EditZoneCommand::class,

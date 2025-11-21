@@ -45,27 +45,27 @@ class ZoneEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => [
             'POST',
-            '/zone',
+            '/zones',
         ];
 
         yield 'get endpoint' => [
             'GET',
-            '/zone/1',
+            '/zones/1',
         ];
 
         yield 'update endpoint' => [
             'PUT',
-            '/zone/1',
+            '/zones/1',
         ];
 
         yield 'toggle status endpoint' => [
             'PUT',
-            '/zone/1/toggle-status',
+            '/zones/1/toggle-status',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/zone/1',
+            '/zones/1',
         ];
 
         yield 'list endpoint' => [
@@ -74,13 +74,13 @@ class ZoneEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/zones/delete',
+            'DELETE',
+            '/zones/bulk-delete',
         ];
 
         yield 'bulk toggle status endpoint' => [
             'PUT',
-            '/zones/toggle-status',
+            '/zones/bulk-update-status',
         ];
     }
 
@@ -88,7 +88,7 @@ class ZoneEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/zones', ['zone_read']);
 
-        $zone = $this->createItem('/zone', [
+        $zone = $this->createItem('/zones', [
             'name' => 'My Zone',
             'enabled' => false,
             'shopIds' => [1],
@@ -117,7 +117,7 @@ class ZoneEndpointTest extends ApiTestCase
      */
     public function testGetZone(int $zoneId): int
     {
-        $zone = $this->getItem('/zone/' . $zoneId, ['zone_read']);
+        $zone = $this->getItem('/zones/' . $zoneId, ['zone_read']);
         $this->assertEquals(
             [
                 'zoneId' => $zoneId,
@@ -140,7 +140,7 @@ class ZoneEndpointTest extends ApiTestCase
      */
     public function testUpdateZone(int $zoneId): int
     {
-        $updatedZone = $this->updateItem('/zone/' . $zoneId, [
+        $updatedZone = $this->updateItem('/zones/' . $zoneId, [
             'name' => 'My Zone updated',
             'enabled' => true,
         ], ['zone_write']);
@@ -166,7 +166,7 @@ class ZoneEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedZone(int $zoneId): int
     {
-        $zone = $this->getItem('/zone/' . $zoneId, ['zone_read']);
+        $zone = $this->getItem('/zones/' . $zoneId, ['zone_read']);
         $this->assertEquals(
             [
                 'zoneId' => $zoneId,
@@ -189,8 +189,8 @@ class ZoneEndpointTest extends ApiTestCase
      */
     public function testToggleStatusZone(int $zoneId): int
     {
-        $this->updateItem('/zone/' . $zoneId . '/toggle-status', [], ['zone_write'], Response::HTTP_NO_CONTENT);
-        $zone = $this->getItem('/zone/' . $zoneId, ['zone_read']);
+        $this->updateItem('/zones/' . $zoneId . '/toggle-status', [], ['zone_write'], Response::HTTP_NO_CONTENT);
+        $zone = $this->getItem('/zones/' . $zoneId, ['zone_read']);
         $this->assertEquals(
             [
                 'zoneId' => $zoneId,
@@ -245,12 +245,12 @@ class ZoneEndpointTest extends ApiTestCase
      */
     public function testDeleteZone(int $zoneId): void
     {
-        $return = $this->deleteItem('/zone/' . $zoneId, ['zone_write']);
+        $return = $this->deleteItem('/zones/' . $zoneId, ['zone_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/zone/' . $zoneId, ['zone_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/zones/' . $zoneId, ['zone_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -273,13 +273,13 @@ class ZoneEndpointTest extends ApiTestCase
             $zones['items'][3]['zoneId'],
         ];
 
-        $this->updateItem('/zones/delete', [
+        $this->bulkDeleteItems('/zones/bulk-delete', [
             'zoneIds' => $bulkZones,
-        ], ['zone_write'], Response::HTTP_NO_CONTENT);
+        ], ['zone_write']);
 
         // Assert the provided zones have been removed
         foreach ($bulkZones as $zoneId) {
-            $this->getItem('/zone/' . $zoneId, ['zone_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/zones/' . $zoneId, ['zone_read'], Response::HTTP_NOT_FOUND);
         }
 
         $this->assertEquals(6, $this->countItems('/zones', ['zone_read']));
@@ -303,13 +303,13 @@ class ZoneEndpointTest extends ApiTestCase
             $zones['items'][1]['zoneId'],
         ];
 
-        $this->updateItem('/zones/toggle-status', [
+        $this->updateItem('/zones/bulk-update-status', [
             'zoneIds' => $bulkZones,
             'enabled' => false,
         ], ['zone_write'], Response::HTTP_NO_CONTENT);
 
         foreach ($bulkZones as $zoneId) {
-            $zone = $this->getItem('/zone/' . $zoneId, ['zone_read']);
+            $zone = $this->getItem('/zones/' . $zoneId, ['zone_read']);
             $this->assertEquals(false, $zone['enabled']);
         }
     }
@@ -317,7 +317,7 @@ class ZoneEndpointTest extends ApiTestCase
     public function testCreateInvalidZone(): void
     {
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
-        $validationErrorsResponse = $this->createItem('/zone', [
+        $validationErrorsResponse = $this->createItem('/zones', [
             'name' => '',
         ], ['zone_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);

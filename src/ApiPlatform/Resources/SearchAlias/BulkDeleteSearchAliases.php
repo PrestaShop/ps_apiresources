@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -20,38 +21,38 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Store;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchAlias;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Store\Command\BulkDeleteStoreCommand;
-use PrestaShop\PrestaShop\Core\Domain\Store\Exception\StoreNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\Alias\Command\BulkDeleteSearchTermsAliasesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/stores/delete',
-            // No output 204 code
-            output: false,
-            CQRSCommand: BulkDeleteStoreCommand::class,
-            scopes: [
-                'store_write',
+        new CQRSDelete(
+            uriTemplate: '/search-aliases/bulk-delete',
+            CQRSCommand: BulkDeleteSearchTermsAliasesCommand::class,
+            scopes: ['search_alias_write'],
+            CQRSCommandMapping: [
+                '[searchTerms]' => '[searchTerms]',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
-        StoreNotFoundException::class => Response::HTTP_NOT_FOUND,
+        AliasNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkStoresDelete
+class BulkDeleteSearchAliases
 {
-    /**
-     * @var int[]
-     */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
-    #[Assert\NotBlank]
-    public array $storeIds;
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'array',
+            'items' => ['type' => 'string'],
+        ]
+    )]
+    public array $searchTerms = [];
 }

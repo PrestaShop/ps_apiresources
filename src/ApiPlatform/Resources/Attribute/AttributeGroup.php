@@ -42,7 +42,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/attributes/group/{attributeGroupId}',
+            uriTemplate: '/attributes/groups/{attributeGroupId}',
             CQRSQuery: GetAttributeGroupForEditing::class,
             scopes: [
                 'attribute_group_read',
@@ -50,7 +50,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/attributes/group',
+            uriTemplate: '/attributes/groups',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddAttributeGroupCommand::class,
             CQRSQuery: GetAttributeGroupForEditing::class,
@@ -61,7 +61,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/attributes/group/{attributeGroupId}',
+            uriTemplate: '/attributes/groups/{attributeGroupId}',
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditAttributeGroupCommand::class,
             CQRSQuery: GetAttributeGroupForEditing::class,
@@ -72,7 +72,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/attributes/group/{attributeGroupId}',
+            uriTemplate: '/attributes/groups/{attributeGroupId}',
+            requirements: ['attributeGroupId' => '\d+'],
             CQRSCommand: DeleteAttributeGroupCommand::class,
             scopes: [
                 'attribute_group_write',

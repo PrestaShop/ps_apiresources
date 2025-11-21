@@ -58,22 +58,22 @@ class AttributeGroupEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/attributes/group/1',
+            '/attributes/groups/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/attributes/group',
+            '/attributes/groups',
         ];
 
         yield 'patch endpoint' => [
             'PATCH',
-            '/attributes/group/1',
+            '/attributes/groups/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/attributes/group/1',
+            '/attributes/groups/1',
         ];
 
         yield 'list endpoint' => [
@@ -82,8 +82,8 @@ class AttributeGroupEndpointTest extends ApiTestCase
         ];
 
         yield 'bulk delete endpoint' => [
-            'PUT',
-            '/attributes/groups/delete',
+            'DELETE',
+            '/attributes/groups/bulk-delete',
         ];
     }
 
@@ -105,7 +105,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
         ];
 
         // Create an attribute group, the POST endpoint returns the created item as JSON
-        $attributeGroup = $this->createItem('/attributes/group', $postData, ['attribute_group_write']);
+        $attributeGroup = $this->createItem('/attributes/groups', $postData, ['attribute_group_write']);
         $this->assertArrayHasKey('attributeGroupId', $attributeGroup);
         $attributeGroupId = $attributeGroup['attributeGroupId'];
 
@@ -130,7 +130,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
      */
     public function testGetAttributeGroup(int $attributeGroupId): int
     {
-        $attributeGroup = $this->getItem('/attributes/group/' . $attributeGroupId, ['attribute_group_read']);
+        $attributeGroup = $this->getItem('/attributes/groups/' . $attributeGroupId, ['attribute_group_read']);
         $this->assertEquals([
             'attributeGroupId' => $attributeGroupId,
             'names' => [
@@ -170,11 +170,11 @@ class AttributeGroupEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ];
 
-        $updatedAttributeGroup = $this->partialUpdateItem('/attributes/group/' . $attributeGroupId, $patchData, ['attribute_group_write']);
+        $updatedAttributeGroup = $this->partialUpdateItem('/attributes/groups/' . $attributeGroupId, $patchData, ['attribute_group_write']);
         $this->assertEquals(['attributeGroupId' => $attributeGroupId] + $patchData, $updatedAttributeGroup);
 
         // We check that when we GET the item it is updated as expected
-        $attributeGroup = $this->getItem('/attributes/group/' . $attributeGroupId, ['attribute_group_read']);
+        $attributeGroup = $this->getItem('/attributes/groups/' . $attributeGroupId, ['attribute_group_read']);
         $this->assertEquals(['attributeGroupId' => $attributeGroupId] + $patchData, $attributeGroup);
 
         // Test partial update
@@ -199,7 +199,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
             'type' => 'radio',
             'shopIds' => [1],
         ];
-        $updatedAttributeGroup = $this->partialUpdateItem('/attributes/group/' . $attributeGroupId, $partialUpdateData, ['attribute_group_write']);
+        $updatedAttributeGroup = $this->partialUpdateItem('/attributes/groups/' . $attributeGroupId, $partialUpdateData, ['attribute_group_write']);
         $this->assertEquals($expectedUpdatedData, $updatedAttributeGroup);
 
         return $attributeGroupId;
@@ -259,12 +259,12 @@ class AttributeGroupEndpointTest extends ApiTestCase
     public function testRemoveAttributeGroup(int $attributeGroupId): void
     {
         // Delete the item
-        $return = $this->deleteItem('/attributes/group/' . $attributeGroupId, ['attribute_group_write']);
+        $return = $this->deleteItem('/attributes/groups/' . $attributeGroupId, ['attribute_group_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/attributes/group/' . $attributeGroupId, ['attribute_group_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/attributes/groups/' . $attributeGroupId, ['attribute_group_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkRemoveAttributeGroups(): void
@@ -280,13 +280,13 @@ class AttributeGroupEndpointTest extends ApiTestCase
             $attributeGroups['items'][2]['attributeGroupId'],
         ];
 
-        $this->updateItem('/attributes/groups/delete', [
+        $this->bulkDeleteItems('/attributes/groups/bulk-delete', [
             'attributeGroupIds' => $removeAttributeGroupIds,
-        ], ['attribute_group_write'], Response::HTTP_NO_CONTENT);
+        ], ['attribute_group_write']);
 
         // Assert the provided attribute groups have been removed
         foreach ($removeAttributeGroupIds as $attributeGroupId) {
-            $this->getItem('/attributes/group/' . $attributeGroupId, ['attribute_group_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/attributes/groups/' . $attributeGroupId, ['attribute_group_read'], Response::HTTP_NOT_FOUND);
         }
 
         // Only two attribute group remain
@@ -313,7 +313,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
         ];
 
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
-        $validationErrorsResponse = $this->createItem('/attributes/group', $attributeGroupInvalidData, ['attribute_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/attributes/groups', $attributeGroupInvalidData, ['attribute_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
         $this->assertValidationErrors([
             [
@@ -343,7 +343,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
         ], $validationErrorsResponse);
 
         // Now create a valid attribute group to test the validation on PATCH request
-        $validAttributeGroup = $this->createItem('/attributes/group', [
+        $validAttributeGroup = $this->createItem('/attributes/groups', [
             'names' => [
                 'en-US' => 'name en',
                 'fr-FR' => 'name fr',
@@ -439,7 +439,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
             ],
         ];
         foreach ($invalidUpdateData as $updateData) {
-            $validationErrorsResponse = $this->partialUpdateItem('/attributes/group/' . $attributeGroupId, $updateData['data'], ['attribute_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $validationErrorsResponse = $this->partialUpdateItem('/attributes/groups/' . $attributeGroupId, $updateData['data'], ['attribute_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
             $this->assertValidationErrors($updateData['expectedErrors'], $validationErrorsResponse);
         }
     }
