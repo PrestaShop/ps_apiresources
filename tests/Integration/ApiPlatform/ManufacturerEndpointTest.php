@@ -64,11 +64,6 @@ class ManufacturerEndpointTest extends ApiTestCase
             '/manufacturer/1',
         ];
 
-        yield 'get details endpoint' => [
-            'GET',
-            '/manufacturer/1/details/1',
-        ];
-
         yield 'create endpoint' => [
             'POST',
             '/manufacturer',
@@ -162,26 +157,6 @@ class ManufacturerEndpointTest extends ApiTestCase
             ],
             'shopIds' => [1],
             'enabled' => true,
-        ], $manufacturer);
-
-        return $manufacturerId;
-    }
-
-    /**
-     * @depends testGetManufacturer
-     *
-     * @param int $manufacturerId
-     *
-     * @return int
-     */
-    public function testGetManufacturerDetails(int $manufacturerId): int
-    {
-        $manufacturer = $this->getItem('/manufacturer/' . $manufacturerId . '/details/1', ['manufacturer_read']);
-
-        $this->assertEquals([
-            'name' => 'manufacturer name',
-            'products' => [],
-            'addresses' => [],
         ], $manufacturer);
 
         return $manufacturerId;
