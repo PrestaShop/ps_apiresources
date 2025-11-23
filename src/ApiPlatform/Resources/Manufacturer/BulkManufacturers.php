@@ -36,7 +36,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/manufacturers/delete',
+            uriTemplate: '/manufacturers/bulk-delete',
             // No output 204 code
             output: false,
             CQRSCommand: BulkDeleteManufacturerCommand::class,

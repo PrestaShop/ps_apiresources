@@ -61,27 +61,27 @@ class ManufacturerEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/manufacturer/1',
+            '/manufacturers/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/manufacturer',
+            '/manufacturers',
         ];
 
         yield 'patch endpoint' => [
             'PATCH',
-            '/manufacturer/1',
+            '/manufacturers/1',
         ];
 
         yield 'bulk delete endpoint' => [
             'PUT',
-            '/manufacturers/delete',
+            '/manufacturers/bulk-delete',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/manufacturer/1',
+            '/manufacturers/1',
         ];
     }
 
@@ -110,7 +110,7 @@ class ManufacturerEndpointTest extends ApiTestCase
             'enabled' => true,
         ];
         // Create an manufacturer, the POST endpoint returns the created item as JSON
-        $manufacturer = $this->createItem('/manufacturer', $postData, ['manufacturer_write']);
+        $manufacturer = $this->createItem('/manufacturers', $postData, ['manufacturer_write']);
         $this->assertArrayHasKey('manufacturerId', $manufacturer);
         $manufacturerId = $manufacturer['manufacturerId'];
 
@@ -135,7 +135,7 @@ class ManufacturerEndpointTest extends ApiTestCase
      */
     public function testGetManufacturer(int $manufacturerId): int
     {
-        $manufacturer = $this->getItem('/manufacturer/' . $manufacturerId, ['manufacturer_read']);
+        $manufacturer = $this->getItem('/manufacturers/' . $manufacturerId, ['manufacturer_read']);
         $this->assertEquals([
             'manufacturerId' => $manufacturerId,
             'name' => 'manufacturer name',
@@ -193,11 +193,11 @@ class ManufacturerEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ];
 
-        $updatedManufacturer = $this->partialUpdateItem('/manufacturer/' . $manufacturerId, $patchData, ['manufacturer_write']);
+        $updatedManufacturer = $this->partialUpdateItem('/manufacturers/' . $manufacturerId, $patchData, ['manufacturer_write']);
         $this->assertEquals(['manufacturerId' => $manufacturerId] + $patchData, $updatedManufacturer);
 
         // We check that when we GET the item it is updated as expected
-        $manufacturer = $this->getItem('/manufacturer/' . $manufacturerId, ['manufacturer_read']);
+        $manufacturer = $this->getItem('/manufacturers/' . $manufacturerId, ['manufacturer_read']);
         $this->assertEquals(['manufacturerId' => $manufacturerId] + $patchData, $manufacturer);
 
         // Test partial update
@@ -232,7 +232,7 @@ class ManufacturerEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ];
 
-        $updatedManufacturer = $this->partialUpdateItem('/manufacturer/' . $manufacturerId, $partialUpdateData, ['manufacturer_write']);
+        $updatedManufacturer = $this->partialUpdateItem('/manufacturers/' . $manufacturerId, $partialUpdateData, ['manufacturer_write']);
         $this->assertEquals($expectedUpdatedData, $updatedManufacturer);
 
         return $manufacturerId;
@@ -291,12 +291,12 @@ class ManufacturerEndpointTest extends ApiTestCase
     public function testRemoveManufacturer(int $manufacturerId): void
     {
         // Delete the item
-        $return = $this->deleteItem('/manufacturer/' . $manufacturerId, ['manufacturer_write']);
+        $return = $this->deleteItem('/manufacturers/' . $manufacturerId, ['manufacturer_write']);
         // This endpoint return empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/manufacturer/' . $manufacturerId, ['manufacturer_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/manufacturers/' . $manufacturerId, ['manufacturer_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -329,7 +329,7 @@ class ManufacturerEndpointTest extends ApiTestCase
             'enabled' => true,
         ];
         // Create an manufacturer, the POST endpoint returns the created item as JSON
-        $manufacturer = $this->createItem('/manufacturer', $postData, ['manufacturer_write']);
+        $manufacturer = $this->createItem('/manufacturers', $postData, ['manufacturer_write']);
 
         $manufacturers = $this->listItems('/manufacturers', ['manufacturer_read']);
 
@@ -342,13 +342,13 @@ class ManufacturerEndpointTest extends ApiTestCase
             $manufacturers['items'][2]['manufacturerId'],
         ];
 
-        $this->updateItem('/manufacturers/delete', [
+        $this->updateItem('/manufacturers/bulk-delete', [
             'manufacturerIds' => $removeManufacturerIds,
         ], ['manufacturer_write'], Response::HTTP_NO_CONTENT);
 
         // Assert the provided manufacturers have been removed
         foreach ($removeManufacturerIds as $manufacturerId) {
-            $this->getItem('/manufacturer/' . $manufacturerId, ['manufacturer_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/manufacturers/' . $manufacturerId, ['manufacturer_read'], Response::HTTP_NOT_FOUND);
         }
 
         // Only two manufacturer remain
@@ -364,7 +364,7 @@ class ManufacturerEndpointTest extends ApiTestCase
 
     public function testInvalidManufacturer(): void
     {
-        $manufacturer = $this->getItem('/manufacturer/9999', ['manufacturer_read'], Response::HTTP_NOT_FOUND);
+        $manufacturer = $this->getItem('/manufacturers/9999', ['manufacturer_read'], Response::HTTP_NOT_FOUND);
 
         $manufacturerInvalidData = [
             'name' => 'updated manufacturer name',
@@ -390,7 +390,7 @@ class ManufacturerEndpointTest extends ApiTestCase
         ];
 
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
-        $validationErrorsResponse = $this->createItem('/manufacturer', $manufacturerInvalidData, ['manufacturer_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/manufacturers', $manufacturerInvalidData, ['manufacturer_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $this->assertIsArray($validationErrorsResponse);
         $this->assertEquals($validationErrorsResponse['detail'], 'Failed to add new manufacturer "updated manufacturer name"');
@@ -398,11 +398,11 @@ class ManufacturerEndpointTest extends ApiTestCase
         $manufacturerData['shortDescriptions']['en-US'] = 'updated short description en';
 
         // Now create a valid manufacturer to test the validation on PATCH request
-        $validManufacturer = $this->createItem('/manufacturer', $manufacturerData, ['manufacturer_write']);
+        $validManufacturer = $this->createItem('/manufacturers', $manufacturerData, ['manufacturer_write']);
         $manufacturerId = $validManufacturer['manufacturerId'];
         // <script> is not valid
         $manufacturerData['shortDescriptions']['en-US'] = 'updated short description en<script>';
 
-        $validationErrorsResponse = $this->partialUpdateItem('/manufacturer/' . $manufacturerId, $manufacturerData, ['manufacturer_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->partialUpdateItem('/manufacturers/' . $manufacturerId, $manufacturerData, ['manufacturer_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }
