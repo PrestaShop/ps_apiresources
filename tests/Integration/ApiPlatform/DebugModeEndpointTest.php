@@ -50,13 +50,13 @@ class DebugModeEndpointTest extends ApiTestCase
         $debugMode = $this->getContainer()->get('prestashop.adapter.debug_mode');
 
         $this->updateItem('/debug/toggle', [
-            'enableDebugMode' => true,
+            'enableDebugMode' => "true",
         ], ['debug_mode_write']);
 
         $this->assertEquals("true", $debugMode->getCurrentDebugMode());
 
         $this->updateItem('/debug/toggle', [
-            'enableDebugMode' => false,
+            'enableDebugMode' => "false",
         ], ['debug_mode_write']);
 
         $this->assertEquals("false", $debugMode->getCurrentDebugMode());
