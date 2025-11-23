@@ -47,7 +47,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         // GET /manufacturer/{manufacturerId}
         new CQRSGet(
-            uriTemplate: '/manufacturer/{manufacturerId}',
+            uriTemplate: '/manufacturers/{manufacturerId}',
             requirements: ['manufacturerId' => '\d+'],
             CQRSQuery: GetManufacturerForEditing::class,
             scopes: ['manufacturer_read'],
@@ -55,7 +55,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         // POST /manufacturer
         new CQRSCreate(
-            uriTemplate: '/manufacturer',
+            uriTemplate: '/manufacturers',
             validationContext: [IframeValidationGroupsResolver::class, 'create'],
             CQRSCommand: AddManufacturerCommand::class,
             CQRSQuery: GetManufacturerForEditing::class,
@@ -64,7 +64,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/manufacturer/{manufacturerId}',
+            uriTemplate: '/manufacturers/{manufacturerId}',
             validationContext: [IframeValidationGroupsResolver::class, 'create'],
             requirements: ['manufacturerId' => '\d+'],
             CQRSCommand: EditManufacturerCommand::class,
@@ -74,7 +74,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/manufacturer/{manufacturerId}',
+            uriTemplate: '/manufacturers/{manufacturerId}',
             requirements: ['manufacturerId' => '\d+'],
             CQRSCommand: DeleteManufacturerCommand::class,
             scopes: ['manufacturer_write'],
