@@ -16,7 +16,9 @@
         "prestashop/php-dev-tools": "^4.3",
         "czproject/git-php": "^4.2",
         "phpunit/phpunit": "^10",
-        "friendsofphp/php-cs-fixer": "^v3"
+        "friendsofphp/php-cs-fixer": "^v3",
+        "rector/rector": "^2.0",
+        "doctrine/inflector": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -47,7 +49,10 @@
             "@composer setup-local-tests -- --build-db"
         ],
         "run-module-tests": "@php -d date.timezone=UTC ./vendor/bin/phpunit -c tests/Integration/phpunit-local.xml",
-        "setup-local-tests": "PsApiResourcesTest\\EnvironmentBuilder::setupLocalTests"
+        "run-unit-tests": "@php -d date.timezone=UTC ./vendor/bin/phpunit -c tests/Unit/phpunit.xml",
+        "setup-local-tests": "PsApiResourcesTest\\EnvironmentBuilder::setupLocalTests",
+        "rector": "vendor/bin/rector process --clear-cache --dry-run",
+        "rector-fix": "vendor/bin/rector process"
     },
     "type": "prestashop-module",
     "author": "PrestaShop"

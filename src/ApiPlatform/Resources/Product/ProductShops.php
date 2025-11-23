@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSPartialUpdate(
-            uriTemplate: '/product/{productId}/shops',
+            uriTemplate: '/products/{productId}/shops',
             CQRSCommand: SetProductShopsCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [

@@ -30,7 +30,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/tab/{className}',
+            uriTemplate: '/tabs/{className}',
             read: false,
             CQRSCommand: UpdateTabStatusByClassNameCommand::class,
             scopes: ['tab_write'],

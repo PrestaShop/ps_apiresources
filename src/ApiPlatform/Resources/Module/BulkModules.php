@@ -31,7 +31,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/modules/toggle-status',
+            uriTemplate: '/modules/bulk-update-status',
             output: false,
             CQRSCommand: BulkToggleModuleStatusCommand::class,
             scopes: [
@@ -42,7 +42,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/modules/uninstall',
+            uriTemplate: '/modules/bulk-uninstall',
             output: false,
             CQRSCommand: BulkUninstallModuleCommand::class,
             scopes: [

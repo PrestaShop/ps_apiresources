@@ -38,7 +38,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/product/image/{imageId}',
+            uriTemplate: '/products/images/{imageId}',
             CQRSQuery: GetProductImage::class,
             scopes: [
                 'product_read',
@@ -48,7 +48,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
         new CQRSUpdate(
             // We have to force POST request, because we cannot use PUT with files AND data
             method: CQRSUpdate::METHOD_POST,
-            uriTemplate: '/product/image/{imageId}',
+            uriTemplate: '/products/images/{imageId}',
             inputFormats: ['multipart' => ['multipart/form-data']],
             status: Response::HTTP_OK,
             // Form data value are all string so we disable type enforcement
@@ -67,7 +67,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
             ]
         ),
         new CQRSDelete(
-            uriTemplate: '/product/image/{imageId}',
+            uriTemplate: '/products/images/{imageId}',
             CQRSCommand: DeleteProductImageCommand::class,
         ),
     ],

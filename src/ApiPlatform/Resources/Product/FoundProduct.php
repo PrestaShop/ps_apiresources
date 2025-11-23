@@ -24,50 +24,83 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\QueryParameter;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\SearchProducts;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 
 #[ApiResource(
     operations: [
         new CQRSGetCollection(
-            uriTemplate: '/products/search/{phrase}/{resultsLimit}/{isoCode}',
+            uriTemplate: '/products/search',
+            scopes: [
+                'product_read',
+            ],
+            CQRSQuery: SearchProducts::class,
+            parameters: [
+                new QueryParameter(
+                    key: 'phrase',
+                    required: true,
+                    description: 'Search phrase to find products'
+                ),
+                new QueryParameter(
+                    key: 'resultsLimit',
+                    schema: ['type' => 'integer', 'default' => 20],
+                    required: true,
+                    description: 'Maximum number of results to return'
+                ),
+                new QueryParameter(
+                    key: 'isoCode',
+                    required: true,
+                    description: 'Currency ISO code (e.g., EUR, USD)'
+                ),
+                new QueryParameter(
+                    key: 'orderId',
+                    schema: ['type' => 'integer'],
+                    required: false,
+                    description: 'Optional order ID for context-specific pricing'
+                ),
+            ],
             openapiContext: [
                 'parameters' => [
                     [
                         'name' => 'phrase',
-                        'in' => 'path',
+                        'in' => 'query',
                         'required' => true,
                         'schema' => [
                             'type' => 'string',
                         ],
+                        'description' => 'Search phrase to find products',
                     ],
                     [
                         'name' => 'resultsLimit',
-                        'in' => 'path',
+                        'in' => 'query',
                         'required' => true,
                         'schema' => [
-                            'type' => 'int',
+                            'type' => 'integer',
+                            'default' => 20,
                         ],
+                        'description' => 'Maximum number of results to return',
                     ],
                     [
                         'name' => 'isoCode',
-                        'in' => 'path',
+                        'in' => 'query',
                         'required' => true,
                         'schema' => [
                             'type' => 'string',
                         ],
+                        'description' => 'Currency ISO code (e.g., EUR, USD)',
                     ],
                     [
                         'name' => 'orderId',
                         'in' => 'query',
                         'required' => false,
                         'schema' => [
-                            'type' => 'int',
+                            'type' => 'integer',
                         ],
+                        'description' => 'Optional order ID for context-specific pricing',
                     ],
                 ],
-            ],
-            CQRSQuery: SearchProducts::class
+            ]
         ),
     ],
 )]

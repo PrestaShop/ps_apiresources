@@ -46,17 +46,17 @@ class WebserviceKeyEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => [
             'POST',
-            '/webservice-key',
+            '/webservice-keys',
         ];
 
         yield 'get endpoint' => [
             'GET',
-            '/webservice-key/1',
+            '/webservice-keys/1',
         ];
 
         yield 'update endpoint' => [
             'PATCH',
-            '/webservice-key/1',
+            '/webservice-keys/1',
         ];
 
         yield 'list endpoint' => [
@@ -69,7 +69,7 @@ class WebserviceKeyEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/webservice-keys', ['webservice_key_read']);
 
-        $webserviceKey = $this->createItem('/webservice-key', [
+        $webserviceKey = $this->createItem('/webservice-keys', [
             'key' => 'AZERTYUIOPAZERTYUIOPAZERTYUIOPAZ',
             'description' => 'Webservice Key test',
             'enabled' => false,
@@ -107,7 +107,7 @@ class WebserviceKeyEndpointTest extends ApiTestCase
      */
     public function testGetWebserviceKey(int $webserviceKeyId): int
     {
-        $webserviceKey = $this->getItem('/webservice-key/' . $webserviceKeyId, ['webservice_key_read']);
+        $webserviceKey = $this->getItem('/webservice-keys/' . $webserviceKeyId, ['webservice_key_read']);
         $this->assertEquals(
             [
                 'webserviceKeyId' => $webserviceKeyId,
@@ -152,7 +152,7 @@ class WebserviceKeyEndpointTest extends ApiTestCase
     public function testUpdateWebserviceKey(int $webserviceKeyId): int
     {
         // description
-        $updatedWebserviceKey = $this->partialUpdateItem('/webservice-key/' . $webserviceKeyId, [
+        $updatedWebserviceKey = $this->partialUpdateItem('/webservice-keys/' . $webserviceKeyId, [
             'description' => 'Webservice Key test updated',
         ], ['webservice_key_write']);
         $this->assertEquals(
@@ -187,7 +187,7 @@ class WebserviceKeyEndpointTest extends ApiTestCase
         );
 
         // key
-        $updatedWebserviceKey = $this->partialUpdateItem('/webservice-key/' . $webserviceKeyId, [
+        $updatedWebserviceKey = $this->partialUpdateItem('/webservice-keys/' . $webserviceKeyId, [
             'key' => 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
         ], ['webservice_key_write']);
         $this->assertEquals(
@@ -222,7 +222,7 @@ class WebserviceKeyEndpointTest extends ApiTestCase
         );
 
         // enabled
-        $updatedWebserviceKey = $this->partialUpdateItem('/webservice-key/' . $webserviceKeyId, [
+        $updatedWebserviceKey = $this->partialUpdateItem('/webservice-keys/' . $webserviceKeyId, [
             'enabled' => true,
         ], ['webservice_key_write']);
         $this->assertEquals(
@@ -257,7 +257,7 @@ class WebserviceKeyEndpointTest extends ApiTestCase
         );
 
         // enabled
-        $updatedWebserviceKey = $this->partialUpdateItem('/webservice-key/' . $webserviceKeyId, [
+        $updatedWebserviceKey = $this->partialUpdateItem('/webservice-keys/' . $webserviceKeyId, [
             'permissions' => [
                 'DELETE' => ['carts', 'carriers', 'addresses'],
                 'GET' => ['carts', 'carriers', 'addresses'],
@@ -309,7 +309,7 @@ class WebserviceKeyEndpointTest extends ApiTestCase
      */
     public function testGetUpdatedWebserviceKey(int $webserviceKeyId): int
     {
-        $webserviceKey = $this->getItem('/webservice-key/' . $webserviceKeyId, ['webservice_key_read']);
+        $webserviceKey = $this->getItem('/webservice-keys/' . $webserviceKeyId, ['webservice_key_read']);
         $this->assertEquals(
             [
                 'webserviceKeyId' => $webserviceKeyId,
@@ -381,7 +381,7 @@ class WebserviceKeyEndpointTest extends ApiTestCase
     public function testCreateInvalidWebserviceKey(): void
     {
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
-        $validationErrorsResponse = $this->createItem('/webservice-key', [
+        $validationErrorsResponse = $this->createItem('/webservice-keys', [
             'key' => '',
             'description' => '',
         ], ['webservice_key_write'], Response::HTTP_UNPROCESSABLE_ENTITY);

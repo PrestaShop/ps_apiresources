@@ -36,14 +36,14 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/module/{technicalName}',
+            uriTemplate: '/modules/{technicalName}',
             CQRSQuery: GetModuleInfos::class,
             scopes: [
                 'module_read',
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/module/{technicalName}/status',
+            uriTemplate: '/modules/{technicalName}/status',
             CQRSCommand: UpdateModuleStatusCommand::class,
             CQRSQuery: GetModuleInfos::class,
             scopes: [
@@ -51,7 +51,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/module/{technicalName}/install',
+            uriTemplate: '/modules/{technicalName}/install',
             CQRSCommand: InstallModuleCommand::class,
             CQRSQuery: GetModuleInfos::class,
             scopes: [

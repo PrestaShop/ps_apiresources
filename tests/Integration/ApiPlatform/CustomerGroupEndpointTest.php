@@ -48,22 +48,22 @@ class CustomerGroupEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/customers/group/1',
+            '/customers/groups/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/customers/group',
+            '/customers/groups',
         ];
 
         yield 'update endpoint' => [
             'PUT',
-            '/customers/group/1',
+            '/customers/groups/1',
         ];
 
         yield 'delete endpoint' => [
             'DELETE',
-            '/customers/group/1',
+            '/customers/groups/1',
         ];
     }
 
@@ -77,7 +77,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
             'displayPriceTaxExcluded' => true,
             'showPrice' => true,
         ];
-        $customerGroup = $this->createItem('/customers/group', $postData, ['customer_group_write']);
+        $customerGroup = $this->createItem('/customers/groups', $postData, ['customer_group_write']);
         $this->assertArrayHasKey('customerGroupId', $customerGroup);
         $customerGroupId = $customerGroup['customerGroupId'];
         $this->assertEquals(['customerGroupId' => $customerGroupId, 'shopIds' => [1]] + $postData, $customerGroup);
@@ -96,7 +96,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
             'showPrice' => true,
             'shopIds' => [1],
         ];
-        $customerGroup = $this->createItem('/customers/group', $postData, ['customer_group_write']);
+        $customerGroup = $this->createItem('/customers/groups', $postData, ['customer_group_write']);
         $this->assertArrayHasKey('customerGroupId', $customerGroup);
         $customerGroupId = $customerGroup['customerGroupId'];
         $this->assertEquals(['customerGroupId' => $customerGroupId] + $postData, $customerGroup);
@@ -118,7 +118,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/customers/groups', ['customer_group_read']);
 
-        $updatedCustomerGroup = $this->updateItem('/customers/group/' . $customerGroupId, [
+        $updatedCustomerGroup = $this->updateItem('/customers/groups/' . $customerGroupId, [
             'localizedNames' => [
                 'en-US' => 'new_test1',
             ],
@@ -157,7 +157,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
      */
     public function testGetCustomerGroup(int $customerGroupId): int
     {
-        $customerGroup = $this->getItem('/customers/group/' . $customerGroupId, ['customer_group_read']);
+        $customerGroup = $this->getItem('/customers/groups/' . $customerGroupId, ['customer_group_read']);
         // Fetching the updated item returns the same data as the previous response content
         $this->assertEquals(
             [
@@ -214,8 +214,8 @@ class CustomerGroupEndpointTest extends ApiTestCase
     public function testDeleteCustomerGroup(int $customerGroupId): void
     {
         // Delete the item
-        $this->deleteItem('/customers/group/' . $customerGroupId, ['customer_group_write']);
+        $this->deleteItem('/customers/groups/' . $customerGroupId, ['customer_group_write']);
         // Fetching the item returns a 404 indicatjng it no longer exists
-        $this->getItem('/customers/group/' . $customerGroupId, ['customer_group_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/customers/groups/' . $customerGroupId, ['customer_group_read'], Response::HTTP_NOT_FOUND);
     }
 }

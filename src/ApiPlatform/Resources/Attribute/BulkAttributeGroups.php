@@ -24,20 +24,19 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Command\BulkDeleteAttributeGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Exception\AttributeGroupNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/attributes/groups/delete',
-            // No output 204 code
-            output: false,
+        new CQRSDelete(
+            uriTemplate: '/attributes/groups/bulk-delete',
             CQRSCommand: BulkDeleteAttributeGroupCommand::class,
             scopes: [
                 'attribute_group_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [

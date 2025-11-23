@@ -110,7 +110,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
      *
      *  yield 'get endpoint' => [
      *      'GET',
-     *      '/product/1',
+     *      '/products/1',
      *  ];
      *
      * Since all Api Platform resources should likely have some protected endpoints this provider
@@ -275,6 +275,14 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     protected function deleteItem(string $endPointUrl, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
     {
         return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, null, $scopes, $expectedHttpCode, $requestOptions);
+    }
+
+    /**
+     * Performs a DELETE request to delete multiple items, which requires passing some data
+     */
+    protected function bulkDeleteItems(string $endPointUrl, ?array $data, array $scopes = [], ?int $expectedHttpCode = null, ?array $requestOptions = null): array|string|null
+    {
+        return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
 
     /**

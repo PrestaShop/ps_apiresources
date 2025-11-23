@@ -31,6 +31,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopAssociationNotFound;
+use PrestaShop\PrestaShop\Core\Util\DateTime\DateImmutable;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -41,7 +42,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/product/{productId}',
+            uriTemplate: '/products/{productId}',
             CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_read',
@@ -49,7 +50,7 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQueryMapping: Product::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/product',
+            uriTemplate: '/products',
             CQRSCommand: AddProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
@@ -63,7 +64,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/product/{productId}',
+            uriTemplate: '/products/{productId}',
             CQRSCommand: UpdateProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
@@ -73,7 +74,7 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSCommandMapping: Product::UPDATE_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/product/{productId}',
+            uriTemplate: '/products/{productId}',
             CQRSCommand: DeleteProductCommand::class,
             scopes: [
                 'product_write',
@@ -209,7 +210,7 @@ class Product
     #[LocalizedValue]
     public array $availableLaterLabels;
 
-    public ?\DateTimeImmutable $availableDate = null;
+    public ?DateImmutable $availableDate = null;
 
     public string $coverThumbnailUrl;
 
@@ -219,6 +220,7 @@ class Product
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[_context][langId]' => '[displayLanguageId]',
+        '[isActive]' => '[active]',
         '[basicInformation][localizedNames]' => '[names]',
         '[basicInformation][localizedDescriptions]' => '[descriptions]',
         '[basicInformation][localizedShortDescriptions]' => '[shortDescriptions]',

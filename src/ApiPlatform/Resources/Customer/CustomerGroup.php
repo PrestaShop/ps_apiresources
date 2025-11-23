@@ -40,7 +40,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/customers/group/{customerGroupId}',
+            uriTemplate: '/customers/groups/{customerGroupId}',
             CQRSQuery: GetCustomerGroupForEditing::class,
             scopes: [
                 'customer_group_read',
@@ -54,7 +54,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             ],
         ),
         new CQRSCreate(
-            uriTemplate: '/customers/group',
+            uriTemplate: '/customers/groups',
             CQRSCommand: AddCustomerGroupCommand::class,
             CQRSQuery: GetCustomerGroupForEditing::class,
             scopes: [
@@ -72,7 +72,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/customers/group/{customerGroupId}',
+            uriTemplate: '/customers/groups/{customerGroupId}',
             CQRSCommand: EditCustomerGroupCommand::class,
             CQRSQuery: GetCustomerGroupForEditing::class,
             scopes: [
@@ -85,7 +85,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             ],
         ),
         new CQRSDelete(
-            uriTemplate: '/customers/group/{customerGroupId}',
+            uriTemplate: '/customers/groups/{customerGroupId}',
             CQRSCommand: DeleteCustomerGroupCommand::class,
             scopes: [
                 'customer_group_write',

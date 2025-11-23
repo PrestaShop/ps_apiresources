@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGetCollection(
-            uriTemplate: '/product/{productId}/images',
+            uriTemplate: '/products/{productId}/images',
             CQRSQuery: GetProductImages::class,
             scopes: [
                 'product_read',

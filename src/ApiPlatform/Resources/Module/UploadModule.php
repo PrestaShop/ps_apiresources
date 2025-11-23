@@ -30,7 +30,7 @@ use Symfony\Component\HttpFoundation\File\File;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/module/upload-source',
+            uriTemplate: '/modules/upload-source',
             CQRSCommand: UploadModuleCommand::class,
             CQRSQuery: GetModuleInfos::class,
             scopes: [
@@ -38,7 +38,7 @@ use Symfony\Component\HttpFoundation\File\File;
             ],
         ),
         new CQRSCreate(
-            uriTemplate: '/module/upload-archive',
+            uriTemplate: '/modules/upload-archive',
             inputFormats: ['multipart' => ['multipart/form-data']],
             read: false,
             CQRSCommand: UploadModuleCommand::class,

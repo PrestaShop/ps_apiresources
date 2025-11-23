@@ -18,42 +18,37 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Zone;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Attribute;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Exception\ZoneNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\Zone\Command\BulkToggleZoneStatusCommand;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\Command\BulkDeleteAttributeCommand;
+use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\Exception\AttributeNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/zones/toggle-status',
-            output: false,
-            CQRSCommand: BulkToggleZoneStatusCommand::class,
-            CQRSCommandMapping: [
-                '[enabled]' => '[expectedStatus]',
-            ],
+        new CQRSDelete(
+            uriTemplate: '/attributes/attributes/bulk-delete',
+            CQRSCommand: BulkDeleteAttributeCommand::class,
             scopes: [
-                'zone_write',
+                'attribute_write',
             ],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
-        ZoneNotFoundException::class => Response::HTTP_NOT_FOUND,
+        AttributeNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkZonesToggleStatus
+class BulkAttribute
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $zoneIds;
-
-    public bool $enabled;
+    public array $attributeIds;
 }

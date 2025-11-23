@@ -28,6 +28,7 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Command\UpdateHookStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Exception\HookNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHook;
+use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHookStatus;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
@@ -36,7 +37,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/hook-status/{hookId}',
+            uriTemplate: '/hooks/{hookId}/status',
             CQRSCommand: UpdateHookStatusCommand::class,
             CQRSQuery: GetHook::class,
             scopes: ['hook_write'],
@@ -44,10 +45,18 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             CQRSCommandMapping: self::MAPPING,
         ),
         new CQRSGet(
-            uriTemplate: '/hook/{hookId}',
+            uriTemplate: '/hooks/{hookId}',
             requirements: ['hookId' => '\d+'],
             exceptionToStatus: [HookNotFoundException::class => 404],
             CQRSQuery: GetHook::class,
+            scopes: ['hook_read'],
+            CQRSQueryMapping: self::MAPPING,
+        ),
+        new CQRSGet(
+            uriTemplate: '/hooks/{hookId}/status',
+            requirements: ['hookId' => '\d+'],
+            exceptionToStatus: [HookNotFoundException::class => 404],
+            CQRSQuery: GetHookStatus::class,
             scopes: ['hook_read'],
             CQRSQueryMapping: self::MAPPING,
         ),

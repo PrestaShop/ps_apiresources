@@ -26,8 +26,10 @@ use PrestaShop\Module\APIResources\Validation\IframeValidationGroupsResolver;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddCategoryCommand;
-use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCoverImageCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryThumbnailImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\EditCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\SetCategoryIsEnabledCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Query\GetCategoryForEditing;
@@ -37,13 +39,12 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\Annotation\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/category/{categoryId}',
+            uriTemplate: '/categories/{categoryId}',
             CQRSQuery: GetCategoryForEditing::class,
             scopes: [
                 'category_read',
@@ -51,7 +52,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/category',
+            uriTemplate: '/categories',
             validationContext: [IframeValidationGroupsResolver::class, 'create'],
             CQRSCommand: AddCategoryCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
@@ -62,7 +63,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/category/{categoryId}',
+            uriTemplate: '/categories/{categoryId}',
             validationContext: [IframeValidationGroupsResolver::class, 'update'],
             CQRSCommand: EditCategoryCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
@@ -72,9 +73,28 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/categories/{categoryId}/status',
+            CQRSCommand: SetCategoryIsEnabledCommand::class,
+            CQRSQuery: GetCategoryForEditing::class,
+            scopes: [
+                'category_write',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: [
+                '[active]' => '[isEnabled]',
+            ],
+        ),
         new CQRSDelete(
-            uriTemplate: '/category/{categoryId}',
-            CQRSCommand: DeleteCategoryCommand::class,
+            uriTemplate: '/categories/{categoryId}/cover',
+            CQRSCommand: DeleteCategoryCoverImageCommand::class,
+            scopes: [
+                'category_write',
+            ],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/categories/{categoryId}/thumbnail',
+            CQRSCommand: DeleteCategoryThumbnailImageCommand::class,
             scopes: [
                 'category_write',
             ],
@@ -88,8 +108,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 class Category
 {
     #[ApiProperty(identifier: true)]
-    #[SerializedName('id')]
     public int $categoryId;
+
+    public bool $active;
 
     #[LocalizedValue]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]

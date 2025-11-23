@@ -30,7 +30,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 #[ApiResource(
     operations: [
         new CQRSPartialUpdate(
-            uriTemplate: '/module/{technicalName}/reset',
+            uriTemplate: '/modules/{technicalName}/reset',
             CQRSCommand: ResetModuleCommand::class,
             CQRSQuery: GetModuleInfos::class,
             scopes: [
