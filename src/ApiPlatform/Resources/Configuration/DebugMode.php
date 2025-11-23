@@ -9,11 +9,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 
 #[ApiResource(
     operations: [
-/*        new CQRSGet(
-            uriTemplate: '/debug/status',
-            CQRSQuery: GetDebugModeStatus::class,
-            scopes: ['debug_mode_read']
-        ),*/
         new CQRSUpdate(
             uriTemplate: '/debug/toggle',
             CQRSCommand: SwitchDebugModeCommand::class,
