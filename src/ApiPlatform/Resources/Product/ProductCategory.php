@@ -34,7 +34,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/product/{productId}/category',
+            uriTemplate: '/products/{productId}/assign-to-category',
             requirements: ['productId' => '\d+'],
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AssignProductToCategoryCommand::class,
@@ -45,7 +45,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
         ),
         new CQRSCreate(
-            uriTemplate: '/product/{productId}/categories',
+            uriTemplate: '/products/{productId}/categories',
             requirements: ['productId' => '\d+'],
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: SetAssociatedProductCategoriesCommand::class,
@@ -57,7 +57,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
         ),
         new CQRSDelete(
-            uriTemplate: '/product/{productId}/categories',
+            uriTemplate: '/products/{productId}/categories',
             requirements: ['productId' => '\d+'],
             CQRSCommand: RemoveAllAssociatedProductCategoriesCommand::class,
             CQRSCommandMapping: ProductCategory::COMMAND_MAPPING,
