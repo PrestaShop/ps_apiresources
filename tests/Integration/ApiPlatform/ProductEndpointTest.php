@@ -208,17 +208,17 @@ class ProductEndpointTest extends ApiTestCase
 
         yield 'create product_category endpoint' => [
             'POST',
-            '/product/1/category',
+            '/products/1/assign-to-category',
         ];
 
         yield 'create product_categories endpoint' => [
             'POST',
-            '/product/1/categories',
+            '/products/1/categories',
         ];
 
         yield 'delete product_category endpoint' => [
             'DELETE',
-            '/product/1/categories',
+            '/products/1/categories',
         ];
     }
 
@@ -827,7 +827,7 @@ class ProductEndpointTest extends ApiTestCase
             'categoryId' => $categoryId,
         ];
 
-        $response = $this->createItem('/product/' . $productId . '/category', $payload, ['product_write']);
+        $response = $this->createItem('/products/' . $productId . '/assign-to-category', $payload, ['product_write']);
 
         $this->assertArrayHasKey('productId', $response);
         $this->assertEquals($productId, $response['productId']);
@@ -847,7 +847,7 @@ class ProductEndpointTest extends ApiTestCase
             'defaultCategoryId' => $defaultCategory,
         ];
 
-        $response = $this->createItem('/product/' . $productId . '/categories', $payload, ['product_write']);
+        $response = $this->createItem('/products/' . $productId . '/categories', $payload, ['product_write']);
 
         $this->assertArrayHasKey('productId', $response);
         $this->assertEquals($productId, $response['productId']);
@@ -865,7 +865,7 @@ class ProductEndpointTest extends ApiTestCase
     {
         $productId = 1;
 
-        $this->deleteItem('/product/' . $productId . '/categories', ['product_write']);
+        $this->deleteItem('/products/' . $productId . '/categories', ['product_write']);
     }
 
     protected function getImagePath(int $imageId, bool $isThumbnail): string
