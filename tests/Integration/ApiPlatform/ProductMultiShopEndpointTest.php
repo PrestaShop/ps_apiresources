@@ -35,6 +35,8 @@ use Tests\Resources\ResourceResetter;
 
 class ProductMultiShopEndpointTest extends ApiTestCase
 {
+    protected const ROOT_CATEGORY_ID = 2;
+    protected const ROOT_CATEGORY_NAME = 'Home';
     protected const DEFAULT_SHOP_GROUP_ID = 1;
     protected static int $secondShopGroupId;
 
@@ -129,6 +131,14 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         'shopIds' => [
             self::DEFAULT_SHOP_ID,
         ],
+        'categories' => [
+            [
+                'categoryId' => self::ROOT_CATEGORY_ID,
+                'name' => self::ROOT_CATEGORY_NAME,
+                'displayName' => self::ROOT_CATEGORY_NAME,
+            ],
+        ],
+        'defaultCategoryId' => self::ROOT_CATEGORY_ID,
     ];
 
     public static function setUpBeforeClass(): void
