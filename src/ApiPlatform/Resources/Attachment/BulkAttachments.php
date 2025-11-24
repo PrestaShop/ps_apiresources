@@ -31,7 +31,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/attachments/batch',
+            uriTemplate: '/attachments/bulk-delete',
             output: false,
             CQRSCommand: BulkDeleteAttachmentsCommand::class,
             scopes: [

@@ -82,7 +82,7 @@ class AttachmentEndpointTest extends ApiTestCase
 
         yield 'bulk delete endpoint' => [
             'DELETE',
-            '/attachments/batch',
+            '/attachments/bulk-delete',
         ];
     }
 
@@ -178,7 +178,7 @@ class AttachmentEndpointTest extends ApiTestCase
             $removeAttachmentIds[] = $attachment['attachmentId'];
         }
 
-        $this->deleteBatch('/attachments/batch', [
+        $this->deleteBatch('/attachments/bulk-delete', [
             'attachmentIds' => $removeAttachmentIds,
         ], ['attachment_write'], Response::HTTP_NO_CONTENT);
 
