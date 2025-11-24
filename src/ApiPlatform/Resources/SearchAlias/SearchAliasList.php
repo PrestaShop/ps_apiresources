@@ -51,7 +51,7 @@ class SearchAliasList
                 'properties' => [
                     'id_alias' => ['type' => 'integer'],
                     'alias' => ['type' => 'string'],
-                    'active' => ['type' => 'boolean'],
+                    'enabled' => ['type' => 'boolean'],
                 ],
             ],
         ]

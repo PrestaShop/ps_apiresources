@@ -85,7 +85,7 @@ class Discount
     #[LocalizedValue]
     public array $names;
     public int $priority;
-    public bool $active;
+    public bool $enabled;
     public \DateTimeImmutable $validFrom;
     public \DateTimeImmutable $validTo;
     public int $totalQuantity;
@@ -100,15 +100,18 @@ class Discount
     public ?DecimalNumber $percentDiscount;
     public ?DecimalNumber $amountDiscount;
     public int $currencyId;
-    public bool $isTaxIncluded;
+    public bool $taxIncluded;
     public int $productId;
     public array $combinations;
     public int $reductionProduct;
 
     protected const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
+        '[active]' => '[enabled]',
+        '[isTaxIncluded]' => '[taxIncluded]',
     ];
     protected const COMMAND_MAPPING = [
         '[names]' => '[localizedNames]',
+        '[enabled]' => '[active]',
     ];
 }

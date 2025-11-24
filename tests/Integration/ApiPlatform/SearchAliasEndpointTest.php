@@ -114,15 +114,15 @@ class SearchAliasEndpointTest extends ApiTestCase
             'aliases' => [
                 [
                     'alias' => 'test-dres',
-                    'active' => true,
+                    'enabled' => true,
                 ],
                 [
                     'alias' => 'test-clothing',
-                    'active' => true,
+                    'enabled' => true,
                 ],
                 [
                     'alias' => 'test-garment',
-                    'active' => false,
+                    'enabled' => false,
                 ],
             ],
         ];
@@ -147,7 +147,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             'aliases' => [
                 [
                     'alias' => 'test-alias',
-                    'active' => true,
+                    'enabled' => true,
                 ],
             ],
         ];
@@ -189,7 +189,7 @@ class SearchAliasEndpointTest extends ApiTestCase
             'search' => 'test-search',
             'aliases' => [
                 [
-                    'active' => true,
+                    'enabled' => true,
                 ],
             ],
         ];
@@ -233,7 +233,7 @@ class SearchAliasEndpointTest extends ApiTestCase
         // Find and check specific aliases (active is returned as int, not boolean)
         foreach ($aliases as $alias) {
             if ($alias['alias'] === 'test-dres' || $alias['alias'] === 'test-clothing') {
-                $this->assertEquals(1, $alias['active']); // Active is stored as int in DB
+                $this->assertEquals(1, $alias['enabled']); // enabled is stored as int in DB
             }
         }
     }
@@ -257,11 +257,11 @@ class SearchAliasEndpointTest extends ApiTestCase
             'aliases' => [
                 [
                     'alias' => 'updated-alias',
-                    'active' => true,
+                    'enabled' => true,
                 ],
                 [
                     'alias' => 'another-updated-alias',
-                    'active' => false,
+                    'enabled' => false,
                 ],
             ],
         ];
@@ -380,11 +380,11 @@ class SearchAliasEndpointTest extends ApiTestCase
             'aliases' => [
                 [
                     'alias' => 'test-dres',
-                    'active' => true,
+                    'enabled' => true,
                 ],
                 [
                     'alias' => 'test-clothing',
-                    'active' => true,
+                    'enabled' => true,
                 ],
             ],
         ];
@@ -399,11 +399,11 @@ class SearchAliasEndpointTest extends ApiTestCase
             'aliases' => [
                 [
                     'alias' => 'test-telephone',
-                    'active' => true,
+                    'enabled' => true,
                 ],
                 [
                     'alias' => 'test-mobile',
-                    'active' => false,
+                    'enabled' => false,
                 ],
             ],
         ];
@@ -420,6 +420,6 @@ class SearchAliasEndpointTest extends ApiTestCase
         );
 
         $this->assertNotFalse($result, "Search alias '$alias' for term '$searchTerm' should exist in database");
-        $this->assertEquals($active ? 1 : 0, (int) $result['active'], "Search alias '$alias' should have active = " . ($active ? 'true' : 'false'));
+        $this->assertEquals($enabled ? 1 : 0, (int) $result['enabled'], "Search alias '$alias' should have enabled = " . ($enabled ? 'true' : 'false'));
     }
 }

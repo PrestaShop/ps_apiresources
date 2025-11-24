@@ -52,7 +52,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddSearchTermAliasesCommand::class,
             scopes: ['search_alias_write'],
-            CQRSCommandMapping: self::COMMAND_MAPPING,
+            CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
         ),
         new CQRSUpdate(
             uriTemplate: '/search-aliases/{search}',
@@ -89,7 +89,7 @@ class SearchAlias
             new Assert\Collection(
                 fields: [
                     'alias' => new Assert\NotBlank(groups: ['Default', 'Create']),
-                    'active' => new Assert\Type(type: 'bool', groups: ['Default', 'Create']),
+                    'enabled' => new Assert\Type(type: 'bool', groups: ['Default', 'Create']),
                 ],
                 allowMissingFields: false,
                 groups: ['Default', 'Create']
@@ -105,7 +105,7 @@ class SearchAlias
                 'properties' => [
                     'id_alias' => ['type' => 'integer'],
                     'alias' => ['type' => 'string'],
-                    'active' => ['type' => 'boolean'],
+                    'enabled' => ['type' => 'boolean'],
                 ],
             ],
         ]
@@ -115,9 +115,10 @@ class SearchAlias
     protected const QUERY_MAPPING = [
         '[search]' => '[searchTerm]',
         '[searchTerm]' => '[search]',
+        '[active]' => '[enabled]',
     ];
 
-    protected const COMMAND_MAPPING = [
+    protected const CREATE_COMMAND_MAPPING = [
         '[search]' => '[searchTerm]',
         '[aliases]' => '[aliases]',
     ];
