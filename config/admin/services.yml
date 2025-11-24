@@ -41,6 +41,12 @@ services:
     tags:
       - { name: 'serializer.normalizer', priority: 100 }
 
+  # Processor: chain Add + Update for Product create
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\ProductCreateAndUpdateProcessor:
+    autowire: true
+    public: false
+    tags: [ 'api_platform.state_processor' ]
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'
