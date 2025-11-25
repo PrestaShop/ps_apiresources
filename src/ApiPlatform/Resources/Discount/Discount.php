@@ -88,8 +88,8 @@ class Discount
     public bool $enabled;
     public \DateTimeImmutable $validFrom;
     public \DateTimeImmutable $validTo;
-    public int $totalQuantity;
-    public int $quantityPerUser;
+    public ?int $totalQuantity;
+    public ?int $quantityPerUser;
     public string $description;
     public string $code;
     public int $customerId;
