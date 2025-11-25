@@ -26,10 +26,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Processor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use PrestaShop\Module\APIResources\CustomFields\CustomFieldsMetadataProvider;
-use PrestaShop\Module\APIResources\CustomFields\CustomFieldsPersistenceService;
 use PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer;
 use PrestaShopBundle\ApiPlatform\Processor\CommandProcessor;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 /**
  * Decorator for CommandProcessor to persist custom fields
@@ -38,9 +38,9 @@ class CustomFieldsCommandProcessor implements ProcessorInterface
 {
     public function __construct(
         private readonly CommandProcessor $decorated,
-        private readonly CustomFieldsPersistenceService $persistenceService,
         private readonly CustomFieldsMetadataProvider $metadataProvider,
         private readonly RequestStack $requestStack,
+        private readonly NormalizerInterface $normalizer,
     ) {
     }
 
@@ -74,8 +74,11 @@ class CustomFieldsCommandProcessor implements ProcessorInterface
             return $result;
         }
 
-        // Persist custom fields
-        $this->persistenceService->persistCustomFields($entityName, (int) $entityId, $customFieldsData);
+        // Get normalized entity data (base fields) to pass to the hook
+        $entityData = $this->getNormalizedEntityData($result, $entityName);
+
+        // Persist custom fields via hook
+        $this->persistCustomFieldsViaHook($entityName, (int) $entityId, $customFieldsData, $entityData);
 
         return $result;
     }
@@ -200,5 +203,114 @@ class CustomFieldsCommandProcessor implements ProcessorInterface
         $parts = array_map('ucfirst', $parts);
 
         return $first . implode('', $parts);
+    }
+
+    /**
+     * Get normalized entity data
+     *
+     * @param mixed $result Command result
+     * @param string $entityName Entity name
+     *
+     * @return array Normalized entity data (base fields only, without custom fields)
+     */
+    private function getNormalizedEntityData(mixed $result, string $entityName): array
+    {
+        if (!is_object($result)) {
+            // If result is already an array, return it as is
+            if (is_array($result)) {
+                return $result;
+            }
+
+            return [];
+        }
+
+        try {
+            // Normalize the entity to get all its base data
+            $normalized = $this->normalizer->normalize($result, 'json');
+            if (is_array($normalized)) {
+                return $normalized;
+            }
+        } catch (\Exception $e) {
+            // If normalization fails, try to extract data manually
+            return $this->extractEntityDataFromObject($result);
+        }
+
+        return [];
+    }
+
+    /**
+     * Extract entity data from object using reflection
+     *
+     * @param object $object Object to extract data from
+     *
+     * @return array Extracted data
+     */
+    private function extractEntityDataFromObject(object $object): array
+    {
+        $data = [];
+
+        try {
+            $reflection = new \ReflectionClass($object);
+            foreach ($reflection->getProperties() as $property) {
+                $value = $property->getValue($object);
+                $data[$property->getName()] = $value;
+            }
+        } catch (\ReflectionException $e) {
+            // Ignore reflection errors
+        }
+
+        return $data;
+    }
+
+    /**
+     * Persist custom fields via hook
+     *
+     * This hook is called after an entity has been created or updated.
+     * Modules implementing this hook should persist the custom fields data
+     * to their own database tables.
+     *
+     * @param string $entityName Entity name (e.g., 'AttributeGroup')
+     * @param int $entityId Entity ID
+     * @param array $customFieldsData Custom fields data extracted from the request
+     * @param array $entityData Normalized entity data (base fields only, without custom fields)
+     *
+     * @return void
+     */
+    private function persistCustomFieldsViaHook(string $entityName, int $entityId, array $customFieldsData, array $entityData): void
+    {
+        /*
+         * HOOK: persistApiResourcesCustomFields
+         *
+         * Parameters provided to the hook:
+         * - 'entity' (string): The name of the entity (e.g., 'AttributeGroup', 'Product')
+         * - 'entityId' (int): The ID of the entity (after creation/update)
+         * - 'customFieldsData' (array): The custom fields data extracted from the request
+         * - 'entityData' (array): The normalized entity data (base fields only, without custom fields)
+         *                          This contains all the native entity properties that were just persisted.
+         *                          Useful for implementing business logic that depends on entity state.
+         *
+         * The 'customFieldsData' array structure matches the JSON format from the API request:
+         * - Base fields: Direct properties (e.g., "stringField": "value")
+         * - Lang fields: Object with field names as keys, locales as nested keys
+         *   (e.g., "attributeGroupLangExtra": {"stringLangField": {"fr-FR": "value", "en-GB": "value"}})
+         * - Shop fields: Object with field names as keys, shop IDs as nested keys
+         *   (e.g., "attributeGroupShopExtra": {"intShopField": {"1": 100, "2": 200}})
+         *
+         * The 'entityData' array contains the normalized base entity data (e.g., for AttributeGroup:
+         * names, publicNames, type, shopIds, position, etc.). This allows modules to implement
+         * conditional logic based on the entity's native properties.
+         *
+         * Modules should persist this data to their own database tables.
+         * This hook does not return a value (void hook).
+         */
+        \Hook::exec(
+            'persistApiResourcesCustomFields',
+            [
+                'entity' => $entityName,
+                'entityId' => $entityId,
+                'customFieldsData' => $customFieldsData,
+                'entityData' => $entityData,
+            ]
+        );
     }
 }

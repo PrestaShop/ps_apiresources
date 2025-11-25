@@ -85,6 +85,8 @@ class Ps_Apiresources_Extra extends Module
     {
         return parent::install()
         && $this->registerHook('addApiResourcesCustomFields')
+        && $this->registerHook('loadApiResourcesCustomFields')
+        && $this->registerHook('persistApiResourcesCustomFields')
         && $this->installTables();
     }
 
@@ -292,5 +294,300 @@ class Ps_Apiresources_Extra extends Module
         }
 
         return true;
+    }
+
+    /**
+     * Hook to load custom fields data for API Resources entities
+     *
+     * This hook is called by the API Resources module to load custom fields data
+     * when serializing an entity to JSON. You must return the modified $customFields array (chained hook).
+     *
+     * @param array $params Hook parameters:
+     *                      - 'entity' (string): Entity name (e.g., 'AttributeGroup', 'Product')
+     *                      - 'entityId' (int): Entity ID
+     *                      - 'customFields' (array): Custom fields data array to populate
+     *
+     * @return array The enriched customFields array
+     */
+    public function hookLoadApiResourcesCustomFields(array $params)
+    {
+        $entity = $params['entity'];
+        $entityId = (int) $params['entityId'];
+        $customFields = &$params['customFields'];
+
+        switch ($entity) {
+            case 'AttributeGroup':
+                $customFields = array_merge($customFields, $this->loadAttributeGroupCustomFields($entityId));
+                break;
+        }
+
+        // IMPORTANT: This is a chained hook, you MUST return the modified array
+        return $customFields;
+    }
+
+    /**
+     * Hook to persist custom fields data for API Resources entities
+     *
+     * This hook is called by the API Resources module after an entity has been created or updated.
+     * You should persist the custom fields data to your database tables.
+     *
+     * @param array $params Hook parameters:
+     *                      - 'entity' (string): Entity name (e.g., 'AttributeGroup', 'Product')
+     *                      - 'entityId' (int): Entity ID (after creation/update)
+     *                      - 'customFieldsData' (array): Custom fields data extracted from the request
+     *                      - 'entityData' (array): Normalized entity data (base fields only, without custom fields)
+     *                      This contains all the native entity properties that were just persisted.
+     *                      Useful for implementing business logic that depends on entity state.
+     *
+     * @return void
+     */
+    public function hookPersistApiResourcesCustomFields(array $params)
+    {
+        $entity = $params['entity'];
+        $entityId = (int) $params['entityId'];
+        $customFieldsData = $params['customFieldsData'];
+        $entityData = $params['entityData'] ?? [];
+
+        switch ($entity) {
+            case 'AttributeGroup':
+                $this->persistAttributeGroupCustomFields($entityId, $customFieldsData, $entityData);
+                break;
+        }
+    }
+
+    /**
+     * Load custom fields for AttributeGroup entity
+     *
+     * @param int $entityId Entity ID
+     *
+     * @return array Custom fields data
+     */
+    private function loadAttributeGroupCustomFields(int $entityId): array
+    {
+        $result = [];
+
+        // Load base fields
+        $sql = 'SELECT * FROM `' . _DB_PREFIX_ . 'attribute_group_extra`
+                WHERE `id_attribute_group` = ' . (int) $entityId;
+        $row = Db::getInstance()->getRow($sql);
+
+        if ($row) {
+            $result['stringField'] = (string) ($row['string_field'] ?? '');
+            $result['intField'] = (int) ($row['int_field'] ?? 0);
+            $result['boolField'] = (bool) ($row['bool_field'] ?? false);
+            $result['enumField'] = (string) ($row['enum_field'] ?? '');
+        }
+
+        // Load lang fields
+        $sql = 'SELECT * FROM `' . _DB_PREFIX_ . 'attribute_group_lang_extra`
+                WHERE `id_attribute_group` = ' . (int) $entityId;
+        $rows = Db::getInstance()->executeS($sql);
+
+        $langFields = [];
+        if ($rows) {
+            foreach ($rows as $row) {
+                $idLang = (int) ($row['id_lang'] ?? 0);
+                if ($idLang <= 0) {
+                    continue;
+                }
+
+                // Get locale for this language ID
+                $locale = Language::getLocaleById($idLang);
+                if (!$locale) {
+                    continue;
+                }
+
+                $langFields['stringLangField'][$locale] = (string) ($row['string_lang_field'] ?? '');
+            }
+        }
+
+        if (!empty($langFields)) {
+            $result['attributeGroupLangExtra'] = $langFields;
+        }
+
+        // Load shop fields
+        $sql = 'SELECT * FROM `' . _DB_PREFIX_ . 'attribute_group_shop_extra`
+                WHERE `id_attribute_group` = ' . (int) $entityId;
+        $rows = Db::getInstance()->executeS($sql);
+
+        $shopFields = [];
+        if ($rows) {
+            foreach ($rows as $row) {
+                $idShop = (int) ($row['id_shop'] ?? 0);
+                if ($idShop <= 0) {
+                    continue;
+                }
+
+                $shopFields['intShopField'][(string) $idShop] = (int) ($row['int_shop_field'] ?? 0);
+            }
+        }
+
+        if (!empty($shopFields)) {
+            $result['attributeGroupShopExtra'] = $shopFields;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Persist custom fields for AttributeGroup entity
+     *
+     * @param int $entityId Entity ID
+     * @param array $customFieldsData Custom fields data from request
+     * @param array $entityData Normalized entity data (base fields only)
+     *
+     * @return void
+     */
+    private function persistAttributeGroupCustomFields(int $entityId, array $customFieldsData, array $entityData): void
+    {
+        // Example: You can use entityData to implement conditional logic
+        // For instance, only persist custom fields if the entity type is 'select'
+        // if (isset($entityData['type']) && $entityData['type'] !== 'select') {
+        //     return; // Skip persistence for non-select attribute groups
+        // }
+
+        // Persist base fields
+        if (isset($customFieldsData['stringField']) || isset($customFieldsData['intField']) || isset($customFieldsData['boolField']) || isset($customFieldsData['enumField'])) {
+            $columns = ['`id_attribute_group`'];
+            $values = [(int) $entityId];
+            $updates = [];
+
+            if (isset($customFieldsData['stringField'])) {
+                $columns[] = '`string_field`';
+                $value = pSQL((string) $customFieldsData['stringField']);
+                $values[] = '\'' . $value . '\'';
+                $updates[] = '`string_field` = \'' . $value . '\'';
+            }
+
+            if (isset($customFieldsData['intField'])) {
+                $columns[] = '`int_field`';
+                $value = (int) $customFieldsData['intField'];
+                $values[] = (int) $value;
+                $updates[] = '`int_field` = ' . (int) $value;
+            }
+
+            if (isset($customFieldsData['boolField'])) {
+                $columns[] = '`bool_field`';
+                $value = (bool) $customFieldsData['boolField'] ? 1 : 0;
+                $values[] = (int) $value;
+                $updates[] = '`bool_field` = ' . (int) $value;
+            }
+
+            if (isset($customFieldsData['enumField'])) {
+                $columns[] = '`enum_field`';
+                $value = pSQL((string) $customFieldsData['enumField']);
+                $values[] = '\'' . $value . '\'';
+                $updates[] = '`enum_field` = \'' . $value . '\'';
+            }
+
+            if (!empty($updates)) {
+                $sql = 'INSERT INTO `' . _DB_PREFIX_ . 'attribute_group_extra` (' . implode(', ', $columns) . ')
+                        VALUES (' . implode(', ', $values) . ')
+                        ON DUPLICATE KEY UPDATE ' . implode(', ', $updates);
+                Db::getInstance()->execute($sql);
+            }
+        }
+
+        // Persist lang fields
+        // The serializer converts locale-based format to idLang-based format:
+        // Input: {"stringLangField": {"fr-FR": "value", "en-GB": "value"}}
+        // Output: [{"idLang": 1, "stringLangField": "value"}, {"idLang": 2, "stringLangField": "value"}]
+        if (isset($customFieldsData['attributeGroupLangExtra'])) {
+            $langData = $customFieldsData['attributeGroupLangExtra'];
+
+            // Check if it's in the converted format (array of objects with idLang)
+            if (is_array($langData) && !empty($langData) && isset($langData[0]) && is_array($langData[0]) && isset($langData[0]['idLang'])) {
+                // Format: [{"idLang": 1, "stringLangField": "value"}, ...]
+                foreach ($langData as $langRow) {
+                    $idLang = (int) ($langRow['idLang'] ?? 0);
+                    if ($idLang <= 0) {
+                        continue;
+                    }
+
+                    // Process each field in the row
+                    foreach ($langRow as $fieldName => $value) {
+                        if ($fieldName === 'idLang' || $fieldName === '_jsonKey') {
+                            continue;
+                        }
+
+                        // Map field name to column name (here we know it's stringLangField -> string_lang_field)
+                        if ($fieldName === 'stringLangField') {
+                            $sql = 'INSERT INTO `' . _DB_PREFIX_ . 'attribute_group_lang_extra`
+                                    (`id_attribute_group`, `id_lang`, `string_lang_field`)
+                                    VALUES (' . (int) $entityId . ', ' . (int) $idLang . ', \'' . pSQL((string) $value) . '\')
+                                    ON DUPLICATE KEY UPDATE `string_lang_field` = \'' . pSQL((string) $value) . '\'';
+                            Db::getInstance()->execute($sql);
+                        }
+                    }
+                }
+            } else {
+                // Fallback: original locale-based format (should not happen after serializer conversion)
+                if (isset($langData['stringLangField']) && is_array($langData['stringLangField'])) {
+                    foreach ($langData['stringLangField'] as $locale => $value) {
+                        $idLang = (int) Language::getIdByLocale($locale);
+                        if ($idLang <= 0) {
+                            continue;
+                        }
+
+                        $sql = 'INSERT INTO `' . _DB_PREFIX_ . 'attribute_group_lang_extra`
+                                (`id_attribute_group`, `id_lang`, `string_lang_field`)
+                                VALUES (' . (int) $entityId . ', ' . (int) $idLang . ', \'' . pSQL((string) $value) . '\')
+                                ON DUPLICATE KEY UPDATE `string_lang_field` = \'' . pSQL((string) $value) . '\'';
+                        Db::getInstance()->execute($sql);
+                    }
+                }
+            }
+        }
+
+        // Persist shop fields
+        // The serializer converts shop ID-based format to idShop-based format:
+        // Input: {"intShopField": {"1": 100, "2": 200}}
+        // Output: [{"idShop": 1, "intShopField": 100}, {"idShop": 2, "intShopField": 200}]
+        if (isset($customFieldsData['attributeGroupShopExtra'])) {
+            $shopData = $customFieldsData['attributeGroupShopExtra'];
+
+            // Check if it's in the converted format (array of objects with idShop)
+            if (is_array($shopData) && !empty($shopData) && isset($shopData[0]) && is_array($shopData[0]) && isset($shopData[0]['idShop'])) {
+                // Format: [{"idShop": 1, "intShopField": 100}, ...]
+                foreach ($shopData as $shopRow) {
+                    $idShop = (int) ($shopRow['idShop'] ?? 0);
+                    if ($idShop <= 0) {
+                        continue;
+                    }
+
+                    // Process each field in the row
+                    foreach ($shopRow as $fieldName => $value) {
+                        if ($fieldName === 'idShop' || $fieldName === '_jsonKey') {
+                            continue;
+                        }
+
+                        // Map field name to column name (here we know it's intShopField -> int_shop_field)
+                        if ($fieldName === 'intShopField') {
+                            $sql = 'INSERT INTO `' . _DB_PREFIX_ . 'attribute_group_shop_extra`
+                                    (`id_attribute_group`, `id_shop`, `int_shop_field`)
+                                    VALUES (' . (int) $entityId . ', ' . (int) $idShop . ', ' . (int) $value . ')
+                                    ON DUPLICATE KEY UPDATE `int_shop_field` = ' . (int) $value;
+                            Db::getInstance()->execute($sql);
+                        }
+                    }
+                }
+            } else {
+                // Fallback: original shop ID-based format (should not happen after serializer conversion)
+                if (isset($shopData['intShopField']) && is_array($shopData['intShopField'])) {
+                    foreach ($shopData['intShopField'] as $shopId => $value) {
+                        $idShop = (int) $shopId;
+                        if ($idShop <= 0) {
+                            continue;
+                        }
+
+                        $sql = 'INSERT INTO `' . _DB_PREFIX_ . 'attribute_group_shop_extra`
+                                (`id_attribute_group`, `id_shop`, `int_shop_field`)
+                                VALUES (' . (int) $entityId . ', ' . (int) $idShop . ', ' . (int) $value . ')
+                                ON DUPLICATE KEY UPDATE `int_shop_field` = ' . (int) $value;
+                        Db::getInstance()->execute($sql);
+                    }
+                }
+            }
+        }
     }
 }

@@ -54,9 +54,6 @@ services:
   PrestaShop\Module\APIResources\CustomFields\CustomFieldsMetadataProvider:
     autowire: true
 
-  PrestaShop\Module\APIResources\CustomFields\CustomFieldsPersistenceService:
-    autowire: true
-
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\CustomFieldsNormalizer:
     arguments:
       $objectNormalizer: '@serializer.normalizer.object'

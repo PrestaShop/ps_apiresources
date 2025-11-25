@@ -24,7 +24,6 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Normalizer;
 
 use PrestaShop\Module\APIResources\CustomFields\CustomFieldsMetadataProvider;
-use PrestaShop\Module\APIResources\CustomFields\CustomFieldsPersistenceService;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
@@ -36,7 +35,6 @@ class CustomFieldsNormalizer implements NormalizerInterface
     public function __construct(
         private readonly ObjectNormalizer $objectNormalizer,
         private readonly CustomFieldsMetadataProvider $metadataProvider,
-        private readonly CustomFieldsPersistenceService $persistenceService,
     ) {
     }
 
@@ -74,8 +72,8 @@ class CustomFieldsNormalizer implements NormalizerInterface
             return $normalized;
         }
 
-        // Load custom fields from database
-        $customFields = $this->persistenceService->loadCustomFields($entityName, (int) $entityId);
+        // Load custom fields via hook
+        $customFields = $this->loadCustomFields($entityName, (int) $entityId);
 
         // Merge custom fields into normalized data
         return array_merge($normalized, $customFields);
@@ -242,5 +240,62 @@ class CustomFieldsNormalizer implements NormalizerInterface
         $parts = array_map('ucfirst', $parts);
 
         return $first . implode('', $parts);
+    }
+
+    /**
+     * Load custom fields via hook
+     *
+     * This hook is called to load custom fields data for an entity.
+     * Modules implementing this hook should return an array of custom fields data
+     * that will be merged into the API response.
+     *
+     * @param string $entityName Entity name (e.g., 'AttributeGroup')
+     * @param int $entityId Entity ID
+     *
+     * @return array Custom fields data to merge into the response
+     */
+    private function loadCustomFields(string $entityName, int $entityId): array
+    {
+        $customFields = [];
+
+        /**
+         * HOOK: loadApiResourcesCustomFields
+         *
+         * Parameters provided to the hook:
+         * - 'entity' (string): The name of the entity (e.g., 'AttributeGroup', 'Product')
+         * - 'entityId' (int): The ID of the entity
+         * - 'customFields' (array): The current array of custom fields data (initially empty)
+         *
+         * Modules should populate the 'customFields' array with the custom fields data
+         * for the given entity. The structure should match the JSON format expected in API responses:
+         * - Base fields: Direct properties (e.g., "stringField": "value")
+         * - Lang fields: Object with field names as keys, locales as nested keys
+         *   (e.g., "attributeGroupLangExtra": {"stringLangField": {"fr-FR": "value", "en-GB": "value"}})
+         * - Shop fields: Object with field names as keys, shop IDs as nested keys
+         *   (e.g., "attributeGroupShopExtra": {"intShopField": {"1": 100, "2": 200}})
+         *
+         * This is a chained hook, so modules should return the modified 'customFields' array.
+         */
+        $hookResult = \Hook::exec(
+            'loadApiResourcesCustomFields',
+            [
+                'entity' => $entityName,
+                'entityId' => $entityId,
+                'customFields' => &$customFields,
+            ],
+            null,
+            false,
+            true,
+            false,
+            null,
+            true
+        );
+
+        // If hook returns an array, use it (chained hook)
+        if (is_array($hookResult)) {
+            $customFields = $hookResult;
+        }
+
+        return $customFields;
     }
 }

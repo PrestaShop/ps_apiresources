@@ -26,7 +26,6 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Processor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use PrestaShop\Module\APIResources\CustomFields\CustomFieldsMetadataProvider;
-use PrestaShop\Module\APIResources\CustomFields\CustomFieldsPersistenceService;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -36,7 +35,6 @@ class CustomFieldsProcessor implements ProcessorInterface
 {
     public function __construct(
         private readonly CustomFieldsMetadataProvider $metadataProvider,
-        private readonly CustomFieldsPersistenceService $persistenceService,
         private readonly RequestStack $requestStack,
     ) {
     }
@@ -87,7 +85,7 @@ class CustomFieldsProcessor implements ProcessorInterface
      */
     private function loadCustomFieldsIntoObject(object $object, string $entityName, int $entityId): void
     {
-        $customFields = $this->persistenceService->loadCustomFields($entityName, $entityId);
+        $customFields = $this->loadCustomFields($entityName, $entityId);
 
         // Inject custom fields as public properties on the object
         foreach ($customFields as $fieldName => $value) {
@@ -105,6 +103,54 @@ class CustomFieldsProcessor implements ProcessorInterface
                 }
             }
         }
+    }
+
+    /**
+     * Load custom fields via hook
+     *
+     * @param string $entityName Entity name (e.g., 'AttributeGroup')
+     * @param int $entityId Entity ID
+     *
+     * @return array Custom fields data
+     */
+    private function loadCustomFields(string $entityName, int $entityId): array
+    {
+        $customFields = [];
+
+        /**
+         * HOOK: loadApiResourcesCustomFields
+         *
+         * Parameters provided to the hook:
+         * - 'entity' (string): The name of the entity (e.g., 'AttributeGroup', 'Product')
+         * - 'entityId' (int): The ID of the entity
+         * - 'customFields' (array): The current array of custom fields data (initially empty)
+         *
+         * Modules should populate the 'customFields' array with the custom fields data
+         * for the given entity. The structure should match the JSON format expected in API responses.
+         *
+         * This is a chained hook, so modules should return the modified 'customFields' array.
+         */
+        $hookResult = \Hook::exec(
+            'loadApiResourcesCustomFields',
+            [
+                'entity' => $entityName,
+                'entityId' => $entityId,
+                'customFields' => &$customFields,
+            ],
+            null,
+            false,
+            true,
+            false,
+            null,
+            true
+        );
+
+        // If hook returns an array, use it (chained hook)
+        if (is_array($hookResult)) {
+            $customFields = $hookResult;
+        }
+
+        return $customFields;
     }
 
     /**
