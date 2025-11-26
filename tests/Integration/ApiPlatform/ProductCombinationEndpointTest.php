@@ -46,8 +46,8 @@ class ProductCombinationEndpointTest extends ApiTestCase
 
         // 2. Create Attribute Group
         $attributeGroup = new \AttributeGroup();
-        $attributeGroup->name = ['en-US' => 'Size', 'fr-FR' => 'Taille'];
-        $attributeGroup->public_name = ['en-US' => 'Size', 'fr-FR' => 'Taille'];
+        $attributeGroup->name = [\Configuration::get('PS_LANG_DEFAULT') => 'Size'];
+        $attributeGroup->public_name = [\Configuration::get('PS_LANG_DEFAULT') => 'Size'];
         $attributeGroup->group_type = 'select';
         $attributeGroup->add();
         $attributeGroupId = (int) $attributeGroup->id;
@@ -55,7 +55,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
         // 3. Create Attribute
         $attribute = new \Attribute();
         $attribute->id_attribute_group = $attributeGroupId;
-        $attribute->name = ['en-US' => 'Small', 'fr-FR' => 'Petit'];
+        $attribute->name = [\Configuration::get('PS_LANG_DEFAULT') => 'Small'];
         $attribute->add();
         $attributeId = (int) $attribute->id;
 
