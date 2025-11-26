@@ -35,6 +35,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             provider: QueryListProvider::class,
             scopes: ['search_alias_read'],
             gridDataFactory: 'prestashop.core.grid.data_provider.alias_decorator',
+            experimentalOperation: true,
         ),
     ],
 )]
