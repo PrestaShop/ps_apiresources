@@ -55,7 +55,7 @@ class ProductCombinationListEndpointTest extends ApiTestCase
         $attributeGroupId = (int) $attributeGroup->id;
 
         // 3. Create Attribute
-        $attribute = new \Attribute();
+        $attribute = new \AttributeCore();
         $attribute->id_attribute_group = $attributeGroupId;
         $attribute->name = [\Configuration::get('PS_LANG_DEFAULT') => 'Small'];
         $attribute->add();
