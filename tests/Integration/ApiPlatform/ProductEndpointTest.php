@@ -36,6 +36,9 @@ use Tests\Resources\ResourceResetter;
 
 class ProductEndpointTest extends ApiTestCase
 {
+    protected const ROOT_CATEGORY_ID = 2;
+    protected const ROOT_CATEGORY_NAME = 'Home';
+
     protected static array $defaultProductData = [
         'type' => ProductType::TYPE_STANDARD,
         'names' => [
@@ -123,6 +126,14 @@ class ProductEndpointTest extends ApiTestCase
         'shopIds' => [
             1,
         ],
+        'categories' => [
+            [
+                'categoryId' => self::ROOT_CATEGORY_ID,
+                'name' => self::ROOT_CATEGORY_NAME,
+                'displayName' => self::ROOT_CATEGORY_NAME,
+            ],
+        ],
+        'defaultCategoryId' => self::ROOT_CATEGORY_ID,
     ];
 
     public static function setUpBeforeClass(): void

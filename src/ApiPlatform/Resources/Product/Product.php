@@ -217,6 +217,28 @@ class Product
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $shopIds;
 
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'categoryId' => ['type' => 'integer'],
+                'name' => ['type' => 'string'],
+                'displayName' => ['type' => 'string'],
+            ],
+        ],
+        'example' => [
+            [
+                'categoryId' => 2,
+                'name' => 'Home',
+                'displayName' => 'Home',
+            ],
+        ]])
+    ]
+    public array $categories;
+
+    public int $defaultCategoryId;
+
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[_context][langId]' => '[displayLanguageId]',
@@ -272,6 +294,11 @@ class Product
         '[stockInformation][localizedAvailableLaterLabels]' => '[availableLaterLabels]',
         '[stockInformation][location]' => '[location]',
         '[stockInformation][availableDate]' => '[availableDate]',
+        // Transform each field one by one (instead of the whole array) to avoid having an extra id field in the target
+        '[categoriesInformation][categoriesInformation][@index][id]' => '[categories][@index][categoryId]',
+        '[categoriesInformation][categoriesInformation][@index][name]' => '[categories][@index][name]',
+        '[categoriesInformation][categoriesInformation][@index][displayName]' => '[categories][@index][displayName]',
+        '[categoriesInformation][defaultCategoryId]' => '[defaultCategoryId]',
     ];
 
     public const UPDATE_MAPPING = [
