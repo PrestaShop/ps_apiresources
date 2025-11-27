@@ -24,7 +24,6 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Adapter\Debug\DebugMode;
-use PsApiResourcesTest\Integration\ApiPlatform\ApiTestCase;
 
 class DebugModeEndpointTest extends ApiTestCase
 {
@@ -49,16 +48,35 @@ class DebugModeEndpointTest extends ApiTestCase
         /** @var DebugMode $debugMode */
         $debugMode = $this->getContainer()->get('prestashop.adapter.debug_mode');
 
-        $this->updateItem('/debug/toggle', [
-            'enableDebugMode' => "true",
-        ], ['debug_mode_write']);
+        $currentDebugMode = $debugMode->getCurrentDebugMode();
 
-        $this->assertEquals("true", $debugMode->getCurrentDebugMode());
+        if ($currentDebugMode === "false") {
+            $this->updateItem('/debug/toggle', [
+                'enableDebugMode' => "true",
+            ], ['debug_mode_write']);
 
-        $this->updateItem('/debug/toggle', [
-            'enableDebugMode' => "false",
-        ], ['debug_mode_write']);
+            $this->assertEquals("true", $debugMode->getCurrentDebugMode());
 
-        $this->assertEquals("false", $debugMode->getCurrentDebugMode());
+            $this->updateItem('/debug/toggle', [
+                'enableDebugMode' => "false",
+            ], ['debug_mode_write']);
+
+            $this->assertEquals("false", $debugMode->getCurrentDebugMode());
+        } else {
+            $this->updateItem('/debug/toggle', [
+                'enableDebugMode' => "false",
+            ], ['debug_mode_write']);
+
+            $this->assertEquals("false", $debugMode->getCurrentDebugMode());
+
+            $this->updateItem('/debug/toggle', [
+                'enableDebugMode' => "true",
+            ], ['debug_mode_write']);
+
+            $this->assertEquals("true", $debugMode->getCurrentDebugMode());
+        }
+
+
+
     }
 }
