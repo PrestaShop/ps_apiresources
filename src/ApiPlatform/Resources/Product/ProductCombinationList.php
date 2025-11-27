@@ -25,24 +25,39 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationIds;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetEditableCombinationsList;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
 
-#[ApiResource(
+#[ApiResource( // 
     operations: [
         new CQRSGetCollection(
-            uriTemplate: '/product/{productId}/combinations',
+            uriTemplate: '/products/{productId}/combinations/ids',
             CQRSQuery: GetCombinationIds::class,
             scopes: [
                 'product_read',
             ],
             CQRSQueryMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
+                // '[@index][combinationId]' => '[@index]' TODO Test in PS 9.0.2
             ],
             ApiResourceMapping: [
                 '[localizedLegends]' => '[legends]',
             ],
         ),
+        // TODO: we would like to implement this resource but we need to improve the core
+        // new CQRSGetCollection(
+        //     uriTemplate: '/product/{productId}/combinations',
+        //     CQRSQuery: GetEditableCombinationsList::class,
+        //     scopes: [
+        //         'product_read',
+        //     ],
+        //     CQRSQueryMapping: [
+        //         '[_context][shopConstraint]' => '[shopConstraint]',
+        //         '[_context][langId]' => '[languageId]',
+        //         '[combinations]' => '[]',
+        //     ],
+        // ),
     ],
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
@@ -54,3 +69,5 @@ class ProductCombinationList
     public int $combinationId;
     public array $shopIds;
 }
+
+// CombinationListForEditing

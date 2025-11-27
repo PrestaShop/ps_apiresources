@@ -38,7 +38,7 @@ use PrestaShop\Decimal\DecimalNumber;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/product/combination/{combinationId}',
+            uriTemplate: '/products/combinations/{combinationId}',
             CQRSQuery: GetCombinationForEditing::class,
             scopes: [
                 'product_read',
@@ -84,7 +84,7 @@ class ProductCombination
     public DecimalNumber $productTaxRate;
     public DecimalNumber $productPrice;
     public DecimalNumber $productEcotax;
-    
+
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[details][gtin]' => '[gtin]',
