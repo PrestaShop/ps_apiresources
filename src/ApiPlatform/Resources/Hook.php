@@ -41,8 +41,8 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             CQRSCommand: UpdateHookStatusCommand::class,
             CQRSQuery: GetHook::class,
             scopes: ['hook_write'],
-            CQRSQueryMapping: self::MAPPING,
-            CQRSCommandMapping: self::MAPPING,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSGet(
             uriTemplate: '/hooks/{hookId}',
@@ -50,7 +50,7 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             exceptionToStatus: [HookNotFoundException::class => 404],
             CQRSQuery: GetHook::class,
             scopes: ['hook_read'],
-            CQRSQueryMapping: self::MAPPING,
+            CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSGet(
             uriTemplate: '/hooks/{hookId}/status',
@@ -58,13 +58,13 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
             exceptionToStatus: [HookNotFoundException::class => 404],
             CQRSQuery: GetHookStatus::class,
             scopes: ['hook_read'],
-            CQRSQueryMapping: self::MAPPING,
+            CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new PaginatedList(
             uriTemplate: '/hooks',
             provider: QueryListProvider::class,
             scopes: ['hook_read'],
-            ApiResourceMapping: ['[id_hook]' => '[hookId]'],
+            ApiResourceMapping: self::LIST_MAPPING,
             gridDataFactory: 'prestashop.core.grid.data_factory.hook',
             filtersMapping: [
                 '[hookId]' => '[id_hook]',
@@ -77,7 +77,7 @@ class Hook
     #[ApiProperty(identifier: true)]
     public int $hookId;
 
-    public bool $active;
+    public bool $enabled;
 
     public string $name;
 
@@ -85,10 +85,22 @@ class Hook
 
     public string $description;
 
-    protected const MAPPING = [
+    protected const QUERY_MAPPING = [
         // Transforms the url hookId parameter into the $id parameter for GetHook
         '[hookId]' => '[id]',
         // Transforms the query result Hook::getId into the Api resource hookId
         '[id]' => '[hookId]',
+        '[active]' => '[enabled]',
+    ];
+
+    protected const LIST_MAPPING = [
+        '[id_hook]' => '[hookId]',
+        '[active]' => '[enabled]',
+    ];
+
+    protected const COMMAND_MAPPING = [
+        // Transforms the url hookId parameter into the $id parameter for UpdateHookStatusCommand
+        '[hookId]' => '[id]',
+        '[enabled]' => '[active]',
     ];
 }

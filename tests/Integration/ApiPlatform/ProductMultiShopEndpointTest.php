@@ -127,7 +127,7 @@ class ProductMultiShopEndpointTest extends ApiTestCase
             'fr-FR' => '',
         ],
         'coverThumbnailUrl' => 'http://myshop.com/img/p/en-default-cart_default.jpg',
-        'active' => false,
+        'enabled' => false,
         'shopIds' => [
             self::DEFAULT_SHOP_ID,
         ],

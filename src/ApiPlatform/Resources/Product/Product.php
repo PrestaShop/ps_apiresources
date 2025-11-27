@@ -57,11 +57,7 @@ use Symfony\Component\HttpFoundation\Response;
                 'product_write',
             ],
             CQRSQueryMapping: Product::QUERY_MAPPING,
-            CQRSCommandMapping: [
-                '[_context][shopId]' => '[shopId]',
-                '[type]' => '[productType]',
-                '[names]' => '[localizedNames]',
-            ],
+            CQRSCommandMapping: self::CREATE_MAPPING,
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/products/{productId}',
@@ -96,7 +92,7 @@ class Product
 
     public string $type;
 
-    public bool $active;
+    public bool $enabled;
 
     #[LocalizedValue]
     public array $names;
@@ -242,7 +238,7 @@ class Product
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[_context][langId]' => '[displayLanguageId]',
-        '[isActive]' => '[active]',
+        '[active]' => '[enabled]',
         '[basicInformation][localizedNames]' => '[names]',
         '[basicInformation][localizedDescriptions]' => '[descriptions]',
         '[basicInformation][localizedShortDescriptions]' => '[shortDescriptions]',
@@ -301,9 +297,17 @@ class Product
         '[categoriesInformation][defaultCategoryId]' => '[defaultCategoryId]',
     ];
 
+    public const CREATE_MAPPING = [
+        '[_context][shopId]' => '[shopId]',
+        '[type]' => '[productType]',
+        '[names]' => '[localizedNames]',
+        '[enabled]' => '[active]',
+    ];
+
     public const UPDATE_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[type]' => '[productType]',
+        '[enabled]' => '[active]',
         '[names]' => '[localizedNames]',
         '[descriptions]' => '[localizedDescriptions]',
         '[shortDescriptions]' => '[localizedShortDescriptions]',
