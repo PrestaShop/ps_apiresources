@@ -1,5 +1,9 @@
+## Directories
 /vendor
+
+## Files
 .php-cs-fixer.cache
 .phpunit.result.cache
+tests/Integration/clover.xml
 tests/local-parameters/parameters.php
 tests/local-parameters/parameters.yml

@@ -12,4 +12,15 @@
       <directory>.</directory>
     </testsuite>
   </testsuites>
+  <source>
+    <include>
+      <directory suffix=".php">../../src</directory>
+    </include>
+  </source>
+  <coverage
+    includeUncoveredFiles="false">
+    <report>
+      <clover outputFile="clover.xml"/>
+    </report>
+  </coverage>
 </phpunit>
