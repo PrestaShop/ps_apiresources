@@ -36,6 +36,9 @@ use Tests\Resources\ResourceResetter;
 
 class ProductEndpointTest extends ApiTestCase
 {
+    protected const ROOT_CATEGORY_ID = 2;
+    protected const ROOT_CATEGORY_NAME = 'Home';
+
     protected static array $defaultProductData = [
         'type' => ProductType::TYPE_STANDARD,
         'names' => [
@@ -119,10 +122,18 @@ class ProductEndpointTest extends ApiTestCase
             'fr-FR' => '',
         ],
         'coverThumbnailUrl' => 'http://myshop.com/img/p/en-default-cart_default.jpg',
-        'active' => false,
+        'enabled' => false,
         'shopIds' => [
             1,
         ],
+        'categories' => [
+            [
+                'categoryId' => self::ROOT_CATEGORY_ID,
+                'name' => self::ROOT_CATEGORY_NAME,
+                'displayName' => self::ROOT_CATEGORY_NAME,
+            ],
+        ],
+        'defaultCategoryId' => self::ROOT_CATEGORY_ID,
     ];
 
     public static function setUpBeforeClass(): void
@@ -226,7 +237,7 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => '',
                     'fr-FR' => '',
                 ],
-                'active' => false,
+                'enabled' => false,
                 'shopIds' => [
                     1,
                 ],
@@ -254,7 +265,7 @@ class ProductEndpointTest extends ApiTestCase
             'descriptions' => [
                 'en-US' => 'new description',
             ],
-            'active' => true,
+            'enabled' => true,
         ], ['product_write']);
 
         // No new product, the number of products stays the same
@@ -277,7 +288,7 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'new description',
                     'fr-FR' => '',
                 ],
-                'active' => true,
+                'enabled' => true,
                 'shopIds' => [
                     1,
                 ],
@@ -309,7 +320,7 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'new description',
                     'fr-FR' => '',
                 ],
-                'active' => true,
+                'enabled' => true,
                 'shopIds' => [
                     1,
                 ],
@@ -345,7 +356,7 @@ class ProductEndpointTest extends ApiTestCase
                     'en-US' => 'new description',
                     'fr-FR' => '',
                 ],
-                'active' => true,
+                'enabled' => true,
                 'shopIds' => [
                     1,
                 ],
@@ -435,7 +446,7 @@ class ProductEndpointTest extends ApiTestCase
                 'en-US' => 'available later',
                 'fr-FR' => 'disponible plus tard',
             ],
-            'active' => false,
+            'enabled' => false,
             // Multi-parameters setter
             'redirectOption' => [
                 'redirectType' => RedirectType::TYPE_CATEGORY_PERMANENT,
@@ -786,7 +797,7 @@ class ProductEndpointTest extends ApiTestCase
                 'priceTaxExcluded' => 13.90,
                 'priceTaxIncluded' => 14.734,
                 'category' => 'Home Accessories',
-                'active' => true,
+                'enabled' => true,
             ];
             $this->assertEquals($expectedProduct, $paginatedProducts['items'][0]);
         }

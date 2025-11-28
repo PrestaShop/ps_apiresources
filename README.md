@@ -10,6 +10,14 @@ This module contains no code only some resource files that are automatically sca
 
 You can report issues with this module in the main PrestaShop repository. [Click here to report an issue][report-issue].
 
+## Under development
+
+Please be aware that this module is still under development, that is why its version is only `0.*`, we didn't release a major version `1.0` yet because we anticipate some breaking changes may happen while we add all the missing endpoints.
+
+We try to maintain retro compatibility as much as possible and always refrain from adding breaking changes, but we also want this API contract to be a fixed standard once it's finalized, so we prefer to polish and improve it before a major version is released.
+
+After the `1.0` version is released it won't include other breaking changes, any breaking change will require a new major version (`2.0`) and will follow semver convention.
+
 ## Requirements
 
 Required only for development:

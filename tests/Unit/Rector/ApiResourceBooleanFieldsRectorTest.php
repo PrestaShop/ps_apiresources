@@ -23,15 +23,15 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Unit\Rector;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use PsApiResourcesTest\Rector\ApiResourceUriTemplateRector;
+use PsApiResourcesTest\Rector\ApiResourceBooleanFieldsRector;
 use Rector\Testing\PHPUnit\AbstractRectorTestCase;
 
 /**
- * Test class for ApiResourceUriTemplateRector following Rector's testing guidelines
+ * Test class for ApiResourceBooleanFieldsRector following Rector's testing guidelines
  *
  * @see https://getrector.com/documentation/writing-tests-for-custom-rule
  */
-final class ApiResourceUriTemplateRectorTest extends AbstractRectorTestCase
+final class ApiResourceBooleanFieldsRectorTest extends AbstractRectorTestCase
 {
     /**
      * @param string $filePath
@@ -47,7 +47,7 @@ final class ApiResourceUriTemplateRectorTest extends AbstractRectorTestCase
      */
     public static function provideData(): \Iterator
     {
-        return self::yieldFilesFromDirectory(__DIR__ . '/Fixture/ApiResourceUriTemplateRector');
+        return self::yieldFilesFromDirectory(__DIR__ . '/Fixture/ApiResourceBooleanFieldsRector');
     }
 
     /**
@@ -55,6 +55,6 @@ final class ApiResourceUriTemplateRectorTest extends AbstractRectorTestCase
      */
     public function provideConfigFilePath(): string
     {
-        return __DIR__ . '/config/uri_template_rule.php';
+        return __DIR__ . '/config/boolean_fields_rule.php';
     }
 }

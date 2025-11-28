@@ -174,7 +174,7 @@ class CategoryEndpointTest extends ApiTestCase
 
         $this->assertArrayHasKey('categoryId', $first);
         $this->assertArrayHasKey('name', $first);
-        $this->assertArrayHasKey('active', $first);
+        $this->assertArrayHasKey('enabled', $first);
         $this->assertEquals($categoryId, $first['categoryId']);
 
         return $categoryId;
@@ -201,26 +201,26 @@ class CategoryEndpointTest extends ApiTestCase
         $this->requestApi(
             Request::METHOD_PATCH,
             '/categories/3/status',
-            ['active' => false],
+            ['enabled' => false],
             ['category_write'],
             Response::HTTP_OK
         );
 
         $category = $this->getItem('/categories/3', ['category_read']);
 
-        $this->assertFalse($category['active']);
+        $this->assertFalse($category['enabled']);
 
         // Re-enable the category to avoid leaving side effects for other tests
         $this->requestApi(
             Request::METHOD_PATCH,
             '/categories/3/status',
-            ['active' => true],
+            ['enabled' => true],
             ['category_write'],
             Response::HTTP_OK
         );
 
         $category = $this->getItem('/categories/3', ['category_read']);
-        $this->assertTrue($category['active']);
+        $this->assertTrue($category['enabled']);
     }
 
     public function testDeleteCategoryThumbnail(): void
@@ -264,7 +264,7 @@ class CategoryEndpointTest extends ApiTestCase
         // Assert that the selected categories have been successfully disabled
         foreach ($bulkCategories as $categoryId) {
             $category = $this->getItem('/categories/' . $categoryId, ['category_read']);
-            $this->assertEquals(false, $category['active']);
+            $this->assertEquals(false, $category['enabled']);
         }
 
         // Return IDs so they can be reused by testBulkDelete

@@ -36,6 +36,7 @@ use Symfony\Component\HttpFoundation\Response;
             scopes: ['discount_read'],
             ApiResourceMapping: [
                 '[id_discount]' => '[discountId]',
+                '[active]' => '[enabled]',
             ],
             gridDataFactory: 'prestashop.core.grid.data.factory.discount',
             filtersClass: DiscountFilters::class,
@@ -51,6 +52,6 @@ class DiscountList
     public int $discountId;
     public string $type;
     public string $name;
-    public bool $active;
+    public bool $enabled;
     public string $code;
 }

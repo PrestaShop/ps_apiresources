@@ -82,7 +82,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: [
-                '[active]' => '[isEnabled]',
+                '[enabled]' => '[isEnabled]',
             ],
         ),
         new CQRSDelete(
@@ -110,7 +110,7 @@ class Category
     #[ApiProperty(identifier: true)]
     public int $categoryId;
 
-    public bool $active;
+    public bool $enabled;
 
     #[LocalizedValue]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
@@ -186,6 +186,7 @@ class Category
 
     public const QUERY_MAPPING = [
         '[id]' => '[categoryId]',
+        '[active]' => '[enabled]',
         '[name]' => '[names]',
         '[description]' => '[descriptions]',
         '[additionalDescription]' => '[additionalDescriptions]',
@@ -197,6 +198,7 @@ class Category
 
     public const COMMAND_MAPPING = [
         '[names]' => '[localizedNames]',
+        '[enabled]' => '[isEnabled]',
         '[descriptions]' => '[localizedDescriptions]',
         '[additionalDescriptions]' => '[localizedAdditionalDescriptions]',
         '[shopIds]' => '[associatedShopIds]',

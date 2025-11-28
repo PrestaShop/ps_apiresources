@@ -83,7 +83,7 @@ class HookEndpointTest extends ApiTestCase
             'name' => 'testHook',
             'title' => 'Test Hook',
             'description' => 'Hook created only for API test',
-            'active' => true,
+            'enabled' => true,
         ], $hook);
 
         return $hookId;
@@ -94,19 +94,19 @@ class HookEndpointTest extends ApiTestCase
      */
     public function testUpdateHookStatus(int $hookId): int
     {
-        $updatedHook = $this->updateItem('/hooks/' . $hookId . '/status', ['active' => false], ['hook_write']);
+        $updatedHook = $this->updateItem('/hooks/' . $hookId . '/status', ['enabled' => false], ['hook_write']);
         $expectedHook = [
             'hookId' => $hookId,
             'name' => 'testHook',
             'title' => 'Test Hook',
             'description' => 'Hook created only for API test',
-            'active' => false,
+            'enabled' => false,
         ];
         $this->assertEquals($expectedHook, $updatedHook);
         $this->assertEquals($expectedHook, $this->getItem('/hooks/' . $hookId, ['hook_read']));
 
-        $updatedHook = $this->updateItem('/hooks/' . $hookId . '/status', ['active' => true], ['hook_write']);
-        $expectedHook['active'] = true;
+        $updatedHook = $this->updateItem('/hooks/' . $hookId . '/status', ['enabled' => true], ['hook_write']);
+        $expectedHook['enabled'] = true;
         $this->assertEquals($expectedHook, $updatedHook);
         $this->assertEquals($expectedHook, $this->getItem('/hooks/' . $hookId, ['hook_read']));
 
@@ -120,8 +120,8 @@ class HookEndpointTest extends ApiTestCase
     {
         $hookStatus = $this->getItem('/hooks/' . $hookId . '/status', ['hook_read']);
 
-        $this->assertArrayHasKey('active', $hookStatus);
-        $this->assertTrue($hookStatus['active'], 'Expected hook to be active');
+        $this->assertArrayHasKey('enabled', $hookStatus);
+        $this->assertTrue($hookStatus['enabled'], 'Expected hook to be enabled');
 
         return $hookId;
     }
@@ -147,7 +147,7 @@ class HookEndpointTest extends ApiTestCase
             'name' => 'testHook',
             'title' => 'Test Hook',
             'description' => 'Hook created only for API test',
-            'active' => true,
+            'enabled' => true,
         ], $testHook);
     }
 }
