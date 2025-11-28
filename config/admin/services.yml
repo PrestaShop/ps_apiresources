@@ -47,3 +47,27 @@ services:
     autowire: true
     arguments:
       $decorated: '@.inner'
+      $customFieldsMetadataProvider: '@PrestaShop\Module\APIResources\CustomFields\CustomFieldsMetadataProvider'
+      $requestStack: '@request_stack'
+
+  # Custom Fields services
+  PrestaShop\Module\APIResources\CustomFields\CustomFieldsMetadataProvider:
+    autowire: true
+
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\CustomFieldsNormalizer:
+    arguments:
+      $objectNormalizer: '@serializer.normalizer.object'
+    tags:
+      - { name: 'serializer.normalizer', priority: 50 }
+
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\CustomFieldsCommandProcessor:
+    decorates: 'PrestaShopBundle\ApiPlatform\Processor\CommandProcessor'
+    tags: [ 'api_platform.state_processor' ]
+    autowire: true
+    arguments:
+      $decorated: '@.inner'
+
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\CustomFieldsProcessor:
+    tags:
+      - { name: 'api_platform.state_processor', priority: -100 }
+    autowire: true
