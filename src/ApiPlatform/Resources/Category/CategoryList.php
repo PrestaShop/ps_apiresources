@@ -40,11 +40,13 @@ use Symfony\Component\HttpFoundation\Response;
             scopes: ['category_read'],
             ApiResourceMapping: [
                 '[id_category]' => '[categoryId]',
+                '[active]' => '[enabled]',
             ],
             gridDataFactory: 'prestashop.core.grid.data.factory.category_decorator',
             filtersClass: CategoryFilters::class,
             filtersMapping: [
                 '[categoryId]' => '[id_category]',
+                '[enabled]' => '[active]',
             ],
         ),
     ],
@@ -58,7 +60,7 @@ class CategoryList
     #[ApiProperty(identifier: true)]
     public int $categoryId;
 
-    public bool $active;
+    public bool $enabled;
 
     public string $name;
 }

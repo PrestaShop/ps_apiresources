@@ -25,35 +25,36 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchAlias;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Alias\Command\BulkDeleteSearchTermsAliasesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Alias\Command\DeleteSearchTermAliasesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/search-aliases/bulk-delete',
-            CQRSCommand: BulkDeleteSearchTermsAliasesCommand::class,
+            // Usually the identifier would be in the URL, but since here it is a string this would conflict
+            // with the bulk url /search-aliases/bulk-delete (bulk-delete would be considered the identifier,
+            // vice versa) So the searchTerm will need to be passed in the JSON body
+            uriTemplate: '/search-aliases',
+            requirements: ['searchTerm' => '\d+'],
+            CQRSCommand: DeleteSearchTermAliasesCommand::class,
             scopes: ['search_alias_write'],
-            CQRSCommandMapping: [
-                '[searchTerms]' => '[searchTerms]',
-            ],
             allowEmptyBody: false,
             experimentalOperation: true,
         ),
     ],
     exceptionToStatus: [
         AliasNotFoundException::class => Response::HTTP_NOT_FOUND,
+        AliasConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class BulkDeleteSearchAliases
+class DeleteSearchAlias
 {
-    #[ApiProperty(
-        openapiContext: [
-            'type' => 'array',
-            'items' => ['type' => 'string'],
-        ]
-    )]
-    public array $searchTerms = [];
+    #[ApiProperty(identifier: true)]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 1, max: 255)]
+    public string $searchTerm;
 }

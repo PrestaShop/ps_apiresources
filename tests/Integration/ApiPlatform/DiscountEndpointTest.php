@@ -103,7 +103,7 @@ class DiscountEndpointTest extends ApiTestCase
             'type' => $type,
             'names' => $names,
             'priority' => 1,
-            'active' => false,
+            'enabled' => false,
             'totalQuantity' => 1,
             'quantityPerUser' => 1,
             'description' => '',
@@ -116,6 +116,7 @@ class DiscountEndpointTest extends ApiTestCase
             // These two values are dynamic, we can't hard-code the expected value
             'validFrom' => $discount['validFrom'],
             'validTo' => $discount['validTo'],
+            'taxIncluded' => false,
         ];
         if ($data !== null) {
             $expectedDiscount = array_merge($expectedDiscount, $data);
@@ -195,7 +196,7 @@ class DiscountEndpointTest extends ApiTestCase
                 'discountId' => $discount['discountId'],
                 'type' => $creationData[0],
                 'name' => $creationData[1]['en-US'],
-                'active' => false,
+                'enabled' => false,
                 'code' => '',
             ];
             $this->assertEquals($expectedDiscount, $discount);
@@ -288,9 +289,9 @@ class DiscountEndpointTest extends ApiTestCase
         $this->assertEquals('NEWCODE123', $updatedDiscount['code']);
 
         $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
-            'active' => true,
+            'enabled' => true,
         ], ['discount_write']);
-        $this->assertEquals(true, $updatedDiscount['active']);
+        $this->assertEquals(true, $updatedDiscount['enabled']);
 
         $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'totalQuantity' => 100,
@@ -331,7 +332,7 @@ class DiscountEndpointTest extends ApiTestCase
         $discount = $this->getItem('/discounts/' . $discountId, ['discount_read']);
         $this->assertEquals('Updated description', $discount['description']);
         $this->assertEquals('NEWCODE123', $discount['code']);
-        $this->assertEquals(true, $discount['active']);
+        $this->assertEquals(true, $discount['enabled']);
         $this->assertEquals(100, $discount['totalQuantity']);
         $this->assertEquals(5, $discount['quantityPerUser']);
         $this->assertEquals(true, $discount['highlightInCart']);

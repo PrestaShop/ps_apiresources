@@ -93,6 +93,7 @@ class Attribute
     public int $attributeGroupId;
 
     #[LocalizedValue]
+    #[Assert\NotBlank(groups: ['Create'])]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
     #[DefaultLanguage(groups: ['Update'], fieldName: 'names', allowNull: true)]
     #[Assert\All(constraints: [
@@ -108,8 +109,6 @@ class Attribute
     #[Assert\NotBlank(allowNull: true)]
     public array $shopIds;
 
-    public int $position;
-
     public const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
         '[name]' => '[names]',
@@ -117,7 +116,7 @@ class Attribute
     ];
 
     public const CREATE_COMMAND_MAPPING = [
-        '[names]' => '[localizedValue]',
+        '[names]' => '[localizedNames]',
         '[shopIds]' => '[associatedShopIds]',
     ];
 
