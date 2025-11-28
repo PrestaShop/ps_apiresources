@@ -43,6 +43,7 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGet(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\\d+'],
             CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_read',
@@ -61,6 +62,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\\d+'],
             CQRSCommand: UpdateProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
@@ -71,6 +73,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSDelete(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\\d+'],
             CQRSCommand: DeleteProductCommand::class,
             scopes: [
                 'product_write',

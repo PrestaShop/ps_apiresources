@@ -47,3 +47,33 @@ services:
     autowire: true
     arguments:
       $decorated: '@.inner'
+
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\CombinationSuppliersUpdateProcessor:
+    autowire: true
+    public: true
+    tags:
+      - { name: 'api_platform.state_processor' }
+
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\CombinationStockUpdateProcessor:
+    autowire: true
+    public: true
+    tags:
+      - { name: 'api_platform.state_processor' }
+
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\GenerateProductCombinationsProcessor:
+    autowire: true
+    public: true
+    tags:
+      - { name: 'api_platform.state_processor' }
+
+  PrestaShop\Module\APIResources\ApiPlatform\Provider\SearchProductCombinationsProvider:
+    autowire: true
+    public: true
+    tags:
+      - { name: 'api_platform.state_provider' }
+
+  PrestaShop\Module\APIResources\ApiPlatform\Provider\GetEditableCombinationsListProvider:
+    autowire: true
+    public: true
+    tags:
+      - { name: 'api_platform.state_provider' }
