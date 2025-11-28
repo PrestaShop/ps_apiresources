@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use Tests\Resources\Resetter\ProductResetter;
 use Tests\Resources\ResourceResetter;
-use Symfony\Component\HttpFoundation\Response;
 
 class ProductCombinationListEndpointTest extends ApiTestCase
 {
@@ -30,7 +28,7 @@ class ProductCombinationListEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/product/1/combinations',
+            '/products/1/combinations',
         ];
     }
 
@@ -55,7 +53,7 @@ class ProductCombinationListEndpointTest extends ApiTestCase
         $attributeGroupId = (int) $attributeGroup->id;
 
         // 3. Create Attribute
-        $attribute = new \AttributeCore();
+        $attribute = new \Attribute();
         $attribute->id_attribute_group = $attributeGroupId;
         $attribute->name = [\Configuration::get('PS_LANG_DEFAULT') => 'Small'];
         $attribute->add();
@@ -75,7 +73,7 @@ class ProductCombinationListEndpointTest extends ApiTestCase
         $combination->setAttributes([$attributeId]);
 
         // 5. Call API
-        $response = $this->getItem('/product/' . $productId . '/combinations', ['product_read']);
+        $response = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
 
         // 6. Assert
         $this->assertCount(1, $response['items']);

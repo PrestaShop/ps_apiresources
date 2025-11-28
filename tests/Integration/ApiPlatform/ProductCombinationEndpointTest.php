@@ -28,7 +28,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/product/combination/1',
+            '/products/combinations/1',
         ];
     }
 
@@ -53,7 +53,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
         $attributeGroupId = (int) $attributeGroup->id;
 
         // 3. Create Attribute
-        $attribute = new \AttributeCore();
+        $attribute = new \Attribute();
         $attribute->id_attribute_group = $attributeGroupId;
         $attribute->name = [\Configuration::get('PS_LANG_DEFAULT') => 'Small'];
         $attribute->add();
@@ -78,7 +78,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
         $combination->setAttributes([$attributeId]);
 
         // 5. Call API
-        $response = $this->getItem('/product/combination/' . $combinationId, ['product_read']);
+        $response = $this->getItem('/products/combinations/' . $combinationId, ['product_read']);
 
         // 6. Assert
         $this->assertEquals($combinationId, $response['combinationId']);

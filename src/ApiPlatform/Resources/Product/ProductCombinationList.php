@@ -23,16 +23,16 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationIds;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetEditableCombinationsList;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
 
-#[ApiResource( // 
+#[ApiResource(
     operations: [
         new CQRSGetCollection(
-            uriTemplate: '/products/{productId}/combinations/ids',
+            uriTemplate: '/products/{productId}/combinations',
             CQRSQuery: GetCombinationIds::class,
             scopes: [
                 'product_read',

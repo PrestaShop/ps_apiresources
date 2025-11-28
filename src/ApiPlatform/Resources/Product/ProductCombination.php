@@ -24,16 +24,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-
-use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationNotFoundException;
-
-use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationForEditing;
-
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
