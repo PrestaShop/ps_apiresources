@@ -30,12 +30,13 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/module/{technicalName}/upgrade',
+            uriTemplate: '/modules/{technicalName}/upgrade',
             CQRSCommand: UpgradeModuleCommand::class,
             CQRSQuery: GetModuleInfos::class,
             scopes: [
                 'module_write',
             ],
+            allowEmptyBody: true,
         ),
     ],
 )]

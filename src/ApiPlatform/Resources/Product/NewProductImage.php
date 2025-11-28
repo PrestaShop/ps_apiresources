@@ -23,16 +23,18 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\AddProductImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetProductImage;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/product/{productId}/image',
+            uriTemplate: '/products/{productId}/images',
             inputFormats: ['multipart' => ['multipart/form-data']],
             read: false,
             CQRSCommand: AddProductImageCommand::class,
@@ -46,6 +48,9 @@ use Symfony\Component\HttpFoundation\File\File;
                 '[image].pathName' => '[pathName]',
             ],
         ),
+    ],
+    exceptionToStatus: [
+        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class NewProductImage
@@ -64,6 +69,8 @@ class NewProductImage
     public bool $cover;
 
     public int $position;
+
+    public array $shopIds;
 
     public File $image;
 

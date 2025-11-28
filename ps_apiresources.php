@@ -36,8 +36,8 @@ class Ps_Apiresources extends Module
         $this->displayName = $this->trans('PrestaShop API Resources', [], 'Modules.Apiresources.Admin');
         $this->description = $this->trans('Includes the resources allowing using the API for the PrestaShop domain, all endpoints are based on CQRS commands/queries from the Core and we APIPlatform framework is used as a base.', [], 'Modules.Apiresources.Admin');
         $this->author = 'PrestaShop';
-        $this->version = '0.1.0';
-        $this->ps_versions_compliancy = ['min' => '9.0.0', 'max' => _PS_VERSION_];
+        $this->version = '0.2.0';
+        $this->ps_versions_compliancy = ['min' => '9.0.2', 'max' => _PS_VERSION_];
         $this->need_instance = 0;
         $this->tab = 'administration';
         parent::__construct();

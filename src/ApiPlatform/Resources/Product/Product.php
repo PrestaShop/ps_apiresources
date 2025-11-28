@@ -31,6 +31,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopAssociationNotFound;
+use PrestaShop\PrestaShop\Core\Util\DateTime\DateImmutable;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -41,7 +42,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/product/{productId}',
+            uriTemplate: '/products/{productId}',
             CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_read',
@@ -49,21 +50,17 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQueryMapping: Product::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/product',
+            uriTemplate: '/products',
             CQRSCommand: AddProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_write',
             ],
             CQRSQueryMapping: Product::QUERY_MAPPING,
-            CQRSCommandMapping: [
-                '[_context][shopId]' => '[shopId]',
-                '[type]' => '[productType]',
-                '[names]' => '[localizedNames]',
-            ],
+            CQRSCommandMapping: self::CREATE_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/product/{productId}',
+            uriTemplate: '/products/{productId}',
             CQRSCommand: UpdateProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
@@ -73,12 +70,12 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSCommandMapping: Product::UPDATE_MAPPING,
         ),
         new CQRSDelete(
-            uriTemplate: '/product/{productId}',
-            CQRSQuery: DeleteProductCommand::class,
+            uriTemplate: '/products/{productId}',
+            CQRSCommand: DeleteProductCommand::class,
             scopes: [
                 'product_write',
             ],
-            CQRSQueryMapping: [
+            CQRSCommandMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
             ]
         ),
@@ -95,7 +92,7 @@ class Product
 
     public string $type;
 
-    public bool $active;
+    public bool $enabled;
 
     #[LocalizedValue]
     public array $names;
@@ -209,16 +206,39 @@ class Product
     #[LocalizedValue]
     public array $availableLaterLabels;
 
-    public ?\DateTimeImmutable $availableDate = null;
+    public ?DateImmutable $availableDate = null;
 
     public string $coverThumbnailUrl;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $shopIds;
 
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'categoryId' => ['type' => 'integer'],
+                'name' => ['type' => 'string'],
+                'displayName' => ['type' => 'string'],
+            ],
+        ],
+        'example' => [
+            [
+                'categoryId' => 2,
+                'name' => 'Home',
+                'displayName' => 'Home',
+            ],
+        ]])
+    ]
+    public array $categories;
+
+    public int $defaultCategoryId;
+
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[_context][langId]' => '[displayLanguageId]',
+        '[active]' => '[enabled]',
         '[basicInformation][localizedNames]' => '[names]',
         '[basicInformation][localizedDescriptions]' => '[descriptions]',
         '[basicInformation][localizedShortDescriptions]' => '[shortDescriptions]',
@@ -270,11 +290,24 @@ class Product
         '[stockInformation][localizedAvailableLaterLabels]' => '[availableLaterLabels]',
         '[stockInformation][location]' => '[location]',
         '[stockInformation][availableDate]' => '[availableDate]',
+        // Transform each field one by one (instead of the whole array) to avoid having an extra id field in the target
+        '[categoriesInformation][categoriesInformation][@index][id]' => '[categories][@index][categoryId]',
+        '[categoriesInformation][categoriesInformation][@index][name]' => '[categories][@index][name]',
+        '[categoriesInformation][categoriesInformation][@index][displayName]' => '[categories][@index][displayName]',
+        '[categoriesInformation][defaultCategoryId]' => '[defaultCategoryId]',
+    ];
+
+    public const CREATE_MAPPING = [
+        '[_context][shopId]' => '[shopId]',
+        '[type]' => '[productType]',
+        '[names]' => '[localizedNames]',
+        '[enabled]' => '[active]',
     ];
 
     public const UPDATE_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[type]' => '[productType]',
+        '[enabled]' => '[active]',
         '[names]' => '[localizedNames]',
         '[descriptions]' => '[localizedDescriptions]',
         '[shortDescriptions]' => '[localizedShortDescriptions]',

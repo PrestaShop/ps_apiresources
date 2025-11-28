@@ -29,12 +29,13 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/module/{technicalName}/uninstall',
+            uriTemplate: '/modules/{technicalName}/uninstall',
             output: false,
             CQRSCommand: UninstallModuleCommand::class,
             scopes: [
                 'module_write',
             ],
+            allowEmptyBody: true,
         ),
     ],
     exceptionToStatus: [
@@ -44,5 +45,5 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 )]
 class UninstallModule extends Module
 {
-    public bool $deleteFiles;
+    public bool $deleteFiles = false;
 }

@@ -18,59 +18,42 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-declare(strict_types=1);
-
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Category;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\CartRule\Command\EditCartRuleCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\BulkUpdateCategoriesStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/cart-rule/{cartRuleId}',
-            CQRSCommand: EditCartRuleCommand::class,
-            scopes: [
-                'cart_rule_write',
+            uriTemplate: '/categories/bulk-update-status',
+            output: false,
+            CQRSCommand: BulkUpdateCategoriesStatusCommand::class,
+            CQRSCommandMapping: [
+                '[enabled]' => '[newStatus]',
             ],
-            experimentalOperation: true,
+            scopes: [
+                'category_write',
+            ],
         ),
     ],
+    exceptionToStatus: [
+        CategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
+    ],
 )]
-class CartRule
+class BulkUpdateStatusCategories
 {
-    #[ApiProperty(identifier: true)]
-    public int $cartRuleId;
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[Assert\NotBlank]
+    public array $categoryIds;
 
-    public string $description;
-
-    public string $code;
-
-    public array $minimumAmount;
-
-    public bool $minimumAmountShippingIncluded;
-
-    public int $customerId;
-
-    #[LocalizedValue]
-    public array $localizedNames;
-
-    public bool $highlightInCart;
-
-    public bool $allowPartialUse;
-
-    public int $priority;
-
-    public bool $active;
-
-    public array $validityDateRange;
-
-    public int $totalQuantity;
-
-    public int $quantityPerUser;
-
-    public array $cartRuleAction;
+    public bool $enabled;
 }

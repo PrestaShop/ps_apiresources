@@ -10,6 +10,14 @@ This module contains no code only some resource files that are automatically sca
 
 You can report issues with this module in the main PrestaShop repository. [Click here to report an issue][report-issue].
 
+## Under development
+
+Please be aware that this module is still under development, that is why its version is only `0.*`, we didn't release a major version `1.0` yet because we anticipate some breaking changes may happen while we add all the missing endpoints.
+
+We try to maintain retro compatibility as much as possible and always refrain from adding breaking changes, but we also want this API contract to be a fixed standard once it's finalized, so we prefer to polish and improve it before a major version is released.
+
+After the `1.0` version is released it won't include other breaking changes, any breaking change will require a new major version (`2.0`) and will follow semver convention.
+
 ## Requirements
 
 Required only for development:
@@ -51,6 +59,10 @@ composer setup-local-tests -- [arguments]
 
 Example:
 ```bash
+# To test with 9.0.x branch
+composer setup-local-tests -- --force --core-branch=9.0.x
+
+# To test with a branch from your fork (in this example fork: jolelievre branch: product-api)
 composer setup-local-tests -- --force --core-branch=jolelievre:product-api
 ```
 
@@ -73,6 +85,6 @@ Just make sure to follow our [contribution guidelines][contribution-guidelines].
 This module is released under the [Academic Free License 3.0][AFL-3.0]
 
 [report-issue]: https://github.com/PrestaShop/PrestaShop/issues/new/choose
-[prestashop]: https://www.prestashop.com/
-[contribution-guidelines]: https://devdocs.prestashop.com/1.7/contribute/contribution-guidelines/project-modules/
+[prestashop]: https://www.prestashop-project.org/
+[contribution-guidelines]: https://devdocs.prestashop-project.org/9/contribute/contribution-guidelines/project-modules/
 [AFL-3.0]: https://opensource.org/licenses/AFL-3.0

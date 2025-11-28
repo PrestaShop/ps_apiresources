@@ -21,7 +21,7 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
@@ -31,7 +31,6 @@ use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\DeleteCustomerGroup
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\EditCustomerGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Exception\GroupNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Query\GetCustomerGroupForEditing;
-use PrestaShop\PrestaShop\Core\Domain\Customer\Group\QueryResult\EditableCustomerGroup;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -41,7 +40,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/customers/group/{customerGroupId}',
+            uriTemplate: '/customers/groups/{customerGroupId}',
             CQRSQuery: GetCustomerGroupForEditing::class,
             scopes: [
                 'customer_group_read',
@@ -55,7 +54,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             ],
         ),
         new CQRSCreate(
-            uriTemplate: '/customers/group',
+            uriTemplate: '/customers/groups',
             CQRSCommand: AddCustomerGroupCommand::class,
             CQRSQuery: GetCustomerGroupForEditing::class,
             scopes: [
@@ -73,7 +72,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             ],
         ),
         new CQRSUpdate(
-            uriTemplate: '/customers/group/{customerGroupId}',
+            uriTemplate: '/customers/groups/{customerGroupId}',
             CQRSCommand: EditCustomerGroupCommand::class,
             CQRSQuery: GetCustomerGroupForEditing::class,
             scopes: [
@@ -86,13 +85,13 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             ],
         ),
         new CQRSDelete(
-            uriTemplate: '/customers/group/{customerGroupId}',
-            CQRSQuery: DeleteCustomerGroupCommand::class,
+            uriTemplate: '/customers/groups/{customerGroupId}',
+            CQRSCommand: DeleteCustomerGroupCommand::class,
             scopes: [
                 'customer_group_write',
             ],
             // Here, we use query mapping to adapt URI parameters to the expected constructor parameter name
-            CQRSQueryMapping: [
+            CQRSCommandMapping: [
                 '[customerGroupId]' => '[groupId]',
             ],
         ),

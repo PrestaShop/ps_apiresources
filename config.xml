@@ -2,7 +2,7 @@
 <module>
     <name>ps_apiresources</name>
     <displayName><![CDATA[PrestaShop API Resources]]></displayName>
-    <version><![CDATA[0.1.0]]></version>
+    <version><![CDATA[0.2.0]]></version>
     <description><![CDATA[Includes the resources allowing using the API for the PrestaShop domain, all endpoints are based on CQRS commands/queries from the Core and we APIPlatform framework is used as a base.]]></description>
     <author><![CDATA[PrestaShop]]></author>
     <tab><![CDATA[administration]]></tab>

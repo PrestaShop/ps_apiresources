@@ -44,9 +44,16 @@ use Symfony\Component\HttpFoundation\Response;
                 '[id_product]' => '[productId]',
                 '[price_tax_excluded_decimal_value]' => '[priceTaxExcluded]',
                 '[price_tax_included_decimal_value]' => '[priceTaxIncluded]',
+                '[active]' => '[enabled]',
             ],
             gridDataFactory: ProductGridDataFactoryDecorator::class,
             filtersClass: ProductFilters::class,
+            filtersMapping: [
+                '[productId]' => '[id_product]',
+                '[priceTaxExcluded]' => '[final_price_tax_excluded]',
+                '[priceTaxIncluded]' => '[final_price_tax_included]',
+                '[enabled]' => '[active]',
+            ],
         ),
     ],
     exceptionToStatus: [
@@ -61,7 +68,7 @@ class ProductList
 
     public string $type;
 
-    public bool $active;
+    public bool $enabled;
 
     public string $name;
 
