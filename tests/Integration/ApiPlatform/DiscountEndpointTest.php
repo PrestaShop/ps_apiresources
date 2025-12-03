@@ -129,7 +129,7 @@ class DiscountEndpointTest extends ApiTestCase
         return $discountId;
     }
 
-    public function discountTypesDataProvider(): array
+    public static function discountTypesDataProvider(): array
     {
         return [
             [

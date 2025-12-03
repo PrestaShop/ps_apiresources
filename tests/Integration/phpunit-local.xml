@@ -1,6 +1,7 @@
 <phpunit
     bootstrap="bootstrap-local.php"
     displayDetailsOnTestsThatTriggerWarnings="true"
+    displayDetailsOnPhpunitDeprecations="true"
     processIsolation="false">
   <php>
     <env name="KERNEL_CLASS" value="AdminKernel" />
