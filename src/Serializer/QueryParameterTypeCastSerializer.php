@@ -22,28 +22,13 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\Serializer;
 
-use PrestaShopBundle\ApiPlatform\ContextParametersProvider;
-use PrestaShopBundle\ApiPlatform\LocalizedValueUpdater;
-use PrestaShopBundle\ApiPlatform\NormalizationMapper;
 use PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer;
-use Symfony\Component\Serializer\Mapping\Factory\ClassMetadataFactoryInterface;
-use Symfony\Component\Serializer\Serializer;
 
 /**
  * Extends CQRSApiSerializer to add automatic type casting for query parameters.
  */
 class QueryParameterTypeCastSerializer extends CQRSApiSerializer
 {
-    public function __construct(
-        Serializer $decorated,
-        ContextParametersProvider $contextParametersProvider,
-        ClassMetadataFactoryInterface $classMetadataFactory,
-        LocalizedValueUpdater $localizedValueUpdater,
-        NormalizationMapper $normalizationMapper,
-    ) {
-        parent::__construct($decorated, $contextParametersProvider, $classMetadataFactory, $localizedValueUpdater, $normalizationMapper);
-    }
-
     /**
      * {@inheritdoc}
      */
