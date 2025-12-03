@@ -51,6 +51,9 @@ class AttributeGroupEndpointTest extends ApiTestCase
             'attribute_group',
             'attribute_group_lang',
             'attribute_group_shop',
+            'attribute',
+            'attribute_lang',
+            'attribute_shop',
         ]);
     }
 
@@ -79,6 +82,11 @@ class AttributeGroupEndpointTest extends ApiTestCase
         yield 'list endpoint' => [
             'GET',
             '/attributes/groups',
+        ];
+
+        yield 'update positions endpoint' => [
+            'PATCH',
+            '/attributes/groups/positions',
         ];
 
         yield 'bulk delete endpoint' => [
@@ -265,6 +273,119 @@ class AttributeGroupEndpointTest extends ApiTestCase
 
         // Getting the item should result in a 404 now
         $this->getItem('/attributes/groups/' . $attributeGroupId, ['attribute_group_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testAttributeGroupPositions(): void
+    {
+        // List default fixture Color
+        $list = $this->listItems('/attributes/groups?orderBy=position', ['attribute_group_read']);
+        $expectedAttributeGroups = [
+            [
+                'attributeGroupId' => 1,
+                'name' => 'Size',
+                'position' => 0,
+                'values' => 4,
+            ],
+            [
+                'attributeGroupId' => 2,
+                'name' => 'Color',
+                'position' => 1,
+                'values' => 14,
+            ],
+            [
+                'attributeGroupId' => 3,
+                'name' => 'Dimension',
+                'position' => 2,
+                'values' => 3,
+            ],
+            [
+                'attributeGroupId' => 4,
+                'name' => 'Paper Type',
+                'position' => 3,
+                'values' => 4,
+            ],
+        ];
+        $this->assertEquals($expectedAttributeGroups, $list['items']);
+
+        // Increase Size position
+        $this->partialUpdateItem('/attributes/groups/positions', [
+            'positions' => [
+                [
+                    'attributeGroupId' => 1,
+                    'newPosition' => 2,
+                ],
+            ],
+        ], ['attribute_group_write'], Response::HTTP_NO_CONTENT);
+
+        // Check updated order
+        $list = $this->listItems('/attributes/groups?orderBy=position', ['attribute_group_read']);
+        $expectedAttributeGroups = [
+            [
+                'attributeGroupId' => 2,
+                'name' => 'Color',
+                'position' => 0,
+                'values' => 14,
+            ],
+            [
+                'attributeGroupId' => 3,
+                'name' => 'Dimension',
+                'position' => 1,
+                'values' => 3,
+            ],
+            [
+                'attributeGroupId' => 1,
+                'name' => 'Size',
+                'position' => 2,
+                'values' => 4,
+            ],
+            [
+                'attributeGroupId' => 4,
+                'name' => 'Paper Type',
+                'position' => 3,
+                'values' => 4,
+            ],
+        ];
+        $this->assertEquals($expectedAttributeGroups, $list['items']);
+
+        // Decrease Paper Type position
+        $this->partialUpdateItem('/attributes/groups/positions', [
+            'positions' => [
+                [
+                    'attributeGroupId' => 4,
+                    'newPosition' => 1,
+                ],
+            ],
+        ], ['attribute_group_write'], Response::HTTP_NO_CONTENT);
+
+        // Check updated order
+        $list = $this->listItems('/attributes/groups?orderBy=position', ['attribute_group_read']);
+        $expectedAttributeGroups = [
+            [
+                'attributeGroupId' => 2,
+                'name' => 'Color',
+                'position' => 0,
+                'values' => 14,
+            ],
+            [
+                'attributeGroupId' => 4,
+                'name' => 'Paper Type',
+                'position' => 1,
+                'values' => 4,
+            ],
+            [
+                'attributeGroupId' => 3,
+                'name' => 'Dimension',
+                'position' => 2,
+                'values' => 3,
+            ],
+            [
+                'attributeGroupId' => 1,
+                'name' => 'Size',
+                'position' => 3,
+                'values' => 4,
+            ],
+        ];
+        $this->assertEquals($expectedAttributeGroups, $list['items']);
     }
 
     public function testBulkRemoveAttributeGroups(): void
