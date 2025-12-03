@@ -81,6 +81,11 @@ class AttributeEndpointTest extends ApiTestCase
             '/attributes/groups/1/attributes',
         ];
 
+        yield 'update positions endpoint' => [
+            'PATCH',
+            '/attributes/groups/1/attributes/positions',
+        ];
+
         yield 'bulk delete endpoint' => [
             'DELETE',
             '/attributes/attributes/bulk-delete',
@@ -278,6 +283,124 @@ class AttributeEndpointTest extends ApiTestCase
 
         // Only two attribute remain
         $this->assertEquals(2, $this->countItems('/attributes/groups/1/attributes', ['attribute_read']));
+    }
+
+    public function testAttributePositions(): void
+    {
+        // List default fixture Color
+        $list = $this->listItems('/attributes/groups/2/attributes?limit=5&orderBy=position', ['attribute_read']);
+        $expectedAttributes = [
+            [
+                'attributeId' => 5,
+                'name' => 'Gray',
+                'position' => 0,
+            ],
+            [
+                'attributeId' => 6,
+                'name' => 'Taupe',
+                'position' => 1,
+            ],
+            [
+                'attributeId' => 7,
+                'name' => 'Beige',
+                'position' => 2,
+            ],
+            [
+                'attributeId' => 8,
+                'name' => 'White',
+                'position' => 3,
+            ],
+            [
+                'attributeId' => 9,
+                'name' => 'Off White',
+                'position' => 4,
+            ],
+        ];
+        $this->assertEquals($expectedAttributes, $list['items']);
+
+        // Increase Gray position
+        $this->partialUpdateItem('/attributes/groups/2/attributes/positions', [
+            'positions' => [
+                [
+                    'attributeId' => 5,
+                    'newPosition' => 3,
+                ],
+            ],
+        ], ['attribute_write'], Response::HTTP_NO_CONTENT);
+
+        // Check updated order
+        $list = $this->listItems('/attributes/groups/2/attributes?limit=5&orderBy=position', ['attribute_read']);
+        $expectedAttributes = [
+            [
+                'attributeId' => 6,
+                'name' => 'Taupe',
+                'position' => 0,
+            ],
+            [
+                'attributeId' => 7,
+                'name' => 'Beige',
+                'position' => 1,
+            ],
+            [
+                'attributeId' => 8,
+                'name' => 'White',
+                'position' => 2,
+            ],
+            // Gray replaces white, since it came from lower White is pushed below
+            [
+                'attributeId' => 5,
+                'name' => 'Gray',
+                'position' => 3,
+            ],
+            [
+                'attributeId' => 9,
+                'name' => 'Off White',
+                'position' => 4,
+            ],
+        ];
+        $this->assertEquals($expectedAttributes, $list['items']);
+
+        // Decrease Gray position, so one new item and another disappears from the subset
+        $this->partialUpdateItem('/attributes/groups/2/attributes/positions', [
+            'positions' => [
+                [
+                    'attributeId' => 10,
+                    'newPosition' => 2,
+                ],
+            ],
+        ], ['attribute_write'], Response::HTTP_NO_CONTENT);
+
+        // Check updated order
+        $list = $this->listItems('/attributes/groups/2/attributes?limit=5&orderBy=position', ['attribute_read']);
+        $expectedAttributes = [
+            [
+                'attributeId' => 6,
+                'name' => 'Taupe',
+                'position' => 0,
+            ],
+            [
+                'attributeId' => 7,
+                'name' => 'Beige',
+                'position' => 1,
+            ],
+            // Red replaces White, since it came from upper white is pushed up along with all the following
+            [
+                'attributeId' => 10,
+                'name' => 'Red',
+                'position' => 2,
+            ],
+            [
+                'attributeId' => 8,
+                'name' => 'White',
+                'position' => 3,
+            ],
+            [
+                'attributeId' => 5,
+                'name' => 'Gray',
+                'position' => 4,
+            ],
+        ];
+        $this->assertEquals($expectedAttributes, $list['items']);
     }
 
     public function testInvalidAttribute(): void
