@@ -42,6 +42,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['search_alias_write'],
             CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
             output: false,
+            experimentalOperation: true,
         ),
     ],
     exceptionToStatus: [
