@@ -77,6 +77,11 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
             'PUT',
             '/tax-rules-groups/bulk-update-status',
         ];
+
+        yield 'toggle status endpoint' => [
+            'PATCH',
+            '/tax-rules-groups/1/update-status',
+        ];
     }
 
     public function testAddTaxRulesGroup(): int
@@ -185,6 +190,54 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
         );
 
         return $taxRulesGroupId;
+    }
+
+    /**
+     * @depends testGetTaxRulesGroup
+     *
+     * @param int $taxRulesGroupId
+     *
+     * @return int
+     */
+    public function testToggleTaxRulesGroupStatus(int $taxRulesGroupId): void
+    {
+        $response = $this->partialUpdateItem(
+            '/tax-rules-groups/' . $taxRulesGroupId . '/update-status',
+            ['enabled' => false],
+            ['tax_rules_group_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        $this->assertNull($response);
+
+        $taxRulesGroup = $this->getItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_read']);
+        $this->assertEquals(
+            [
+                'taxRulesGroupId' => $taxRulesGroupId,
+                'name' => 'My Tax Rules Group updated',
+                'enabled' => false,
+                'shopIds' => [1],
+            ],
+            $taxRulesGroup
+        );
+
+        $response = $this->partialUpdateItem(
+            '/tax-rules-groups/' . $taxRulesGroupId . '/update-status',
+            ['enabled' => true],
+            ['tax_rules_group_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        $this->assertNull($response);
+
+        $taxRulesGroup = $this->getItem('/tax-rules-groups/' . $taxRulesGroupId, ['tax_rules_group_read']);
+        $this->assertEquals(
+            [
+                'taxRulesGroupId' => $taxRulesGroupId,
+                'name' => 'My Tax Rules Group updated',
+                'enabled' => true,
+                'shopIds' => [1],
+            ],
+            $taxRulesGroup
+        );
     }
 
     /**
