@@ -62,6 +62,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/attributes/groups/{attributeGroupId}',
+            requirements: ['attributeGroupId' => '\d+'],
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditAttributeGroupCommand::class,
             CQRSQuery: GetAttributeGroupForEditing::class,

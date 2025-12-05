@@ -22,28 +22,16 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\Serializer;
 
-use PrestaShopBundle\ApiPlatform\ContextParametersProvider;
-use PrestaShopBundle\ApiPlatform\LocalizedValueUpdater;
-use PrestaShopBundle\ApiPlatform\NormalizationMapper;
 use PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer;
-use Symfony\Component\Serializer\Mapping\Factory\ClassMetadataFactoryInterface;
-use Symfony\Component\Serializer\Serializer;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionNamedType;
 
 /**
  * Extends CQRSApiSerializer to add automatic type casting for query parameters.
  */
 class QueryParameterTypeCastSerializer extends CQRSApiSerializer
 {
-    public function __construct(
-        Serializer $decorated,
-        ContextParametersProvider $contextParametersProvider,
-        ClassMetadataFactoryInterface $classMetadataFactory,
-        LocalizedValueUpdater $localizedValueUpdater,
-        NormalizationMapper $normalizationMapper,
-    ) {
-        parent::__construct($decorated, $contextParametersProvider, $classMetadataFactory, $localizedValueUpdater, $normalizationMapper);
-    }
-
     /**
      * {@inheritdoc}
      */
@@ -62,7 +50,7 @@ class QueryParameterTypeCastSerializer extends CQRSApiSerializer
     private function castQueryParametersToExpectedTypes(array $data, string $queryClass): array
     {
         try {
-            $reflection = new \ReflectionClass($queryClass);
+            $reflection = new ReflectionClass($queryClass);
             $constructor = $reflection->getConstructor();
 
             if (!$constructor) {
@@ -78,7 +66,7 @@ class QueryParameterTypeCastSerializer extends CQRSApiSerializer
 
                 $type = $parameter->getType();
 
-                if (!$type instanceof \ReflectionNamedType || !$type->isBuiltin()) {
+                if (!$type instanceof ReflectionNamedType || !$type->isBuiltin()) {
                     continue;
                 }
 
@@ -89,7 +77,7 @@ class QueryParameterTypeCastSerializer extends CQRSApiSerializer
                     default => $data[$paramName],
                 };
             }
-        } catch (\ReflectionException $e) {
+        } catch (ReflectionException $e) {
             return $data;
         }
 
