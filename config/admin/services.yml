@@ -47,3 +47,15 @@ services:
     autowire: true
     arguments:
       $decorated: '@.inner'
+
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\BulkCustomersDeleteProcessor:
+    tags:
+      - { name: 'api_platform.state_processor' }
+    arguments:
+      $commandProcessor: '@PrestaShopBundle\ApiPlatform\Processor\CommandProcessor'
+
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\BulkDeleteCustomerCommandDenormalizer:
+    tags:
+      - { name: 'serializer.normalizer', priority: 100 }
+    arguments:
+      $denormalizer: '@PrestaShopBundle\ApiPlatform\Normalizer\CQRSApiNormalizer'
