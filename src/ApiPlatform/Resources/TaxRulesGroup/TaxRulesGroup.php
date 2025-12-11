@@ -27,6 +27,7 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Command\AddTaxRulesGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Command\DeleteTaxRulesGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Command\EditTaxRulesGroupCommand;
+use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Command\SetTaxRulesGroupStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\CannotAddTaxRulesGroupException;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Query\GetTaxRulesGroupForEditing;
@@ -69,6 +70,18 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetTaxRulesGroupForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['tax_rules_group_write'],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/tax-rules-groups/{taxRulesGroupId}/update-status',
+            requirements: ['taxRulesGroupId' => '\d+'],
+            output: false,
+            read: false,
+            CQRSCommand: SetTaxRulesGroupStatusCommand::class,
+            scopes: ['tax_rules_group_write'],
+            // No output 204 code
+            CQRSCommandMapping: [
+                '[enabled]' => '[expectedStatus]',
+            ],
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
