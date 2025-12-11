@@ -100,10 +100,10 @@ class CustomerEndpointTest extends ApiTestCase
             'defaultGroupId' => 3,
             'groupIds' => [3],
             'genderId' => 1,
-            'isEnabled' => true,
-            'isPartnerOffersSubscribed' => true,
+            'enabled' => true,
+            'partnerOffersSubscribed' => true,
             'birthday' => '1990-01-15',
-            'isGuest' => false,
+            'guest' => false,
         ];
 
         $customer = $this->createItem('/customers', $postData, ['customer_write']);
@@ -111,23 +111,28 @@ class CustomerEndpointTest extends ApiTestCase
         $customerId = $customer['customerId'];
 
         // Check that all data was saved correctly
-        $this->assertEquals($postData['firstName'], $customer['firstName']);
-        $this->assertEquals($postData['lastName'], $customer['lastName']);
-        $this->assertEquals($postData['email'], $customer['email']);
-        $this->assertEquals($postData['defaultGroupId'], $customer['defaultGroupId']);
-        $this->assertEquals($postData['groupIds'], $customer['groupIds']);
-        if (isset($customer['genderId'])) {
-            $this->assertEquals($postData['genderId'], $customer['genderId']);
-        }
-        if (isset($customer['isPartnerOffersSubscribed'])) {
-            $this->assertEquals($postData['isPartnerOffersSubscribed'], $customer['isPartnerOffersSubscribed']);
-        }
-        if (isset($postData['birthday']) && isset($customer['birthday'])) {
-            $this->assertEquals($postData['birthday'], $customer['birthday']);
-        }
-        if (isset($customer['isGuest'])) {
-            $this->assertEquals($postData['isGuest'], $customer['isGuest']);
-        }
+        $expectedData = [
+            'customerId' => $customerId,
+            'firstName' => 'Jane',
+            'lastName' => 'Doe',
+            'email' => 'jane.doe@example.com',
+            'defaultGroupId' => 3,
+            'groupIds' => [3],
+            'genderId' => 1,
+            'enabled' => true,
+            'partnerOffersSubscribed' => true,
+            'birthday' => '1990-01-15',
+            'guest' => false,
+            'newsletterSubscribed' => false,
+            'companyName' => '',
+            'siretCode' => '',
+            'apeCode' => '',
+            'website' => '',
+            'allowedOutstandingAmount' => 0.0,
+            'maxPaymentDays' => 0,
+            'riskId' => 0,
+        ];
+        $this->assertEquals($expectedData, $customer);
 
         return $customerId;
     }
@@ -142,10 +147,10 @@ class CustomerEndpointTest extends ApiTestCase
             'defaultGroupId' => 3,
             'groupIds' => [3],
             'genderId' => 2,
-            'isEnabled' => true,
-            'isPartnerOffersSubscribed' => true,
+            'enabled' => true,
+            'partnerOffersSubscribed' => true,
             'birthday' => '1985-05-20',
-            'isGuest' => false,
+            'guest' => false,
             'companyName' => 'Test Company',
             'siretCode' => '12345678901234',
             'apeCode' => '1234Z',
@@ -160,16 +165,28 @@ class CustomerEndpointTest extends ApiTestCase
         $customerId = $customer['customerId'];
 
         // Check that all data was saved correctly
-        $this->assertEquals($postData['firstName'], $customer['firstName']);
-        $this->assertEquals($postData['lastName'], $customer['lastName']);
-        $this->assertEquals($postData['email'], $customer['email']);
-        $this->assertEquals($postData['companyName'], $customer['companyName']);
-        $this->assertEquals($postData['siretCode'], $customer['siretCode']);
-        $this->assertEquals($postData['apeCode'], $customer['apeCode']);
-        $this->assertEquals($postData['website'], $customer['website']);
-        $this->assertEquals($postData['allowedOutstandingAmount'], $customer['allowedOutstandingAmount']);
-        $this->assertEquals($postData['maxPaymentDays'], $customer['maxPaymentDays']);
-        $this->assertEquals($postData['riskId'], $customer['riskId']);
+        $expectedData = [
+            'customerId' => $customerId,
+            'firstName' => 'Jane',
+            'lastName' => 'Smith',
+            'email' => 'jane.smith@example.com',
+            'defaultGroupId' => 3,
+            'groupIds' => [3],
+            'genderId' => 2,
+            'enabled' => true,
+            'partnerOffersSubscribed' => true,
+            'birthday' => '1985-05-20',
+            'guest' => false,
+            'newsletterSubscribed' => false,
+            'companyName' => 'Test Company',
+            'siretCode' => '12345678901234',
+            'apeCode' => '1234Z',
+            'website' => 'https://www.example.com',
+            'allowedOutstandingAmount' => 1000.50,
+            'maxPaymentDays' => 30,
+            'riskId' => 1,
+        ];
+        $this->assertEquals($expectedData, $customer);
 
         return $customerId;
     }
@@ -190,22 +207,28 @@ class CustomerEndpointTest extends ApiTestCase
         $customerId = $customer['customerId'];
 
         // Check that all required data was saved correctly
-        $this->assertEquals($postData['firstName'], $customer['firstName']);
-        $this->assertEquals($postData['lastName'], $customer['lastName']);
-        $this->assertEquals($postData['email'], $customer['email']);
-        $this->assertEquals($postData['defaultGroupId'], $customer['defaultGroupId']);
-        $this->assertEquals($postData['groupIds'], $customer['groupIds']);
-
-        // Check default values - isEnabled might not be in response, check if it exists
-        if (isset($customer['isEnabled'])) {
-            $this->assertTrue($customer['isEnabled']);
-        }
-        if (isset($customer['isPartnerOffersSubscribed'])) {
-            $this->assertFalse($customer['isPartnerOffersSubscribed']);
-        }
-        if (isset($customer['isGuest'])) {
-            $this->assertFalse($customer['isGuest']);
-        }
+        $expectedData = [
+            'customerId' => $customerId,
+            'firstName' => 'Minimal',
+            'lastName' => 'Customer',
+            'email' => 'minimal.customer@example.com',
+            'defaultGroupId' => 3,
+            'groupIds' => [3],
+            'genderId' => 0,
+            'enabled' => true,
+            'partnerOffersSubscribed' => false,
+            'birthday' => '0000-00-00',
+            'guest' => false,
+            'newsletterSubscribed' => false,
+            'companyName' => '',
+            'siretCode' => '',
+            'apeCode' => '',
+            'website' => '',
+            'allowedOutstandingAmount' => 0.0,
+            'maxPaymentDays' => 0,
+            'riskId' => 0,
+        ];
+        $this->assertEquals($expectedData, $customer);
 
         return $customerId;
     }
@@ -218,9 +241,10 @@ class CustomerEndpointTest extends ApiTestCase
             'email' => 'jane.guest@example.com',
             'password' => 'INVALID',
             'genderId' => 2,
-            'isGuest' => true,
+            'guest' => true,
             'defaultGroupId' => 1,
             'groupIds' => [1],
+            'enabled' => false,
         ];
 
         $customer = $this->createItem('/customers', $postData, ['customer_write']);
@@ -228,17 +252,28 @@ class CustomerEndpointTest extends ApiTestCase
         $customerId = $customer['customerId'];
 
         // Check that all data was saved correctly
-        $this->assertEquals($postData['firstName'], $customer['firstName']);
-        $this->assertEquals($postData['lastName'], $customer['lastName']);
-        $this->assertEquals($postData['email'], $customer['email']);
-        $this->assertEquals($postData['defaultGroupId'], $customer['defaultGroupId']);
-        $this->assertEquals($postData['groupIds'], $customer['groupIds']);
-        if (isset($customer['genderId'])) {
-            $this->assertEquals($postData['genderId'], $customer['genderId']);
-        }
-        if (isset($customer['isGuest'])) {
-            $this->assertTrue($customer['isGuest']);
-        }
+        $expectedData = [
+            'customerId' => $customerId,
+            'firstName' => 'Jane',
+            'lastName' => 'GUEST',
+            'email' => 'jane.guest@example.com',
+            'defaultGroupId' => 1,
+            'groupIds' => [1],
+            'genderId' => 2,
+            'enabled' => false,
+            'partnerOffersSubscribed' => false,
+            'birthday' => '0000-00-00',
+            'guest' => true,
+            'newsletterSubscribed' => false,
+            'companyName' => '',
+            'siretCode' => '',
+            'apeCode' => '',
+            'website' => '',
+            'allowedOutstandingAmount' => 0.0,
+            'maxPaymentDays' => 0,
+            'riskId' => 0,
+        ];
+        $this->assertEquals($expectedData, $customer);
 
         return $customerId;
     }
@@ -308,23 +343,17 @@ class CustomerEndpointTest extends ApiTestCase
         $updatedCustomer = $this->partialUpdateItem('/customers/' . $customerId, [
             'lastName' => 'Smith',
             'email' => $uniqueEmail,
-            'isEnabled' => false,
-            'isNewsletterSubscribed' => true,
-            'isPartnerOffersSubscribed' => true,
+            'enabled' => false,
+            'newsletterSubscribed' => true,
+            'partnerOffersSubscribed' => true,
         ], ['customer_write']);
 
         $this->assertEquals('Jane', $updatedCustomer['firstName']);
         $this->assertEquals('Smith', $updatedCustomer['lastName']);
         $this->assertEquals($uniqueEmail, $updatedCustomer['email']);
-        if (isset($updatedCustomer['isEnabled'])) {
-            $this->assertFalse($updatedCustomer['isEnabled']);
-        }
-        if (isset($updatedCustomer['isNewsletterSubscribed'])) {
-            $this->assertTrue($updatedCustomer['isNewsletterSubscribed']);
-        }
-        if (isset($updatedCustomer['isPartnerOffersSubscribed'])) {
-            $this->assertTrue($updatedCustomer['isPartnerOffersSubscribed']);
-        }
+        $this->assertFalse($updatedCustomer['enabled']);
+        $this->assertTrue($updatedCustomer['newsletterSubscribed']);
+        $this->assertTrue($updatedCustomer['partnerOffersSubscribed']);
 
         return $customerId;
     }
@@ -467,15 +496,7 @@ class CustomerEndpointTest extends ApiTestCase
         ], ['customer_write']);
 
         $this->assertEquals(3, $updatedCustomer['defaultGroupId']);
-        // Verify groups were updated
-        if (isset($updatedCustomer['groupIds'])) {
-            $this->assertContains(3, $updatedCustomer['groupIds']);
-        } else {
-            // If not in response, check database directly
-            $db = $this->getContainer()->get('doctrine.dbal.default_connection');
-            $groups = $db->fetchFirstColumn('SELECT id_group FROM ps_customer_group WHERE id_customer = ?', [$customerId]);
-            $this->assertContains(3, $groups);
-        }
+        $this->assertContains(3, $updatedCustomer['groupIds']);
 
         return $customerId;
     }
@@ -754,7 +775,7 @@ class CustomerEndpointTest extends ApiTestCase
                 'password' => 'TestPassword123!',
                 'defaultGroupId' => 3,
                 'groupIds' => [3],
-                'isEnabled' => true,
+                'enabled' => true,
             ];
             $customer = $this->createItem('/customers', $postData, ['customer_write']);
             $customers[] = $customer['customerId'];
@@ -787,7 +808,7 @@ class CustomerEndpointTest extends ApiTestCase
                 'password' => 'TestPassword123!',
                 'defaultGroupId' => 3,
                 'groupIds' => [3],
-                'isEnabled' => false,
+                'enabled' => false,
             ];
             $customer = $this->createItem('/customers', $postData, ['customer_write']);
             $customers[] = $customer['customerId'];
@@ -853,7 +874,7 @@ class CustomerEndpointTest extends ApiTestCase
             'password' => 'TestPassword123!',
             'defaultGroupId' => 3,
             'groupIds' => [3],
-            'isEnabled' => true,
+            'enabled' => true,
         ];
 
         $customer = $this->createItem('/customers', $postData, ['customer_write']);
@@ -892,7 +913,7 @@ class CustomerEndpointTest extends ApiTestCase
             'password' => 'TestPassword123!',
             'defaultGroupId' => 3,
             'groupIds' => [3],
-            'isEnabled' => true,
+            'enabled' => true,
         ];
 
         $customer = $this->createItem('/customers', $postData, ['customer_write']);
@@ -932,7 +953,7 @@ class CustomerEndpointTest extends ApiTestCase
             'password' => 'TestPassword123!',
             'defaultGroupId' => 3,
             'groupIds' => [3],
-            'isEnabled' => true,
+            'enabled' => true,
         ];
 
         $postData2 = [
@@ -942,7 +963,7 @@ class CustomerEndpointTest extends ApiTestCase
             'password' => 'TestPassword123!',
             'defaultGroupId' => 3,
             'groupIds' => [3],
-            'isEnabled' => true,
+            'enabled' => true,
         ];
 
         $customer1 = $this->createItem('/customers', $postData1, ['customer_write']);
@@ -971,10 +992,10 @@ class CustomerEndpointTest extends ApiTestCase
             'defaultGroupId' => 3,
             'groupIds' => [3],
             'genderId' => 1,
-            'isEnabled' => true,
-            'isPartnerOffersSubscribed' => false,
+            'enabled' => true,
+            'partnerOffersSubscribed' => false,
             'birthday' => '1990-01-15',
-            'isGuest' => false,
+            'guest' => false,
         ];
 
         $customer = $this->createItem('/customers', $postData, ['customer_write']);
