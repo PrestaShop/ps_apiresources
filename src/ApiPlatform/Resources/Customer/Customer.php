@@ -109,6 +109,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
     ],
+    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         CustomerConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
@@ -146,13 +147,13 @@ class Customer
     public ?int $genderId;
 
     #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => true])]
-    public bool $isEnabled;
+    public bool $enabled;
 
     #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => false])]
-    public ?bool $isNewsletterSubscribed;
+    public bool $newsletterSubscribed;
 
     #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => false])]
-    public bool $isPartnerOffersSubscribed;
+    public bool $partnerOffersSubscribed;
 
     public ?string $birthday;
 
@@ -174,7 +175,7 @@ class Customer
     public ?int $riskId;
 
     #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => false])]
-    public bool $isGuest;
+    public bool $guest;
 
     public ?string $deleteMethod;
 
@@ -184,6 +185,9 @@ class Customer
 
     public const COMMAND_MAPPING = [
         '[_context][shopId]' => '[shopId]',
+        '[partnerOffersSubscribed]' => '[isPartnerOffersSubscribed]',
+        '[guest]' => '[isGuest]',
+        '[enabled]' => '[isEnabled]',
     ];
 
     public const DELETE_COMMAND_MAPPING = [
