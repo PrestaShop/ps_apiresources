@@ -37,6 +37,7 @@ use Symfony\Component\HttpFoundation\Response;
             ApiResourceMapping: [
                 '[id_discount]' => '[discountId]',
                 '[active]' => '[enabled]',
+                '[discount_type]' => '[type]',
             ],
             gridDataFactory: 'prestashop.core.grid.data.factory.discount',
             filtersClass: DiscountFilters::class,
