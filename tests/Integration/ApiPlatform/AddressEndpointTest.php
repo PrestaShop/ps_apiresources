@@ -31,7 +31,7 @@ class AddressEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['address', 'customer']);
+        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer', 'cart']);
         self::createApiClient(['address_write', 'address_read']);
     }
 
@@ -39,7 +39,7 @@ class AddressEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         // Reset DB as it was before this test
-        DatabaseDump::restoreTables(['address', 'customer']);
+        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer', 'cart']);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -73,6 +73,221 @@ class AddressEndpointTest extends ApiTestCase
             'DELETE',
             '/addresses/bulk-delete',
         ];
+
+        yield 'get manufacturer address endpoint' => [
+            'GET',
+            '/addresses/manufacturers/1',
+        ];
+
+        yield 'create manufacturer address endpoint' => [
+            'POST',
+            '/addresses/manufacturers',
+        ];
+
+        yield 'update manufacturer address endpoint' => [
+            'PATCH',
+            '/addresses/manufacturers/1',
+        ];
+
+        yield 'update cart delivery address endpoint' => [
+            'PATCH',
+            '/addresses/carts/1',
+        ];
+
+        yield 'update order delivery address endpoint' => [
+            'PATCH',
+            '/addresses/orders/1',
+        ];
+    }
+
+    public function testAddManufacturerAddress(): int
+    {
+        $postData = [
+            'manufacturerId' => 1,
+            'firstName' => 'Manu',
+            'lastName' => 'Facturer',
+            'address' => '11 Rue du Fabricant',
+            'address2' => 'Bâtiment B',
+            'city' => 'Paris',
+            'postCode' => '75001',
+            'countryId' => 8,
+            'stateId' => 0,
+            'homePhone' => '0123456789',
+            'mobilePhone' => '0612345678',
+            'other' => 'Entrée côté quai',
+            'dni' => 'ABC123456',
+        ];
+
+        $manufacturerAddress = $this->createItem('/addresses/manufacturers', $postData, ['address_write']);
+        $this->assertArrayHasKey('addressId', $manufacturerAddress);
+        $addressId = $manufacturerAddress['addressId'];
+
+        foreach ($postData as $key => $value) {
+            $this->assertEquals($value, $manufacturerAddress[$key], 'Manufacturer address data mismatch for key: ' . $key);
+        }
+
+        return $addressId;
+    }
+
+    /**
+     * @depends testAddManufacturerAddress
+     */
+    public function testUpdateManufacturerAddress(int $addressId): int
+    {
+        $updatedData = [
+            'firstName' => 'Marie',
+            'lastName' => 'Fab',
+            'address' => '22 Avenue Industrie',
+            'city' => 'Lyon',
+            'postCode' => '69001',
+            'homePhone' => '0199999999',
+        ];
+
+        $updated = $this->partialUpdateItem('/addresses/manufacturers/' . $addressId, $updatedData, ['address_write']);
+        $this->assertEquals($addressId, $updated['addressId']);
+        foreach ($updatedData as $key => $value) {
+            $this->assertEquals($value, $updated[$key], 'Manufacturer address update mismatch for key: ' . $key);
+        }
+
+        return $addressId;
+    }
+
+    /**
+     * @depends testUpdateManufacturerAddress
+     */
+    public function testGetManufacturerAddress(int $addressId): void
+    {
+        $expected = $this->getItem('/addresses/manufacturers/' . $addressId, ['address_read']);
+        $this->assertEquals($addressId, $expected['addressId']);
+        $this->assertEquals('Marie', $expected['firstName']);
+        $this->assertEquals('Fab', $expected['lastName']);
+        $this->assertEquals('22 Avenue Industrie', $expected['address']);
+        $this->assertEquals('Lyon', $expected['city']);
+        $this->assertEquals('69001', $expected['postCode']);
+    }
+
+    public function testUpdateCartAddress(): void
+    {
+        $updatedData = [
+            'addressType' => 'delivery_address',
+            'addressAlias' => 'Cart updated',
+            'firstName' => 'John NEW',
+            'lastName' => 'CART DELIVERY',
+            'address' => '42 street Example',
+            'address2' => 'line 42',
+            'city' => 'Orleans',
+            'postCode' => '45000',
+            'countryId' => 8,
+            'stateId' => 0,
+            'company' => 'Test Company',
+            'homePhone' => '0238123456',
+            'mobilePhone' => '0612345678',
+            'other' => 'other data',
+            'dni' => '123456798',
+            'vatNumber' => 'FR66497916635',
+        ];
+
+        // Use cart ID 1 from test database
+        $updated = $this->partialUpdateItem('/addresses/carts/1', $updatedData, ['address_write']);
+        $this->assertEquals(1, $updated['cartId']);
+
+        // Verify all updated fields are returned (addressType is not returned, it's only an input parameter)
+        foreach ($updatedData as $key => $value) {
+            if ($key !== 'addressType') {
+                $this->assertEquals($value, $updated[$key], 'Cart address update mismatch for key: ' . $key);
+            }
+        }
+    }
+
+    public function testUpdateCartAddressNotFound(): void
+    {
+        $updatedData = [
+            'addressType' => 'delivery_address',
+            'firstName' => 'Cart',
+            'lastName' => 'User',
+            'address' => '10 Rue du Panier',
+            'city' => 'Marseille',
+            'postCode' => '13001',
+        ];
+
+        // Expect 404 for non existing cart id
+        $this->partialUpdateItem('/addresses/carts/999999', $updatedData, ['address_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testUpdateOrderAddress(): void
+    {
+        // First, create a customer address that we'll use for the order
+        $addressData = [
+            'customerId' => 1,
+            'addressAlias' => 'Order Test Address',
+            'firstName' => 'Order',
+            'lastName' => 'Test',
+            'address' => '1 street Example',
+            'city' => 'Orleans',
+            'postCode' => '45000',
+            'countryId' => 8,
+            'stateId' => 0,
+        ];
+        $customerAddress = $this->createItem('/addresses/customers', $addressData, ['address_write']);
+        $addressId = $customerAddress['addressId'];
+
+        // Create a minimal order with this address
+        $order = new \Order();
+        $order->id_customer = 1;
+        $order->id_address_invoice = $addressId;
+        $order->id_address_delivery = $addressId;
+        $order->id_cart = 1;
+        $order->id_currency = 1;
+        $order->id_carrier = 1;
+        $order->id_shop = 1;
+        $order->id_shop_group = 1;
+        $order->payment = 'Payment by check';
+        $order->module = 'ps_checkpayment';
+        $order->total_paid = $order->total_paid_real = $order->total_paid_tax_incl = $order->total_paid_tax_excl = 42;
+        $order->total_products = $order->total_products_wt = 42;
+        $order->conversion_rate = 1.0;
+        $order->save();
+        $orderId = $order->id;
+
+        $updatedData = [
+            'addressType' => 'invoice_address',
+            'addressAlias' => 'Test',
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+            'address' => '1 street Example',
+            'city' => 'Orleans',
+            'postCode' => '45000',
+            'countryId' => 8,
+            'stateId' => 0,
+        ];
+
+        $updated = $this->partialUpdateItem('/addresses/orders/' . $orderId, $updatedData, ['address_write']);
+        $this->assertEquals($orderId, $updated['orderId']);
+
+        // Verify all updated fields are returned (addressType is not returned, it's only an input parameter)
+        foreach ($updatedData as $key => $value) {
+            if ($key !== 'addressType') {
+                $this->assertEquals($value, $updated[$key], 'Order address update mismatch for key: ' . $key);
+            }
+        }
+
+        // Cleanup: delete the order
+        $order->delete();
+    }
+
+    public function testUpdateOrderAddressNotFound(): void
+    {
+        $updatedData = [
+            'addressType' => 'delivery_address',
+            'firstName' => 'Order',
+            'lastName' => 'User',
+            'address' => '11 Rue de la Paix',
+            'city' => 'Paris',
+            'postCode' => '75002',
+        ];
+
+        // Expect 422 because underlying address resolution fails when order is invalid
+        $this->partialUpdateItem('/addresses/orders/999999', $updatedData, ['address_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testAddCustomerAddress(): int
@@ -159,7 +374,8 @@ class AddressEndpointTest extends ApiTestCase
         $updatedAddress = $this->partialUpdateItem('/addresses/customers/' . $addressId, $updatedData, ['address_write']);
 
         // Check that the data was updated correctly
-        $this->assertEquals($addressId, $updatedAddress['addressId']);
+        $this->assertArrayHasKey('addressId', $updatedAddress);
+        $this->assertEquals($addressId, $updatedAddress['addressId'], 'Address ID mismatch after update');
         foreach ($updatedData as $key => $value) {
             $this->assertEquals($value, $updatedAddress[$key], 'Address data mismatch for key: ' . $key);
         }
