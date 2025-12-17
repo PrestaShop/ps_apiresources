@@ -56,6 +56,9 @@ services:
       $decorated: '@serializer.normalizer.object'
     tags:
       - { name: 'serializer.normalizer', priority: 300 }
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\DateTimeImmutableNormalizer:
+    tags:
+      - { name: 'serializer.normalizer', priority: 100 }
 
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
@@ -75,3 +78,8 @@ services:
       - { name: 'serializer.normalizer', priority: 100 }
     arguments:
       $denormalizer: '@PrestaShopBundle\ApiPlatform\Normalizer\CQRSApiNormalizer'
+  PrestaShop\Module\APIResources\ApiPlatform\Provider\SpecificPriceListProvider:
+    autowire: true
+    public: true
+    tags:
+      - { name: 'api_platform.state_provider' }
