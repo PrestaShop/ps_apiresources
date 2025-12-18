@@ -118,6 +118,7 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         'upload-source',
         'thumbnail',
         'logo',
+        'duplicate',
     ];
 
     public function __construct()

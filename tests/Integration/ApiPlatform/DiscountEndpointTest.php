@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
+use Symfony\Component\HttpFoundation\Request;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 
@@ -433,5 +434,27 @@ class DiscountEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('countryIds', $conditions);
 
         $this->addToAssertionCount(1);
+    }
+
+    /**
+     * @depends testCreateDiscountForUpdateTests
+     *
+     * @param int $discountId
+     *
+     * @return void
+     */
+    public function testDuplicateDiscount(int $discountId): void
+    {
+        $newDiscount = $this->requestApi(
+            httpMethod: Request::METHOD_POST,
+            endPointUrl: '/discounts/' . $discountId . '/duplicate',
+            data: [null], // (need with POST method to avoid 400 error on empty body with json content-type)
+            scopes: ['discount_write']
+        );
+
+        $this->assertArrayHasKey('discountId', $newDiscount);
+        $this->assertNotEquals($discountId, $newDiscount['discountId']);
+        $this->assertEquals('copy of Updated EN name', $newDiscount['names']['en-US']);
+        $this->assertEquals('copie de Updated FR name', $newDiscount['names']['fr-FR']);
     }
 }
