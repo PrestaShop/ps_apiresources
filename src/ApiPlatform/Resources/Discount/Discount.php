@@ -22,9 +22,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DeleteDiscountCommand;
+use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DuplicateDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\UpdateDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
@@ -70,6 +72,19 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'discount_write',
             ],
+        ),
+        new CQRSCreate(
+            uriTemplate: '/discounts/{discountId}/duplicate',
+            requirements: ['discountId' => '\d+'],
+            CQRSCommand: DuplicateDiscountCommand::class,
+            CQRSQuery: GetDiscountForEditing::class,
+            scopes: ['discount_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            allowEmptyBody: true,
+            openapi: new OpenApiOperation(
+                summary: 'Duplicate a Discount resource.',
+                description: 'Creates a copy of an existing Discount resource.',
+            )
         ),
     ],
     exceptionToStatus: [
