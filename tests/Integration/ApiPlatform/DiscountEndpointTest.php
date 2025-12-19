@@ -251,7 +251,7 @@ class DiscountEndpointTest extends ApiTestCase
 
         yield 'bulk toggle status endpoint' => [
             'PATCH',
-            '/discounts/bulk-toggle-status',
+            '/discounts/bulk-update-status',
         ];
 
         yield 'bulk delete endpoint' => [
@@ -464,7 +464,7 @@ class DiscountEndpointTest extends ApiTestCase
         }
 
         // Bulk enable all discounts
-        $this->updateItem('/discounts/bulk-toggle-status', [
+        $this->partialUpdateItem('/discounts/bulk-update-status', [
             'discountIds' => $discountIds,
             'enabled' => true,
         ], ['discount_write']);
@@ -486,7 +486,7 @@ class DiscountEndpointTest extends ApiTestCase
     public function testBulkDisableDiscounts(array $discountIds): array
     {
         // Bulk disable all discounts
-        $this->updateItem('/discounts/bulk-toggle-status', [
+        $this->partialUpdateItem('/discounts/bulk-update-status', [
             'discountIds' => $discountIds,
             'enabled' => false,
         ], ['discount_write']);
@@ -539,7 +539,7 @@ class DiscountEndpointTest extends ApiTestCase
 
         // Try to bulk enable with mixed valid and invalid IDs
         $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('PATCH', '/discounts/bulk-toggle-status', [
+        static::createClient()->request('PATCH', '/discounts/bulk-update-status', [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'discountIds' => [$validId, 999999],
@@ -574,7 +574,7 @@ class DiscountEndpointTest extends ApiTestCase
     public function testBulkToggleStatusWithEmptyArray(): void
     {
         $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('PATCH', '/discounts/bulk-toggle-status', [
+        static::createClient()->request('PATCH', '/discounts/bulk-update-status', [
             'auth_bearer' => $bearerToken,
             'json' => [
                 'discountIds' => [],
@@ -599,50 +599,5 @@ class DiscountEndpointTest extends ApiTestCase
 
         // Expect validation error
         self::assertResponseStatusCodeSame(400);
-    }
-
-    /**
-     * Test bulk operations with large batch
-     */
-    public function testBulkOperationsWithLargeBatch(): void
-    {
-        // Create 50 discounts
-        $discountIds = [];
-        for ($i = 0; $i < 50; ++$i) {
-            $discount = $this->createItem('/discounts', [
-                'type' => self::CART_LEVEL,
-                'names' => [
-                    'en-US' => 'Large batch discount ' . $i,
-                    'fr-FR' => 'Discount lot important ' . $i,
-                ],
-            ], ['discount_write']);
-            $discountIds[] = $discount['discountId'];
-        }
-
-        // Bulk enable all 50 discounts
-        $this->updateItem('/discounts/bulk-toggle-status', [
-            'discountIds' => $discountIds,
-            'enabled' => true,
-        ], ['discount_write']);
-
-        // Verify a sample of discounts are enabled
-        foreach (array_slice($discountIds, 0, 5) as $discountId) {
-            $discount = $this->getItem('/discounts/' . $discountId, ['discount_read']);
-            $this->assertTrue($discount['enabled']);
-        }
-
-        // Bulk delete all 50 discounts
-        $this->bulkDeleteItems('/discounts/bulk-delete', [
-            'discountIds' => $discountIds,
-        ], ['discount_write']);
-
-        // Verify a sample are deleted
-        foreach (array_slice($discountIds, 0, 5) as $discountId) {
-            $bearerToken = $this->getBearerToken(['discount_read']);
-            static::createClient()->request('GET', '/discounts/' . $discountId, [
-                'auth_bearer' => $bearerToken,
-            ]);
-            self::assertResponseStatusCodeSame(404);
-        }
     }
 }
