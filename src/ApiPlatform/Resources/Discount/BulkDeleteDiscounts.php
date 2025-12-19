@@ -23,6 +23,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\BulkDeleteDiscountsCommand;
+use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\BulkDiscountException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
@@ -38,11 +39,32 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'discount_write',
             ],
             allowEmptyBody: false,
+            openapiContext: [
+                'requestBody' => [
+                    'content' => [
+                        'application/json' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'discountIds' => [
+                                        'type' => 'array',
+                                        'items' => ['type' => 'integer'],
+                                    ],
+                                ],
+                            ],
+                            'example' => [
+                                'discountIds' => [1, 3],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ),
     ],
     exceptionToStatus: [
         DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
         DiscountConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        BulkDiscountException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkDeleteDiscounts

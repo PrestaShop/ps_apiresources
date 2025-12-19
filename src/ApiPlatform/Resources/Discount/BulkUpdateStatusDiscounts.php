@@ -23,6 +23,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\BulkUpdateDiscountsStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\BulkDiscountException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -44,6 +45,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
+        BulkDiscountException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkUpdateStatusDiscounts
