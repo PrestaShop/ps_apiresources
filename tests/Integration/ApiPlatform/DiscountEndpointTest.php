@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 
@@ -467,7 +468,7 @@ class DiscountEndpointTest extends ApiTestCase
         $this->partialUpdateItem('/discounts/bulk-update-status', [
             'discountIds' => $discountIds,
             'enabled' => true,
-        ], ['discount_write']);
+        ], ['discount_write'], Response::HTTP_NO_CONTENT);
 
         // Verify all discounts are enabled
         foreach ($discountIds as $discountId) {
@@ -489,7 +490,7 @@ class DiscountEndpointTest extends ApiTestCase
         $this->partialUpdateItem('/discounts/bulk-update-status', [
             'discountIds' => $discountIds,
             'enabled' => false,
-        ], ['discount_write']);
+        ], ['discount_write'], Response::HTTP_NO_CONTENT);
 
         // Verify all discounts are disabled
         foreach ($discountIds as $discountId) {
@@ -547,8 +548,8 @@ class DiscountEndpointTest extends ApiTestCase
             ],
         ]);
 
-        // Expect an error response
-        self::assertResponseStatusCodeSame(404);
+        // Expect an error response (422 for bulk operations with invalid items)
+        self::assertResponseStatusCodeSame(422);
     }
 
     /**

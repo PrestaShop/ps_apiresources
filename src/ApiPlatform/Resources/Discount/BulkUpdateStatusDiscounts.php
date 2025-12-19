@@ -26,7 +26,6 @@ use PrestaShop\PrestaShop\Core\Domain\Discount\Command\BulkUpdateDiscountsStatus
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\BulkDiscountException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
