@@ -599,6 +599,6 @@ class DiscountEndpointTest extends ApiTestCase
         ]);
 
         // Expect validation error
-        self::assertResponseStatusCodeSame(400);
+        self::assertResponseStatusCodeSame(422);
     }
 }
