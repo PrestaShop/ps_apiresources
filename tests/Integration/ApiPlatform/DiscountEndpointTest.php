@@ -515,11 +515,7 @@ class DiscountEndpointTest extends ApiTestCase
 
         // Verify all discounts are deleted
         foreach ($discountIds as $discountId) {
-            $bearerToken = $this->getBearerToken(['discount_read']);
-            static::createClient()->request('GET', '/discounts/' . $discountId, [
-                'auth_bearer' => $bearerToken,
-            ]);
-            self::assertResponseStatusCodeSame(404);
+            $this->getItem('/discounts/' . $discountId, ['discount_read'], 404);
         }
     }
 
@@ -539,17 +535,10 @@ class DiscountEndpointTest extends ApiTestCase
         $validId = $discount['discountId'];
 
         // Try to bulk enable with mixed valid and invalid IDs
-        $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('PATCH', '/discounts/bulk-update-status', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'discountIds' => [$validId, 999999],
-                'enabled' => true,
-            ],
-        ]);
-
-        // Expect an error response (422 for bulk operations with invalid items)
-        self::assertResponseStatusCodeSame(422);
+        $this->partialUpdateItem('/discounts/bulk-update-status', [
+            'discountIds' => [$validId, 999999],
+            'enabled' => true,
+        ], ['discount_write'], 422);
     }
 
     /**
@@ -557,16 +546,9 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testBulkDeleteWithEmptyArray(): void
     {
-        $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('DELETE', '/discounts/bulk-delete', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'discountIds' => [],
-            ],
-        ]);
-
-        // Expect validation error
-        self::assertResponseStatusCodeSame(422);
+        $this->bulkDeleteItems('/discounts/bulk-delete', [
+            'discountIds' => [],
+        ], ['discount_write'], 422);
     }
 
     /**
@@ -574,17 +556,10 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testBulkToggleStatusWithEmptyArray(): void
     {
-        $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('PATCH', '/discounts/bulk-update-status', [
-            'auth_bearer' => $bearerToken,
-            'json' => [
-                'discountIds' => [],
-                'enabled' => true,
-            ],
-        ]);
-
-        // Expect validation error
-        self::assertResponseStatusCodeSame(422);
+        $this->partialUpdateItem('/discounts/bulk-update-status', [
+            'discountIds' => [],
+            'enabled' => true,
+        ], ['discount_write'], 422);
     }
 
     /**
@@ -592,13 +567,6 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testBulkDeleteWithMissingParameter(): void
     {
-        $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('DELETE', '/discounts/bulk-delete', [
-            'auth_bearer' => $bearerToken,
-            'json' => [],
-        ]);
-
-        // Expect validation error
-        self::assertResponseStatusCodeSame(422);
+        $this->bulkDeleteItems('/discounts/bulk-delete', [], ['discount_write'], 422);
     }
 }
