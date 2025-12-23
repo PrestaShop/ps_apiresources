@@ -569,8 +569,8 @@ class DiscountEndpointTest extends ApiTestCase
     {
         $bearerToken = $this->getBearerToken(['discount_write']);
         static::createClient()->request('DELETE', '/discounts/bulk-delete', [
-        'auth_bearer' => $bearerToken,
-        'json' => [],
+            'auth_bearer' => $bearerToken,
+            'json' => [],
         ]);
 
         self::assertResponseStatusCodeSame(422);
