@@ -511,7 +511,7 @@ class DiscountEndpointTest extends ApiTestCase
         // Bulk delete all discounts
         $this->bulkDeleteItems('/discounts/bulk-delete', [
             'discountIds' => $discountIds,
-        ], ['discount_write']);
+        ], ['discount_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
         // Verify all discounts are deleted
         foreach ($discountIds as $discountId) {
