@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 
@@ -248,6 +249,16 @@ class DiscountEndpointTest extends ApiTestCase
             'PATCH',
             '/discounts/1/conditions',
         ];
+
+        yield 'bulk toggle status endpoint' => [
+            'PATCH',
+            '/discounts/bulk-update-status',
+        ];
+
+        yield 'bulk delete endpoint' => [
+            'DELETE',
+            '/discounts/bulk-delete',
+        ];
     }
 
     /**
@@ -433,5 +444,135 @@ class DiscountEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('countryIds', $conditions);
 
         $this->addToAssertionCount(1);
+    }
+
+    /**
+     * Test bulk enable discounts
+     */
+    public function testBulkEnableDiscounts(): array
+    {
+        // Create multiple discounts for bulk testing
+        $discountIds = [];
+        for ($i = 0; $i < 3; ++$i) {
+            $discount = $this->createItem('/discounts', [
+                'type' => self::CART_LEVEL,
+                'names' => [
+                    'en-US' => 'Bulk test discount ' . $i,
+                    'fr-FR' => 'Discount test bulk ' . $i,
+                ],
+            ], ['discount_write']);
+            $discountIds[] = $discount['discountId'];
+        }
+
+        // Bulk enable all discounts
+        $this->partialUpdateItem('/discounts/bulk-update-status', [
+            'discountIds' => $discountIds,
+            'enabled' => true,
+        ], ['discount_write'], Response::HTTP_NO_CONTENT);
+
+        // Verify all discounts are enabled
+        foreach ($discountIds as $discountId) {
+            $discount = $this->getItem('/discounts/' . $discountId, ['discount_read']);
+            $this->assertTrue($discount['enabled'], "Discount {$discountId} should be enabled");
+        }
+
+        return $discountIds;
+    }
+
+    /**
+     * @depends testBulkEnableDiscounts
+     *
+     * Test bulk disable discounts
+     */
+    public function testBulkDisableDiscounts(array $discountIds): array
+    {
+        // Bulk disable all discounts
+        $this->partialUpdateItem('/discounts/bulk-update-status', [
+            'discountIds' => $discountIds,
+            'enabled' => false,
+        ], ['discount_write'], Response::HTTP_NO_CONTENT);
+
+        // Verify all discounts are disabled
+        foreach ($discountIds as $discountId) {
+            $discount = $this->getItem('/discounts/' . $discountId, ['discount_read']);
+            $this->assertFalse($discount['enabled'], "Discount {$discountId} should be disabled");
+        }
+
+        return $discountIds;
+    }
+
+    /**
+     * @depends testBulkDisableDiscounts
+     *
+     * Test bulk delete discounts
+     */
+    public function testBulkDeleteDiscounts(array $discountIds): void
+    {
+        // Bulk delete all discounts
+        $this->bulkDeleteItems('/discounts/bulk-delete', [
+            'discountIds' => $discountIds,
+        ], ['discount_write'], Response::HTTP_NO_CONTENT);
+
+        // Verify all discounts are deleted
+        foreach ($discountIds as $discountId) {
+            $this->getItem('/discounts/' . $discountId, ['discount_read'], 404);
+        }
+    }
+
+    /**
+     * Test bulk enable with mixed valid and invalid IDs
+     */
+    public function testBulkEnableWithInvalidIds(): void
+    {
+        // Create one valid discount
+        $discount = $this->createItem('/discounts', [
+            'type' => self::CART_LEVEL,
+            'names' => [
+                'en-US' => 'Valid discount',
+                'fr-FR' => 'Discount valide',
+            ],
+        ], ['discount_write']);
+        $validId = $discount['discountId'];
+
+        // Try to bulk enable with mixed valid and invalid IDs
+        $this->partialUpdateItem('/discounts/bulk-update-status', [
+            'discountIds' => [$validId, 999999],
+            'enabled' => true,
+        ], ['discount_write'], 422);
+    }
+
+    /**
+     * Test bulk delete with empty array
+     */
+    public function testBulkDeleteWithEmptyArray(): void
+    {
+        $this->bulkDeleteItems('/discounts/bulk-delete', [
+            'discountIds' => [],
+        ], ['discount_write'], 422);
+    }
+
+    /**
+     * Test bulk toggle status with empty array
+     */
+    public function testBulkToggleStatusWithEmptyArray(): void
+    {
+        $this->partialUpdateItem('/discounts/bulk-update-status', [
+            'discountIds' => [],
+            'enabled' => true,
+        ], ['discount_write'], 422);
+    }
+
+    /**
+     * Test bulk delete without providing discountIds parameter
+     */
+    public function testBulkDeleteWithMissingParameter(): void
+    {
+        $bearerToken = $this->getBearerToken(['discount_write']);
+        static::createClient()->request('DELETE', '/discounts/bulk-delete', [
+            'auth_bearer' => $bearerToken,
+            'json' => [],
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
     }
 }
