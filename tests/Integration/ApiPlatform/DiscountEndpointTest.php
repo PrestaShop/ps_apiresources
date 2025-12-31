@@ -105,7 +105,6 @@ class DiscountEndpointTest extends ApiTestCase
             'names' => $names,
             'priority' => 1,
             'enabled' => false,
-            'totalQuantity' => 1,
             'quantityPerUser' => 1,
             'description' => '',
             'code' => '',
@@ -305,9 +304,19 @@ class DiscountEndpointTest extends ApiTestCase
         $this->assertEquals(true, $updatedDiscount['enabled']);
 
         $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+            'totalQuantity' => null,
+        ], ['discount_write']);
+        $this->assertNotContains('totalQuantity', $updatedDiscount);
+
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'totalQuantity' => 100,
         ], ['discount_write']);
         $this->assertEquals(100, $updatedDiscount['totalQuantity']);
+
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+            'quantityPerUser' => null,
+        ], ['discount_write']);
+        $this->assertNotContains('quantityPerUser', $updatedDiscount);
 
         $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'quantityPerUser' => 5,
