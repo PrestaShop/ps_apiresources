@@ -17,5 +17,11 @@
  * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
-define('_PS_ROOT_DIR_', sys_get_temp_dir() . '/prestashop-api-resources');
+if (getenv('_PS_ROOT_DIR_')) {
+    // When running locally from PrestaShop shop (especially with symbolic links for the module)
+    define('_PS_ROOT_DIR_', getenv('_PS_ROOT_DIR_'));
+} else {
+    // When running locally from the module stand alone (the creation process creates an instance in the temporary folder)
+    define('_PS_ROOT_DIR_', sys_get_temp_dir() . '/prestashop-api-resources');
+}
 include_once 'bootstrap.php';
