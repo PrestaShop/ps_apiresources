@@ -28,6 +28,8 @@ use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DeleteDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\UpdateDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Discount\ProductRuleGroupType;
+use PrestaShop\PrestaShop\Core\Domain\Discount\ProductRuleType;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Query\GetDiscountForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
@@ -72,6 +74,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
     ],
+    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
         DiscountConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -82,33 +85,174 @@ class Discount
     #[ApiProperty(identifier: true)]
     public int $discountId;
     #[Assert\NotBlank(groups: ['Create'])]
+    public string $type;
+    #[Assert\NotBlank(groups: ['Create'])]
     #[LocalizedValue]
     public array $names;
-    public int $priority;
-    public bool $enabled;
-    public \DateTimeImmutable $validFrom;
-    public \DateTimeImmutable $validTo;
-    public ?int $totalQuantity;
-    public ?int $quantityPerUser;
     public string $description;
     public string $code;
-    public int $customerId;
+    public bool $enabled;
+    public ?int $totalQuantity;
+    public ?int $quantityPerUser;
+    public ?DecimalNumber $reductionPercent;
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'object',
+            'description' => 'Fixed reduction amount',
+            'properties' => [
+                'amount' => [
+                    'type' => 'number',
+                    'description' => 'Fixed reduction amount value',
+                ],
+                'currencyId' => [
+                    'type' => 'integer',
+                    'description' => 'Currency ID for reduction amount',
+                ],
+                'taxIncluded' => [
+                    'type' => 'boolean',
+                    'Whether reduction amount is tax included',
+                ],
+            ],
+        ]
+    )]
+    public ?array $reductionAmount;
+    public ?int $giftProductId;
+    public ?int $giftCombinationId;
+
+    // Conditions/compatibility values
+    public bool $cheapestProduct;
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'array',
+            'description' => 'Product conditions (rule groups)',
+            'items' => [
+                'type' => 'object',
+                'properties' => [
+                    'quantity' => ['type' => 'integer'],
+                    'rules' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'type' => [
+                                    'type' => 'string',
+                                    'enum' => [
+                                        ProductRuleType::CATEGORIES,
+                                        ProductRuleType::PRODUCTS,
+                                        ProductRuleType::COMBINATIONS,
+                                        ProductRuleType::MANUFACTURERS,
+                                        ProductRuleType::SUPPLIERS,
+                                        ProductRuleType::ATTRIBUTES,
+                                        ProductRuleType::FEATURES,
+                                    ],
+                                ],
+                                'itemIds' => [
+                                    'type' => 'array',
+                                    'items' => ['type' => 'integer'],
+                                ],
+                                'required' => ['type', 'itemIds'],
+                            ],
+                        ],
+                    ],
+                    'type' => [
+                        'type' => 'string',
+                        'enum' => [
+                            ProductRuleGroupType::ALL_PRODUCT_RULES,
+                            ProductRuleGroupType::AT_LEAST_ONE_PRODUCT_RULE,
+                        ],
+                    ],
+                    'required' => ['quantity', 'rules'],
+                ],
+            ],
+        ]
+    )]
+    public ?array $productConditions;
+
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'integer',
+            'description' => 'Minimum quantity of products required',
+            'minimum' => 0,
+        ]
+    )]
+    public ?int $minimumProductQuantity;
+
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'object',
+            'description' => 'Minimum amount required',
+            'properties' => [
+                'amount' => [
+                    'type' => 'number',
+                    'description' => 'Minimum amount value',
+                ],
+                'currencyId' => [
+                    'type' => 'integer',
+                    'description' => 'Currency ID for minimum amount',
+                ],
+                'taxIncluded' => [
+                    'type' => 'boolean',
+                    'Whether minimum amount is tax included',
+                ],
+            ],
+        ]
+    )]
+    public ?array $minimumAmount;
+
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'boolean',
+            'description' => 'Whether minimum amount includes shipping',
+        ]
+    )]
+    public ?bool $minimumAmountShippingIncluded;
+
+    public ?int $customerId;
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'array',
+            'description' => 'Customer group IDs for which the discount is valid',
+            'items' => ['type' => 'integer'],
+        ]
+    )]
+    public ?array $customerGroupIds;
+
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'array',
+            'description' => 'Carrier IDs for which the discount is valid',
+            'items' => ['type' => 'integer'],
+        ]
+    )]
+    public ?array $carrierIds;
+
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'array',
+            'description' => 'Country IDs for which the discount is valid',
+            'items' => ['type' => 'integer'],
+        ]
+    )]
+    public ?array $countryIds;
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'array',
+            'description' => 'Discount Type IDs compatible with the discount',
+            'items' => ['type' => 'integer'],
+        ]
+    )]
+    public ?array $compatibleDiscountTypeIds;
+    // End of conditions/compatibility values
+
     public bool $highlightInCart;
     public bool $allowPartialUse;
-    #[Assert\NotBlank(groups: ['Create'])]
-    public string $type;
-    public ?DecimalNumber $percentDiscount;
-    public ?DecimalNumber $amountDiscount;
-    public int $currencyId;
-    public bool $taxIncluded;
-    public int $productId;
-    public array $combinations;
-    public int $reductionProduct;
+    public int $priority;
+    public \DateTimeImmutable $validFrom;
+    public \DateTimeImmutable $validTo;
 
     protected const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
         '[active]' => '[enabled]',
-        '[isTaxIncluded]' => '[taxIncluded]',
     ];
     protected const COMMAND_MAPPING = [
         '[names]' => '[localizedNames]',
