@@ -205,6 +205,21 @@ class ProductEndpointTest extends ApiTestCase
             'GET',
             '/products/1/images',
         ];
+
+        yield 'create product_category endpoint' => [
+            'POST',
+            '/products/1/assign-to-category',
+        ];
+
+        yield 'create product_categories endpoint' => [
+            'POST',
+            '/products/1/categories',
+        ];
+
+        yield 'delete product_category endpoint' => [
+            'DELETE',
+            '/products/1/categories',
+        ];
     }
 
     public function testAddProduct(): int
@@ -801,6 +816,56 @@ class ProductEndpointTest extends ApiTestCase
             ];
             $this->assertEquals($expectedProduct, $paginatedProducts['items'][0]);
         }
+    }
+
+    public function testAssignProductToCategory(): void
+    {
+        $productId = 1;
+        $categoryId = 3;
+
+        $payload = [
+            'categoryId' => $categoryId,
+        ];
+
+        $response = $this->createItem('/products/' . $productId . '/assign-to-category', $payload, ['product_write']);
+
+        $this->assertArrayHasKey('productId', $response);
+        $this->assertEquals($productId, $response['productId']);
+
+        $categoryIds = array_column($response['categories'], 'id');
+        $this->assertContains($categoryId, $categoryIds);
+    }
+
+    public function testSetAssociatedProductCategories(): void
+    {
+        $productId = 1;
+        $defaultCategory = 5;
+        $categoryIds = [3, 4, $defaultCategory];
+
+        $payload = [
+            'categoryIds' => $categoryIds,
+            'defaultCategoryId' => $defaultCategory,
+        ];
+
+        $response = $this->createItem('/products/' . $productId . '/categories', $payload, ['product_write']);
+
+        $this->assertArrayHasKey('productId', $response);
+        $this->assertEquals($productId, $response['productId']);
+
+        $this->assertEquals($defaultCategory, $response['defaultCategoryId']);
+
+        $returnedCategoryIds = array_column($response['categories'], 'id');
+        sort($returnedCategoryIds);
+        sort($categoryIds);
+
+        $this->assertEquals($categoryIds, $returnedCategoryIds);
+    }
+
+    public function testRemoveAllAssociatedProductCategories(): void
+    {
+        $productId = 1;
+
+        $this->deleteItem('/products/' . $productId . '/categories', ['product_write']);
     }
 
     protected function getImagePath(int $imageId, bool $isThumbnail): string

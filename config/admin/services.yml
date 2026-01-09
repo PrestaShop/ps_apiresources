@@ -75,3 +75,9 @@ services:
       - { name: 'serializer.normalizer', priority: 100 }
     arguments:
       $denormalizer: '@PrestaShopBundle\ApiPlatform\Normalizer\CQRSApiNormalizer'
+
+  PrestaShop\Module\APIResources\Serializer\ProductCategoryOutputNormalizer:
+    public: true
+    autowire: true
+    tags:
+      - { name: 'serializer.normalizer', priority: 100 }
