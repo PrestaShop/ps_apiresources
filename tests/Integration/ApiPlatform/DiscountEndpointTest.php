@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
@@ -583,5 +584,47 @@ class DiscountEndpointTest extends ApiTestCase
         ]);
 
         self::assertResponseStatusCodeSame(422);
+    }
+
+    /**
+     * Test duplicate discount
+     *
+     * @depends testCreateDiscountForUpdateTests
+     *
+     * @param int $discountId
+     *
+     * @return void
+     */
+    public function testDuplicateDiscount(int $discountId): void
+    {
+        $originalDiscount = $this->getItem(
+            '/discounts/' . $discountId,
+            ['discount_read']
+        );
+        $newDiscount = $this->requestApi(
+            httpMethod: Request::METHOD_POST,
+            endPointUrl: '/discounts/' . $discountId . '/duplicate',
+            scopes: ['discount_write']
+        );
+
+        $this->assertArrayHasKey('discountId', $newDiscount);
+        $this->assertNotEquals($discountId, $newDiscount['discountId']);
+        $this->assertEquals('copy of Updated EN name', $newDiscount['names']['en-US']);
+        $this->assertEquals('copie de Updated FR name', $newDiscount['names']['fr-FR']);
+        $this->assertEquals(false, $newDiscount['enabled']);
+        $this->assertEquals($originalDiscount['type'], $newDiscount['type']);
+        $this->assertEquals($originalDiscount['priority'], $newDiscount['priority']);
+        $this->assertEquals($originalDiscount['totalQuantity'], $newDiscount['totalQuantity']);
+        $this->assertEquals($originalDiscount['quantityPerUser'], $newDiscount['quantityPerUser']);
+        $this->assertEquals($originalDiscount['description'], $newDiscount['description']);
+        $this->assertNotEquals($originalDiscount['code'], $newDiscount['code']);
+        $this->assertEquals($originalDiscount['customerId'], $newDiscount['customerId']);
+        $this->assertEquals($originalDiscount['highlightInCart'], $newDiscount['highlightInCart']);
+        $this->assertEquals($originalDiscount['allowPartialUse'], $newDiscount['allowPartialUse']);
+        $this->assertEquals($originalDiscount['currencyId'], $newDiscount['currencyId']);
+        $this->assertEquals($originalDiscount['reductionProduct'], $newDiscount['reductionProduct']);
+        $this->assertEquals($originalDiscount['validFrom'], $newDiscount['validFrom']);
+        $this->assertEquals($originalDiscount['validTo'], $newDiscount['validTo']);
+        $this->assertEquals($originalDiscount['taxIncluded'], $newDiscount['taxIncluded']);
     }
 }
