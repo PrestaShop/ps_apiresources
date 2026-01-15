@@ -50,8 +50,8 @@ composer clear-test-cache
 composer setup-local-tests -- [arguments]
   arguments:
     --force-clone Force cloning the repository even if a cloned repository is detected (when no repository is detected, the clone is automatic)
-    --build-assets Force building assets even if they are already built (when no assets are detecte,d the build is automatic)
-    --build-db Force building DB by installing the default shop data (when no DB is detect,ed the DB shop is installed automatically)
+    --build-assets Force building assets even if they are already built (when no assets are detected, the build is automatic)
+    --build-db Force building DB by installing the default shop data (when no DB is detected, the DB shop is installed automatically)
     --update-local-parameters Force copying parameters from the `test/local-parameters` folder (when no parameter file is detectec they are automatically copied)
     --force Force all the previous arguments
     --core-branch Use a specific branch, you can use a branch from the original repository (ex: `develop`, `9.0.x`, ...) or from a fork (ex: `myfork:my-dev-branch`) (By default branch develop is used)
