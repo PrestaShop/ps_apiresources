@@ -76,9 +76,15 @@ composer run-module-tests
 
 ## Contributing
 
-PrestaShop modules are open source extensions to the [PrestaShop e-commerce platform][prestashop]. Everyone is welcome and even encouraged to contribute with their own improvements!
+The PrestaShop Admin API provides RESTful endpoints for managing your store programmatically. Everyone is welcome to contribute by adding new API endpoints!
 
-Just make sure to follow our [contribution guidelines][contribution-guidelines].
+**Please read our contributing guide before starting:**
+- **[Create new API endpoints](https://devdocs.prestashop-project.org/9/admin-api/contribute-to-core-api/)** - Complete step-by-step guide
+- **[Admin API Documentation](https://devdocs.prestashop-project.org/9/admin-api/)** - Full API reference
+
+Need help or believe core improvements are needed? Reach out to the team on [Slack][slack], and `#cfc-adminapi` channel - we're here to help!
+
+Also, follow our general [contribution guidelines][contribution-guidelines].
 
 ## License
 
@@ -88,3 +94,4 @@ This module is released under the [Academic Free License 3.0][AFL-3.0]
 [prestashop]: https://www.prestashop-project.org/
 [contribution-guidelines]: https://devdocs.prestashop-project.org/9/contribute/contribution-guidelines/project-modules/
 [AFL-3.0]: https://opensource.org/licenses/AFL-3.0
+[slack]: https://prestashop-project.org/slack
