@@ -23,6 +23,8 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
+use PrestaShop\PrestaShop\Core\Domain\Discount\ProductRuleGroupType;
+use PrestaShop\PrestaShop\Core\Domain\Discount\ProductRuleType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
@@ -40,24 +42,25 @@ class DiscountEndpointTest extends ApiTestCase
     {
         parent::setUpBeforeClass();
 
-        LanguageResetter::resetLanguages();
-        DatabaseDump::restoreTables([
-            'cart_cart_rule',
-            'cart_rule',
-            'cart_rule_carrier',
-            'cart_rule_combination',
-            'cart_rule_country',
-            'cart_rule_group',
-            'cart_rule_lang',
-            'cart_rule_product_rule',
-            'cart_rule_product_rule_group',
-            'cart_rule_product_rule_value',
-            'cart_rule_shop',
-        ]);
-
-        self::addLanguageByLocale('fr-FR');
-        // Check if the command exists, if it doesn't the scopes are not usable
+        // Check if the command exists, if it doesn't the tests won't run so nothing to init
         if (class_exists(AddDiscountCommand::class)) {
+            LanguageResetter::resetLanguages();
+            DatabaseDump::restoreTables([
+                'cart_cart_rule',
+                'cart_rule',
+                'cart_rule_carrier',
+                'cart_rule_combination',
+                'cart_rule_compatible_types',
+                'cart_rule_country',
+                'cart_rule_group',
+                'cart_rule_lang',
+                'cart_rule_product_rule',
+                'cart_rule_product_rule_group',
+                'cart_rule_product_rule_value',
+                'cart_rule_shop',
+            ]);
+
+            self::addLanguageByLocale('fr-FR');
             self::createApiClient(['discount_write', 'discount_read']);
         }
     }
@@ -66,7 +69,9 @@ class DiscountEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
 
-        LanguageResetter::resetLanguages();
+        if (class_exists(AddDiscountCommand::class)) {
+            LanguageResetter::resetLanguages();
+        }
     }
 
     protected function setUp(): void
@@ -76,141 +81,6 @@ class DiscountEndpointTest extends ApiTestCase
         if (!class_exists(AddDiscountCommand::class)) {
             $this->markTestSkipped('AddDiscountCommand class does not exist');
         }
-    }
-
-    /**
-     * @dataProvider discountTypesDataProvider
-     *
-     * @param string $type
-     * @param array $names
-     *
-     * @return int
-     */
-    public function testAddDiscountAndGet(string $type, array $names, ?array $data): int
-    {
-        $json = [
-            'type' => $type,
-            'names' => $names,
-        ];
-        if ($data !== null) {
-            $json = array_merge($json, $data);
-        }
-
-        $discount = $this->createItem('/discounts', $json, ['discount_write']);
-        $this->assertArrayHasKey('discountId', $discount);
-        $discountId = $discount['discountId'];
-
-        $expectedDiscount = [
-            'discountId' => $discountId,
-            'type' => $type,
-            'names' => $names,
-            'priority' => 1,
-            'enabled' => false,
-            'quantityPerUser' => 1,
-            'description' => '',
-            'code' => '',
-            'customerId' => 0,
-            'highlightInCart' => false,
-            'allowPartialUse' => true,
-            'currencyId' => 1,
-            'reductionProduct' => 0,
-            // These two values are dynamic, we can't hard-code the expected value
-            'validFrom' => $discount['validFrom'],
-            'validTo' => $discount['validTo'],
-            'taxIncluded' => false,
-        ];
-        if ($data !== null) {
-            $expectedDiscount = array_merge($expectedDiscount, $data);
-        }
-
-        $this->assertEquals($expectedDiscount, $discount);
-        // Now test that the GET request returns the same expected result
-        $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
-
-        return $discountId;
-    }
-
-    public static function discountTypesDataProvider(): array
-    {
-        return [
-            [
-                self::CART_LEVEL,
-                [
-                    'en-US' => 'new cart level discount',
-                    'fr-FR' => 'nouveau discount panier',
-                ],
-                null,
-            ],
-            [
-                self::PRODUCT_LEVEL,
-                [
-                    'en-US' => 'new product level discount',
-                    'fr-FR' => 'nouveau discount produit',
-                ],
-                [
-                    'reductionProduct' => -1,
-                    'percentDiscount' => 20.0,
-                ],
-            ],
-            // todo: This one must be improved, the naming productId is not correct, it should be giftProductId
-            /*[
-                self::FREE_GIFT,
-                [
-                    'en-US' => 'new free gift discount',
-                    'fr-FR' => 'nouveau discount produit offert',
-                ],
-                [
-                    'productId' => 1,
-                ],
-            ],*/
-            [
-                self::FREE_SHIPPING,
-                [
-                    'en-US' => 'new free shipping discount',
-                    'fr-FR' => 'nouveau discount frais de port offert',
-                ],
-                null,
-            ],
-            [
-                self::ORDER_LEVEL,
-                [
-                    'en-US' => 'new order level discount',
-                    'fr-FR' => 'nouveau discount commande',
-                ],
-                null,
-            ],
-        ];
-    }
-
-    /**
-     * @depends testAddDiscountAndGet
-     */
-    public function testListDiscount(): void
-    {
-        $paginatedDiscounts = $this->listItems('/discounts', ['discount_read']);
-        $createdDiscountData = $this->discountTypesDataProvider();
-        $this->assertEquals(count($createdDiscountData), $paginatedDiscounts['totalItems']);
-
-        foreach ($paginatedDiscounts['items'] as $key => $discount) {
-            $creationData = $createdDiscountData[$key];
-            $expectedDiscount = [
-                'discountId' => $discount['discountId'],
-                'type' => $creationData[0],
-                'name' => $creationData[1]['en-US'],
-                'enabled' => false,
-                'code' => '',
-            ];
-            $this->assertEquals($expectedDiscount, $discount);
-        }
-    }
-
-    public function testDeleteDiscount(): void
-    {
-        $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('DELETE', '/discounts/1', [
-            'auth_bearer' => $bearerToken,
-        ]);
-        self::assertResponseStatusCodeSame(204);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -240,16 +110,6 @@ class DiscountEndpointTest extends ApiTestCase
             '/discounts/1',
         ];
 
-        yield 'get conditions endpoint' => [
-            'GET',
-            '/discounts/1/conditions',
-        ];
-
-        yield 'update conditions endpoint' => [
-            'PATCH',
-            '/discounts/1/conditions',
-        ];
-
         yield 'bulk toggle status endpoint' => [
             'PATCH',
             '/discounts/bulk-update-status',
@@ -262,11 +122,163 @@ class DiscountEndpointTest extends ApiTestCase
     }
 
     /**
-     * Create a discount specifically for update tests
+     * @dataProvider discountTypesDataProvider
+     *
+     * @param string $type
+     * @param array $names
      *
      * @return int
      */
-    public function testCreateDiscountForUpdateTests(): int
+    public function testAddDiscountAndGet(string $type, array $names, ?array $data): int
+    {
+        $creationData = [
+            'type' => $type,
+            'names' => $names,
+        ];
+        if ($data !== null) {
+            $creationData = array_merge($creationData, $data);
+        }
+
+        $discount = $this->createItem('/discounts', $creationData, ['discount_write']);
+        $this->assertArrayHasKey('discountId', $discount);
+        $discountId = $discount['discountId'];
+
+        $expectedDiscount = [
+            'discountId' => $discountId,
+            'type' => $type,
+            'names' => $names,
+            'description' => '',
+            'code' => '',
+            'enabled' => false,
+            'totalQuantity' => null,
+            'quantityPerUser' => null,
+            'reductionPercent' => null,
+            'reductionAmount' => null,
+            'giftProductId' => null,
+            'giftCombinationId' => null,
+            'cheapestProduct' => false,
+            'productConditions' => [],
+            'minimumProductQuantity' => 0,
+            'minimumAmount' => null,
+            'customerId' => null,
+            'customerGroupIds' => [],
+            'carrierIds' => [],
+            'countryIds' => [],
+            'compatibleDiscountTypeIds' => [],
+            'highlightInCart' => false,
+            'allowPartialUse' => true,
+            'priority' => 1,
+            // These two values are dynamic, we can't hard-code the expected value
+            'validFrom' => $discount['validFrom'],
+            'validTo' => $discount['validTo'],
+        ];
+        if ($data !== null) {
+            $expectedDiscount = array_merge($expectedDiscount, $data);
+        }
+
+        $this->assertEquals($expectedDiscount, $discount);
+        // Now test that the GET request returns the same expected result
+        $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
+
+        return $discountId;
+    }
+
+    public static function discountTypesDataProvider(): iterable
+    {
+        yield 'cart level discount' => [
+            self::CART_LEVEL,
+            [
+                'en-US' => 'new cart level discount',
+                'fr-FR' => 'nouveau discount panier',
+            ],
+            null,
+        ];
+
+        yield 'product level discount' => [
+            self::PRODUCT_LEVEL,
+            [
+                'en-US' => 'new product level discount',
+                'fr-FR' => 'nouveau discount produit',
+            ],
+            [
+                'cheapestProduct' => true,
+                'reductionPercent' => 10.0,
+            ],
+        ];
+
+        yield 'free gift discount' => [
+            self::FREE_GIFT,
+            [
+                'en-US' => 'new free gift discount',
+                'fr-FR' => 'nouveau discount produit offert',
+            ],
+            [
+                'giftProductId' => 1,
+            ],
+        ];
+
+        yield 'free shipping discount' => [
+            self::FREE_SHIPPING,
+            [
+                'en-US' => 'new free shipping discount',
+                'fr-FR' => 'nouveau discount frais de port offert',
+            ],
+            null,
+        ];
+
+        yield 'order level discount' => [
+            self::ORDER_LEVEL,
+            [
+                'en-US' => 'new order level discount',
+                'fr-FR' => 'nouveau discount commande',
+            ],
+            null,
+        ];
+    }
+
+    /**
+     * @depends testAddDiscountAndGet
+     */
+    public function testListDiscount(): void
+    {
+        $paginatedDiscounts = $this->listItems('/discounts', ['discount_read']);
+        $createdDiscountData = [];
+        $index = 0;
+        foreach ($this->discountTypesDataProvider() as $discountData) {
+            $createdDiscountData[$index] = $discountData;
+            ++$index;
+        }
+        $this->assertEquals(count($createdDiscountData), $paginatedDiscounts['totalItems']);
+
+        foreach ($paginatedDiscounts['items'] as $key => $discount) {
+            $creationData = $createdDiscountData[$key];
+            $expectedDiscount = [
+                'discountId' => $discount['discountId'],
+                'type' => $creationData[0],
+                'name' => $creationData[1]['en-US'],
+                'enabled' => false,
+                'code' => '',
+            ];
+            $this->assertEquals($expectedDiscount, $discount);
+        }
+    }
+
+    /**
+     * @depends testListDiscount
+     */
+    public function testDeleteDiscount(): void
+    {
+        $this->deleteItem('/discounts/1', ['discount_write']);
+        // Check that the discount no longer exists
+        $this->getItem('/discounts/1', ['discount_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * Create a discount specifically for update tests
+     *
+     * @return array
+     */
+    public function testCreateDiscountForUpdateTests(): array
     {
         $discount = $this->createItem('/discounts', [
             'type' => self::CART_LEVEL,
@@ -277,183 +289,243 @@ class DiscountEndpointTest extends ApiTestCase
         ], ['discount_write']);
         $this->assertArrayHasKey('discountId', $discount);
 
-        return $discount['discountId'];
+        return $discount;
     }
 
     /**
      * @depends testCreateDiscountForUpdateTests
      *
-     * @param int $discountId
+     * @param array $discount
      *
-     * @return int
+     * @return array
      */
-    public function testPartialUpdateDiscount(int $discountId): int
+    public function testPartialUpdateDiscount(array $discount): array
     {
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
-            'description' => 'Updated description',
-        ], ['discount_write']);
-        $this->assertEquals('Updated description', $updatedDiscount['description']);
-
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
-            'code' => 'NEWCODE123',
-        ], ['discount_write']);
-        $this->assertEquals('NEWCODE123', $updatedDiscount['code']);
-
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
-            'enabled' => true,
-        ], ['discount_write']);
-        $this->assertEquals(true, $updatedDiscount['enabled']);
-
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+        $discountId = $discount['discountId'];
+        $expectedDiscount = [
+            'discountId' => $discountId,
+            'type' => self::CART_LEVEL,
+            'names' => [
+                'en-US' => 'Discount for update tests',
+                'fr-FR' => 'Discount pour tests de mise à jour',
+            ],
+            'description' => '',
+            'code' => '',
+            'enabled' => false,
             'totalQuantity' => null,
-        ], ['discount_write']);
-        $this->assertNotContains('totalQuantity', $updatedDiscount);
-
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
-            'totalQuantity' => 100,
-        ], ['discount_write']);
-        $this->assertEquals(100, $updatedDiscount['totalQuantity']);
-
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
             'quantityPerUser' => null,
-        ], ['discount_write']);
-        $this->assertNotContains('quantityPerUser', $updatedDiscount);
+            'reductionPercent' => null,
+            'reductionAmount' => null,
+            'giftProductId' => null,
+            'giftCombinationId' => null,
+            'cheapestProduct' => false,
+            'productConditions' => [],
+            'minimumProductQuantity' => 0,
+            'minimumAmount' => null,
+            'customerId' => null,
+            'customerGroupIds' => [],
+            'carrierIds' => [],
+            'countryIds' => [],
+            'compatibleDiscountTypeIds' => [],
+            'highlightInCart' => false,
+            'allowPartialUse' => true,
+            'priority' => 1,
+            // These two values are dynamic, we can't hard-code the expected value
+            'validFrom' => $discount['validFrom'],
+            'validTo' => $discount['validTo'],
+        ];
 
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
-            'quantityPerUser' => 5,
-        ], ['discount_write']);
-        $this->assertEquals(5, $updatedDiscount['quantityPerUser']);
-
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
-            'highlightInCart' => true,
-        ], ['discount_write']);
-        $this->assertEquals(true, $updatedDiscount['highlightInCart']);
-
-        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+        $updatedFields = [
             'names' => [
                 'en-US' => 'Updated EN name',
                 'fr-FR' => 'Updated FR name',
             ],
-        ], ['discount_write']);
-        $this->assertEquals('Updated EN name', $updatedDiscount['names']['en-US']);
-        $this->assertEquals('Updated FR name', $updatedDiscount['names']['fr-FR']);
+            'description' => 'Updated description',
+            'code' => 'NEWCODE123',
+            'enabled' => true,
+            'totalQuantity' => 100,
+            'quantityPerUser' => 5,
+            'highlightInCart' => true,
+            'allowPartialUse' => false,
+            'priority' => 10,
+        ];
 
-        return $discountId;
+        // Update fields one by one and check that the content is updated accordingly
+        foreach ($updatedFields as $key => $value) {
+            $expectedDiscount[$key] = $value;
+            $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+                $key => $value,
+            ], ['discount_write']);
+            $this->assertEquals($expectedDiscount, $updatedDiscount);
+            // Also check that the discount is updated when we read it
+            $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
+        }
+
+        return $expectedDiscount;
     }
 
     /**
      * @depends testPartialUpdateDiscount
      *
-     * @param int $discountId
+     * @param array $expectedDiscount
      *
-     * @return int
+     * @return array
      */
-    public function testGetUpdatedDiscount(int $discountId): int
+    public function testGetUpdatedDiscount(array $expectedDiscount): array
     {
+        $discountId = $expectedDiscount['discountId'];
         $discount = $this->getItem('/discounts/' . $discountId, ['discount_read']);
-        $this->assertEquals('Updated description', $discount['description']);
-        $this->assertEquals('NEWCODE123', $discount['code']);
-        $this->assertEquals(true, $discount['enabled']);
-        $this->assertEquals(100, $discount['totalQuantity']);
-        $this->assertEquals(5, $discount['quantityPerUser']);
-        $this->assertEquals(true, $discount['highlightInCart']);
-        $this->assertEquals('Updated EN name', $discount['names']['en-US']);
-        $this->assertEquals('Updated FR name', $discount['names']['fr-FR']);
+        $this->assertEquals($expectedDiscount, $discount);
 
-        return $discountId;
+        return $expectedDiscount;
     }
 
     /**
      * @depends testGetUpdatedDiscount
      *
-     * @param int $discountId
+     * @param array $expectedDiscount
      *
      * @return int
      */
-    public function testGetDiscountConditions(int $discountId): int
+    public function testUpdateDiscountConditions(array $expectedDiscount): array
     {
-        $conditions = $this->getItem('/discounts/' . $discountId . '/conditions', ['discount_read']);
-        $this->assertArrayHasKey('discountId', $conditions);
-        $this->assertEquals($discountId, $conditions['discountId']);
-
-        return $discountId;
-    }
-
-    /**
-     * @depends testGetDiscountConditions
-     *
-     * @param int $discountId
-     *
-     * @return int
-     */
-    public function testUpdateDiscountConditions(int $discountId): int
-    {
-        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
-            'minimumProductsQuantity' => 5,
-        ], ['discount_write']);
-        $this->assertArrayHasKey('discountId', $updatedConditions);
-        $this->assertEquals($discountId, $updatedConditions['discountId']);
-
-        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
+        $discountId = $expectedDiscount['discountId'];
+        $conditionFields = [
+            'minimumProductQuantity' => 5,
             'carrierIds' => [1, 2],
-        ], ['discount_write']);
-        $this->assertArrayHasKey('discountId', $updatedConditions);
-        $this->assertEquals($discountId, $updatedConditions['discountId']);
-
-        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
             'countryIds' => [1, 2, 3],
-        ], ['discount_write']);
-        $this->assertArrayHasKey('discountId', $updatedConditions);
-        $this->assertEquals($discountId, $updatedConditions['discountId']);
+            'customerId' => 42,
+            'customerGroupIds' => [1, 2],
+            // Hummingbird t-shirt
+            'giftProductId' => 1,
+            'giftCombinationId' => 1,
+            'compatibleDiscountTypeIds' => [1, 2],
+            'reductionPercent' => 0.5,
+            'minimumAmount' => [
+                'amount' => '50.00',
+                'currencyId' => 1,
+                'taxIncluded' => true,
+                'shippingIncluded' => true,
+            ],
+        ];
 
-        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
-            'amountDiscount' => '50.00',
-            'currencyId' => 1,
-            'taxIncluded' => true,
-        ], ['discount_write']);
-        $this->assertArrayHasKey('discountId', $updatedConditions);
-        $this->assertEquals($discountId, $updatedConditions['discountId']);
+        // Update fields one by one and check that the content is updated accordingly
+        foreach ($conditionFields as $key => $value) {
+            $expectedDiscount[$key] = $value;
+            $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+                $key => $value,
+            ], ['discount_write']);
+            $this->assertEquals($expectedDiscount, $updatedDiscount, sprintf('Unexpected updated data for %s', $key));
+            // Also check that the discount is updated when we read it
+            $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']), sprintf('Unexpected get data for %s', $key));
+        }
 
-        return $discountId;
+        // Update reduction amount automatically removes reduction percent
+        $reductionAmount = [
+            'amount' => '42.99',
+            'currencyId' => 2,
+            'taxIncluded' => false,
+        ];
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+            'reductionAmount' => $reductionAmount,
+        ], ['discount_write']);
+        $expectedDiscount['reductionAmount'] = $reductionAmount;
+        $expectedDiscount['reductionPercent'] = null;
+        $this->assertEquals($expectedDiscount, $updatedDiscount);
+        $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
+
+        // And when percent is used the amount is null
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+            'reductionPercent' => 0.43,
+        ], ['discount_write']);
+        $expectedDiscount['reductionAmount'] = null;
+        $expectedDiscount['reductionPercent'] = 0.43;
+        $this->assertEquals($expectedDiscount, $updatedDiscount);
+        $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
+
+        // Unset the minimum amount
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+            'minimumAmount' => null,
+        ], ['discount_write']);
+        $expectedDiscount['minimumAmount'] = null;
+        $this->assertEquals($expectedDiscount, $updatedDiscount);
+        $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
+
+        return $expectedDiscount;
     }
 
     /**
      * @depends testUpdateDiscountConditions
      *
-     * @param int $discountId
+     * @param array $expectedDiscount
      *
      * @return int
      */
-    public function testUpdateDiscountProductConditions(int $discountId): int
+    public function testUpdateDiscountProductConditions(array $expectedDiscount): int
     {
-        $updatedConditions = $this->partialUpdateItem('/discounts/' . $discountId . '/conditions', [
-            'productConditions' => [],
+        $discountId = $expectedDiscount['discountId'];
+
+        $simpleProductSelection = [
+            [
+                'quantity' => 5,
+                'rules' => [
+                    [
+                        'type' => ProductRuleType::PRODUCTS->value,
+                        'itemIds' => [1, 2, 3],
+                    ],
+                ],
+                // This would be the default value even if left empty
+                'type' => ProductRuleGroupType::AT_LEAST_ONE_PRODUCT_RULE->value,
+            ],
+        ];
+        $productConditionsToTest = [
+            'product selection' => $simpleProductSelection,
+            'product segment' => [
+                [
+                    'quantity' => 5,
+                    'rules' => [
+                        [
+                            'type' => ProductRuleType::CATEGORIES->value,
+                            'itemIds' => [1, 2, 3],
+                        ],
+                    ],
+                    // This would be the default value even if left empty
+                    'type' => ProductRuleGroupType::ALL_PRODUCT_RULES->value,
+                ],
+            ],
+            // Remove product conditions
+            'no conditions' => [],
+        ];
+
+        foreach ($productConditionsToTest as $productConditionsUseCase => $productConditions) {
+            $expectedDiscount['productConditions'] = $productConditions;
+            $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+                'productConditions' => $productConditions,
+            ], ['discount_write']);
+            $this->assertEquals($expectedDiscount, $updatedDiscount, 'Unexpected value for use case ' . $productConditionsUseCase);
+            // Also check that the discount is updated when we read it
+            $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
+        }
+
+        // Special case: switch to the cheapest product, the product conditions is removed
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+            'cheapestProduct' => true,
         ], ['discount_write']);
-        $this->assertArrayHasKey('discountId', $updatedConditions);
-        $this->assertEquals($discountId, $updatedConditions['discountId']);
+        $expectedDiscount['productConditions'] = [];
+        $expectedDiscount['cheapestProduct'] = true;
+        $this->assertEquals($expectedDiscount, $updatedDiscount, 'Unexpected value for use case ' . $productConditionsUseCase);
+        $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
+
+        // And when we set a new product segment cheapestProduct is false
+        $updatedDiscount = $this->partialUpdateItem('/discounts/' . $discountId, [
+            'productConditions' => $simpleProductSelection,
+        ], ['discount_write']);
+        $expectedDiscount['productConditions'] = $simpleProductSelection;
+        $expectedDiscount['cheapestProduct'] = false;
+        $this->assertEquals($expectedDiscount, $updatedDiscount, 'Unexpected value for use case ' . $productConditionsUseCase);
+        $this->assertEquals($expectedDiscount, $this->getItem('/discounts/' . $discountId, ['discount_read']));
 
         return $discountId;
-    }
-
-    /**
-     * @depends testUpdateDiscountProductConditions
-     *
-     * @param int $discountId
-     *
-     * @return void
-     */
-    public function testGetUpdatedDiscountConditions(int $discountId): void
-    {
-        $conditions = $this->getItem('/discounts/' . $discountId . '/conditions', ['discount_read']);
-        $this->assertArrayHasKey('discountId', $conditions);
-        $this->assertEquals($discountId, $conditions['discountId']);
-
-        $this->assertArrayHasKey('minimumProductsQuantity', $conditions);
-        $this->assertArrayHasKey('productConditions', $conditions);
-        $this->assertArrayHasKey('carrierIds', $conditions);
-        $this->assertArrayHasKey('countryIds', $conditions);
-
-        $this->addToAssertionCount(1);
     }
 
     /**
@@ -591,12 +663,13 @@ class DiscountEndpointTest extends ApiTestCase
      *
      * @depends testCreateDiscountForUpdateTests
      *
-     * @param int $discountId
+     * @param array $createdDiscount
      *
      * @return void
      */
-    public function testDuplicateDiscount(int $discountId): void
+    public function testDuplicateDiscount(array $createdDiscount): void
     {
+        $discountId = $createdDiscount['discountId'];
         $originalDiscount = $this->getItem(
             '/discounts/' . $discountId,
             ['discount_read']
@@ -607,24 +680,22 @@ class DiscountEndpointTest extends ApiTestCase
             scopes: ['discount_write']
         );
 
-        $this->assertArrayHasKey('discountId', $newDiscount);
-        $this->assertNotEquals($discountId, $newDiscount['discountId']);
-        $this->assertEquals('copy of Updated EN name', $newDiscount['names']['en-US']);
-        $this->assertEquals('copie de Updated FR name', $newDiscount['names']['fr-FR']);
-        $this->assertEquals(false, $newDiscount['enabled']);
-        $this->assertEquals($originalDiscount['type'], $newDiscount['type']);
-        $this->assertEquals($originalDiscount['priority'], $newDiscount['priority']);
-        $this->assertEquals($originalDiscount['totalQuantity'], $newDiscount['totalQuantity']);
-        $this->assertEquals($originalDiscount['quantityPerUser'], $newDiscount['quantityPerUser']);
-        $this->assertEquals($originalDiscount['description'], $newDiscount['description']);
+        $expectedDiscount = [
+            'discountId' => $newDiscount['discountId'],
+            'names' => [
+                'en-US' => 'copy of ' . $originalDiscount['names']['en-US'],
+                'fr-FR' => 'copie de ' . $originalDiscount['names']['fr-FR'],
+            ],
+            // New code has been generated
+            'code' => $newDiscount['code'],
+            // Status is forced to disabled
+            'enabled' => false,
+        ] + $originalDiscount;
+
+        $this->assertEquals($expectedDiscount, $newDiscount);
+        // New ID has been created
+        $this->assertNotEquals($originalDiscount['discountId'], $newDiscount['discountId']);
+        // New code has been created
         $this->assertNotEquals($originalDiscount['code'], $newDiscount['code']);
-        $this->assertEquals($originalDiscount['customerId'], $newDiscount['customerId']);
-        $this->assertEquals($originalDiscount['highlightInCart'], $newDiscount['highlightInCart']);
-        $this->assertEquals($originalDiscount['allowPartialUse'], $newDiscount['allowPartialUse']);
-        $this->assertEquals($originalDiscount['currencyId'], $newDiscount['currencyId']);
-        $this->assertEquals($originalDiscount['reductionProduct'], $newDiscount['reductionProduct']);
-        $this->assertEquals($originalDiscount['validFrom'], $newDiscount['validFrom']);
-        $this->assertEquals($originalDiscount['validTo'], $newDiscount['validTo']);
-        $this->assertEquals($originalDiscount['taxIncluded'], $newDiscount['taxIncluded']);
     }
 }
