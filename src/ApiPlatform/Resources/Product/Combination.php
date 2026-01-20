@@ -45,40 +45,37 @@ use Symfony\Component\HttpFoundation\Response;
         CombinationNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class ProductCombination
+class Combination
 {
-    #[ApiProperty(identifier: true)]
-    public int $combinationId;
-
     public int $productId;
 
-    public bool $isDefault; // I cannot see this atribute, It works?
-
+    #[ApiProperty(identifier: true)]
+    public int $combinationId;
     public string $name;
-
-    public int $quantity;
-
-    public array $imageIds;
-
-    public string $coverThumbnailUrl;
+    public bool $default;
 
     public string $gtin;
     public string $isbn;
     public string $mpn;
     public string $reference;
     public string $upc;
-    public DecimalNumber $impactOnWeight;
 
-    public DecimalNumber $impactOnPrice;
+    public string $coverThumbnailUrl;
+    public array $imageIds;
+
+    public DecimalNumber $impactOnPriceTaxExcluded;
     public DecimalNumber $impactOnPriceTaxIncluded;
     public DecimalNumber $impactOnUnitPrice;
     public DecimalNumber $impactOnUnitPriceTaxIncluded;
-    public DecimalNumber $ecotax;
+    public DecimalNumber $ecotaxTaxExcluded;
     public DecimalNumber $ecotaxTaxIncluded;
+    public DecimalNumber $impactOnWeight;
     public DecimalNumber $wholesalePrice;
     public DecimalNumber $productTaxRate;
-    public DecimalNumber $productPrice;
-    public DecimalNumber $productEcotax;
+    public DecimalNumber $productPriceTaxExcluded;
+    public DecimalNumber $productEcotaxTaxExcluded;
+
+    public int $quantity;
 
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
@@ -88,16 +85,16 @@ class ProductCombination
         '[details][reference]' => '[reference]',
         '[details][upc]' => '[upc]',
         '[details][impactOnWeight]' => '[impactOnWeight]',
-        '[prices][impactOnPrice]' => '[impactOnPrice]',
+        '[prices][impactOnPrice]' => '[impactOnPriceTaxExcluded]',
         '[prices][impactOnPriceTaxIncluded]' => '[impactOnPriceTaxIncluded]',
-        '[prices][impactOnUnitPrice]' => '[impactOnUnitPrice]',
+        '[prices][impactOnUnitPrice]' => '[impactOnUnitPriceTaxExcluded]',
         '[prices][impactOnUnitPriceTaxIncluded]' => '[impactOnUnitPriceTaxIncluded]',
-        '[prices][ecotax]' => '[ecotax]',
+        '[prices][ecotax]' => '[ecotaxTaxExcluded]',
         '[prices][ecotaxTaxIncluded]' => '[ecotaxTaxIncluded]',
         '[prices][wholesalePrice]' => '[wholesalePrice]',
         '[prices][productTaxRate]' => '[productTaxRate]',
-        '[prices][productPrice]' => '[productPrice]',
-        '[prices][productEcotax]' => '[productEcotax]',
+        '[prices][productPrice]' => '[productPriceTaxExcluded]',
+        '[prices][productEcotax]' => '[productEcotaxTaxExcluded]',
         '[stock][quantity]' => '[quantity]',
     ];
 }
