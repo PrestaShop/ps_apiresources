@@ -36,6 +36,7 @@ use Symfony\Component\HttpFoundation\Response;
         new CQRSCreate(
             uriTemplate: '/products/{productId}/images',
             inputFormats: ['multipart' => ['multipart/form-data']],
+            requirements: ['productId' => '\d+'],
             read: false,
             CQRSCommand: AddProductImageCommand::class,
             CQRSQuery: GetProductImage::class,
@@ -56,7 +57,6 @@ use Symfony\Component\HttpFoundation\Response;
 class NewProductImage
 {
     public int $productId;
-
     public int $imageId;
 
     public string $imageUrl;
