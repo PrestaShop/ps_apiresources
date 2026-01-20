@@ -24,50 +24,30 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationIds;
-use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetEditableCombinationsList;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSGetCollection(
-            uriTemplate: '/products/{productId}/combinations',
+        new CQRSGet(
+            uriTemplate: '/products/{productId}/combination-ids',
             CQRSQuery: GetCombinationIds::class,
             scopes: [
                 'product_read',
             ],
             CQRSQueryMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
-                // '[@index][combinationId]' => '[@index]' TODO Test in PS 9.0.2
-            ],
-            ApiResourceMapping: [
-                '[localizedLegends]' => '[legends]',
+                '[@index][combinationId]' => '[combinationIds][@index]',
             ],
         ),
-        // TODO: we would like to implement this resource but we need to improve the core
-        // new CQRSGetCollection(
-        //     uriTemplate: '/product/{productId}/combinations',
-        //     CQRSQuery: GetEditableCombinationsList::class,
-        //     scopes: [
-        //         'product_read',
-        //     ],
-        //     CQRSQueryMapping: [
-        //         '[_context][shopConstraint]' => '[shopConstraint]',
-        //         '[_context][langId]' => '[languageId]',
-        //         '[combinations]' => '[]',
-        //     ],
-        // ),
     ],
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class ProductCombinationList
+class CombinationIdList
 {
     public int $productId;
-    public int $combinationId;
-    public array $shopIds;
+    public array $combinationIds;
 }
-
-// CombinationListForEditing
