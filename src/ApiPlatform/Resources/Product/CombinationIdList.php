@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationIds;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
@@ -49,5 +50,6 @@ use Symfony\Component\HttpFoundation\Response;
 class CombinationIdList
 {
     public int $productId;
+    #[ApiProperty(openapiContext: ['type' => 'array', 'description' => 'List of combination IDs', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $combinationIds;
 }

@@ -61,6 +61,7 @@ class Combination
     public string $upc;
 
     public string $coverThumbnailUrl;
+    #[ApiProperty(openapiContext: ['type' => 'array', 'description' => 'List of image IDs', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $imageIds;
 
     public DecimalNumber $impactOnPriceTaxExcluded;
