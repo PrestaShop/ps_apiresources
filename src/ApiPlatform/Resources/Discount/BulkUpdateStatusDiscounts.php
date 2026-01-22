@@ -22,37 +22,40 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Discount\Command\BulkUpdateDiscountsStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\BulkDiscountException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
-use PrestaShop\PrestaShop\Core\Search\Filters\DiscountFilters;
-use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
-use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new PaginatedList(
-            uriTemplate: '/discounts',
-            provider: QueryListProvider::class,
-            scopes: ['discount_read'],
-            ApiResourceMapping: [
-                '[id_discount]' => '[discountId]',
-                '[active]' => '[enabled]',
-                '[discount_type]' => '[type]',
+        new CQRSPartialUpdate(
+            uriTemplate: '/discounts/bulk-update-status',
+            output: false,
+            CQRSCommand: BulkUpdateDiscountsStatusCommand::class,
+            CQRSCommandMapping: [
+                '[enabled]' => '[newStatus]',
             ],
-            gridDataFactory: 'prestashop.core.grid.data.factory.discount',
-            filtersClass: DiscountFilters::class,
+            scopes: [
+                'discount_write',
+            ],
         ),
     ],
     exceptionToStatus: [
         DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
+        BulkDiscountException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class DiscountList
+class BulkUpdateStatusDiscounts
 {
-    #[ApiProperty(identifier: true)]
-    public int $discountId;
-    public string $type;
-    public string $name;
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[Assert\NotBlank]
+    public array $discountIds;
+
     public bool $enabled;
-    public string $code;
 }

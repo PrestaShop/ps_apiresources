@@ -18,41 +18,38 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
-use PrestaShop\PrestaShop\Core\Search\Filters\DiscountFilters;
-use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
-use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationIds;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new PaginatedList(
-            uriTemplate: '/discounts',
-            provider: QueryListProvider::class,
-            scopes: ['discount_read'],
-            ApiResourceMapping: [
-                '[id_discount]' => '[discountId]',
-                '[active]' => '[enabled]',
-                '[discount_type]' => '[type]',
+        new CQRSGet(
+            uriTemplate: '/products/{productId}/combination-ids',
+            CQRSQuery: GetCombinationIds::class,
+            scopes: [
+                'product_read',
             ],
-            gridDataFactory: 'prestashop.core.grid.data.factory.discount',
-            filtersClass: DiscountFilters::class,
+            CQRSQueryMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+                '[@index][combinationId]' => '[combinationIds][@index]',
+            ],
         ),
     ],
     exceptionToStatus: [
-        DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class DiscountList
+class CombinationIdList
 {
-    #[ApiProperty(identifier: true)]
-    public int $discountId;
-    public string $type;
-    public string $name;
-    public bool $enabled;
-    public string $code;
+    public int $productId;
+    #[ApiProperty(openapiContext: ['type' => 'array', 'description' => 'List of combination IDs', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    public array $combinationIds;
 }

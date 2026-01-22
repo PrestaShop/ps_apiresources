@@ -17,11 +17,30 @@
  * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
-if (getenv('_PS_ROOT_DIR_')) {
-    // When running locally from PrestaShop shop (especially with symbolic links for the module)
-    define('_PS_ROOT_DIR_', getenv('_PS_ROOT_DIR_'));
-} else {
-    // When running locally from the module stand alone (the creation process creates an instance in the temporary folder)
-    define('_PS_ROOT_DIR_', sys_get_temp_dir() . '/prestashop-api-resources');
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Attribute;
+
+use ApiPlatform\Metadata\ApiResource;
+use PrestaShopBundle\ApiPlatform\Metadata\PositionCollection;
+use PrestaShopBundle\ApiPlatform\Metadata\UpdatePosition;
+
+#[ApiResource(
+    operations: [
+        new UpdatePosition(
+            uriTemplate: '/attributes/groups/{attributeGroupId}/attributes/positions',
+            requirements: ['attributeGroupId' => '\d+'],
+            scopes: [
+                'attribute_write',
+            ],
+            positionDefinition: 'prestashop.core.grid.attribute.position_definition',
+            parentIdField: 'attributeGroupId',
+        ),
+    ],
+)]
+class AttributePosition
+{
+    public int $attributeGroupId;
+
+    #[PositionCollection(rowIdField: 'attributeId')]
+    public array $positions;
 }
-include_once 'bootstrap.php';

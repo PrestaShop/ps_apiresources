@@ -507,6 +507,7 @@ class ProductEndpointTest extends ApiTestCase
 
         // Check URLs format based on the newly created Image ID
         $expectedImage = [
+            'productId' => $productId,
             'imageId' => $imageId,
             'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
             'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
@@ -635,6 +636,7 @@ class ProductEndpointTest extends ApiTestCase
         $this->assertEquals(2, count($productImages));
         $this->assertEquals([
             [
+                'productId' => $productId,
                 'imageId' => $imageId,
                 'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
                 'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),
@@ -649,6 +651,7 @@ class ProductEndpointTest extends ApiTestCase
                 ],
             ],
             [
+                'productId' => $productId,
                 'imageId' => $newImageId,
                 'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, false),
                 'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, true),
@@ -686,6 +689,7 @@ class ProductEndpointTest extends ApiTestCase
         // The images are sorted differently (since they are automatically order by position) and the cover has been updated
         $this->assertEquals([
             [
+                'productId' => $productId,
                 'imageId' => $newImageId,
                 'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, false),
                 'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($newImageId, true),
@@ -700,6 +704,7 @@ class ProductEndpointTest extends ApiTestCase
                 ],
             ],
             [
+                'productId' => $productId,
                 'imageId' => $imageId,
                 'imageUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, false),
                 'thumbnailUrl' => 'http://myshop.com/img/p/' . $this->getImagePath($imageId, true),

@@ -33,6 +33,12 @@ services:
     tags:
       - { name: 'console.command' }
 
+  # Custom normalizers for commands/queries that are very specific and cannot rely on generic solutions from the core
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\GenerateCombinationsSerializer:
+    autowire: true
+    autoconfigure: true
+    public: false
+
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\StateIdInterfaceNormalizer:
     tags:
       - { name: 'serializer.normalizer', priority: 100 }
@@ -41,9 +47,35 @@ services:
     tags:
       - { name: 'serializer.normalizer', priority: 100 }
 
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\CartAddressNormalizer:
+    autowire: true
+    public: false
+    arguments:
+      $decorated: '@serializer.normalizer.object'
+    tags:
+      - { name: 'serializer.normalizer', priority: 300 }
+
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\OrderAddressNormalizer:
+    autowire: true
+    public: false
+    arguments:
+      $decorated: '@serializer.normalizer.object'
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'
     autowire: true
     arguments:
       $decorated: '@.inner'
+
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\BulkCustomersDeleteProcessor:
+    tags:
+      - { name: 'api_platform.state_processor' }
+    arguments:
+      $commandProcessor: '@PrestaShopBundle\ApiPlatform\Processor\CommandProcessor'
+
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\BulkDeleteCustomerCommandDenormalizer:
+    tags:
+      - { name: 'serializer.normalizer', priority: 100 }
+    arguments:
+      $denormalizer: '@PrestaShopBundle\ApiPlatform\Normalizer\CQRSApiNormalizer'
