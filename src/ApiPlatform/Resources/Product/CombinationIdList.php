@@ -22,31 +22,24 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationIds;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\AddProductImageCommand;
-use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetProductImage;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
-use Symfony\Component\HttpFoundation\File\File;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSCreate(
-            uriTemplate: '/products/{productId}/images',
-            inputFormats: ['multipart' => ['multipart/form-data']],
-            requirements: ['productId' => '\d+'],
-            read: false,
-            CQRSCommand: AddProductImageCommand::class,
-            CQRSQuery: GetProductImage::class,
+        new CQRSGet(
+            uriTemplate: '/products/{productId}/combination-ids',
+            CQRSQuery: GetCombinationIds::class,
             scopes: [
-                'product_write',
+                'product_read',
             ],
-            CQRSQueryMapping: NewProductImage::QUERY_MAPPING,
-            CQRSCommandMapping: [
+            CQRSQueryMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
-                '[image].pathName' => '[pathName]',
+                '[@index][combinationId]' => '[combinationIds][@index]',
             ],
         ),
     ],
@@ -54,28 +47,9 @@ use Symfony\Component\HttpFoundation\Response;
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class NewProductImage
+class CombinationIdList
 {
     public int $productId;
-    public int $imageId;
-
-    public string $imageUrl;
-
-    public string $thumbnailUrl;
-
-    #[LocalizedValue]
-    public array $legends;
-
-    public bool $cover;
-
-    public int $position;
-
-    public array $shopIds;
-
-    public File $image;
-
-    public const QUERY_MAPPING = [
-        '[_context][shopConstraint]' => '[shopConstraint]',
-        '[localizedLegends]' => '[legends]',
-    ];
+    #[ApiProperty(openapiContext: ['type' => 'array', 'description' => 'List of combination IDs', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    public array $combinationIds;
 }

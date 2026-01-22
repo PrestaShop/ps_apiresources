@@ -230,6 +230,17 @@ class AddressEndpointTest extends ApiTestCase
         ];
         $customerAddress = $this->createItem('/addresses/customers', $addressData, ['address_write']);
         $addressId = $customerAddress['addressId'];
+        $expectedAddress = [
+            'addressId' => $addressId,
+            'address2' => '',
+            'dni' => '',
+            'company' => '',
+            'vatNumber' => '',
+            'homePhone' => '',
+            'mobilePhone' => '',
+            'other' => '',
+        ] + $addressData;
+        $this->assertEquals($expectedAddress, $customerAddress);
 
         // Create a minimal order with this address
         $order = new \Order();

@@ -33,6 +33,12 @@ services:
     tags:
       - { name: 'console.command' }
 
+  # Custom normalizers for commands/queries that are very specific and cannot rely on generic solutions from the core
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\GenerateCombinationsSerializer:
+    autowire: true
+    autoconfigure: true
+    public: false
+
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\StateIdInterfaceNormalizer:
     tags:
       - { name: 'serializer.normalizer', priority: 100 }
@@ -54,8 +60,6 @@ services:
     public: false
     arguments:
       $decorated: '@serializer.normalizer.object'
-    tags:
-      - { name: 'serializer.normalizer', priority: 300 }
 
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
