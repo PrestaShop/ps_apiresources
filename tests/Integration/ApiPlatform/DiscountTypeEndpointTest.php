@@ -20,12 +20,26 @@
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
+
 class DiscountTypeEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient();
+        // Check if the command exists, if it doesn't the tests won't run so nothing to init
+        if (class_exists(AddDiscountCommand::class)) {
+            self::createApiClient();
+        }
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // If the discount domain does not exist we can skip all the tests here
+        if (!class_exists(AddDiscountCommand::class)) {
+            $this->markTestSkipped('AddDiscountCommand class does not exist');
+        }
     }
 
     public static function getProtectedEndpoints(): iterable
