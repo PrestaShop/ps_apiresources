@@ -1,5 +1,7 @@
 # PrestaShop API Resources
 
+[![Coverage Status](https://coveralls.io/repos/github/PrestaShop/ps_apiresources/badge.svg)](https://coveralls.io/github/PrestaShop/ps_apiresources)
+
 ## About
 
 Includes the resources allowing using the API for the PrestaShop domain, all endpoints are based on CQRS commands/queries from the Core and we [API Platform](https://api-platform.com/) framework is used as a base.
