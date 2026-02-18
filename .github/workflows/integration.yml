@@ -25,17 +25,19 @@ jobs:
             prestashop_version: '9.0.x'
       fail-fast: false
     steps:
-      - name: Checkout module code
+      - name: Checkout Module
         uses: actions/checkout@v3
         with:
           path: ps_apiresources
-      - uses: actions/checkout@v3
-        name: Checkout PrestaShop repository
+
+      - name: Checkout PrestaShop repository
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           repository: PrestaShop/PrestaShop
           path: prestashop
           ref: ${{ matrix.prestashop_version }}
+
       - name: Build Docker
         timeout-minutes: 15
         env:
@@ -48,16 +50,59 @@ jobs:
             exit
           fi
           bash -l -c 'while [[ "$(curl -L -s -o /dev/null -w %{http_code} 'http://localhost:8001/install-dev/')" != "200" ]]; do echo "waiting for shop install"; sleep 5; done'
-          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 php bin/console prestashop:module uninstall ps_apiresources
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            php bin/console prestashop:module uninstall ps_apiresources
+
       - name: Install Module
         run: |
           rm -rf prestashop/modules/ps_apiresources
           mkdir -p prestashop/modules/ps_apiresources
           cp -r ps_apiresources/* prestashop/modules/ps_apiresources
           ls -l prestashop/modules/ps_apiresources
-          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 composer install --no-interaction --working-dir=/var/www/html/modules/ps_apiresources
-          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 php bin/console prestashop:module install ps_apiresources
-          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 composer create-test-db
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            composer install --no-interaction --working-dir=/var/www/html/modules/ps_apiresources
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            php bin/console prestashop:module install ps_apiresources
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            composer create-test-db
+
+      - name: Install pcov & git
+        if: matrix.php == '8.4' && matrix.prestashop_version == 'develop'
+        run: |
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            pecl install pcov
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            docker-php-ext-enable pcov
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            apt install -y git
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            git config --global --add safe.directory /var/www/html
+
       - name: Run integration tests
+        env:
+          CLI_PHP: ${{ (matrix.php == '8.4' && matrix.prestashop_version == 'develop') && '-d extension=pcov.so -d pcov.enabled=1 -d pcov.directory=./modules/ps_apiresources/ -d pcov.exclude="~(tests|vendor)~" -d memory_limit=-1' || ' ' }}
+          CLI_PHPUNIT: ${{ (matrix.php == '8.4' && matrix.prestashop_version == 'develop') && ' ' || ' --no-coverage' }}
         run : |
-          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 vendor/bin/phpunit -c modules/ps_apiresources/tests/Integration/phpunit-ci.xml
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
+            php ${{env.CLI_PHP}} vendor/bin/phpunit -c modules/ps_apiresources/tests/Integration/phpunit-ci.xml${{ env.CLI_PHPUNIT }}
+
+      - name: Upload coverage results to Coveralls
+        if: matrix.php == '8.4' && matrix.prestashop_version == 'develop'
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec -w /var/www/html/modules/ps_apiresources prestashop-prestashop-git-1 \
+            wget https://github.com/php-coveralls/php-coveralls/releases/download/v2.9.1/php-coveralls.phar
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec -w /var/www/html/modules/ps_apiresources prestashop-prestashop-git-1 \
+            chmod +x php-coveralls.phar
+          USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec \
+            -e COVERALLS_REPO_TOKEN=${{env.COVERALLS_REPO_TOKEN}} \
+            -e GITHUB_ACTIONS=true \
+            -e GITHUB_EVENT_NAME=${{github.event_name}} \
+            -e GITHUB_REF=${{github.ref}} \
+            -e GITHUB_RUN_ID=${{github.run_id}} \
+            -w /var/www/html/modules/ps_apiresources prestashop-prestashop-git-1 \
+            php php-coveralls.phar \
+              --coverage_clover=tests/Integration/clover.xml \
+              --json_path=tests/Integration/coveralls-upload.json \
+              -v
