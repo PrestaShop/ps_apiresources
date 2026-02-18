@@ -10,18 +10,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  workflow_matrix_generator:
+    name: PHP matrix
+    uses: ./.github/workflows/workflow-matrix-generator.yml
   integration:
     permissions:
       contents: read   #   to clone the repos and get release assets (shivammathur/setup-php)
     name: Integration tests
     runs-on: ubuntu-latest
+    needs: workflow_matrix_generator
     strategy:
       matrix:
-        php: [ '8.1', '8.2', '8.3', '8.4', '8.5' ]
+        php: ${{ fromJSON(needs.workflow_matrix_generator.outputs.dynamic_matrix) }}
         prestashop_version: ['develop', '9.0.x', '9.1.x']
         exclude:
           # 9.0.x doesn't support PHP 8.5
           - php: '8.5'
+            prestashop_version: '9.0.x'
+        include:
+          # Since 8.4 is the boundary gor 9.0.x it should be included despite the dynamic matrix
+          - php: '8.4'
             prestashop_version: '9.0.x'
       fail-fast: false
     steps:
@@ -67,7 +75,7 @@ jobs:
             composer create-test-db
 
       - name: Install pcov & git
-        if: matrix.php == '8.4' && matrix.prestashop_version == 'develop'
+        if: matrix.php == '8.1' && matrix.prestashop_version == 'develop'
         run: |
           USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
             pecl install pcov
@@ -80,14 +88,14 @@ jobs:
 
       - name: Run integration tests
         env:
-          CLI_PHP: ${{ (matrix.php == '8.4' && matrix.prestashop_version == 'develop') && '-d extension=pcov.so -d pcov.enabled=1 -d pcov.directory=./modules/ps_apiresources/ -d pcov.exclude="~(tests|vendor)~" -d memory_limit=-1' || ' ' }}
-          CLI_PHPUNIT: ${{ (matrix.php == '8.4' && matrix.prestashop_version == 'develop') && ' ' || ' --no-coverage' }}
+          CLI_PHP: ${{ (matrix.php == '8.1' && matrix.prestashop_version == 'develop') && '-d extension=pcov.so -d pcov.enabled=1 -d pcov.directory=./modules/ps_apiresources/ -d pcov.exclude="~(tests|vendor)~" -d memory_limit=-1' || ' ' }}
+          CLI_PHPUNIT: ${{ (matrix.php == '8.1' && matrix.prestashop_version == 'develop') && ' ' || ' --no-coverage' }}
         run : |
           USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
             php ${{env.CLI_PHP}} vendor/bin/phpunit -c modules/ps_apiresources/tests/Integration/phpunit-ci.xml${{ env.CLI_PHPUNIT }}
 
       - name: Upload coverage results to Coveralls
-        if: matrix.php == '8.4' && matrix.prestashop_version == 'develop'
+        if: matrix.php == '8.1' && matrix.prestashop_version == 'develop'
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
