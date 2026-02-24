@@ -261,7 +261,7 @@ class Discount
     public bool $allowPartialUse;
     public int $priority;
     public \DateTimeImmutable $validFrom;
-    public \DateTimeImmutable $validTo;
+    public ?\DateTimeImmutable $validTo;
 
     protected const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
