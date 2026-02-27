@@ -22,6 +22,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\AddCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\DeleteCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\EditCustomerCommand;
@@ -165,8 +166,8 @@ class Customer
 
     public ?string $website;
 
-    #[ApiProperty(openapiContext: ['type' => 'number', 'format' => 'float', 'example' => 1000.5])]
-    public ?float $allowedOutstandingAmount;
+    #[ApiProperty(openapiContext: ['type' => 'string', 'example' => '1000.50'])]
+    public ?DecimalNumber $allowedOutstandingAmount;
 
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 30])]
     public ?int $maxPaymentDays;

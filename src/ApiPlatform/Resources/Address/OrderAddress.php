@@ -27,11 +27,9 @@ use PrestaShop\PrestaShop\Core\Domain\Address\Command\EditOrderAddressCommand;
 use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Address\Query\GetCustomerAddressForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\Country\ValueObject\CountryId;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\InvalidAddressTypeException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\State\Exception\StateConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\State\ValueObject\StateIdInterface;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -92,9 +90,9 @@ class OrderAddress
     ])]
     public ?string $postCode = null;
 
-    public ?CountryId $countryId = null;
+    public ?int $countryId = null;
 
-    public ?StateIdInterface $stateId = null;
+    public ?int $stateId = null;
 
     #[TypedRegex([
         'type' => TypedRegex::TYPE_PHONE_NUMBER,

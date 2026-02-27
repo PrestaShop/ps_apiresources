@@ -123,3 +123,27 @@ jobs:
 
         - name: Run Rector dry-run
           run: composer rector
+
+    phpstan:
+      name: PHPStan - ApiResource type check
+      runs-on: ubuntu-latest
+      steps:
+        - name: Setup PHP
+          uses: shivammathur/setup-php@v2
+          with:
+            php-version: '8.1'
+
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Cache dependencies
+          uses: actions/cache@v3
+          with:
+            path: vendor
+            key: php-${{ hashFiles('composer.lock') }}
+
+        - name: Install dependencies
+          run: composer install
+
+        - name: Run PHPStan
+          run: composer phpstan

@@ -52,7 +52,8 @@
         "run-unit-tests": "@php -d date.timezone=UTC ./vendor/bin/phpunit -c tests/Unit/phpunit.xml",
         "setup-local-tests": "PsApiResourcesTest\\EnvironmentBuilder::setupLocalTests",
         "rector": "vendor/bin/rector process --clear-cache --dry-run",
-        "rector-fix": "vendor/bin/rector process"
+        "rector-fix": "vendor/bin/rector process",
+        "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress"
     },
     "type": "prestashop-module",
     "author": "PrestaShop"

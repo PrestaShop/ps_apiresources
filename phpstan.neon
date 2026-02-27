@@ -1,0 +1,30 @@
+parameters:
+    # Level 0 is sufficient: we only want our custom rule to run.
+    # Built-in PHPStan rules at higher levels would produce many false positives
+    # because this module's runtime dependencies (PrestaShop core, API Platform,
+    # prestashop/decimal) are not installed in its own vendor directory — they
+    # are provided by the PrestaShop instance the module is deployed into.
+    level: 0
+
+    paths:
+        - src/ApiPlatform/Resources
+        # Include the rule class so PHPStan can track changes and invalidate
+        # the result cache correctly when the rule is updated.
+        - tests/PHPStan
+
+    # Silence errors that arise because this module's runtime dependencies are
+    # not installed in its own vendor/ directory. Our custom rule operates
+    # purely on the AST and does not need those classes to be loadable.
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # "Class Foo not found." / "Instantiated class Foo not found."
+        - '#(Class|Instantiated class|Interface|Trait) [a-zA-Z0-9_\\]+ not found\.#'
+        # "Attribute class Foo does not exist." / "Attribute class Foo not found."
+        - '#Attribute class [a-zA-Z0-9_\\]+ (not found|does not exist)\.#'
+        # "Access to constant BAR on an unknown class Foo."
+        - '#Access to constant [a-zA-Z0-9_]+ on an unknown class [a-zA-Z0-9_\\]+\.#'
+        # "Property Foo::$bar has unknown class Baz as its type."
+        - '#Property [a-zA-Z0-9_\\:$]+ has unknown class [a-zA-Z0-9_\\]+ as its type\.#'
+
+rules:
+    - PsApiResourcesTest\PHPStan\ApiResourcePropertyTypeRule
