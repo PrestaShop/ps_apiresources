@@ -29,6 +29,7 @@ use PrestaShop\PrestaShop\Core\Domain\Tax\Command\DeleteTaxCommand;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Command\EditTaxCommand;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Exception\TaxNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Query\GetTaxForEditing;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -87,7 +88,7 @@ class Tax
     public array $names;
 
     #[Assert\NotNull(groups: ['Create'])]
-    public float $rate;
+    public DecimalNumber $rate;
 
     #[Assert\NotNull(groups: ['Create'])]
     public bool $enabled;

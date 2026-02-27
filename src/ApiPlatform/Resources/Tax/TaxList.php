@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Tax;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Search\Filters\TaxFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
@@ -55,13 +56,13 @@ class TaxList
 
     public string $name;
 
-    public float $rate;
+    public DecimalNumber $rate;
 
     public bool $enabled;
 
     public function setRate(string $rate): self
     {
-        $this->rate = (float) $rate;
+        $this->rate = new DecimalNumber($rate);
 
         return $this;
     }

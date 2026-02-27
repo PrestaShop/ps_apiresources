@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\QueryParameter;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\SearchProducts;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 
@@ -113,13 +114,13 @@ class FoundProduct
 
     public string $name;
 
-    public float $taxRate;
+    public DecimalNumber $taxRate;
 
     public string $formattedPrice;
 
-    public float $priceTaxIncl;
+    public DecimalNumber $priceTaxIncl;
 
-    public float $priceTaxExcl;
+    public DecimalNumber $priceTaxExcl;
 
     public int $stock;
 
