@@ -17,26 +17,9 @@
  * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
-
-declare(strict_types=1);
-
-use PsApiResourcesTest\Rector\ApiResourceBooleanFieldsRector;
-use PsApiResourcesTest\Rector\ApiResourceScalarTypesRector;
-use PsApiResourcesTest\Rector\ApiResourceUriTemplateRector;
-use Rector\Config\RectorConfig;
-
-return RectorConfig::configure()
-    ->withPaths([
-        __DIR__ . '/src/ApiPlatform/Resources',
-    ])
-    ->withAutoloadPaths([
-        __DIR__ . '/tests/Rector',
-    ])
-    ->withSkip([
-        // Skip standard rector rules if you only want to run custom rules
-    ])
-    ->withRules([
-        ApiResourceUriTemplateRector::class,
-        ApiResourceBooleanFieldsRector::class,
-        ApiResourceScalarTypesRector::class,
-    ]);
+if (!defined('_THEME_NAME_')) {
+    define('_THEME_NAME_', 'classic');
+}
+if (!defined('__PS_BASE_URI__')) {
+    define('__PS_BASE_URI__', '/');
+}

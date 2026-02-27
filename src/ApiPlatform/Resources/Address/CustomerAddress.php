@@ -28,8 +28,6 @@ use PrestaShop\PrestaShop\Core\Domain\Address\Command\EditCustomerAddressCommand
 use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Address\Query\GetCustomerAddressForEditing;
-use PrestaShop\PrestaShop\Core\Domain\Country\ValueObject\CountryId;
-use PrestaShop\PrestaShop\Core\Domain\State\ValueObject\StateIdInterface;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
@@ -113,7 +111,7 @@ class CustomerAddress
     public string $postCode;
 
     #[Assert\NotBlank(groups: ['Create'])]
-    public CountryId $countryId;
+    public int $countryId;
 
     #[TypedRegex([
         'type' => TypedRegex::TYPE_DNI_LITE,
@@ -124,7 +122,7 @@ class CustomerAddress
 
     public ?string $vatNumber;
 
-    public StateIdInterface $stateId;
+    public int $stateId;
 
     #[TypedRegex([
         'type' => TypedRegex::TYPE_PHONE_NUMBER,

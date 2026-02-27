@@ -1,0 +1,10 @@
+parameters:
+    # Load stub class definitions so PHPStan can resolve the external types
+    # (ApiResource, DecimalNumber, …) that are not present in this module's
+    # own vendor directory.
+    bootstrapFiles:
+        - ../../PHPStan/Fixture/stubs.php
+
+    # Do not complain about ignore rules that had no match — the set of
+    # classes that are "missing" may vary depending on PHPStan version.
+    reportUnmatchedIgnoredErrors: false

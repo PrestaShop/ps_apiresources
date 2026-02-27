@@ -20,23 +20,22 @@
 
 declare(strict_types=1);
 
-use PsApiResourcesTest\Rector\ApiResourceBooleanFieldsRector;
-use PsApiResourcesTest\Rector\ApiResourceScalarTypesRector;
-use PsApiResourcesTest\Rector\ApiResourceUriTemplateRector;
-use Rector\Config\RectorConfig;
+// A forbidden object type defined in this file so PHPStan can resolve it.
 
-return RectorConfig::configure()
-    ->withPaths([
-        __DIR__ . '/src/ApiPlatform/Resources',
-    ])
-    ->withAutoloadPaths([
-        __DIR__ . '/tests/Rector',
-    ])
-    ->withSkip([
-        // Skip standard rector rules if you only want to run custom rules
-    ])
-    ->withRules([
-        ApiResourceUriTemplateRector::class,
-        ApiResourceBooleanFieldsRector::class,
-        ApiResourceScalarTypesRector::class,
-    ]);
+namespace Some\Forbidden {
+    class ValueObject
+    {
+    }
+}
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Stub {
+    use ApiPlatform\Metadata\ApiResource;
+    use Some\Forbidden\ValueObject;
+
+    #[ApiResource]
+    class InvalidObjectTypeResource
+    {
+        public int $id;
+        public ValueObject $something;
+    }
+}

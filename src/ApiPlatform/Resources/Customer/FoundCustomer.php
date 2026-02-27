@@ -22,6 +22,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\SearchCustomers;
@@ -39,13 +40,13 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQuery: SearchCustomers::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             ApiResourceMapping: self::API_RESOURCE_MAPPING,
-            parameters: [
+            parameters: new Parameters([
                 new QueryParameter(
                     key: 'phrases',
                     required: true,
                     description: 'Array of search phrases to find customers (matches first name, last name, email, company name and id)'
                 ),
-            ],
+            ]),
             openapiContext: [
                 'parameters' => [
                     [

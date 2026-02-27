@@ -76,6 +76,39 @@ Then you can run the tests with this command:
 composer run-module-tests
 ```
 
+## Run PHPStan locally
+
+You can run PHPStan locally using the composer script, you will need to specify two variables though:
+- `_PS_ROOT_DIR_`: path to a local PrestaShop root folder
+- `_PS_BRANCH_`: which branch you are testing, this impacts the PHPStan config file used which contains specific rules and exceptions, accepted values are `develop|9.1.x|9.0.x`
+
+```bash
+# To test with the develop branch
+_PS_ROOT_DIR_=/path/to/prestashop-develop _PS_BRANCH_=develop composer phpstan
+
+# To test with the 9.1.x branch
+_PS_ROOT_DIR_=/path/to/prestashop-91x _PS_BRANCH_=9.1.x composer phpstan
+
+# To test with the develop branch
+_PS_ROOT_DIR_=/path/to/prestashop-90x _PS_BRANCH_=9.0.x composer phpstan
+```
+
+Each config uses a différent cache folders stored in `var/phpstan-tmp` but you can easily pollute it if:
+- you run the command multiple times with mixed variables (`_PS_ROOT_DIR_` and `_PS_BRANCH_` don't match)
+- you change your branch in `_PS_ROOT_DIR_` but the cache was already generated with the previous branch
+
+You can remove the `var/phpstan-tmp` cache to reset the cache.
+
+You can also use the composer script to update the baseline to include exceptions for specific versions:
+
+```bash
+# To test with the develop branch (this should updated phpstan-9.0.x.neon only)
+_PS_ROOT_DIR_=/path/to/prestashop-90x _PS_BRANCH_=9.0.x composer phpstan-baseline
+```
+
+Make sure you use the correct two variables and your cache is correct ro you will add the wrong exceptions for the wrong branch.
+This composer script will generate a dedicated baseline file, but the rules should be included in the existing phpstan config for the branch.
+
 ## Contributing
 
 The PrestaShop Admin API provides RESTful endpoints for managing your store programmatically. Everyone is welcome to contribute by adding new API endpoints!
