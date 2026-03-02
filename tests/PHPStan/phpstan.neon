@@ -7,9 +7,14 @@ parameters:
     paths:
         - ../../ps_apiresources.php
         - ../../src/
-    excludePaths:
-        - ../../src/ApiPlatform/Processor/
-        - ../../src/ApiPlatform/Normalizer/
+    ignoreErrors:
+        # BulkCustomersDeleteProcessor is a pre-existing custom Processor that pre-dates this rule.
+        # TODO: Remove it and use the generic CommandProcessor from PrestaShopBundle instead.
+        -
+            identifier: apiResource.processorProviderNotAllowed
+            path: ../../src/ApiPlatform/Processor/BulkCustomersDeleteProcessor.php
 
 rules:
     - PsApiResourcesTest\PHPStan\ApiResourcePropertyTypeRule
+    - PsApiResourcesTest\PHPStan\ApiResourceNormalizerRule
+    - PsApiResourcesTest\PHPStan\ApiResourceProcessorProviderRule
