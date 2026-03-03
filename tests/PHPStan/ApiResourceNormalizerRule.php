@@ -76,16 +76,6 @@ final class ApiResourceNormalizerRule implements Rule
     private const ALLOWED_CLASSES = [
         // Valid: complex denormalization of product-combination generation input.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GenerateCombinationsSerializer',
-        // Valid: supplies a default deleteMethod for bulk-customer delete operations.
-        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\BulkDeleteCustomerCommandDenormalizer',
-        // Valid: injects orderId from request attributes into the normalized OrderAddress.
-        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\OrderAddressNormalizer',
-        // Valid: injects cartId from request attributes into the normalized CartAddress.
-        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\CartAddressNormalizer',
-        // Pending removal: was needed for StateIdInterface value object; now fixable via int type.
-        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\StateIdInterfaceNormalizer',
-        // Pending removal: was needed for CountryId value object; now fixable via int type.
-        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\CountryIdNormalizer',
     ];
 
     public function getNodeType(): string

@@ -359,10 +359,14 @@ class TaxEndpointTest extends ApiTestCase
     {
         // Creating with invalid data should return a response with invalid constraint messages and use an http code 422
         $validationErrorsResponse = $this->createItem('/taxes', [
-            'name' => '',
+            'names' => [],
         ], ['tax_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
         $this->assertValidationErrors([
+            [
+                'propertyPath' => 'names',
+                'message' => 'The field names is required at least in your default language.',
+            ],
             [
                 'propertyPath' => 'rate',
                 'message' => 'This value should not be null.',

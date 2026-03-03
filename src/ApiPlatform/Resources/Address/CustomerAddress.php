@@ -138,6 +138,9 @@ class CustomerAddress
 
     public const QUERY_MAPPING = [
         '[id]' => '[addressId]',
+        // This is to handle NoStateId that is not normalized properly, it was fixed in 9.1 with
+        // https://github.com/PrestaShop/PrestaShop/pull/40912
+        '[stateId][value]' => '[stateId]',
     ];
 
     public const COMMAND_MAPPING = [
