@@ -202,7 +202,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
     public function testToggleTaxRulesGroupStatus(int $taxRulesGroupId): void
     {
         $response = $this->partialUpdateItem(
-            '/tax-rules-groups/' . $taxRulesGroupId . '/update-status',
+            '/tax-rules-groups/' . $taxRulesGroupId . '/set-status',
             ['enabled' => false],
             ['tax_rules_group_write'],
             Response::HTTP_NO_CONTENT
@@ -221,7 +221,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
         );
 
         $response = $this->partialUpdateItem(
-            '/tax-rules-groups/' . $taxRulesGroupId . '/update-status',
+            '/tax-rules-groups/' . $taxRulesGroupId . '/set-status',
             ['enabled' => true],
             ['tax_rules_group_write'],
             Response::HTTP_NO_CONTENT
