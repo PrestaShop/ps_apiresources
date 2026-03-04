@@ -80,7 +80,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
 
         yield 'toggle status endpoint' => [
             'PATCH',
-            '/tax-rules-groups/1/update-status',
+            '/tax-rules-groups/1/set-status',
         ];
     }
 
