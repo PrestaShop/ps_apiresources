@@ -72,7 +72,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['tax_rules_group_write'],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/tax-rules-groups/{taxRulesGroupId}/update-status',
+            uriTemplate: '/tax-rules-groups/{taxRulesGroupId}/set-status',
             requirements: ['taxRulesGroupId' => '\d+'],
             output: false,
             read: false,
