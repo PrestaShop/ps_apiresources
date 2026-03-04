@@ -18,7 +18,7 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\DiscountType;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
@@ -29,7 +29,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 #[ApiResource(
     operations: [
         new CQRSGetCollection(
-            uriTemplate: '/discount-types',
+            uriTemplate: '/discounts/types',
             CQRSQuery: GetDiscountTypes::class,
             scopes: ['discount_read'],
             CQRSQueryMapping: [],

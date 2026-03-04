@@ -48,13 +48,13 @@ class CustomerDetails
     #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $customerId;
 
-    public mixed $personalInformation;
+    public array $personalInformation;
 
-    public mixed $ordersInformation;
+    public array $ordersInformation;
 
     public array $cartsInformation;
 
-    public mixed $productsInformation;
+    public array $productsInformation;
 
     public array $messagesInformation;
 
@@ -68,7 +68,7 @@ class CustomerDetails
 
     public array $addressesInformation;
 
-    public mixed $generalInformation;
+    public array $generalInformation;
 
     public const QUERY_MAPPING = [
         '[customerId]' => '[customerId]',

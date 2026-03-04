@@ -20,23 +20,32 @@
 
 declare(strict_types=1);
 
-use PsApiResourcesTest\Rector\ApiResourceBooleanFieldsRector;
-use PsApiResourcesTest\Rector\ApiResourceScalarTypesRector;
-use PsApiResourcesTest\Rector\ApiResourceUriTemplateRector;
-use Rector\Config\RectorConfig;
+namespace PsApiResourcesTest\Unit\Rector;
 
-return RectorConfig::configure()
-    ->withPaths([
-        __DIR__ . '/src/ApiPlatform/Resources',
-    ])
-    ->withAutoloadPaths([
-        __DIR__ . '/tests/Rector',
-    ])
-    ->withSkip([
-        // Skip standard rector rules if you only want to run custom rules
-    ])
-    ->withRules([
-        ApiResourceUriTemplateRector::class,
-        ApiResourceBooleanFieldsRector::class,
-        ApiResourceScalarTypesRector::class,
-    ]);
+use PHPUnit\Framework\Attributes\DataProvider;
+use PsApiResourcesTest\Rector\ApiResourceScalarTypesRector;
+use Rector\Testing\PHPUnit\AbstractRectorTestCase;
+
+/**
+ * Test class for ApiResourceScalarTypesRector.
+ *
+ * @see https://getrector.com/documentation/writing-tests-for-custom-rule
+ */
+final class ApiResourceScalarTypesRectorTest extends AbstractRectorTestCase
+{
+    #[DataProvider('provideData')]
+    public function test(string $filePath): void
+    {
+        $this->doTestFile($filePath);
+    }
+
+    public static function provideData(): \Iterator
+    {
+        return self::yieldFilesFromDirectory(__DIR__ . '/Fixture/ApiResourceScalarTypesRector');
+    }
+
+    public function provideConfigFilePath(): string
+    {
+        return __DIR__ . '/config/scalar_types_rule.php';
+    }
+}

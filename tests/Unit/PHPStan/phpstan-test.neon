@@ -1,0 +1,4 @@
+parameters:
+    # Do not complain about ignore rules that had no match — the set of
+    # classes that are "missing" may vary depending on PHPStan version.
+    reportUnmatchedIgnoredErrors: false

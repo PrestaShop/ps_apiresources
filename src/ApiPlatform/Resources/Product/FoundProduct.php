@@ -24,7 +24,9 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\SearchProducts;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 
@@ -36,7 +38,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                 'product_read',
             ],
             CQRSQuery: SearchProducts::class,
-            parameters: [
+            parameters: new Parameters([
                 new QueryParameter(
                     key: 'phrase',
                     required: true,
@@ -44,7 +46,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                 ),
                 new QueryParameter(
                     key: 'resultsLimit',
-                    schema: ['type' => 'integer', 'default' => 20],
+                    schema: ['type' => 'integer', 'default' => '20'],
                     required: true,
                     description: 'Maximum number of results to return'
                 ),
@@ -59,7 +61,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                     required: false,
                     description: 'Optional order ID for context-specific pricing'
                 ),
-            ],
+            ]),
             openapiContext: [
                 'parameters' => [
                     [
@@ -113,13 +115,13 @@ class FoundProduct
 
     public string $name;
 
-    public float $taxRate;
+    public DecimalNumber $taxRate;
 
     public string $formattedPrice;
 
-    public float $priceTaxIncl;
+    public DecimalNumber $priceTaxIncl;
 
-    public float $priceTaxExcl;
+    public DecimalNumber $priceTaxExcl;
 
     public int $stock;
 

@@ -1,0 +1,17 @@
+includes:
+    - %currentWorkingDirectory%/vendor/prestashop/php-dev-tools/phpstan/ps-module-extension.neon
+
+parameters:
+    level: 5
+    phpVersion: 80100
+    paths:
+        - ../../ps_apiresources.php
+        - ../../src/
+        - ../../tests/PHPStan
+    ignoreErrors:
+        # Add all-versions ignores here as needed
+
+rules:
+    - PsApiResourcesTest\PHPStan\ApiResourcePropertyTypeRule
+    - PsApiResourcesTest\PHPStan\ApiResourceNormalizerRule
+    - PsApiResourcesTest\PHPStan\ApiResourceProcessorProviderRule

@@ -20,23 +20,10 @@
 
 declare(strict_types=1);
 
-use PsApiResourcesTest\Rector\ApiResourceBooleanFieldsRector;
 use PsApiResourcesTest\Rector\ApiResourceScalarTypesRector;
-use PsApiResourcesTest\Rector\ApiResourceUriTemplateRector;
 use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
-    ->withPaths([
-        __DIR__ . '/src/ApiPlatform/Resources',
-    ])
-    ->withAutoloadPaths([
-        __DIR__ . '/tests/Rector',
-    ])
-    ->withSkip([
-        // Skip standard rector rules if you only want to run custom rules
-    ])
     ->withRules([
-        ApiResourceUriTemplateRector::class,
-        ApiResourceBooleanFieldsRector::class,
         ApiResourceScalarTypesRector::class,
     ]);

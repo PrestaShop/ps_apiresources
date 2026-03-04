@@ -20,23 +20,24 @@
 
 declare(strict_types=1);
 
-use PsApiResourcesTest\Rector\ApiResourceBooleanFieldsRector;
-use PsApiResourcesTest\Rector\ApiResourceScalarTypesRector;
-use PsApiResourcesTest\Rector\ApiResourceUriTemplateRector;
-use Rector\Config\RectorConfig;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Normalizer;
 
-return RectorConfig::configure()
-    ->withPaths([
-        __DIR__ . '/src/ApiPlatform/Resources',
-    ])
-    ->withAutoloadPaths([
-        __DIR__ . '/tests/Rector',
-    ])
-    ->withSkip([
-        // Skip standard rector rules if you only want to run custom rules
-    ])
-    ->withRules([
-        ApiResourceUriTemplateRector::class,
-        ApiResourceBooleanFieldsRector::class,
-        ApiResourceScalarTypesRector::class,
-    ]);
+use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
+
+class GenerateCombinationsSerializer implements DenormalizerInterface
+{
+    public function denormalize(mixed $data, string $type, ?string $format = null, array $context = []): mixed
+    {
+        return null;
+    }
+
+    public function supportsDenormalization(mixed $data, string $type, ?string $format = null): bool
+    {
+        return false;
+    }
+
+    public function getSupportedTypes(?string $format): array
+    {
+        return [];
+    }
+}

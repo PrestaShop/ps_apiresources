@@ -22,24 +22,23 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Customer\Command\BulkDisableCustomerCommand;
-use PrestaShop\PrestaShop\Core\Domain\Customer\Command\BulkEnableCustomerCommand;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Command\BulkDeleteCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\Customer\ValueObject\CustomerDeleteMethod;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/customers/bulk-disable',
-            // No output 204 code
-            output: false,
-            CQRSCommand: BulkDisableCustomerCommand::class,
+        new CQRSDelete(
+            uriTemplate: '/customers/bulk-delete',
+            CQRSCommand: BulkDeleteCustomerCommand::class,
             scopes: [
                 'customer_write',
             ],
+            allowEmptyBody: false,
             openapiContext: [
                 'requestBody' => [
                     'required' => true,
@@ -53,41 +52,19 @@ use Symfony\Component\Validator\Constraints as Assert;
                                         'type' => 'array',
                                         'items' => ['type' => 'integer'],
                                     ],
-                                ],
-                            ],
-                            'example' => [
-                                'customerIds' => [1, 2, 3],
-                            ],
-                        ],
-                    ],
-                ],
-            ],
-        ),
-        new CQRSUpdate(
-            uriTemplate: '/customers/bulk-enable',
-            // No output 204 code
-            output: false,
-            CQRSCommand: BulkEnableCustomerCommand::class,
-            scopes: [
-                'customer_write',
-            ],
-            openapiContext: [
-                'requestBody' => [
-                    'required' => true,
-                    'content' => [
-                        'application/json' => [
-                            'schema' => [
-                                'type' => 'object',
-                                'required' => ['customerIds'],
-                                'properties' => [
-                                    'customerIds' => [
-                                        'type' => 'array',
-                                        'items' => ['type' => 'integer'],
+                                    'deleteMethod' => [
+                                        'type' => 'string',
+                                        'enum' => [
+                                            CustomerDeleteMethod::ALLOW_CUSTOMER_REGISTRATION,
+                                            CustomerDeleteMethod::DENY_CUSTOMER_REGISTRATION,
+                                        ],
+                                        'description' => 'Method to use for customer deletion. Default: allow_registration_after',
                                     ],
                                 ],
                             ],
                             'example' => [
                                 'customerIds' => [1, 2, 3],
+                                'deleteMethod' => 'allow_registration_after',
                             ],
                         ],
                     ],
@@ -100,7 +77,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkCustomers
+class BulkDeleteCustomers
 {
     /**
      * @var int[]
@@ -108,4 +85,21 @@ class BulkCustomers
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 2, 3]])]
     #[Assert\NotBlank()]
     public array $customerIds;
+
+    #[ApiProperty(openapiContext: [
+        'type' => 'string',
+        'enum' => [
+            CustomerDeleteMethod::ALLOW_CUSTOMER_REGISTRATION,
+            CustomerDeleteMethod::DENY_CUSTOMER_REGISTRATION,
+        ],
+        'example' => CustomerDeleteMethod::ALLOW_CUSTOMER_REGISTRATION,
+    ])]
+    #[Assert\Choice(
+        choices: [
+            CustomerDeleteMethod::ALLOW_CUSTOMER_REGISTRATION,
+            CustomerDeleteMethod::DENY_CUSTOMER_REGISTRATION,
+        ],
+        message: 'The delete method must be either "allow_registration_after" or "deny_registration_after".',
+    )]
+    public string $deleteMethod = CustomerDeleteMethod::ALLOW_CUSTOMER_REGISTRATION;
 }

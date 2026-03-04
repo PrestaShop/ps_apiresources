@@ -20,23 +20,13 @@
 
 declare(strict_types=1);
 
-use PsApiResourcesTest\Rector\ApiResourceBooleanFieldsRector;
-use PsApiResourcesTest\Rector\ApiResourceScalarTypesRector;
-use PsApiResourcesTest\Rector\ApiResourceUriTemplateRector;
-use Rector\Config\RectorConfig;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Normalizer;
 
-return RectorConfig::configure()
-    ->withPaths([
-        __DIR__ . '/src/ApiPlatform/Resources',
-    ])
-    ->withAutoloadPaths([
-        __DIR__ . '/tests/Rector',
-    ])
-    ->withSkip([
-        // Skip standard rector rules if you only want to run custom rules
-    ])
-    ->withRules([
-        ApiResourceUriTemplateRector::class,
-        ApiResourceBooleanFieldsRector::class,
-        ApiResourceScalarTypesRector::class,
-    ]);
+// A helper class in the Normalizer namespace that is not a normalizer itself.
+// The rule must not report this class.
+class NormalizerHelper
+{
+    public function someHelperMethod(): void
+    {
+    }
+}

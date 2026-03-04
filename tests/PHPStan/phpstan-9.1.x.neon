@@ -1,0 +1,7 @@
+includes:
+    - %currentWorkingDirectory%/tests/PHPStan/phpstan.neon
+
+parameters:
+    tmpDir: %currentWorkingDirectory%/var/phpstan-tmp/9.1.x
+    ignoreErrors:
+        # Add version-specific ignores here as needed
