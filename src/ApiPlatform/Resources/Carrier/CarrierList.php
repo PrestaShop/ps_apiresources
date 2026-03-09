@@ -40,7 +40,7 @@ use Symfony\Component\HttpFoundation\Response;
                 '[id_carrier]' => '[carrierId]',
                 '[is_free]' => '[isFree]',
             ],
-            gridDataFactory: 'prestashop.core.grid.data.factory.carrier_decorator',
+            gridDataFactory: 'prestashop.core.grid.data.factory.carrier',
             filtersClass: CarrierFilters::class,
         ),
     ],
