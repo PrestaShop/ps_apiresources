@@ -74,7 +74,7 @@ class CarrierRanges
     public array $zones = [];
 
     public const QUERY_MAPPING = [
-        '[carrierId]' => '[getCarrierId]',
+        '[carrierId]' => '[getCarrierId][getValue]',
         '[zones]' => '[getZones]',
     ];
 }
