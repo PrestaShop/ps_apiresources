@@ -507,7 +507,6 @@ class AddressEndpointTest extends ApiTestCase
     public function testGetAddressRequiredFields(): void
     {
         $result = $this->getItem('/addresses/required-fields', ['address_read']);
-        
         $this->assertArrayHasKey('requiredFields', $result);
         $this->assertIsArray($result['requiredFields']);
         
