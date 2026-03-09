@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Carrier;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetCarrierRanges;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -42,6 +43,8 @@ use Symfony\Component\HttpFoundation\Response;
     normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         CarrierNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // GetCarrierRanges only supports ShopConstraint::allShops() - core limitation (TODO in CarrierRangeRepository)
+        CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CarrierRanges
