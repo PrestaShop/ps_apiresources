@@ -24,7 +24,6 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Carrier;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetCarrierForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -72,7 +71,7 @@ class Carrier
 
     public int $maxDepth;
 
-    public DecimalNumber $maxWeight;
+    public float $maxWeight;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $associatedGroupIds;
@@ -96,7 +95,8 @@ class Carrier
     public int $ordersCount;
 
     public const QUERY_MAPPING = [
-        '[carrierId]' => '[getCarrierId]',
+        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[carrierId]' => '[getCarrierId][getValue]',
         '[name]' => '[getName]',
         '[grade]' => '[getGrade]',
         '[trackingUrl]' => '[getTrackingUrl]',
@@ -111,9 +111,9 @@ class Carrier
         '[associatedGroupIds]' => '[getAssociatedGroupIds]',
         '[hasAdditionalHandlingFee]' => '[hasAdditionalHandlingFee]',
         '[isFree]' => '[isFree]',
-        '[shippingMethod]' => '[getShippingMethod]',
+        '[shippingMethod]' => '[getShippingMethod][getValue]',
         '[idTaxRuleGroup]' => '[getIdTaxRuleGroup]',
-        '[rangeBehavior]' => '[getRangeBehavior]',
+        '[rangeBehavior]' => '[getRangeBehavior][getValue]',
         '[associatedShopIds]' => '[getAssociatedShopIds]',
         '[zones]' => '[getZones]',
         '[ordersCount]' => '[getOrdersCount]',
