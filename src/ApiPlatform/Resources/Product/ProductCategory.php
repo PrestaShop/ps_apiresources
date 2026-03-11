@@ -26,7 +26,6 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AssignProductToCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\RemoveAllAssociatedProductCategoriesCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\SetAssociatedProductCategoriesCommand;
-use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,12 +33,12 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/products/{productId}/assign-to-category',
+            uriTemplate: '/products/{productId}/assign-to-categories',
             requirements: ['productId' => '\d+'],
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AssignProductToCategoryCommand::class,
-            CQRSQueryMapping: ProductCategory::QUERY_MAPPING,
-            CQRSQuery: GetProductForEditing::class,
+            status: Response::HTTP_NO_CONTENT,
+            output: false,
             scopes: [
                 'product_write',
             ],
@@ -50,8 +49,8 @@ use Symfony\Component\HttpFoundation\Response;
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: SetAssociatedProductCategoriesCommand::class,
             CQRSCommandMapping: ProductCategory::COMMAND_MAPPING,
-            CQRSQueryMapping: ProductCategory::QUERY_MAPPING,
-            CQRSQuery: GetProductForEditing::class,
+            status: Response::HTTP_NO_CONTENT,
+            output: false,
             scopes: [
                 'product_write',
             ],
@@ -77,15 +76,7 @@ class ProductCategory
 
     public ?int $defaultCategoryId;
 
-    public ?array $categories;
-
-    public const QUERY_MAPPING = [
-        '[_context][shopConstraint]' => '[shopConstraint]',
-        '[_context][langId]' => '[displayLanguageId]',
-        // Enables the ProductCategoryOutputNormalizer
-        // for serializing the response of CQRS category endpoints.
-        'use_product_category_normalizer' => true,
-    ];
+    public ?array $categoryIds = null;
 
     public const COMMAND_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
