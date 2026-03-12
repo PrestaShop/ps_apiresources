@@ -27,20 +27,21 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeNotFoundException;
 use PrestaShop\PrestaShop\Core\Search\Filters\EmployeeFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
-use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
         new PaginatedList(
             uriTemplate: '/employees',
-            provider: QueryListProvider::class,
             scopes: ['employee_read'],
             ApiResourceMapping: [
                 '[id_employee]' => '[employeeId]',
             ],
             gridDataFactory: 'prestashop.core.grid.data.factory.employee',
             filtersClass: EmployeeFilters::class,
+            filtersMapping: [
+                '[employeeId]' => '[employee_id]',
+            ]
         ),
     ],
     exceptionToStatus: [

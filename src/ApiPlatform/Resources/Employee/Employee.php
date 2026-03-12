@@ -31,6 +31,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
@@ -53,7 +54,7 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
-        new CQRSPartialUpdate(
+        new CQRSUpdate(
             uriTemplate: '/employees/{employeeId}',
             CQRSCommand: EditEmployeeCommand::class,
             CQRSQuery: GetEmployeeForEditing::class,
@@ -78,9 +79,6 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class Employee
 {
-    #[ApiProperty(identifier: true)]
-    public int $employeeId;
-
     public const COMMAND_MAPPING = [
         '[employee_id]' => '[employeeId]',
     ];
@@ -89,6 +87,8 @@ class Employee
         '[employee_id][value]' => '[employeeId]',
     ];
 
+    #[ApiProperty(identifier: true)]
+    public int $employeeId;
     public string $firstName;
     public string $lastName;
     public string $email;
