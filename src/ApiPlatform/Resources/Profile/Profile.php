@@ -26,9 +26,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Profile;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\AddProfileCommand;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Command\DeleteProfileCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Query\GetProfileForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
@@ -47,6 +49,11 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             scopes: ['profile_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+        ),
+        new CQRSDelete(
+            uriTemplate: '/profiles/{profileId}',
+            CQRSCommand: DeleteProfileCommand::class,
+            scopes: ['profile_write'],
         ),
     ]
 )]
