@@ -36,7 +36,13 @@ class CountryEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
+<<<<<<< HEAD
         self::createApiClient(['country_read', 'country_write']);
+||||||| parent of 3780907 (Add test Remove Country)
+        self::createApiClient(['country_read']);
+=======
+        self::createApiClient(['country_read','country_write']);
+>>>>>>> 3780907 (Add test Remove Country)
     }
 
     public static function tearDownAfterClass(): void
@@ -50,6 +56,7 @@ class CountryEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => ['POST', '/countries'];
         yield 'get endpoint' => ['GET', '/countries/1'];
+        yield 'delete endpoint' => ['DELETE','/countries/1'];
     }
 
     public function testAddCountry(): int
@@ -156,6 +163,17 @@ class CountryEndpointTest extends ApiTestCase
             'displayTaxLabel' => true,
             'shopIds' => [1],
         ], $country);
+    }
+
+    public function testRemoveCountry(int $countryId): void
+    {
+        // Delete the item
+        $return = $this->deleteItem('/countries/' . $countryId, ['country_write']);
+        // This endpoint return empty response and 204 HTTP code
+        $this->assertNull($return);
+
+        // Getting the item should result in a 404 now
+        $this->getItem('/countries/' . $countryId, ['country_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testGetNonExistentCountry(): void
