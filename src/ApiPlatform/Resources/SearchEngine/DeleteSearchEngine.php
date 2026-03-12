@@ -21,15 +21,13 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchAlias;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchEngine;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Command\DeleteSearchEngineCommand;
-use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\DeleteSearchEngineException;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\SearchEngineException;
+use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\SearchEngineNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -37,21 +35,20 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/search-engines',
-            requirements: ['searchTerm' => '\d+'],
+            uriTemplate: '/search-engines/{searchEngineId}',
+            requirements: ['searchEngineId' => '\d+'],
             CQRSCommand: DeleteSearchEngineCommand::class,
             scopes: ['search_engine_write'],
-            allowEmptyBody: false,
-            experimentalOperation: true,
         ),
     ],
     exceptionToStatus: [
-        DeleteSearchEngineException::class => Response::HTTP_NOT_FOUND,
-        SearchEngineException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        SearchEngineNotFoundException::class => Response::HTTP_NOT_FOUND,
+        SearchEngineException::class => Response::HTTP_BAD_REQUEST,
     ],
 )]
 class DeleteSearchEngine
 {
     #[ApiProperty(identifier: true)]
+    #[Assert\NotBlank]
     public int $searchEngineId;
 }
