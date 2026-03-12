@@ -85,22 +85,7 @@ class EmployeeEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/employees', ['employee_read']);
 
-        $employee = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED, [
-            'headers' => [
-                'content-type' => 'multipart/form-data',
-            ],
-            'extra' => [
-                'parameters' => [
-                    'names' => [
-                        'en-US' => 'name en',
-                        'fr-FR' => 'name fr',
-                    ],
-                    // We use string on purpose because form data are sent like string, thus we validate here that the denormalization still
-                    // works with string value (actually we only ignore the wrong type, but it works nonetheless)
-                    'gender' => '1',
-                ],
-            ],
-        ]);
+        $employee = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employee);
         $employeeId = $employee['employeeId'];
         $this->assertEquals(
@@ -191,6 +176,8 @@ class EmployeeEndpointTest extends ApiTestCase
             ],
             $updatedEmployee
         );
+
+        return $employeeId;
     }
 
     /**
@@ -283,40 +270,10 @@ class EmployeeEndpointTest extends ApiTestCase
         $this->assertEquals(2, $employees['totalItems']);
 
         // We create two new employees
-        $employeeNew1 = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED, [
-            'headers' => [
-                'content-type' => 'multipart/form-data',
-            ],
-            'extra' => [
-                'parameters' => [
-                    'names' => [
-                        'en-US' => 'name en',
-                        'fr-FR' => 'name fr',
-                    ],
-                    // We use string on purpose because form data are sent like string, thus we validate here that the denormalization still
-                    // works with string value (actually we only ignore the wrong type, but it works nonetheless)
-                    'gender' => '1',
-                ],
-            ],
-        ]);
+        $employeeNew1 = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employeeNew1);
 
-        $employeeNew2 = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED, [
-            'headers' => [
-                'content-type' => 'multipart/form-data',
-            ],
-            'extra' => [
-                'parameters' => [
-                    'names' => [
-                        'en-US' => 'name en',
-                        'fr-FR' => 'name fr',
-                    ],
-                    // We use string on purpose because form data are sent like string, thus we validate here that the denormalization still
-                    // works with string value (actually we only ignore the wrong type, but it works nonetheless)
-                    'gender' => '1',
-                ],
-            ],
-        ]);
+        $employeeNew2 = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employeeNew2);
 
         // There are employees in default fixtures
