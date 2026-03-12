@@ -57,7 +57,7 @@ class ProfileEndpointTest extends ApiTestCase
     {
         $response = $this->createItem('/profiles', [
             'names' => [
-                'en-EN' => 'Profile En',
+                'en-US' => 'Profile En',
                 'fr-FR' => 'Profile Fr',
             ]
         ], ['profile_write']);
@@ -66,7 +66,7 @@ class ProfileEndpointTest extends ApiTestCase
         $this->assertEquals([
             'profileId' => $response['profileId'],
             'names' => [
-                'en-EN' => 'Profile En',
+                'en-US' => 'Profile En',
                 'fr-FR' => 'Profile Fr',
             ],
         ], $response);
@@ -84,7 +84,7 @@ class ProfileEndpointTest extends ApiTestCase
         $this->assertEquals([
             'profileId' => $profileId,
             'names' => [
-                'en-EN' => 'Profile En',
+                'en-US' => 'Profile En',
                 'fr-FR' => 'Profile Fr',
             ],
         ], $response);
