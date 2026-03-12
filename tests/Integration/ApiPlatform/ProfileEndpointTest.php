@@ -23,12 +23,15 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Tests\Resources\DatabaseDump;
+use Tests\Resources\Resetter\LanguageResetter;
 
 class ProfileEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+        LanguageResetter::resetLanguages();
+        self::addLanguageByLocale('fr-FR');
         DatabaseDump::restoreTables(['profile', 'profile_lang']);
 
         self::createApiClient(['profile_read', 'profile_write']);
@@ -37,6 +40,7 @@ class ProfileEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
+        LanguageResetter::resetLanguages();
         DatabaseDump::restoreTables(['profile', 'profile_lang']);
     }
 
