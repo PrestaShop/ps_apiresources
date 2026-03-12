@@ -95,7 +95,7 @@ class Employee
     public string $avatarUrl;
     public int $defaultPageId;
     public int $languageId;
-    public bool $active;
+    public bool $enabled;
     public int $profileId;
     public array $shopAssociation;
     public bool $hasEnabledGravatar;
