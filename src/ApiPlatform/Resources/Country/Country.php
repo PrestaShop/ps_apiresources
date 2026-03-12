@@ -29,7 +29,9 @@ use PrestaShop\PrestaShop\Core\Domain\Country\Command\AddCountryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Query\GetCountryForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShop\PrestaShop\Core\Domain\Country\Command\DeleteCountryCommand;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -49,6 +51,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetCountryForEditing::class,
             scopes: ['country_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
+        ),
+        new CQRSDelete(
+            uriTemplate: '/countries/{countryId}',
+            CQRSCommand: DeleteCountryCommand::class,
+            scopes: ['country_read'],
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
