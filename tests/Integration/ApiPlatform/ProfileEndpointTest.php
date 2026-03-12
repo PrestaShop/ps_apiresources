@@ -51,6 +51,11 @@ class ProfileEndpointTest extends ApiTestCase
             'POST',
             '/profiles',
         ];
+
+        yield 'delete endpoint' => [
+            'DELETE',
+            '/profiles/1',
+        ];
     }
 
     public function testCreateProfile(): int
@@ -77,7 +82,7 @@ class ProfileEndpointTest extends ApiTestCase
     /**
      * @depends testCreateProfile
      */
-    public function testGetProfile(int $profileId): void
+    public function testGetProfile(int $profileId): int
     {
         $response = $this->getItem('/profiles/' . $profileId, ['profile_read']);
 
@@ -88,5 +93,16 @@ class ProfileEndpointTest extends ApiTestCase
                 'fr-FR' => 'Profile Fr',
             ],
         ], $response);
+
+        return $profileId;
+    }
+
+    /**
+     * @depends testGetProfile
+     */
+    public function testDeleteProfile(int $profileId): void
+    {
+        $this->deleteItem('/profiles/' . $profileId, ['profile_write']);
+        $this->getItem('/profiles/' . $profileId, ['profile_read'], 404);
     }
 }
