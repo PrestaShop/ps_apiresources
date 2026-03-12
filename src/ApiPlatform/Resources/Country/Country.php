@@ -81,7 +81,6 @@ class Country
         '[localizedNames]' => '[names]',
         '[defaultCurrency]' => '[defaultCurrencyId]',
         '[zone]' => '[zoneId]',
-        '[zipCodeFormat][value]' => '[zipCodeFormat]',
         '[shopAssociation]' => '[shopIds]',
     ];
 }
