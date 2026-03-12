@@ -28,8 +28,8 @@ use PrestaShop\PrestaShop\Core\Domain\Profile\Command\AddProfileCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\DeleteProfileCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Query\GetProfileForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 
 #[ApiResource(
