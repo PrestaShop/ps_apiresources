@@ -85,7 +85,7 @@ class EmployeeEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/employees', ['employee_read']);
 
-        $employee = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED);
+        $employee = $this->createItem('/employees', null, ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employee);
         $employeeId = $employee['employeeId'];
         $this->assertEquals(
@@ -270,10 +270,10 @@ class EmployeeEndpointTest extends ApiTestCase
         $this->assertEquals(2, $employees['totalItems']);
 
         // We create two new employees
-        $employeeNew1 = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED);
+        $employeeNew1 = $this->createItem('/employees', null, ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employeeNew1);
 
-        $employeeNew2 = $this->requestApi('POST', '/employees', null, ['employee_write'], Response::HTTP_CREATED);
+        $employeeNew2 = $this->createItem('/employees', null, ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employeeNew2);
 
         // There are employees in default fixtures
