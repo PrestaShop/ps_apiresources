@@ -58,8 +58,6 @@ class Profile
     #[LocalizedValue]
     public array $names;
 
-    public ?string $avatarUrl = null;
-
     protected const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
     ];
