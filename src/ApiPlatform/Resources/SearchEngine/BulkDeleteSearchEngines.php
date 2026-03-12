@@ -21,16 +21,15 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchAlias;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchEngine;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Alias\Command\BulkDeleteSearchTermsAliasesCommand;
-use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Command\BulkDeleteSearchEngineCommand;
-use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\DeleteSearchEngineException;
+use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\SearchEngineNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -38,15 +37,10 @@ use Symfony\Component\HttpFoundation\Response;
             uriTemplate: '/search-engines/bulk-delete',
             CQRSCommand: BulkDeleteSearchEngineCommand::class,
             scopes: ['search_engine_write'],
-            CQRSCommandMapping: [
-                '[searchEngineIds]' => '[searchEngineIds]',
-            ],
-            allowEmptyBody: false,
-            experimentalOperation: true,
         ),
     ],
     exceptionToStatus: [
-        DeleteSearchEngineException::class => Response::HTTP_NOT_FOUND,
+        SearchEngineNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class BulkDeleteSearchEngines
@@ -57,5 +51,7 @@ class BulkDeleteSearchEngines
             'items' => ['type' => 'int'],
         ]
     )]
+    #[Assert\NotBlank]
+    #[Assert\Count(min: 1)]
     public array $searchEngineIds = [];
 }
