@@ -64,7 +64,7 @@ class ProfileEndpointTest extends ApiTestCase
             'names' => [
                 'en-US' => 'Profile En',
                 'fr-FR' => 'Profile Fr',
-            ]
+            ],
         ], ['profile_write']);
 
         $this->assertArrayHasKey('profileId', $response);
