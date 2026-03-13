@@ -18,8 +18,6 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-declare(strict_types=1);
-
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Employee;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -33,15 +31,14 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new PaginatedList(
             uriTemplate: '/employees',
-            scopes: ['employee_read'],
             ApiResourceMapping: [
-                '[id_employee]' => '[employeeId]',
+                '[employee_id]' => '[employeeId]',
             ],
             gridDataFactory: 'prestashop.core.grid.data.factory.employee',
             filtersClass: EmployeeFilters::class,
-            filtersMapping: [
-                '[employeeId]' => '[employee_id]',
-            ]
+            scopes: [
+                'employee_read',
+            ],
         ),
     ],
     exceptionToStatus: [
