@@ -55,7 +55,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSDelete(
             uriTemplate: '/countries/{countryId}',
             CQRSCommand: DeleteCountryCommand::class,
-            scopes: ['country_read'],
+            scopes: ['country_write'],
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
