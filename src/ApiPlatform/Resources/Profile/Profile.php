@@ -26,11 +26,13 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\AddProfileCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\DeleteProfileCommand;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Query\GetProfileForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
@@ -54,7 +56,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             CQRSCommand: DeleteProfileCommand::class,
             scopes: ['profile_write'],
         ),
-    ]
+    ],
+    exceptionToStatus: [
+        ProfileNotFoundException::class => Response::HTTP_NOT_FOUND,
+    ],
 )]
 class Profile
 {
