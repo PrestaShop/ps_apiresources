@@ -34,7 +34,6 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSUpdate(
             uriTemplate: '/carriers/bulk-set-status',
-            input: BulkCarriers::class,
             output: false,
             CQRSCommand: BulkToggleCarrierStatusCommand::class,
             CQRSCommandMapping: [
