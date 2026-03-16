@@ -86,7 +86,7 @@ class CountryEndpointTest extends ApiTestCase
         $this->assertValidationErrors([
             [
                 'propertyPath' => 'names',
-                'message' => 'This value should be present in the default language.',
+                'message' => 'The field names is required at least in your default language.',
             ],
             [
                 'propertyPath' => 'isoCode',
