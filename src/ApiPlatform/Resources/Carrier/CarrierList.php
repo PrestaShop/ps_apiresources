@@ -42,6 +42,10 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             gridDataFactory: 'prestashop.core.grid.data.factory.carrier',
             filtersClass: CarrierFilters::class,
+            filtersMapping: [
+                '[carrierId]' => '[id_carrier]',
+                '[isFree]' => '[is_free]',
+            ],
         ),
     ],
     exceptionToStatus: [
