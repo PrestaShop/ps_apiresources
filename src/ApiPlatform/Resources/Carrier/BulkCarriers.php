@@ -55,7 +55,10 @@ class BulkCarriers
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    #[Assert\All([new Assert\Positive()])]
+    #[Assert\All([
+        new Assert\Type('numeric'),
+        new Assert\Positive(),
+    ])]
     public array $carrierIds;
 
     public bool $enabled;
