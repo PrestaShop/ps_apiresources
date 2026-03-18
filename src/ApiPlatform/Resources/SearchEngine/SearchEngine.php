@@ -25,10 +25,13 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchEngine;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Command\AddSearchEngineCommand;
+use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Command\EditSearchEngineCommand;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\SearchEngineException;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\SearchEngineNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Query\GetSearchEngineForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -41,10 +44,24 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetSearchEngineForEditing::class,
             scopes: ['search_engine_write'],
         ),
+        new CQRSGet(
+            uriTemplate: '/search-engines/{searchEngineId}',
+            requirements: ['searchEngineId' => '\d+'],
+            CQRSQuery: GetSearchEngineForEditing::class,
+            scopes: ['search_engine_read'],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/search-engines/{searchEngineId}',
+            requirements: ['searchEngineId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'Update']],
+            CQRSCommand: EditSearchEngineCommand::class,
+            CQRSQuery: GetSearchEngineForEditing::class,
+            scopes: ['search_engine_write'],
+        ),
     ],
     exceptionToStatus: [
-        SearchEngineException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         SearchEngineNotFoundException::class => Response::HTTP_NOT_FOUND,
+        SearchEngineException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class SearchEngine
@@ -52,11 +69,19 @@ class SearchEngine
     #[ApiProperty(identifier: true)]
     public int $searchEngineId;
 
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 1, max: 255)]
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Length(min: 1, max: 255, groups: ['Create'])]
+    #[Assert\AtLeastOneOf([
+        new Assert\Blank(),
+        new Assert\Length(min: 1, max: 255),
+    ], groups: ['Update'])]
     public string $server = '';
 
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 1, max: 255)]
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Length(min: 1, max: 255, groups: ['Create'])]
+    #[Assert\AtLeastOneOf([
+        new Assert\Blank(),
+        new Assert\Length(min: 1, max: 255),
+    ], groups: ['Update'])]
     public string $queryKey = '';
 }

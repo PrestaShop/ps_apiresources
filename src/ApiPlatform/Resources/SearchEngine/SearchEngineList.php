@@ -24,33 +24,32 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchEngine;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Command\BulkDeleteSearchEngineCommand;
-use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\SearchEngineNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints as Assert;
+use PrestaShop\PrestaShop\Core\Search\Filters\SearchEngineFilters;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
+use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 
 #[ApiResource(
     operations: [
-        new CQRSDelete(
-            uriTemplate: '/search-engines/bulk-delete',
-            CQRSCommand: BulkDeleteSearchEngineCommand::class,
-            scopes: ['search_engine_write'],
+        new PaginatedList(
+            uriTemplate: '/search-engines',
+            provider: QueryListProvider::class,
+            scopes: ['search_engine_read'],
+            gridDataFactory: 'prestashop.core.grid.data_provider.search_engines',
+            ApiResourceMapping: [
+                '[id_search_engine]' => '[searchEngineId]',
+                '[getvar]' => '[queryKey]',
+            ],
+            filtersClass: SearchEngineFilters::class,
+            filtersMapping: [
+                '[searchEngineId]' => '[id_search_engine]',
+            ],
         ),
     ],
-    exceptionToStatus: [
-        SearchEngineNotFoundException::class => Response::HTTP_NOT_FOUND,
-    ],
 )]
-class BulkDeleteSearchEngines
+class SearchEngineList
 {
-    #[ApiProperty(
-        openapiContext: [
-            'type' => 'array',
-            'items' => ['type' => 'int'],
-        ]
-    )]
-    #[Assert\NotBlank]
-    #[Assert\Count(min: 1)]
-    public array $searchEngineIds = [];
+    #[ApiProperty(identifier: true)]
+    public int $searchEngineId;
+    public string $server;
+    public string $queryKey;
 }
