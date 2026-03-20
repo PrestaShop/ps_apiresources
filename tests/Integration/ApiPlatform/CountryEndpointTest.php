@@ -52,7 +52,7 @@ class CountryEndpointTest extends ApiTestCase
         yield 'get endpoint' => ['GET', '/countries/1'];
     }
 
-    public function testAddCountry(): void
+    public function testAddCountry(): int
     {
         $country = $this->createItem('/countries', [
             'names' => [
