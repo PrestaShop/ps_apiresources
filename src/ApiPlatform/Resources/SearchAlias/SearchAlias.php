@@ -26,11 +26,13 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchAlias;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Alias\Command\AddSearchTermAliasesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Alias\Command\UpdateSearchTermAliasesCommand;
 use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Alias\Query\GetAliasesBySearchTermForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -42,16 +44,23 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['search_alias_read'],
             exceptionToStatus: [AliasNotFoundException::class => 404],
             CQRSQueryMapping: self::QUERY_MAPPING,
-            experimentalOperation: true,
         ),
         new CQRSCreate(
             uriTemplate: '/search-aliases',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddSearchTermAliasesCommand::class,
+            CQRSQuery: GetAliasesBySearchTermForEditing::class,
             scopes: ['search_alias_write'],
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
-            output: false,
-            experimentalOperation: true,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/search-aliases/{searchTerm}',
+            CQRSCommand: UpdateSearchTermAliasesCommand::class,
+            CQRSQuery: GetAliasesBySearchTermForEditing::class,
+            scopes: ['search_alias_write'],
+            CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
+            CQRSQueryMapping: self::QUERY_MAPPING,
         ),
     ],
     exceptionToStatus: [
@@ -62,12 +71,12 @@ use Symfony\Component\Validator\Constraints as Assert;
 class SearchAlias
 {
     #[ApiProperty(identifier: true)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\Length(min: 1, max: 255)]
     public string $searchTerm = '';
 
-    #[Assert\NotBlank]
-    #[Assert\Count(min: 1)]
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Count(min: 1, groups: ['Create'])]
     #[Assert\All(
         constraints: [
             new Assert\Collection(
@@ -94,12 +103,21 @@ class SearchAlias
     )]
     public array $aliases = [];
 
+    #[Assert\Length(min: 1, max: 255)]
+    public ?string $newSearchTerm = null;
+
     protected const QUERY_MAPPING = [
         '[aliases][@index][alias]' => '[aliases][@index][alias]',
         '[aliases][@index][active]' => '[aliases][@index][enabled]',
     ];
 
     protected const CREATE_COMMAND_MAPPING = [
+        '[aliases][@index][alias]' => '[aliases][@index][alias]',
+        '[aliases][@index][enabled]' => '[aliases][@index][active]',
+    ];
+
+    protected const UPDATE_COMMAND_MAPPING = [
+        '[searchTerm]' => '[oldSearchTerm]',
         '[aliases][@index][alias]' => '[aliases][@index][alias]',
         '[aliases][@index][enabled]' => '[aliases][@index][active]',
     ];
