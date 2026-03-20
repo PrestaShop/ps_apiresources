@@ -75,6 +75,8 @@ class CountryEndpointTest extends ApiTestCase
 
         $this->assertArrayHasKey('countryId', $country);
         $this->assertEquals(['countryId' => $country['countryId']], $country);
+
+        return $country['countryId'];
     }
 
     public function testAddCountryWithInvalidData(): void
