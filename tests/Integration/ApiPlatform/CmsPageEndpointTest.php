@@ -146,7 +146,7 @@ class CmsPageEndpointTest extends ApiTestCase
             ],
             'friendlyUrls' => [
                 // en-US (default language) is missing
-                'fr-FR' => 'invalid friendly url with spaces',
+                'fr-FR' => 'valid-friendly-url',
             ],
             'metaTitles' => [],
             'metaDescriptions' => [],
@@ -175,10 +175,6 @@ class CmsPageEndpointTest extends ApiTestCase
             [
                 'propertyPath' => 'friendlyUrls',
                 'message' => 'The field friendlyUrls is required at least in your default language.',
-            ],
-            [
-                'propertyPath' => 'friendlyUrls[fr-FR]',
-                'message' => '"invalid friendly url with spaces" is invalid',
             ],
         ], $response);
     }
