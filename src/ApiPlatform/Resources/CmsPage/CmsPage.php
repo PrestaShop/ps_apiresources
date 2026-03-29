@@ -118,7 +118,6 @@ class CmsPage
         '[localizedMetaDescription]' => '[metaDescriptions]',
         '[localizedFriendlyUrl]' => '[friendlyUrls]',
         '[localizedContent]' => '[contents]',
-        '[indexedForSearch]' => '[indexedForSearch]',
         '[displayed]' => '[enabled]',
         '[shopAssociation]' => '[shopIds]',
     ];
