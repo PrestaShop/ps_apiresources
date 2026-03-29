@@ -91,6 +91,11 @@ class CategoryEndpointTest extends ApiTestCase
             '/categories/3/status',
         ];
 
+        yield 'get status endpoint' => [
+            'GET',
+            '/categories/3/status',
+        ];
+
         yield 'delete thumbnail endpoint' => [
             'DELETE',
             '/categories/3/thumbnail',
@@ -193,6 +198,23 @@ class CategoryEndpointTest extends ApiTestCase
 
         // Fetching the item returns a 404 indicatjng it no longer exists
         $this->getItem('/categories/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testGetCategoryStatus(): void
+    {
+        // Get the status of an enabled category
+        $status = $this->getItem('/categories/3/status', ['category_read']);
+
+        $this->assertArrayHasKey('categoryId', $status);
+        $this->assertArrayHasKey('enabled', $status);
+        $this->assertSame(3, $status['categoryId']);
+        $this->assertTrue($status['enabled']);
+    }
+
+    public function testGetCategoryStatusNotFound(): void
+    {
+        // Try to get the status of a non-existent category
+        $this->getItem('/categories/999999/status', ['category_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testUpdateCategoryStatus(): void
