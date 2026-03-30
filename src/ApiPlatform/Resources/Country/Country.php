@@ -24,25 +24,41 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Country;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Country\Command\EditCountryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Query\GetCountryForEditing;
+use PrestaShop\PrestaShop\Core\Domain\Country\Query\GetCountryRequiredFields;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
         new CQRSGet(
+            uriTemplate: '/countries/{countryId}/required-fields',
+            requirements: ['countryId' => '\d+'],
+            openapiContext: ['summary' => 'Get country required fields', 'description' => 'Retrieves the required fields for a country'],
+            CQRSQuery: GetCountryRequiredFields::class,
+            scopes: [
+                'country_read',
+            ],
+        ),
+        new CQRSPartialUpdate(
             uriTemplate: '/countries/{countryId}',
             requirements: ['countryId' => '\d+'],
+            openapiContext: ['summary' => 'Edit country', 'description' => 'Updates a country configuration'],
+            CQRSCommand: EditCountryCommand::class,
             CQRSQuery: GetCountryForEditing::class,
-            scopes: ['country_read'],
-            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: [
+                'country_write',
+            ],
         ),
     ],
-    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         CountryNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CountryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Country
@@ -51,19 +67,19 @@ class Country
     public int $countryId;
 
     #[LocalizedValue]
-    public array $names;
+    public array $localizedNames;
 
     public string $isoCode;
 
     public int $callPrefix;
 
-    public int $defaultCurrencyId;
+    public int $defaultCurrency;
 
-    public int $zoneId;
+    public ?int $zoneId = null;
 
     public bool $needZipCode;
 
-    public ?string $zipCodeFormat;
+    public ?string $zipCodeFormat = null;
 
     public string $addressFormat;
 
@@ -75,12 +91,6 @@ class Country
 
     public bool $displayTaxLabel;
 
-    public array $shopIds;
-
-    public const QUERY_MAPPING = [
-        '[localizedNames]' => '[names]',
-        '[defaultCurrency]' => '[defaultCurrencyId]',
-        '[zone]' => '[zoneId]',
-        '[shopAssociation]' => '[shopIds]',
-    ];
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 2]])]
+    public array $shopAssociation;
 }
