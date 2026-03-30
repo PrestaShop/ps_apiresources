@@ -285,6 +285,25 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         return $this->requestApi(Request::METHOD_DELETE, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
     }
 
+    protected function bulkCommandItemsWithExpectedErrors(string $httpMethod, string $endPointUrl, ?array $data, ?array $expectedErrors, array $scopes = [], ?array $requestOptions = null): array|string|null
+    {
+        // In 9.1, we added a new normalizer to handle bulk command exceptions and return a 207 code with details about each error.
+        // If the normalizer is not present, it means we are on an older version and the API will return a 422 code with a generic error message,
+        // so we adapt our assertions based on the normalizer presence.
+        $newNormalizer = class_exists("PrestaShopBundle\ApiPlatform\Normalizer\BulkCommandExceptionNormalizer");
+        $expectedHttpCode = $newNormalizer ? Response::HTTP_MULTI_STATUS : Response::HTTP_UNPROCESSABLE_ENTITY;
+
+        $responseData = $this->requestApi($httpMethod, $endPointUrl, $data, $scopes, $expectedHttpCode, $requestOptions);
+
+        if ($newNormalizer && null !== $expectedErrors) {
+            $this->assertArrayHasKey('errors', $responseData);
+            $this->assertIsArray($responseData['errors']);
+            $this->assertEquals($expectedErrors, $responseData['errors']);
+        }
+
+        return $responseData;
+    }
+
     /**
      * Performs a GET request to list some items, returned data is paginated
      */
