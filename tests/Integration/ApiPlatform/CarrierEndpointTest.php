@@ -75,9 +75,34 @@ class CarrierEndpointTest extends ApiTestCase
         $carrierId = (int) self::$carrier1->id;
 
         $carrier = $this->getItem('/carriers/' . $carrierId, ['carrier_read']);
-        $this->assertEquals($carrierId, $carrier['carrierId']);
-        $this->assertTrue($carrier['active']);
-        $this->assertFalse($carrier['isFree']);
+        $this->assertEquals(
+            [
+                'carrierId' => $carrierId,
+                'name' => 'Test Carrier 1',
+                'grade' => 0,
+                'trackingUrl' => '',
+                'position' => $carrier['position'],
+                'active' => true,
+                'delay' => [
+                    'en-US' => 'Delivery in 2-3 days',
+                ],
+                'logoPath' => null,
+                'maxWidth' => 0,
+                'maxHeight' => 0,
+                'maxDepth' => 0,
+                'maxWeight' => 0.0,
+                'associatedGroupIds' => $carrier['associatedGroupIds'],
+                'hasAdditionalHandlingFee' => false,
+                'isFree' => false,
+                'shippingMethod' => 0,
+                'idTaxRuleGroup' => 0,
+                'rangeBehavior' => 0,
+                'associatedShopIds' => [1],
+                'zones' => [],
+                'ordersCount' => 0,
+            ],
+            $carrier
+        );
 
         return $carrierId;
     }
