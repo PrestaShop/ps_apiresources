@@ -78,7 +78,5 @@ class CarrierRanges
 
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
-        '[carrierId]' => '[getCarrierId][getValue]',
-        '[zones]' => '[getZones]',
     ];
 }
