@@ -1,0 +1,74 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
+
+use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Order\Command\ChangeOrderDeliveryAddressCommand;
+use PrestaShop\PrestaShop\Core\Domain\Order\Command\ChangeOrderInvoiceAddressCommand;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\CannotUpdateOrderException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\InvalidAddressTypeException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ApiResource(
+    operations: [
+        new CQRSUpdate(
+            uriTemplate: '/orders/{orderId}/delivery-addresses',
+            requirements: ['orderId' => '\d+'],
+            output: false,
+            CQRSCommand: ChangeOrderDeliveryAddressCommand::class,
+            scopes: ['order_write'],
+            CQRSCommandMapping: [
+                '[addressId]' => '[newDeliveryAddressId]',
+            ],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/orders/{orderId}/invoice-addresses',
+            requirements: ['orderId' => '\d+'],
+            output: false,
+            CQRSCommand: ChangeOrderInvoiceAddressCommand::class,
+            scopes: ['order_write'],
+            CQRSCommandMapping: [
+                '[addressId]' => '[newInvoiceAddressId]',
+            ],
+        ),
+    ],
+    exceptionToStatus: [
+        OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
+        OrderConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CannotUpdateOrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        InvalidAddressTypeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
+)]
+class OrderAddress
+{
+    #[ApiProperty(identifier: true)]
+    public int $orderId;
+
+    #[Assert\NotBlank]
+    public int $addressId;
+}
