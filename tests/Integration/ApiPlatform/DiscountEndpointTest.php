@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
+use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\ProductRuleGroupType;
 use PrestaShop\PrestaShop\Core\Domain\Discount\ProductRuleType;
 use Symfony\Component\HttpFoundation\Request;
@@ -617,10 +618,19 @@ class DiscountEndpointTest extends ApiTestCase
         $validId = $discount['discountId'];
 
         // Try to bulk enable with mixed valid and invalid IDs
-        $this->partialUpdateItem('/discounts/bulk-update-status', [
-            'discountIds' => [$validId, 999999],
-            'enabled' => true,
-        ], ['discount_write'], 422);
+        $this->bulkCommandItemsWithExpectedErrors(
+            Request::METHOD_DELETE,
+            '/discounts/bulk-delete',
+            ['discountIds' => [$validId, 999999]],
+            [
+                [
+                    'type' => DiscountNotFoundException::class,
+                    'message' => 'CartRule #999999 was not found',
+                    'status' => Response::HTTP_NOT_FOUND,
+                ],
+            ],
+            ['discount_write']
+        );
     }
 
     /**

@@ -76,6 +76,7 @@ final class ApiResourceNormalizerRule implements Rule
     private const ALLOWED_CLASSES = [
         // Valid: complex denormalization of product-combination generation input.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GenerateCombinationsSerializer',
+        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GetSearchTermAliasesQuerySerializer',
     ];
 
     public function getNodeType(): string

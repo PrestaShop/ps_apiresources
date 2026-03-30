@@ -24,48 +24,42 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Carrier;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException;
-use PrestaShop\PrestaShop\Core\Search\Filters\CarrierFilters;
-use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
-use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\BulkToggleCarrierStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new PaginatedList(
-            uriTemplate: '/carriers',
-            provider: QueryListProvider::class,
-            scopes: ['carrier_read'],
-            ApiResourceMapping: [
-                '[id_carrier]' => '[carrierId]',
-                '[is_free]' => '[isFree]',
+        new CQRSUpdate(
+            uriTemplate: '/carriers/bulk-set-status',
+            output: false,
+            CQRSCommand: BulkToggleCarrierStatusCommand::class,
+            CQRSCommandMapping: [
+                '[enabled]' => '[expectedStatus]',
             ],
-            gridDataFactory: 'prestashop.core.grid.data.factory.carrier',
-            filtersClass: CarrierFilters::class,
-            filtersMapping: [
-                '[carrierId]' => '[id_carrier]',
-                '[isFree]' => '[is_free]',
+            scopes: [
+                'carrier_write',
             ],
         ),
     ],
     exceptionToStatus: [
-        CarrierNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class CarrierList
+class BulkCarriers
 {
-    #[ApiProperty(identifier: true)]
-    public int $carrierId;
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[Assert\NotBlank]
+    #[Assert\All([
+        new Assert\Type('numeric'),
+        new Assert\Positive(),
+    ])]
+    public array $carrierIds;
 
-    public string $name;
-
-    public ?string $delay;
-
-    public bool $active;
-
-    public bool $isFree;
-
-    public int $position;
-
-    public ?string $logo;
+    public bool $enabled;
 }

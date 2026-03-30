@@ -26,26 +26,47 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchAlias;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Alias\Command\BulkDeleteSearchTermsAliasesCommand;
-use PrestaShop\PrestaShop\Core\Domain\Alias\Exception\AliasNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSDelete(
+            // Usually the identifier searchTerm would be in the URL, but since here it is a string this would
+            // conflict with the bulk url /search-aliases/bulk-delete (bulk-delete would be considered the identifier,
+            // vice versa)
+            // We will have only one endpoint for deletion, if there are multiple search terms to delete they will be
+            // passed in the JSON body, if there is only one search term to delete it will still need to be passed in
+            // the JSON body as an array with one element
+            // As a consequence, there is no single delete endpoint with the DeleteSearchTermAliasesCommand.
             uriTemplate: '/search-aliases/bulk-delete',
             CQRSCommand: BulkDeleteSearchTermsAliasesCommand::class,
             scopes: ['search_alias_write'],
-            CQRSCommandMapping: [
-                '[searchTerms]' => '[searchTerms]',
-            ],
             allowEmptyBody: false,
-            experimentalOperation: true,
+            openapiContext: [
+                'requestBody' => [
+                    'required' => true,
+                    'content' => [
+                        'application/json' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'required' => ['searchTerms'],
+                                'properties' => [
+                                    'searchTerms' => [
+                                        'type' => 'array',
+                                        'items' => ['type' => 'string'],
+                                    ],
+                                ],
+                            ],
+                            'example' => [
+                                'searchTerms' => ['blouse', 't-shirt'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ),
-    ],
-    exceptionToStatus: [
-        AliasNotFoundException::class => Response::HTTP_NOT_FOUND,
-    ],
+    ]
 )]
 class BulkDeleteSearchAliases
 {
@@ -55,5 +76,7 @@ class BulkDeleteSearchAliases
             'items' => ['type' => 'string'],
         ]
     )]
+    #[Assert\NotBlank]
+    #[Assert\Count(min: 1)]
     public array $searchTerms = [];
 }

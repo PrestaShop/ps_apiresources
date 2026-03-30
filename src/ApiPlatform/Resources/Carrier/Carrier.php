@@ -24,9 +24,15 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Carrier;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\DeleteCarrierCommand;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\ToggleCarrierIsFreeCommand;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\ToggleCarrierStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetCarrierForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -39,10 +45,33 @@ use Symfony\Component\HttpFoundation\Response;
             scopes: ['carrier_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
+        new CQRSUpdate(
+            uriTemplate: '/carriers/{carrierId}/toggle-status',
+            requirements: ['carrierId' => '\d+'],
+            output: false,
+            allowEmptyBody: true,
+            CQRSCommand: ToggleCarrierStatusCommand::class,
+            scopes: ['carrier_write'],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/carriers/{carrierId}/toggle-is-free',
+            requirements: ['carrierId' => '\d+'],
+            output: false,
+            allowEmptyBody: true,
+            CQRSCommand: ToggleCarrierIsFreeCommand::class,
+            scopes: ['carrier_write'],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/carriers/{carrierId}',
+            requirements: ['carrierId' => '\d+'],
+            CQRSCommand: DeleteCarrierCommand::class,
+            scopes: ['carrier_write'],
+        ),
     ],
     normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         CarrierNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Carrier
