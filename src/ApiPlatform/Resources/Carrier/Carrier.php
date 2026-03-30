@@ -115,26 +115,6 @@ class Carrier
 
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
-        '[carrierId]' => '[getCarrierId][getValue]',
-        '[name]' => '[getName]',
-        '[grade]' => '[getGrade]',
-        '[trackingUrl]' => '[getTrackingUrl]',
-        '[position]' => '[getPosition]',
-        '[active]' => '[isActive]',
-        '[delay]' => '[getLocalizedDelay]',
-        '[logoPath]' => '[getLogoPath]',
-        '[maxWidth]' => '[getMaxWidth]',
-        '[maxHeight]' => '[getMaxHeight]',
-        '[maxDepth]' => '[getMaxDepth]',
-        '[maxWeight]' => '[getMaxWeight]',
-        '[associatedGroupIds]' => '[getAssociatedGroupIds]',
-        '[hasAdditionalHandlingFee]' => '[hasAdditionalHandlingFee]',
-        '[isFree]' => '[isFree]',
-        '[shippingMethod]' => '[getShippingMethod][getValue]',
-        '[idTaxRuleGroup]' => '[getIdTaxRuleGroup]',
-        '[rangeBehavior]' => '[getRangeBehavior][getValue]',
-        '[associatedShopIds]' => '[getAssociatedShopIds]',
-        '[zones]' => '[getZones]',
-        '[ordersCount]' => '[getOrdersCount]',
+        '[localizedDelay]' => '[delay]',
     ];
 }
