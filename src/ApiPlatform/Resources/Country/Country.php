@@ -24,14 +24,25 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Country;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
+use PrestaShop\PrestaShop\Core\Domain\Country\Command\AddCountryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Query\GetCountryForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
+        new CQRSCreate(
+            uriTemplate: '/countries',
+            validationContext: ['groups' => ['Default', 'Create']],
+            CQRSCommand: AddCountryCommand::class,
+            scopes: ['country_write'],
+            CQRSCommandMapping: self::COMMAND_MAPPING,
+        ),
         new CQRSGet(
             uriTemplate: '/countries/{countryId}',
             requirements: ['countryId' => '\d+'],
@@ -51,31 +62,50 @@ class Country
     public int $countryId;
 
     #[LocalizedValue]
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
     public array $names;
 
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Length(max: 3)]
     public string $isoCode;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public int $callPrefix;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public int $defaultCurrencyId;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public int $zoneId;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $needZipCode;
 
     public ?string $zipCodeFormat;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public string $addressFormat;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $enabled;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $containsStates;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $needIdNumber;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $displayTaxLabel;
 
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $shopIds;
+
+    public const COMMAND_MAPPING = [
+        '[names]' => '[localizedNames]',
+        '[defaultCurrencyId]' => '[defaultCurrency]',
+        '[shopIds]' => '[shopAssociation]',
+    ];
 
     public const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',

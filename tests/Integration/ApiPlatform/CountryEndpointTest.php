@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 
 class CountryEndpointTest extends ApiTestCase
@@ -35,18 +36,101 @@ class CountryEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
-        self::createApiClient(['country_read']);
+        self::createApiClient(['country_read', 'country_write']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
         LanguageResetter::resetLanguages();
+        DatabaseDump::restoreTables(['country', 'country_lang', 'country_shop']);
     }
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'create endpoint' => ['POST', '/countries'];
         yield 'get endpoint' => ['GET', '/countries/1'];
+    }
+
+    public function testAddCountry(): int
+    {
+        $country = $this->createItem('/countries', [
+            'names' => [
+                'en-US' => 'My Country EN',
+                'fr-FR' => 'My Country FR',
+            ],
+            'isoCode' => 'ZZ',
+            'callPrefix' => 999,
+            'defaultCurrencyId' => 0,
+            'zoneId' => 1,
+            'needZipCode' => false,
+            'zipCodeFormat' => null,
+            'addressFormat' => '',
+            'enabled' => true,
+            'containsStates' => false,
+            'needIdNumber' => false,
+            'displayTaxLabel' => true,
+            'shopIds' => [1],
+        ], ['country_write']);
+
+        $this->assertArrayHasKey('countryId', $country);
+        $this->assertEquals(['countryId' => $country['countryId']], $country);
+
+        return $country['countryId'];
+    }
+
+    public function testAddCountryWithInvalidData(): void
+    {
+        $validationErrorsResponse = $this->createItem('/countries', [
+            'isoCode' => '',
+        ], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'names',
+                'message' => 'The field names is required at least in your default language.',
+            ],
+            [
+                'propertyPath' => 'isoCode',
+                'message' => 'This value should not be blank.',
+            ],
+            [
+                'propertyPath' => 'callPrefix',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'defaultCurrencyId',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'zoneId',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'needZipCode',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'addressFormat',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'enabled',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'containsStates',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'needIdNumber',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'displayTaxLabel',
+                'message' => 'This value should not be null.',
+            ],
+        ], $validationErrorsResponse);
     }
 
     public function testGetCountry(): void
