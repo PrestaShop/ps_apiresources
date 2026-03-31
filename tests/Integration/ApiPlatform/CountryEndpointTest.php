@@ -37,12 +37,18 @@ class CountryEndpointTest extends ApiTestCase
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
 <<<<<<< HEAD
+<<<<<<< HEAD
         self::createApiClient(['country_read', 'country_write']);
 ||||||| parent of 3780907 (Add test Remove Country)
         self::createApiClient(['country_read']);
 =======
         self::createApiClient(['country_read','country_write']);
 >>>>>>> 3780907 (Add test Remove Country)
+||||||| parent of 681834d (correct CS fixer)
+        self::createApiClient(['country_read','country_write']);
+=======
+        self::createApiClient(['country_read', 'country_write']);
+>>>>>>> 681834d (correct CS fixer)
     }
 
     public static function tearDownAfterClass(): void
@@ -56,7 +62,7 @@ class CountryEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => ['POST', '/countries'];
         yield 'get endpoint' => ['GET', '/countries/1'];
-        yield 'delete endpoint' => ['DELETE','/countries/1'];
+        yield 'delete endpoint' => ['DELETE', '/countries/1'];
     }
 
     public function testAddCountry(): int
