@@ -173,6 +173,31 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testRemoveCountry(int $countryId): void
     {
+
+        // Create Country
+        $country = $this->createItem('/countries', [
+            'names' => [
+                'en-US' => 'My Country EN',
+                'fr-FR' => 'My Country FR',
+            ],
+            'isoCode' => 'ZZ',
+            'callPrefix' => 999,
+            'defaultCurrencyId' => 0,
+            'zoneId' => 1,
+            'needZipCode' => false,
+            'zipCodeFormat' => null,
+            'addressFormat' => '',
+            'enabled' => true,
+            'containsStates' => false,
+            'needIdNumber' => false,
+            'displayTaxLabel' => true,
+            'shopIds' => [1],
+        ], ['country_write']);
+
+        // Obtain the countryID
+        $this->assertArrayHasKey('countryId', $country);
+        $this->assertEquals(['countryId' => $country['countryId']], $country);
+
         // Delete the item
         $return = $this->deleteItem('/countries/' . $countryId, ['country_write']);
         // This endpoint return empty response and 204 HTTP code
