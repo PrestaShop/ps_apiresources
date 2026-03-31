@@ -72,6 +72,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
         $postData = [
             'localizedNames' => [
                 'en-US' => 'test1',
+                'fr-FR' => 'test1 FR',
             ],
             'reductionPercent' => 10.3,
             'displayPriceTaxExcluded' => true,
@@ -90,6 +91,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
         $postData = [
             'localizedNames' => [
                 'en-US' => 'test1',
+                'fr-FR' => 'test1 FR',
             ],
             'reductionPercent' => 10.3,
             'displayPriceTaxExcluded' => true,
@@ -121,6 +123,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
         $updatedCustomerGroup = $this->updateItem('/customers/groups/' . $customerGroupId, [
             'localizedNames' => [
                 'en-US' => 'new_test1',
+                'fr-FR' => 'new_test1 FR',
             ],
             'displayPriceTaxExcluded' => false,
             'shopIds' => [1],
@@ -132,6 +135,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
                 'customerGroupId' => $customerGroupId,
                 'localizedNames' => [
                     'en-US' => 'new_test1',
+                    'fr-FR' => 'new_test1 FR',
                 ],
                 'reductionPercent' => 10.3,
                 'displayPriceTaxExcluded' => false,
@@ -164,6 +168,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
                 'customerGroupId' => $customerGroupId,
                 'localizedNames' => [
                     'en-US' => 'new_test1',
+                    'fr-FR' => 'new_test1 FR',
                 ],
                 'reductionPercent' => 10.3,
                 'displayPriceTaxExcluded' => false,

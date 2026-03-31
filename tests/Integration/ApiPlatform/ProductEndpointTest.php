@@ -30,9 +30,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductVisibility;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\RedirectType;
 use Symfony\Component\HttpFoundation\Response;
-use Tests\Resources\Resetter\LanguageResetter;
 use Tests\Resources\Resetter\ProductResetter;
-use Tests\Resources\ResourceResetter;
 
 class ProductEndpointTest extends ApiTestCase
 {
@@ -139,10 +137,7 @@ class ProductEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        (new ResourceResetter())->backupTestModules();
         ProductResetter::resetProducts();
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
         // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients
         self::createApiClient(['product_write', 'product_read']);
     }
@@ -151,9 +146,6 @@ class ProductEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         ProductResetter::resetProducts();
-        LanguageResetter::resetLanguages();
-        // Reset modules folder that are removed with the FR language
-        (new ResourceResetter())->resetTestModules();
     }
 
     public static function getProtectedEndpoints(): iterable

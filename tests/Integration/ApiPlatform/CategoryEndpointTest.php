@@ -25,16 +25,12 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
-use Tests\Resources\Resetter\LanguageResetter;
 
 class CategoryEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        // Add the fr-FR language to test multi lang values accurately
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
         self::resetTables();
         // Pre-create API client with needed scopes
         self::createApiClient(['category_read', 'category_write']);
@@ -43,8 +39,6 @@ class CategoryEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        // Reset DB as it was before this test
-        LanguageResetter::resetLanguages();
         self::resetTables();
     }
 

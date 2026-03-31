@@ -26,7 +26,6 @@ use Module;
 use PrestaShop\PrestaShop\Core\Module\ModuleRepository;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
-use Tests\Resources\ResourceResetter;
 
 class ModuleEndpointTest extends ApiTestCase
 {
@@ -50,7 +49,6 @@ class ModuleEndpointTest extends ApiTestCase
         parent::tearDownAfterClass();
         // We also need to restore role tables related to module installation, so it's safer to restore everything
         DatabaseDump::restoreAllTables();
-        (new ResourceResetter())->resetTestModules();
     }
 
     public static function getProtectedEndpoints(): iterable

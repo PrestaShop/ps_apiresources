@@ -28,10 +28,8 @@ use PrestaShop\PrestaShop\Core\Multistore\MultistoreConfig;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\Resetter\ConfigurationResetter;
 use Tests\Resources\Resetter\FeatureFlagResetter;
-use Tests\Resources\Resetter\LanguageResetter;
 use Tests\Resources\Resetter\ProductResetter;
 use Tests\Resources\Resetter\ShopResetter;
-use Tests\Resources\ResourceResetter;
 
 class ProductMultiShopEndpointTest extends ApiTestCase
 {
@@ -144,13 +142,9 @@ class ProductMultiShopEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        (new ResourceResetter())->backupTestModules();
         ProductResetter::resetProducts();
-        LanguageResetter::resetLanguages();
         ShopResetter::resetShops();
         ConfigurationResetter::resetConfiguration();
-
-        self::addLanguageByLocale('fr-FR');
 
         self::updateConfiguration(MultistoreConfig::FEATURE_STATUS, 1);
         // Disable secure protection for the tests (the configuration reset forced the default config back)
@@ -165,24 +159,21 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         $featureFlagManager->enable(FeatureFlagSettings::FEATURE_FLAG_ADMIN_API_MULTISTORE);
     }
 
+    public static function tearDownAfterClass(): void
+    {
+        parent::tearDownAfterClass();
+        ProductResetter::resetProducts();
+        ShopResetter::resetShops();
+        ConfigurationResetter::resetConfiguration();
+        FeatureFlagResetter::resetFeatureFlags();
+    }
+
     public static function getProtectedEndpoints(): iterable
     {
         yield 'get endpoint' => [
             'GET',
             '/products/1',
         ];
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        parent::tearDownAfterClass();
-        ProductResetter::resetProducts();
-        LanguageResetter::resetLanguages();
-        ShopResetter::resetShops();
-        ConfigurationResetter::resetConfiguration();
-        // Reset modules folder that are removed with the FR language
-        (new ResourceResetter())->resetTestModules();
-        FeatureFlagResetter::resetFeatureFlags();
     }
 
     public function testShopContextIsRequired(): void
