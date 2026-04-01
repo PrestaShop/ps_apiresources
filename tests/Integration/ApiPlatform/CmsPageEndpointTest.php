@@ -57,6 +57,12 @@ class CmsPageEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => ['GET', '/cms-pages/1'];
         yield 'create endpoint' => ['POST', '/cms-pages'];
+        yield 'patch endpoint' => ['PATCH', '/cms-pages/1'];
+        yield 'toggle status endpoint' => ['PUT', '/cms-pages/1/toggle-status'];
+        yield 'delete endpoint' => ['DELETE', '/cms-pages/1'];
+        yield 'bulk delete endpoint' => ['DELETE', '/cms-pages/bulk-delete'];
+        yield 'bulk enable endpoint' => ['PUT', '/cms-pages/bulk-enable'];
+        yield 'bulk disable endpoint' => ['PUT', '/cms-pages/bulk-disable'];
     }
 
     public function testAddCmsPage(): int
@@ -135,9 +141,129 @@ class CmsPageEndpointTest extends ApiTestCase
         return $cmsPageId;
     }
 
+    /** @depends testGetCmsPage */
+    public function testPartialUpdateCmsPage(int $cmsPageId): int
+    {
+        $patchData = [
+            'titles' => [
+                'en-US' => 'Updated CMS Page',
+                'fr-FR' => 'Page CMS mise à jour',
+            ],
+            'enabled' => false,
+        ];
+
+        $updated = $this->partialUpdateItem('/cms-pages/' . $cmsPageId, $patchData, ['cms_page_write']);
+        $this->assertEquals([
+            'cmsPageId' => $cmsPageId,
+            'cmsPageCategoryId' => 1,
+            'titles' => [
+                'en-US' => 'Updated CMS Page',
+                'fr-FR' => 'Page CMS mise à jour',
+            ],
+            'metaTitles' => [
+                'en-US' => 'Meta Title EN',
+                'fr-FR' => 'Meta Title FR',
+            ],
+            'metaDescriptions' => [
+                'en-US' => 'Meta description EN',
+                'fr-FR' => 'Meta description FR',
+            ],
+            'friendlyUrls' => [
+                'en-US' => 'test-cms-page',
+                'fr-FR' => 'page-cms-de-test',
+            ],
+            'contents' => [
+                'en-US' => '<p>Content EN</p>',
+                'fr-FR' => '<p>Contenu FR</p>',
+            ],
+            'indexedForSearch' => true,
+            'enabled' => false,
+            'shopIds' => [1],
+        ], $updated);
+
+        // Verify GET reflects the changes
+        $fetched = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
+        $this->assertEquals($updated, $fetched);
+
+        return $cmsPageId;
+    }
+
+    /** @depends testPartialUpdateCmsPage */
+    public function testToggleCmsPageStatus(int $cmsPageId): int
+    {
+        // Page is currently disabled, toggle should enable it
+        $this->updateItem('/cms-pages/' . $cmsPageId . '/toggle-status', [], ['cms_page_write'], Response::HTTP_NO_CONTENT);
+        $response = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
+        $this->assertEquals(true, $response['enabled']);
+
+        // Toggle again should disable it
+        $this->updateItem('/cms-pages/' . $cmsPageId . '/toggle-status', [], ['cms_page_write'], Response::HTTP_NO_CONTENT);
+        $response = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
+        $this->assertEquals(false, $response['enabled']);
+
+        return $cmsPageId;
+    }
+
+    /** @depends testToggleCmsPageStatus */
+    public function testBulkUpdateStatusCmsPages(int $cmsPageId): int
+    {
+        // Bulk enable
+        $this->updateItem('/cms-pages/bulk-enable', ['cmsPageIds' => [$cmsPageId]], ['cms_page_write'], Response::HTTP_NO_CONTENT);
+        $response = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
+        $this->assertEquals(true, $response['enabled']);
+
+        // Bulk disable
+        $this->updateItem('/cms-pages/bulk-disable', ['cmsPageIds' => [$cmsPageId]], ['cms_page_write'], Response::HTTP_NO_CONTENT);
+        $response = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
+        $this->assertEquals(false, $response['enabled']);
+
+        return $cmsPageId;
+    }
+
+    /** @depends testBulkUpdateStatusCmsPages */
+    public function testDeleteCmsPage(int $cmsPageId): void
+    {
+        $this->deleteItem('/cms-pages/' . $cmsPageId, ['cms_page_write']);
+        $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testBulkDeleteCmsPages(): void
+    {
+        // Create two pages to bulk delete
+        $page1 = $this->createItem('/cms-pages', [
+            'cmsPageCategoryId' => 1,
+            'titles' => ['en-US' => 'Bulk Page 1'],
+            'friendlyUrls' => ['en-US' => 'bulk-page-1'],
+            'metaTitles' => [],
+            'metaDescriptions' => [],
+            'contents' => [],
+            'indexedForSearch' => false,
+            'enabled' => false,
+            'shopIds' => [1],
+        ], ['cms_page_write']);
+
+        $page2 = $this->createItem('/cms-pages', [
+            'cmsPageCategoryId' => 1,
+            'titles' => ['en-US' => 'Bulk Page 2'],
+            'friendlyUrls' => ['en-US' => 'bulk-page-2'],
+            'metaTitles' => [],
+            'metaDescriptions' => [],
+            'contents' => [],
+            'indexedForSearch' => false,
+            'enabled' => false,
+            'shopIds' => [1],
+        ], ['cms_page_write']);
+
+        $this->deleteItem('/cms-pages/bulk-delete', ['cms_page_write'], Response::HTTP_NO_CONTENT, [
+            'json' => ['cmsPageIds' => [$page1['cmsPageId'], $page2['cmsPageId']]],
+        ]);
+
+        $this->getItem('/cms-pages/' . $page1['cmsPageId'], ['cms_page_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/cms-pages/' . $page2['cmsPageId'], ['cms_page_read'], Response::HTTP_NOT_FOUND);
+    }
+
     public function testInvalidCmsPage(): void
     {
-        // Missing required titles (default language) and friendlyUrls
         $invalidData = [
             'cmsPageCategoryId' => 1,
             'titles' => [

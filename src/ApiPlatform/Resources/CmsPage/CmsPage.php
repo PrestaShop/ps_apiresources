@@ -42,6 +42,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -72,12 +73,12 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
         ),
-        new CQRSPartialUpdate(
+        new CQRSUpdate(
             uriTemplate: '/cms-pages/{cmsPageId}/toggle-status',
+            output: false,
+            allowEmptyBody: true,
             CQRSCommand: ToggleCmsPageStatusCommand::class,
-            CQRSQuery: GetCmsPageForEditing::class,
             scopes: ['cms_page_write'],
-            CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSDelete(
             uriTemplate: '/cms-pages/{cmsPageId}',
