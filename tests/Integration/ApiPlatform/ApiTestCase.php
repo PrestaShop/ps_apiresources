@@ -33,6 +33,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Tests\Resources\Resetter\ApiClientResetter;
+use Tests\Resources\Resetter\LanguageResetter;
 
 abstract class ApiTestCase extends SymfonyApiTestCase
 {
@@ -47,11 +48,15 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         parent::setUpBeforeClass();
         self::updateConfiguration('PS_ADMIN_API_FORCE_DEBUG_SECURED', 0);
         ApiClientResetter::resetApiClient();
+        // Always reset and install a new language, this way all endpoints must test their multi lang fields accurately
+        LanguageResetter::resetLanguages();
+        self::addLanguageByLocale('fr-FR');
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
+        LanguageResetter::resetLanguages();
         ApiClientResetter::resetApiClient();
         self::updateConfiguration('PS_ADMIN_API_FORCE_DEBUG_SECURED', 1);
         self::$apiClients = null;

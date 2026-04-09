@@ -24,7 +24,6 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
-use Tests\Resources\Resetter\LanguageResetter;
 
 class CountryEndpointTest extends ApiTestCase
 {
@@ -34,15 +33,12 @@ class CountryEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
         self::createApiClient(['country_read', 'country_write']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        LanguageResetter::resetLanguages();
         DatabaseDump::restoreTables(['country', 'country_lang', 'country_shop']);
     }
 

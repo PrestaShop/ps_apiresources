@@ -45,7 +45,6 @@ class DiscountEndpointTest extends ApiTestCase
 
         // Check if the command exists, if it doesn't the tests won't run so nothing to init
         if (class_exists(AddDiscountCommand::class)) {
-            LanguageResetter::resetLanguages();
             DatabaseDump::restoreTables([
                 'cart_cart_rule',
                 'cart_rule',
@@ -60,8 +59,6 @@ class DiscountEndpointTest extends ApiTestCase
                 'cart_rule_product_rule_value',
                 'cart_rule_shop',
             ]);
-
-            self::addLanguageByLocale('fr-FR');
             self::createApiClient(['discount_write', 'discount_read']);
         }
     }

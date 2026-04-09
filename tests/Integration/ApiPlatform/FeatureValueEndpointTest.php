@@ -24,15 +24,12 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
-use Tests\Resources\Resetter\LanguageResetter;
 
 class FeatureValueEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
         self::resetTables();
         self::createApiClient(['feature_value_read', 'feature_value_write']);
     }
@@ -40,7 +37,6 @@ class FeatureValueEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        LanguageResetter::resetLanguages();
         self::resetTables();
     }
 

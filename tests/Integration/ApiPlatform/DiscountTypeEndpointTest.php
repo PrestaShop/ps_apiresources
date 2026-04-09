@@ -70,9 +70,11 @@ class DiscountTypeEndpointTest extends ApiTestCase
             'type' => 'cart_level',
             'names' => [
                 'en-US' => 'On cart amount',
+                'fr-FR' => 'On cart amount',
             ],
             'descriptions' => [
                 'en-US' => 'Discount applied to cart',
+                'fr-FR' => 'Discount applied to cart',
             ],
             'core' => true,
             'enabled' => true,

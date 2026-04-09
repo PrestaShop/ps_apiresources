@@ -25,7 +25,6 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
-use Tests\Resources\Resetter\LanguageResetter;
 
 class SupplierEndpointTest extends ApiTestCase
 {
@@ -36,9 +35,6 @@ class SupplierEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        // Add the fr-FR language to test multi lang values accurately
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
         self::createApiClient(['supplier_write', 'supplier_read']);
 
         self::$countryIdFR = \Db::getInstance()->getValue('SELECT id_country FROM `' . _DB_PREFIX_ . 'country` WHERE iso_code="FR"');
@@ -48,8 +44,6 @@ class SupplierEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        // Reset DB as it was before this test
-        LanguageResetter::resetLanguages();
         DatabaseDump::restoreTables(['address', 'supplier', 'supplier_lang', 'supplier_shop']);
     }
 
