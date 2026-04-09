@@ -77,113 +77,26 @@ class CartEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        // Cart.php endpoints
-        yield 'get cart endpoint' => [
-            'GET',
-            '/carts/1',
-        ];
-
-        yield 'create cart endpoint' => [
-            'POST',
-            '/carts',
-        ];
-
-        yield 'delete cart endpoint' => [
-            'DELETE',
-            '/carts/1',
-        ];
-
-        // BulkCarts.php endpoints
-        yield 'bulk delete carts endpoint' => [
-            'DELETE',
-            '/carts/bulk-delete',
-        ];
-
-        // CartCartRule.php endpoints
-        yield 'add cart rule to cart endpoint' => [
-            'POST',
-            '/carts/1/cart-rules',
-        ];
-
-        yield 'remove cart rule from cart endpoint' => [
-            'DELETE',
-            '/carts/1/cart-rules',
-        ];
-
-        // CartCustomization.php endpoints
-        yield 'add customization to cart endpoint' => [
-            'POST',
-            '/carts/1/customizations',
-        ];
-
-        // CartForOrderCreation.php endpoints
-        yield 'get cart for order creation endpoint' => [
-            'GET',
-            '/carts/1/order-creations',
-        ];
-
-        // CartProduct.php endpoints
-        yield 'add product to cart endpoint' => [
-            'POST',
-            '/carts/1/products',
-        ];
-
-        yield 'remove product from cart endpoint' => [
-            'DELETE',
-            '/carts/1/products',
-        ];
-
-        yield 'update product quantity in cart endpoint' => [
-            'PUT',
-            '/carts/1/products/quantities',
-        ];
-
-        // CartProductPrice.php endpoints
-        yield 'update product price in cart endpoint' => [
-            'PUT',
-            '/carts/1/products/1/prices',
-        ];
-
-        // CartSettings.php endpoints
-        yield 'update cart addresses endpoint' => [
-            'PUT',
-            '/carts/1/addresses',
-        ];
-
-        yield 'update cart carrier endpoint' => [
-            'PUT',
-            '/carts/1/carriers',
-        ];
-
-        yield 'update cart currency endpoint' => [
-            'PUT',
-            '/carts/1/currencies',
-        ];
-
-        yield 'update cart language endpoint' => [
-            'PUT',
-            '/carts/1/languages',
-        ];
-
-        yield 'update cart delivery settings endpoint' => [
-            'PUT',
-            '/carts/1/delivery-settings',
-        ];
-
-        // CustomerLastEmptyCart.php endpoints
-        yield 'get customer last empty cart endpoint' => [
-            'GET',
-            '/carts/1/last-empty-carts',
-        ];
+        yield 'get cart endpoint' => ['GET', '/carts/1'];
+        yield 'create cart endpoint' => ['POST', '/carts'];
+        yield 'delete cart endpoint' => ['DELETE', '/carts/1'];
+        yield 'bulk delete carts endpoint' => ['DELETE', '/carts/bulk-delete'];
+        yield 'add cart rule to cart endpoint' => ['POST', '/carts/1/cart-rules'];
+        yield 'remove cart rule from cart endpoint' => ['DELETE', '/carts/1/cart-rules'];
+        yield 'add customization to cart endpoint' => ['POST', '/carts/1/customizations'];
+        yield 'get cart for order creation endpoint' => ['GET', '/carts/1/order-creations'];
+        yield 'add product to cart endpoint' => ['POST', '/carts/1/products'];
+        yield 'remove product from cart endpoint' => ['DELETE', '/carts/1/products'];
+        yield 'update product quantity in cart endpoint' => ['PUT', '/carts/1/products/quantities'];
+        yield 'update product price in cart endpoint' => ['PUT', '/carts/1/products/1/prices'];
+        yield 'update cart addresses endpoint' => ['PUT', '/carts/1/addresses'];
+        yield 'update cart carrier endpoint' => ['PUT', '/carts/1/carriers'];
+        yield 'update cart currency endpoint' => ['PUT', '/carts/1/currencies'];
+        yield 'update cart language endpoint' => ['PUT', '/carts/1/languages'];
+        yield 'update cart delivery settings endpoint' => ['PUT', '/carts/1/delivery-settings'];
+        yield 'get customer last empty cart endpoint' => ['GET', '/carts/1/last-empty-carts'];
     }
 
-    // ========================================
-    // SETUP: Create required test data
-    // ========================================
-
-    /**
-     * First we need to create a customer to associate with carts.
-     */
     public function testCreateCustomerForCart(): int
     {
         $customer = $this->createItem('/customers', [
@@ -214,7 +127,7 @@ class CartEndpointTest extends ApiTestCase
             'address' => '123 Test Street',
             'city' => 'Paris',
             'postCode' => '75001',
-            'countryId' => 8, // France
+            'countryId' => 8,
             'stateId' => 0,
         ], ['address_write']);
 
@@ -233,7 +146,6 @@ class CartEndpointTest extends ApiTestCase
             $this->markTestSkipped('Discount API not available');
         }
 
-        // Create a simple cart rule (discount) for testing cart rules endpoints
         $cartRule = $this->createItem('/discounts', [
             'type' => 'cart_level',
             'names' => [
@@ -248,10 +160,6 @@ class CartEndpointTest extends ApiTestCase
 
         return $customerId;
     }
-
-    // ========================================
-    // CART CRUD TESTS
-    // ========================================
 
     /**
      * @depends testCreateAddressForCustomer
@@ -274,10 +182,17 @@ class CartEndpointTest extends ApiTestCase
     {
         $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
 
-        $this->assertArrayHasKey('cartId', $cart);
-        $this->assertEquals($cartId, $cart['cartId']);
-        $this->assertArrayHasKey('customerInformation', $cart);
-        $this->assertArrayHasKey('cartSummary', $cart);
+        $expectedCart = [
+            'cartId' => $cartId,
+            'customerId' => self::$testCustomerId,
+            'currencyId' => $cart['currencyId'],
+            'customerInformation' => $cart['customerInformation'],
+            'orderInformation' => $cart['orderInformation'],
+            'cartSummary' => $cart['cartSummary'],
+        ];
+        $this->assertEquals($expectedCart, $cart);
+
+        $this->assertEquals($expectedCart, $this->getItem('/carts/' . $cartId, ['cart_read']));
 
         return $cartId;
     }
@@ -289,10 +204,19 @@ class CartEndpointTest extends ApiTestCase
     {
         $cart = $this->getItem('/carts/' . $cartId . '/order-creations', ['cart_read']);
 
-        $this->assertArrayHasKey('cartId', $cart);
-        $this->assertEquals($cartId, $cart['cartId']);
-        $this->assertArrayHasKey('products', $cart);
-        $this->assertArrayHasKey('summary', $cart);
+        $expectedCart = [
+            'cartId' => $cartId,
+            'products' => $cart['products'],
+            'currencyId' => $cart['currencyId'],
+            'langId' => $cart['langId'],
+            'cartRules' => $cart['cartRules'],
+            'addresses' => $cart['addresses'],
+            'summary' => $cart['summary'],
+            'shipping' => $cart['shipping'],
+        ];
+        $this->assertEquals($expectedCart, $cart);
+
+        $this->assertEquals($expectedCart, $this->getItem('/carts/' . $cartId . '/order-creations', ['cart_read']));
 
         return $cartId;
     }
@@ -304,30 +228,23 @@ class CartEndpointTest extends ApiTestCase
     {
         $result = $this->getItem('/carts/' . self::$testCustomerId . '/last-empty-carts', ['cart_read']);
 
-        $this->assertArrayHasKey('cartId', $result);
         $this->assertEquals($cartId, $result['cartId']);
 
         return $cartId;
     }
-
-    // ========================================
-    // CART PRODUCT TESTS
-    // ========================================
 
     /**
      * @depends testGetCustomerLastEmptyCart
      */
     public function testAddProductToCart(int $cartId): int
     {
-        // Product ID 1 exists in default fixtures
         $this->createItem('/carts/' . $cartId . '/products', [
             'productId' => 1,
             'quantity' => 2,
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
 
-        // Verify product was added by getting the cart
-        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $this->assertArrayHasKey('cartSummary', $cart);
+        $cart = $this->getItem('/carts/' . $cartId . '/order-creations', ['cart_read']);
+        $this->assertNotEmpty($cart['products'], 'Cart should contain products after adding one');
 
         return $cartId;
     }
@@ -342,6 +259,9 @@ class CartEndpointTest extends ApiTestCase
             'quantity' => 5,
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
 
+        $cart = $this->getItem('/carts/' . $cartId . '/order-creations', ['cart_read']);
+        $this->assertNotEmpty($cart['products'], 'Cart should still contain products after quantity update');
+
         return $cartId;
     }
 
@@ -350,18 +270,16 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateProductPriceInCart(int $cartId): int
     {
-        // Update price for product 1, combination 0 (no combination)
         $this->updateItem('/carts/' . $cartId . '/products/1/prices', [
             'combinationId' => 0,
             'price' => '15.99',
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
 
+        $cart = $this->getItem('/carts/' . $cartId . '/order-creations', ['cart_read']);
+        $this->assertNotEmpty($cart['products'], 'Cart should still contain products after price update');
+
         return $cartId;
     }
-
-    // ========================================
-    // CART SETTINGS TESTS
-    // ========================================
 
     /**
      * @depends testUpdateProductPriceInCart
@@ -373,6 +291,9 @@ class CartEndpointTest extends ApiTestCase
             'invoiceAddressId' => self::$testAddressId,
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
 
+        $cart = $this->getItem('/carts/' . $cartId . '/order-creations', ['cart_read']);
+        $this->assertNotEmpty($cart['addresses'], 'Cart should have addresses after update');
+
         return $cartId;
     }
 
@@ -381,10 +302,12 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateCartCarrier(int $cartId): int
     {
-        // Carrier ID 1 exists in default fixtures
         $this->updateItem('/carts/' . $cartId . '/carriers', [
             'carrierId' => 1,
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
+
+        $cart = $this->getItem('/carts/' . $cartId . '/order-creations', ['cart_read']);
+        $this->assertArrayHasKey('shipping', $cart);
 
         return $cartId;
     }
@@ -394,10 +317,12 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateCartCurrency(int $cartId): int
     {
-        // Currency ID 1 (EUR) exists in default fixtures
         $this->updateItem('/carts/' . $cartId . '/currencies', [
             'currencyId' => 1,
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
+
+        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $this->assertEquals(1, $cart['currencyId']);
 
         return $cartId;
     }
@@ -407,10 +332,12 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateCartLanguage(int $cartId): int
     {
-        // Language ID 1 (en-US) exists in default fixtures
         $this->updateItem('/carts/' . $cartId . '/languages', [
             'languageId' => 1,
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
+
+        $cart = $this->getItem('/carts/' . $cartId . '/order-creations', ['cart_read']);
+        $this->assertEquals(1, $cart['langId']);
 
         return $cartId;
     }
@@ -427,12 +354,11 @@ class CartEndpointTest extends ApiTestCase
             'giftMessage' => '',
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
 
+        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $this->assertEquals($cartId, $cart['cartId']);
+
         return $cartId;
     }
-
-    // ========================================
-    // CLEANUP TESTS
-    // ========================================
 
     /**
      * @depends testUpdateCartDeliverySettings
@@ -454,20 +380,14 @@ class CartEndpointTest extends ApiTestCase
         $result = $this->deleteItem('/carts/' . $cartId, ['cart_write']);
         $this->assertNull($result);
 
-        // Verify cart was deleted
         $this->getItem('/carts/' . $cartId, ['cart_read'], Response::HTTP_NOT_FOUND);
     }
-
-    // ========================================
-    // BULK OPERATIONS TESTS
-    // ========================================
 
     /**
      * @depends testDeleteCart
      */
     public function testBulkDeleteCarts(): void
     {
-        // Create multiple carts for bulk delete test
         $cart1 = $this->createItem('/carts', [
             'customerId' => self::$testCustomerId,
         ], ['cart_write']);
@@ -482,48 +402,35 @@ class CartEndpointTest extends ApiTestCase
             'cartIds' => $cartIds,
         ], ['cart_write']);
 
-        // Verify carts were deleted
         foreach ($cartIds as $cartId) {
             $this->getItem('/carts/' . $cartId, ['cart_read'], Response::HTTP_NOT_FOUND);
         }
     }
-
-    // ========================================
-    // CART RULES TESTS
-    // ========================================
 
     /**
      * @depends testBulkDeleteCarts
      */
     public function testCartRulesOperations(): void
     {
-        if (!self::$discountApiAvailable || self::$testCartRuleId === null) {
+        if (!self::$discountApiAvailable || null === self::$testCartRuleId) {
             $this->markTestSkipped('Discount API not available, skipping cart rules tests');
         }
 
-        // Create a cart for cart rules testing
         $cart = $this->createItem('/carts', [
             'customerId' => self::$testCustomerId,
         ], ['cart_write']);
         $cartId = $cart['cartId'];
 
-        // Add cart rule to cart
         $this->createItem('/carts/' . $cartId . '/cart-rules', [
             'cartRuleId' => self::$testCartRuleId,
         ], ['cart_write'], Response::HTTP_NO_CONTENT);
 
-        // Remove cart rule from cart
         $this->bulkDeleteItems('/carts/' . $cartId . '/cart-rules', [
             'cartRuleId' => self::$testCartRuleId,
         ], ['cart_write']);
 
-        // Clean up
         $this->deleteItem('/carts/' . $cartId, ['cart_write']);
     }
-
-    // ========================================
-    // ERROR HANDLING TESTS
-    // ========================================
 
     public function testCreateCartWithInvalidCustomer(): void
     {
@@ -552,18 +459,15 @@ class CartEndpointTest extends ApiTestCase
 
     public function testAddNonExistentProductToCart(): void
     {
-        // First create a valid cart
         $cart = $this->createItem('/carts', [
             'customerId' => self::$testCustomerId,
         ], ['cart_write']);
 
-        // Try to add non-existent product
         $this->createItem('/carts/' . $cart['cartId'] . '/products', [
             'productId' => 999999,
             'quantity' => 1,
         ], ['cart_write'], Response::HTTP_NOT_FOUND);
 
-        // Clean up
         $this->deleteItem('/carts/' . $cart['cartId'], ['cart_write']);
     }
 
@@ -574,72 +478,48 @@ class CartEndpointTest extends ApiTestCase
 
     public function testUpdateCartWithInvalidCarrier(): void
     {
-        // First create a valid cart
         $cart = $this->createItem('/carts', [
             'customerId' => self::$testCustomerId,
         ], ['cart_write']);
 
-        // Try to update with non-existent carrier
         $this->updateItem('/carts/' . $cart['cartId'] . '/carriers', [
             'carrierId' => 999999,
         ], ['cart_write'], Response::HTTP_NOT_FOUND);
 
-        // Clean up
         $this->deleteItem('/carts/' . $cart['cartId'], ['cart_write']);
     }
 
     public function testUpdateCartWithInvalidCurrency(): void
     {
-        // First create a valid cart
         $cart = $this->createItem('/carts', [
             'customerId' => self::$testCustomerId,
         ], ['cart_write']);
 
-        // Try to update with non-existent currency
         $this->updateItem('/carts/' . $cart['cartId'] . '/currencies', [
             'currencyId' => 999999,
         ], ['cart_write'], Response::HTTP_NOT_FOUND);
 
-        // Clean up
         $this->deleteItem('/carts/' . $cart['cartId'], ['cart_write']);
     }
 
     public function testUpdateCartWithInvalidLanguage(): void
     {
-        // First create a valid cart
         $cart = $this->createItem('/carts', [
             'customerId' => self::$testCustomerId,
         ], ['cart_write']);
 
-        // Try to update with non-existent language
         $this->updateItem('/carts/' . $cart['cartId'] . '/languages', [
             'languageId' => 999999,
         ], ['cart_write'], Response::HTTP_NOT_FOUND);
 
-        // Clean up
         $this->deleteItem('/carts/' . $cart['cartId'], ['cart_write']);
     }
 
-    // ========================================
-    // CUSTOMIZATION TESTS
-    // Note: These tests require products with customization fields
-    // which may not be available in default fixtures.
-    // ========================================
-
     /**
-     * Test adding customization to cart.
-     * This test is skipped by default as it requires a product with customization fields.
-     * To enable this test, ensure you have a product with customization fields in fixtures.
+     * Customization test requires a product with customization fields in fixtures.
      */
     public function testAddCustomizationToCart(): void
     {
-        // Skip this test as it requires specific product setup with customization fields
-        // To test this endpoint manually:
-        // 1. Create/find a product with customization fields
-        // 2. Create a cart
-        // 3. POST to /carts/{cartId}/customizations with:
-        //    - productId: the product ID
-        //    - customizationValuesByFieldIds: array mapping field IDs to values
         $this->markTestSkipped(
             'Customization test requires a product with customization fields. ' .
             'Enable this test when proper fixtures are available.'
