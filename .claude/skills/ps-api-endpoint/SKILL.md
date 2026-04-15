@@ -175,7 +175,7 @@ Bulk operations also live in a **separate class file** named `Bulk{Entities}.php
 - `src/ApiPlatform/Resources/Category/BulkDeleteCategories.php`
 - `src/ApiPlatform/Resources/Category/BulkUpdateStatusCategories.php`
 
-URI uses `bulk-` prefix + plural: `/tax-rules/bulk-delete`. The single public property is the array of IDs, named with the singular entity + "Ids" (e.g. `$taxRuleIds`, `$attributeGroupIds`), typed as `array`, and annotated with `#[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]` and `#[Assert\NotBlank]`. On `CQRSDelete`, set `allowEmptyBody: false` so missing payloads are rejected.
+URI uses `bulk-` prefix + plural: `/tax-rules/bulk-delete`. The single public property is the array of IDs, named with the singular entity + "Ids" (e.g. `$taxRuleIds`, `$attributeGroupIds`), typed as `array`, and annotated with `#[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]` and `#[Assert\NotBlank]`.
 
 ## Step 5: Generate the integration test
 
