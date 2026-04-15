@@ -161,7 +161,6 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testRemoveCountry(): void
     {
-
         // Create Country
         $country = $this->createItem('/countries', [
             'names' => [
