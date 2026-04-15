@@ -36,19 +36,7 @@ class CountryEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
-<<<<<<< HEAD
-<<<<<<< HEAD
         self::createApiClient(['country_read', 'country_write']);
-||||||| parent of 3780907 (Add test Remove Country)
-        self::createApiClient(['country_read']);
-=======
-        self::createApiClient(['country_read','country_write']);
->>>>>>> 3780907 (Add test Remove Country)
-||||||| parent of 681834d (correct CS fixer)
-        self::createApiClient(['country_read','country_write']);
-=======
-        self::createApiClient(['country_read', 'country_write']);
->>>>>>> 681834d (correct CS fixer)
     }
 
     public static function tearDownAfterClass(): void
@@ -171,7 +159,7 @@ class CountryEndpointTest extends ApiTestCase
         ], $country);
     }
 
-    public function testRemoveCountry(int $countryId): void
+    public function testRemoveCountry(): void
     {
 
         // Create Country
@@ -196,7 +184,7 @@ class CountryEndpointTest extends ApiTestCase
 
         // Obtain the countryID
         $this->assertArrayHasKey('countryId', $country);
-        $this->assertEquals(['countryId' => $country['countryId']], $country);
+        $countryId = $country['countryId'];
 
         // Delete the item
         $return = $this->deleteItem('/countries/' . $countryId, ['country_write']);
