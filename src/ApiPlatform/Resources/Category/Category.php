@@ -174,7 +174,7 @@ class Category
 
     public int $position;
 
-    public int $parentId;
+    public int $parentCategoryId;
 
     public string $redirectType;
 
@@ -194,6 +194,7 @@ class Category
         '[metaTitle]' => '[metaTitles]',
         '[metaDescription]' => '[metaDescriptions]',
         '[linkRewrite]' => '[linkRewrites]',
+        '[parentId]' => '[parentCategoryId]',
     ];
 
     public const COMMAND_MAPPING = [
