@@ -165,11 +165,17 @@ See `references/conventions.md` for the full ruleset. The most important ones:
 
 ### List endpoints (PaginatedList)
 
-When a list operation is needed, use `PaginatedList` with the Grid's data factory service. See `src/ApiPlatform/Resources/Contact/` for an example. The URI is the plural base path (e.g. `/contacts`) without an ID.
+List operations live in a **separate class file** named `{Entity}List.php` next to the main resource (e.g. `src/ApiPlatform/Resources/Contact/ContactList.php`, `src/ApiPlatform/Resources/Attribute/AttributeGroupList.php`). Use `PaginatedList` with the Grid's data factory service and a `filtersClass`. The URI is the plural base path (e.g. `/contacts`) without an ID. Field mapping is done via `ApiResourceMapping`.
 
 ### Bulk operations
 
-URI uses `bulk-` prefix + plural: `/tax-rules/bulk-delete`. The parameter name uses plural entity name + "Ids": `taxRuleIds`.
+Bulk operations also live in a **separate class file** named `Bulk{Entities}.php` (or `BulkDelete{Entities}.php` / `BulkUpdateStatus{Entities}.php` when more specific) next to the main resource. Real examples in the repo:
+
+- `src/ApiPlatform/Resources/Attribute/BulkAttributeGroups.php`
+- `src/ApiPlatform/Resources/Category/BulkDeleteCategories.php`
+- `src/ApiPlatform/Resources/Category/BulkUpdateStatusCategories.php`
+
+URI uses `bulk-` prefix + plural: `/tax-rules/bulk-delete`. The single public property is the array of IDs, named with the singular entity + "Ids" (e.g. `$taxRuleIds`, `$attributeGroupIds`), typed as `array`, and annotated with `#[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]` and `#[Assert\NotBlank]`.
 
 ## Step 5: Generate the integration test
 
@@ -324,3 +330,4 @@ Create both files at their correct paths. Then tell the user:
 ## Reference files
 
 - `references/conventions.md` — full naming and structural conventions
+- `../../../CONTEXT.md` (repo root) — module-wide AI context: purpose, architecture, Do/Don't, canonical examples. This skill must stay aligned with it.
