@@ -33,7 +33,6 @@ jobs:
   check-guard:
     needs: check-diff
     if: needs.check-diff.outputs.has-code-changes == 'true'
-    # Reusable guard: checks team membership + duplicate review label
     uses: PrestaShop/.github/.github/workflows/ai-prereview-guard.yml@master
     with:
       team-slug: prestashop-sa
