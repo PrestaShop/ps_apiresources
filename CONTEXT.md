@@ -66,7 +66,8 @@ src/ApiPlatform/Resources/Attribute/
   `/products/{productId}/combinations`,
   `/categories/{categoryId}/cover`.
 - **Bulk operations** use the `bulk-` prefix: `/contacts/bulk-delete`,
-  `/attributes/groups/bulk-delete`.
+  `/attributes/groups/bulk-delete`. The bulk parameter name must be
+  plural domain + `Ids` (e.g. `attributeGroupIds`).
 - **URI parameters** use the domain identifier name, not `id`:
   `{contactId}`, `{attributeGroupId}`, `{taxRuleId}`.
 - The DTO property exposed as the identifier must match the URI
@@ -86,24 +87,41 @@ OAuth2 scope naming: `{entity_snake_case}_{action}`.
 
 | Rule                                          | Correct                  | Wrong                          |
 |-----------------------------------------------|--------------------------|--------------------------------|
-| Identifier — domain name + `Id`               | `$contactId`             | `$id`                          |
+| Identifier — domain name + `Id`, with `#[ApiProperty(identifier: true)]` | `$contactId` | `$id` |
 | Boolean — no `is` prefix                      | `$enabled`, `$ready`     | `$isEnabled`, `$isReady`       |
 | Status uses `enabled`, not `active` / `status`| `$enabled`               | `$active`, `$status`           |
 | Localized fields — no `localized` prefix      | `$names`                 | `$localizedNames`              |
 | All public properties strictly typed          | `public int $contactId`  | `public $contactId`            |
 | Decimals — use `DecimalNumber`, never `float` | `public DecimalNumber $price` | `public float $price`     |
 
-Localized properties must be marked with `#[LocalizedValue]`. To require
-the default language on create / update, add `#[DefaultLanguage]` with
-the appropriate validation `groups`. See
-`src/ApiPlatform/Resources/Contact/Contact.php` for the current usage
-pattern.
+Array fields representing complex structures must include
+`#[ApiProperty(openapiContext: ['type' => 'array', 'items' => [...]])]`
+for OpenAPI schema documentation.
+
+Localized properties must be marked with `#[LocalizedValue]` — this
+triggers automatic locale↔languageId conversion on both read and write.
+Single-entity endpoints return localized fields as locale-indexed arrays
+(e.g. `{"names": {"en-US": "Size", "fr-FR": "Taille"}}`); list endpoints
+return a single language string (default shop language, or via `langId`
+query param). Never return language IDs as keys — always locale strings
+like `en-US`.
+
+To require the default language on create / update, add
+`#[DefaultLanguage]` with the appropriate validation `groups`. Set the
+`fieldName` argument to the **API field name** so the validation error
+message includes a meaningful field reference (the auto-detection
+fallback only works in Form contexts, not on ApiResource attributes).
+Use `allowNull: true` on the Update group so the field is optional on
+partial update. See `src/ApiPlatform/Resources/Contact/Contact.php` for
+the current usage pattern.
 
 ## Field mapping
 
 - `CQRSQueryMapping` (often defined as a `QUERY_MAPPING` constant) maps
-  **query result field → API field**. Read the `Get{Entity}ForEditing`
-  query result class in PrestaShop Core to find source field names.
+  **query result field → API field**. A common mistake is inverting the
+  direction (using API field name as key instead of QueryResult field
+  name). Read the `Get{Entity}ForEditing` query result class in
+  PrestaShop Core to find source field names.
 - `CQRSCommandMapping` (often `CREATE_COMMAND_MAPPING` /
   `UPDATE_COMMAND_MAPPING`, or a shared `COMMAND_MAPPING` when both
   commands accept the same parameters) maps **API field → command
@@ -113,9 +131,90 @@ pattern.
   query result fields) to API fields. For `PaginatedList`, the source
   field names can often be read directly from the related query builder
   service wired via `gridDataFactory` — you only need to map the fields
-  whose names don't already match the DTO.
+  whose names don't already match the DTO. `filtersMapping` must be
+  provided when filter parameter names differ from API field names.
+- To find the correct `gridDataFactory` service name: look at the
+  entity's Symfony controller → Grid factory definition → Grid data
+  factory service.
+- **Field alignment for `PaginatedList` endpoints** — the DTO properties
+  must mirror the fields selected by the grid's underlying query builder.
+  To verify alignment:
+  1. Trace the `gridDataFactory` service to its query builder class in
+     PrestaShop Core (the class implementing `DoctrineQueryBuilderInterface`
+     or similar).
+  2. Read the SQL `SELECT` clause — each selected column is a field the
+     grid can return.
+  3. Every selected field should have a corresponding DTO property. If a
+     field is intentionally omitted, it should be a conscious decision
+     (not an oversight).
+  4. When the SQL column name differs from the DTO property name (e.g.
+     `id_contact` vs `contactId`, `firstname` vs `firstName`), an
+     `ApiResourceMapping` entry must cover the rename.
+  5. A DTO property with no matching query field will always be `null` at
+     runtime — this is almost certainly a bug.
+  The same principle applies to `CQRSPaginate`: compare the CQRS query's
+  result DTO fields against the ApiResource properties.
+- Do NOT use `SerializedName` — always use `CQRSQueryMapping`,
+  `CQRSCommandMapping`, or `ApiResourceMapping`.
 - Nested fields use bracket notation:
   `'[basicInformation][localizedNames]' => '[names]'`.
+
+## Multi-shop
+
+When PrestaShop's multistore feature is **disabled**, the API
+automatically uses the default shop — no extra parameters are needed.
+
+When multistore is **enabled**, every API request **must** include a shop
+context parameter (otherwise the API returns 400). The
+`ShopContextListener` in the Core reads these parameters from the
+request and builds a `ShopConstraint` that CQRS commands/queries use:
+
+| Request parameter | Context built | Use case |
+|---|---|---|
+| `shopId` | `ShopConstraint::shop($id)` | Target a single specific shop |
+| `shopGroupId` | `ShopConstraint::shopGroup($id)` | Target all shops in a group |
+| `shopIds` (comma-separated or array) | `ShopCollection::shops([...])` | Target a specific set of shops |
+| `allShops` (presence is enough, value ignored) | `ShopConstraint::allShops()` | Target all shops |
+
+These are **request-level context parameters** (query string or request
+body) that determine *which shop(s) the operation runs against*. They
+are distinct from the `shopIds` DTO property described below.
+
+### Shop association property
+
+Entities that have a shop association (e.g. contacts, attributes,
+categories) expose a `public array $shopIds` property on the DTO. This
+represents the list of shops the entity is associated with, and must be
+mapped in both directions:
+
+- **Query mapping** (read): map the Core field (often `associatedShops`,
+  `associatedShopIds`, or `shopAssociation`) → API field `shopIds`.
+- **Command mapping** (write): map API field `shopIds` → Core parameter
+  (often `shopAssociation` or `associatedShopIds`).
+
+If the entity has no shop association, the `shopIds` property must be
+absent from the DTO.
+
+### Passing shop context to CQRS commands/queries
+
+Some commands/queries need the current shop context (e.g. to filter
+results by shop). This is done via the special `[_context]` prefix in
+mappings, which injects the request's shop context parameters:
+
+```php
+// In a CQRSCommandMapping or CQRSQueryMapping:
+'[_context][shopId]' => '[shopId]',              // single shop ID (int)
+'[_context][shopIds]' => '[shopIds]',            // multiple shop IDs (array)
+'[_context][shopConstraint]' => '[shopConstraint]', // full ShopConstraint object
+```
+
+Use `[_context][shopConstraint]` when the CQRS command/query accepts a
+`ShopConstraint` value object directly (common for Product-related
+commands). Use `[_context][shopId]` or `[_context][shopIds]` when the
+command expects plain integer IDs.
+
+See `Product.php`, `Combination.php`, `CombinationList.php`, and
+`CustomerGroup.php` for examples of these patterns.
 
 ## Do / Don't
 
@@ -123,13 +222,22 @@ pattern.
 
 - Define `exceptionToStatus` for every domain exception the operations
   can throw — at minimum the entity's `…ConstraintException` →
-  `HTTP_UNPROCESSABLE_ENTITY` and `…NotFoundException` → `HTTP_NOT_FOUND`.
+  `HTTP_UNPROCESSABLE_ENTITY` (422) and `…NotFoundException` →
+  `HTTP_NOT_FOUND` (404). Do not add other exceptions unless clearly
+  justified. Never use `HTTP_BAD_REQUEST` (400) for constraint
+  violations — always 422.
 - Use a `CQRSQuery` on `CQRSCreate` and `CQRSPartialUpdate` when the
   endpoint should return the full updated state, not just an identifier.
 - Use `#[LocalizedValue]` for any field stored as `array<locale, value>`.
 - Split single / list / bulk operations into separate classes inside the
   same domain folder.
 - Add an integration test for every new endpoint (see Testing below).
+- Use `validationContext: ['groups' => ['Default', 'Create']]` on
+  `CQRSCreate` and `validationContext: ['groups' => ['Default', 'Update']]`
+  on `CQRSPartialUpdate`. `#[Assert\NotBlank]` must be present on
+  required fields for the Create group. Constraints should match the
+  associated Symfony form type (check the entity's FormType for
+  reference).
 
 ### Don't
 
@@ -215,8 +323,11 @@ Static helpers available for additional setup (call from
   (expecting `HTTP_UNPROCESSABLE_ENTITY`) and use
   `$this->assertValidationErrors([...], $response)` to check the error
   shape.
+- Include `LanguageResetter` only if the entity has localized fields.
+- `declare(strict_types=1)` must be present in the test file.
 - Restore relevant DB tables via `DatabaseDump::restoreTables([...])`
-  in `setUpBeforeClass` / `tearDownAfterClass`.
+  in `setUpBeforeClass` / `tearDownAfterClass` (include `_lang` table
+  if localized, `_shop` table if shop-associated).
 
 Run the suite with:
 
