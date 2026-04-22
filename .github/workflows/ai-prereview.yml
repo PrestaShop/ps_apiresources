@@ -1,7 +1,7 @@
 name: Claude Pre-Review
 
 on:
-  pull_request:
+  pull_request_target:
     types: [labeled]
 
 concurrency:
@@ -30,32 +30,10 @@ jobs:
             echo "📝 $CODE file(s) with code changes detected." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  debug-secrets:
+  check-guard:
     needs: check-diff
     if: needs.check-diff.outputs.has-code-changes == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Debug secret availability
-        env:
-          JARVIS_TOKEN: ${{ secrets.JARVIS_TOKEN }}
-          ORG_READ_TOKEN: ${{ secrets.ORG_READ_TOKEN }}
-        run: |
-          echo "## Secret availability check" >> "$GITHUB_STEP_SUMMARY"
-          if [ -z "$JARVIS_TOKEN" ]; then
-            echo "- ⛔ **JARVIS_TOKEN** is empty or not set" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "- ✅ **JARVIS_TOKEN** is set (length=${#JARVIS_TOKEN})" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -z "$ORG_READ_TOKEN" ]; then
-            echo "- ⛔ **ORG_READ_TOKEN** is empty or not set" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "- ✅ **ORG_READ_TOKEN** is set (length=${#ORG_READ_TOKEN})" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-  check-guard:
-    needs: [check-diff, debug-secrets]
-    if: needs.check-diff.outputs.has-code-changes == 'true'
-    uses: jolelievre/.github/.github/workflows/ai-prereview-guard.yml@debug-guard-workflow
+    uses: PrestaShop/.github/.github/workflows/ai-prereview-guard.yml@master
     with:
       team-slug: prestashop-sa
       actor: ${{ github.event.sender.login }}
