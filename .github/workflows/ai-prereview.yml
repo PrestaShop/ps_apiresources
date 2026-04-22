@@ -92,16 +92,15 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          model: claude-sonnet-4-6
-          max_turns: "5"
-          allowed_tools: "Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),WebFetch,Read"
+          claude_args: '--model claude-sonnet-4-6 --max-turns 5 --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),WebFetch,Read"'
           prompt: ${{ steps.prompt.outputs.content }}
 
-      - name: Add AI reviewed label
+      - name: Update labels
         run: |
           gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" \
-            --add-label "AI reviewed"
-          echo "✅ Label 'AI reviewed' added." >> "$GITHUB_STEP_SUMMARY"
+            --add-label "AI reviewed" \
+            --remove-label "Need AI review"
+          echo "✅ Label 'AI reviewed' added, 'Need AI review' removed." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summary
         run: |
