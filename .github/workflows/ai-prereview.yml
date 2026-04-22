@@ -44,6 +44,17 @@ jobs:
       org-read-token: ${{ secrets.JARVIS_TOKEN }}
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  guard-failed:
+    needs: check-guard
+    if: needs.check-guard.outputs.can-run != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard blocked
+        run: |
+          echo "::error::Guard check failed — the actor is not a member of the required team or the PR was already reviewed."
+          echo "⛔ Guard check failed — Claude pre-review will not run." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
   ai-prereview:
     needs: check-guard
     if: needs.check-guard.outputs.can-run == 'true'
