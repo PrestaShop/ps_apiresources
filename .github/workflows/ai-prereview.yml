@@ -33,8 +33,7 @@ jobs:
   check-guard:
     needs: check-diff
     if: needs.check-diff.outputs.has-code-changes == 'true'
-    # TODO: uses: PrestaShop/.github/.github/workflows/ai-prereview-guard.yml@main
-    uses: jolelievre/.github/.github/workflows/ai-prereview-guard.yml@ai-prereview-guard
+    uses: PrestaShop/.github/.github/workflows/ai-prereview-guard.yml@master
     with:
       team-slug: prestashop-sa
       actor: ${{ github.event.sender.login }}
