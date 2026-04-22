@@ -16,10 +16,18 @@ perform should be grounded in the rules documented there.
 
 ## How to inspect the PR
 
-Use `gh pr diff $PR_NUMBER --repo $REPO` and `gh pr view $PR_NUMBER --repo $REPO` to inspect the PR.
+**Your review must focus on the code changed in the PR — not the entire codebase.**
+Start by fetching the diff and PR metadata:
+- `gh pr diff $PR_NUMBER --repo $REPO` — the changed lines are your primary review scope
+- `gh pr view $PR_NUMBER --repo $REPO` — PR description and metadata
+
+Only read other files when directly referenced or imported by the changed code.
 Focus on PHP and YAML files under `src/ApiPlatform/**`,
 `tests/Integration/ApiPlatform/**`, and `config/**`.
 Ignore `vendor/`, `*.lock`, binary files, and asset files.
+
+**Do not explore the full repository.** Use `Grep` or `Glob` only to verify
+specific conventions or check related code referenced by the diff.
 
 ## Additional references
 
