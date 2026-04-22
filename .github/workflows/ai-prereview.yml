@@ -88,20 +88,41 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Run Claude pre-review
+        id: claude
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          model: claude-sonnet-4-6
-          max_turns: "5"
-          allowed_tools: "Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),WebFetch,Read"
+          claude_args: '--model claude-sonnet-4-6 --max-turns 5 --allowedTools "Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),WebFetch,Read"'
           prompt: ${{ steps.prompt.outputs.content }}
 
-      - name: Add AI reviewed label
+      - name: Validate Claude execution
+        env:
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          if [ ! -f "$EXECUTION_FILE" ]; then
+            echo "::error::Claude execution output file not found."
+            exit 1
+          fi
+          IS_ERROR=$(jq -r '.is_error // false' "$EXECUTION_FILE")
+          NUM_TURNS=$(jq -r '.num_turns // 0' "$EXECUTION_FILE")
+          DENIALS=$(jq -r '.permission_denials_count // 0' "$EXECUTION_FILE")
+          echo "📋 **Claude execution:** turns=$NUM_TURNS, permission_denials=$DENIALS, is_error=$IS_ERROR" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$IS_ERROR" = "true" ]; then
+            echo "::error::Claude reported an error during execution."
+            exit 1
+          fi
+          if [ "$DENIALS" -gt 0 ] && [ "$DENIALS" -ge "$NUM_TURNS" ]; then
+            echo "::error::Claude was denied permissions on almost every turn ($DENIALS/$NUM_TURNS). The review likely failed — check allowed_tools configuration."
+            exit 1
+          fi
+
+      - name: Update labels
         run: |
           gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" \
-            --add-label "AI reviewed"
-          echo "✅ Label 'AI reviewed' added." >> "$GITHUB_STEP_SUMMARY"
+            --add-label "AI reviewed" \
+            --remove-label "Need AI review"
+          echo "✅ Label 'AI reviewed' added, 'Need AI review' removed." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summary
         run: |
