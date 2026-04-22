@@ -106,8 +106,14 @@ jobs:
             echo "::error::Claude execution output file not found."
             exit 1
           fi
-          # The execution file is a JSON array — the result object is the last element
-          RESULT=$(jq '.[-1]' "$EXECUTION_FILE")
+          # The execution file can be a JSON array (conversation log) or a single object.
+          # When it's an array, the result object is the last element.
+          FILE_TYPE=$(jq -r 'type' "$EXECUTION_FILE")
+          if [ "$FILE_TYPE" = "array" ]; then
+            RESULT=$(jq '.[-1]' "$EXECUTION_FILE")
+          else
+            RESULT=$(jq '.' "$EXECUTION_FILE")
+          fi
           IS_ERROR=$(echo "$RESULT" | jq -r '.is_error // false')
           SUBTYPE=$(echo "$RESULT" | jq -r '.subtype // "unknown"')
           NUM_TURNS=$(echo "$RESULT" | jq -r '.num_turns // 0')
