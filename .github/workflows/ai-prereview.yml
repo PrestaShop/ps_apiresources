@@ -47,11 +47,15 @@ jobs:
     needs: check-guard
     if: needs.check-guard.outputs.can-run != 'true'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Guard blocked
+      - name: Remove label and fail
         run: |
+          gh pr edit ${{ github.event.pull_request.number }} --repo "${{ github.repository }}" \
+            --remove-label "Need AI review"
           echo "::error::Guard check failed — the actor is not a member of the required team or the PR was already reviewed."
-          echo "⛔ Guard check failed — Claude pre-review will not run." >> "$GITHUB_STEP_SUMMARY"
+          echo "⛔ Guard check failed — Claude pre-review will not run. Label 'Need AI review' removed." >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
   ai-prereview:
