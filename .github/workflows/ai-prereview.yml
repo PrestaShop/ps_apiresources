@@ -94,7 +94,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: '--model claude-sonnet-4-6 --max-turns 15 --allowedTools "Read,Glob,Grep,LS,WebFetch,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"'
+          claude_args: '--model claude-sonnet-4-6 --max-turns 25 --allowedTools "Read,Glob,Grep,LS,WebFetch,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"'
           prompt: ${{ steps.prompt.outputs.content }}
 
       - name: Validate Claude execution
@@ -111,7 +111,14 @@ jobs:
           NUM_TURNS=$(jq -r '.num_turns // 0' "$EXECUTION_FILE")
           DENIALS=$(jq -r '.permission_denials_count // 0' "$EXECUTION_FILE")
           COST=$(jq -r '.total_cost_usd // 0' "$EXECUTION_FILE")
-          echo "📋 **Claude execution:** subtype=$SUBTYPE, turns=$NUM_TURNS, permission_denials=$DENIALS, cost=\$${COST}, is_error=$IS_ERROR" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Claude execution report" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Status | $SUBTYPE |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Turns used | $NUM_TURNS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Permission denials | $DENIALS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Cost | \$${COST} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Error | $IS_ERROR |" >> "$GITHUB_STEP_SUMMARY"
           FAILED=false
           if [ "$DENIALS" -gt 0 ] && [ "$DENIALS" -ge "$NUM_TURNS" ]; then
             echo "::error::Claude was denied permissions on almost every turn ($DENIALS/$NUM_TURNS). Check allowed_tools configuration."
