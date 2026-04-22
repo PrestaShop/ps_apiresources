@@ -94,7 +94,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: '--model claude-sonnet-4-6 --max-turns 25 --allowedTools "Read,Glob,Grep,LS,WebFetch,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"'
+          claude_args: '--model claude-sonnet-4-6 --max-turns 30 --allowedTools "Read,Glob,Grep,LS,WebFetch,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"'
           prompt: ${{ steps.prompt.outputs.content }}
 
       - name: Validate Claude execution
