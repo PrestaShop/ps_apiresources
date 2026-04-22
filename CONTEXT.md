@@ -136,6 +136,24 @@ the current usage pattern.
 - To find the correct `gridDataFactory` service name: look at the
   entity's Symfony controller → Grid factory definition → Grid data
   factory service.
+- **Field alignment for `PaginatedList` endpoints** — the DTO properties
+  must mirror the fields selected by the grid's underlying query builder.
+  To verify alignment:
+  1. Trace the `gridDataFactory` service to its query builder class in
+     PrestaShop Core (the class implementing `DoctrineQueryBuilderInterface`
+     or similar).
+  2. Read the SQL `SELECT` clause — each selected column is a field the
+     grid can return.
+  3. Every selected field should have a corresponding DTO property. If a
+     field is intentionally omitted, it should be a conscious decision
+     (not an oversight).
+  4. When the SQL column name differs from the DTO property name (e.g.
+     `id_contact` vs `contactId`, `firstname` vs `firstName`), an
+     `ApiResourceMapping` entry must cover the rename.
+  5. A DTO property with no matching query field will always be `null` at
+     runtime — this is almost certainly a bug.
+  The same principle applies to `CQRSPaginate`: compare the CQRS query's
+  result DTO fields against the ApiResource properties.
 - Do NOT use `SerializedName` — always use `CQRSQueryMapping`,
   `CQRSCommandMapping`, or `ApiResourceMapping`.
 - Nested fields use bracket notation:

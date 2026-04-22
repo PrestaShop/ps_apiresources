@@ -40,6 +40,22 @@ These are frequent mistakes that are easy to miss — flag them explicitly:
 - Custom normalizer or processor added in the module (always flag as a **hard blocker**)
 - Test asserting only the identifier without checking the rest of the response fields
 
+### Listing endpoints (`PaginatedList` / `CQRSPaginate`)
+
+When the PR adds or modifies a list endpoint, cross-check the DTO against
+the data source (see "Field alignment" in `CONTEXT.md`):
+
+- Trace the `gridDataFactory` to its query builder; compare SQL SELECT
+  fields with DTO properties. Flag missing DTO properties (data the grid
+  returns but the API silently drops) and orphan DTO properties (no
+  matching query field → always `null`).
+- When a SQL column name differs from the DTO property, verify an
+  `ApiResourceMapping` entry covers the rename.
+- Check `filtersMapping` covers every filterable field whose API name
+  differs from the grid filter name.
+- For `CQRSPaginate`: same checks, but against the CQRS query result DTO
+  instead of the query builder.
+
 ## Output format
 
 Post a **single comment** using `gh pr comment $PR_NUMBER --repo $REPO` with the following
@@ -116,6 +132,12 @@ Base every check on the rules from `CONTEXT.md`.
 **Multi-shop**
 - [ ] `shopIds` present and mapped if entity is shop-associated, absent otherwise
 - [ ] Shop context (`[_context][shopId]`, `[_context][shopConstraint]`) passed when needed
+
+**Listing field alignment** (when PR includes a list endpoint)
+- [ ] DTO properties match fields from the grid query builder / CQRS query result
+- [ ] `ApiResourceMapping` covers every name mismatch between source fields and DTO
+- [ ] `filtersMapping` covers every filter name that differs from the API field name
+- [ ] No orphan DTO property (property with no matching source field → always `null`)
 
 **Integration test**
 - [ ] Extends `ApiTestCase`, `@depends` chain, asserts all fields
