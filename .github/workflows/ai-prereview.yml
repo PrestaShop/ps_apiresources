@@ -106,11 +106,19 @@ jobs:
             echo "::error::Claude execution output file not found."
             exit 1
           fi
-          IS_ERROR=$(jq -r '.is_error // false' "$EXECUTION_FILE")
-          SUBTYPE=$(jq -r '.subtype // "unknown"' "$EXECUTION_FILE")
-          NUM_TURNS=$(jq -r '.num_turns // 0' "$EXECUTION_FILE")
-          DENIALS=$(jq -r '.permission_denials_count // 0' "$EXECUTION_FILE")
-          COST=$(jq -r '.total_cost_usd // 0' "$EXECUTION_FILE")
+          # The execution file can be a JSON array (conversation log) or a single object.
+          # When it's an array, the result object is the last element.
+          FILE_TYPE=$(jq -r 'type' "$EXECUTION_FILE")
+          if [ "$FILE_TYPE" = "array" ]; then
+            RESULT=$(jq '.[-1]' "$EXECUTION_FILE")
+          else
+            RESULT=$(jq '.' "$EXECUTION_FILE")
+          fi
+          IS_ERROR=$(echo "$RESULT" | jq -r '.is_error // false')
+          SUBTYPE=$(echo "$RESULT" | jq -r '.subtype // "unknown"')
+          NUM_TURNS=$(echo "$RESULT" | jq -r '.num_turns // 0')
+          DENIALS=$(echo "$RESULT" | jq -r '.permission_denials_count // 0')
+          COST=$(echo "$RESULT" | jq -r '.total_cost_usd // 0')
           echo "## Claude execution report" >> "$GITHUB_STEP_SUMMARY"
           echo "| Metric | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
