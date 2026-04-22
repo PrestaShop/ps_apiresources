@@ -33,7 +33,8 @@ jobs:
   check-guard:
     needs: check-diff
     if: needs.check-diff.outputs.has-code-changes == 'true'
-    uses: jolelievre/.github/.github/workflows/ai-prereview-guard.yml@debug-guard-workflow
+    # Reusable guard: checks team membership + duplicate review label
+    uses: PrestaShop/.github/.github/workflows/ai-prereview-guard.yml@master
     with:
       team-slug: prestashop-sa
       actor: ${{ github.event.sender.login }}
