@@ -24,58 +24,25 @@ jobs:
             grep -vE '\.(lock|md)$|^vendor/' | wc -l | tr -d ' ')
           if [ "$CODE" = "0" ]; then
             echo "has-code-changes=false" >> "$GITHUB_OUTPUT"
-            echo "💤 No PHP/YAML changes — skipping Claude." >> "$GITHUB_STEP_SUMMARY"
+            echo "No code changes — skipping Claude." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "has-code-changes=true" >> "$GITHUB_OUTPUT"
-            echo "📝 $CODE file(s) with code changes detected." >> "$GITHUB_STEP_SUMMARY"
+            echo "$CODE file(s) with code changes detected." >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  check-guard:
+  load-prompt:
     needs: check-diff
     if: needs.check-diff.outputs.has-code-changes == 'true'
-    uses: PrestaShop/.github/.github/workflows/ai-prereview-guard.yml@master
-    with:
-      team-slug: prestashop-sa
-      actor: ${{ github.event.sender.login }}
-      pr-number: ${{ github.event.pull_request.number }}
-      repository: ${{ github.repository }}
-    secrets:
-      org-read-token: ${{ secrets.JARVIS_TOKEN }}
-      github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  guard-failed:
-    needs: check-guard
-    if: needs.check-guard.outputs.can-run != 'true'
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Remove label and fail
-        run: |
-          gh pr edit ${{ github.event.pull_request.number }} --repo "${{ github.repository }}" \
-            --remove-label "Need AI review"
-          echo "::error::Guard check failed — the actor is not a member of the required team or the PR was already reviewed."
-          echo "⛔ Guard check failed — Claude pre-review will not run. Label 'Need AI review' removed." >> "$GITHUB_STEP_SUMMARY"
-          exit 1
-
-  ai-prereview:
-    needs: check-guard
-    if: needs.check-guard.outputs.can-run == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+    outputs:
+      prompt: ${{ steps.prompt.outputs.content }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Load review prompt
         id: prompt
         env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
@@ -87,70 +54,16 @@ jobs:
             echo "PROMPT_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Run Claude pre-review
-        id: claude
-        continue-on-error: true
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: '--model claude-sonnet-4-6 --max-turns 30 --allowedTools "Read,Glob,Grep,LS,WebFetch,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"'
-          prompt: ${{ steps.prompt.outputs.content }}
-
-      - name: Validate Claude execution
-        env:
-          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
-          STEP_OUTCOME: ${{ steps.claude.outcome }}
-        run: |
-          if [ ! -f "$EXECUTION_FILE" ]; then
-            echo "::error::Claude execution output file not found."
-            exit 1
-          fi
-          # The execution file can be a JSON array (conversation log) or a single object.
-          # When it's an array, the result object is the last element.
-          FILE_TYPE=$(jq -r 'type' "$EXECUTION_FILE")
-          if [ "$FILE_TYPE" = "array" ]; then
-            RESULT=$(jq '.[-1]' "$EXECUTION_FILE")
-          else
-            RESULT=$(jq '.' "$EXECUTION_FILE")
-          fi
-          IS_ERROR=$(echo "$RESULT" | jq -r '.is_error // false')
-          SUBTYPE=$(echo "$RESULT" | jq -r '.subtype // "unknown"')
-          NUM_TURNS=$(echo "$RESULT" | jq -r '.num_turns // 0')
-          DENIALS=$(echo "$RESULT" | jq -r '.permission_denials_count // 0')
-          COST=$(echo "$RESULT" | jq -r '.total_cost_usd // 0')
-          echo "## Claude execution report" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Metric | Value |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Status | $SUBTYPE |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Turns used | $NUM_TURNS |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Permission denials | $DENIALS |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Cost | \$${COST} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Error | $IS_ERROR |" >> "$GITHUB_STEP_SUMMARY"
-          FAILED=false
-          if [ "$DENIALS" -gt 0 ] && [ "$DENIALS" -ge "$NUM_TURNS" ]; then
-            echo "::error::Claude was denied permissions on almost every turn ($DENIALS/$NUM_TURNS). Check allowed_tools configuration."
-            FAILED=true
-          fi
-          if [ "$SUBTYPE" = "error_max_turns" ]; then
-            echo "::warning::Claude reached the maximum number of turns ($NUM_TURNS). The review may be incomplete."
-          fi
-          if [ "$IS_ERROR" = "true" ] && [ "$FAILED" = "true" ]; then
-            exit 1
-          fi
-          if [ "$IS_ERROR" = "true" ]; then
-            echo "::warning::Claude reported an error ($SUBTYPE) but may have posted partial results."
-          fi
-
-      - name: Update labels
-        run: |
-          gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" \
-            --add-label "AI reviewed" \
-            --remove-label "Need AI review"
-          echo "✅ Label 'AI reviewed' added, 'Need AI review' removed." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Summary
-        run: |
-          echo "## Pre-review summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **PR:** #$PR_NUMBER" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Actor:** ${{ github.event.sender.login }}" >> "$GITHUB_STEP_SUMMARY"
+  ai-guarded-review:
+    needs: load-prompt
+    uses: PrestaShop/.github/.github/workflows/ai-guarded-review.yml@master
+    with:
+      team-slug: prestashop-sa
+      actor: ${{ github.event.sender.login }}
+      pr-number: ${{ github.event.pull_request.number }}
+      repository: ${{ github.repository }}
+      prompt: ${{ needs.load-prompt.outputs.prompt }}
+    secrets:
+      org-read-token: ${{ secrets.JARVIS_TOKEN }}
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+      anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
