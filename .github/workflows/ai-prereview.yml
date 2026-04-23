@@ -10,6 +10,7 @@ concurrency:
 
 jobs:
   check-diff:
+    name: Check for code changes
     if: github.event.label.name == 'Need AI review'
     runs-on: ubuntu-latest
     outputs:
@@ -31,13 +32,14 @@ jobs:
           fi
 
   load-prompt:
+    name: Load review prompt
     needs: check-diff
     if: needs.check-diff.outputs.has-code-changes == 'true'
     runs-on: ubuntu-latest
     outputs:
       prompt: ${{ steps.prompt.outputs.content }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Load review prompt
         id: prompt
@@ -55,6 +57,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   ai-guarded-review:
+    name: AI guarded review
     needs: load-prompt
     uses: PrestaShop/.github/.github/workflows/ai-guarded-review.yml@master
     with:
