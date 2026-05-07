@@ -45,6 +45,7 @@
     "scripts": {
         "clear-test-cache": "PsApiResourcesTest\\EnvironmentBuilder::clearCache",
         "create-test-db": [
+            "Composer\\Config::disableProcessTimeout",
             "@composer clear-test-cache",
             "@composer setup-local-tests -- --build-db"
         ],
