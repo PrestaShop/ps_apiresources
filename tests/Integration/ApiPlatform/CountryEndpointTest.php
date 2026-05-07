@@ -196,6 +196,60 @@ class CountryEndpointTest extends ApiTestCase
         $this->getItem('/countries/999999', ['country_read'], Response::HTTP_NOT_FOUND);
     }
 
+    public function testAddCountryWithInvalidData(): void
+    {
+        $validationErrorsResponse = $this->createItem('/countries', [
+            'isoCode' => '',
+        ], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'names',
+                'message' => 'The field names is required at least in your default language.',
+            ],
+            [
+                'propertyPath' => 'isoCode',
+                'message' => 'This value should not be blank.',
+            ],
+            [
+                'propertyPath' => 'callPrefix',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'defaultCurrencyId',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'zoneId',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'needZipCode',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'addressFormat',
+                'message' => 'This value should not be blank.',
+            ],
+            [
+                'propertyPath' => 'enabled',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'containsStates',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'needIdNumber',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'displayTaxLabel',
+                'message' => 'This value should not be null.',
+            ],
+        ], $validationErrorsResponse);
+    }
+
     /**
      * @dataProvider invalidAddressFormatProvider
      *
