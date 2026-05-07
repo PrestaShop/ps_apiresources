@@ -35,6 +35,11 @@ class CountryEndpointTest extends ApiTestCase
     // Variant used by testEditCountry — same required tokens, different optional ones.
     private const UPDATED_ADDRESS_FORMAT = "firstname lastname\naddress1\npostcode city\nCountry:name";
 
+    // Tests that depend on PS 9.2+ behavior (Country API returning the stored
+    // address format, ValidAddressFormat constraint firing on add/edit) gate
+    // themselves on the existence of this interface — introduced in 9.2.
+    private const CORE_ADDRESS_FORMAT_CHECKER = 'PrestaShop\\PrestaShop\\Core\\Domain\\Country\\AddressFormat\\AddressFormatCheckerInterface';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -44,7 +49,7 @@ class CountryEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        DatabaseDump::restoreTables(['country', 'country_lang', 'country_shop']);
+        DatabaseDump::restoreTables(['country', 'country_lang', 'country_shop', 'address_format']);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -70,12 +75,14 @@ class CountryEndpointTest extends ApiTestCase
      */
     public function testGetCountry(int $countryId): int
     {
-        $country = $this->getItem('/countries/' . $countryId, ['country_read']);
+        $expected = ['countryId' => $countryId] + $this->getCreatePayload();
+        // On PS 9.0/9.1 the AddCountryHandler ignores addressFormat from the
+        // command and GetCountryForEditing returns an empty string regardless
+        // of what was sent — the field only round-trips on 9.2+.
+        $expected['addressFormat'] = $this->expectedAddressFormat($expected['addressFormat']);
 
-        $this->assertEquals(
-            ['countryId' => $countryId] + $this->getCreatePayload(),
-            $country
-        );
+        $country = $this->getItem('/countries/' . $countryId, ['country_read']);
+        $this->assertEquals($expected, $country);
 
         return $countryId;
     }
@@ -106,7 +113,8 @@ class CountryEndpointTest extends ApiTestCase
             'zoneId' => 1,
             'needZipCode' => false,
             'zipCodeFormat' => null,
-            'addressFormat' => self::UPDATED_ADDRESS_FORMAT,
+            // Same caveat as testGetCountry — addressFormat only round-trips on 9.2+.
+            'addressFormat' => $this->expectedAddressFormat(self::UPDATED_ADDRESS_FORMAT),
             'enabled' => false,
             'containsStates' => false,
             'needIdNumber' => false,
@@ -125,7 +133,15 @@ class CountryEndpointTest extends ApiTestCase
     }
 
     /**
-     * @depends testEditCountry
+     * Depends on testAddCountry rather than testEditCountry so the delete
+     * still runs on PS 9.0/9.1 where testGetCountry / testEditCountry are
+     * skipped (the AddCountryHandler in those versions ignores addressFormat,
+     * so round-trip assertions on the field cannot pass).
+     *
+     * Source order keeps this last in the chain — on 9.2 testEditCountry will
+     * have already mutated the country before this runs.
+     *
+     * @depends testAddCountry
      */
     public function testEditCountry(int $countryId): int
     {
@@ -187,6 +203,8 @@ class CountryEndpointTest extends ApiTestCase
      */
     public function testAddCountryWithInvalidAddressFormat(string $invalidFormat, array $expectedErrors): void
     {
+        $this->skipIfAddressFormatCheckerMissing();
+
         $payload = $this->getCreatePayload();
         $payload['addressFormat'] = $invalidFormat;
 
@@ -205,6 +223,8 @@ class CountryEndpointTest extends ApiTestCase
      */
     public function testEditCountryWithInvalidAddressFormat(string $invalidFormat, array $expectedErrors, int $countryId): void
     {
+        $this->skipIfAddressFormatCheckerMissing();
+
         // The validator returns early on empty strings, so on PATCH an empty
         // addressFormat slips past the constraint and reaches the handler. We
         // skip that data-provider row here — it would 500, not 422.
@@ -269,6 +289,33 @@ class CountryEndpointTest extends ApiTestCase
                 ['propertyPath' => 'addressFormat', 'message' => 'The Country:name field is required.'],
             ],
         ];
+    }
+
+    /**
+     * Validation tests that exercise the ValidAddressFormat constraint call
+     * this helper to opt out cleanly on PS 9.0/9.1, where the constraint
+     * validator no-ops (no AddressFormatCheckerInterface in core).
+     *
+     * Round-trip tests (testGetCountry, testEditCountry) do NOT skip — they
+     * run on every version and use {@see self::expectedAddressFormat()} to
+     * branch the assertion instead.
+     */
+    private function skipIfAddressFormatCheckerMissing(): void
+    {
+        if (!interface_exists(self::CORE_ADDRESS_FORMAT_CHECKER)) {
+            $this->markTestSkipped('Requires PrestaShop 9.2+ (AddressFormatCheckerInterface).');
+        }
+    }
+
+    /**
+     * On PS 9.2+ the Country API persists and returns the addressFormat string
+     * supplied on add/edit. On 9.0/9.1 the AddCountryHandler/EditCountryHandler
+     * ignore that field and GetCountryForEditing returns an empty string —
+     * regardless of what the request sent.
+     */
+    private function expectedAddressFormat(string $sentFormat): string
+    {
+        return interface_exists(self::CORE_ADDRESS_FORMAT_CHECKER) ? $sentFormat : '';
     }
 
     /**
