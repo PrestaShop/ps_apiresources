@@ -197,6 +197,21 @@ class ProductEndpointTest extends ApiTestCase
             'GET',
             '/products/1/images',
         ];
+
+        yield 'create product_category endpoint' => [
+            'POST',
+            '/products/1/assign-to-categories',
+        ];
+
+        yield 'create product_categories endpoint' => [
+            'POST',
+            '/products/1/categories',
+        ];
+
+        yield 'delete product_category endpoint' => [
+            'DELETE',
+            '/products/1/categories',
+        ];
     }
 
     public function testAddProduct(): int
@@ -729,6 +744,58 @@ class ProductEndpointTest extends ApiTestCase
         $this->getItem('/products/images/' . $imageId, ['product_read'], Response::HTTP_NOT_FOUND);
         $productImages = $this->getItem('/products/' . $productId . '/images', ['product_read']);
         $this->assertEquals(1, count($productImages));
+    }
+
+    /**
+     * @depends testAddProduct
+     */
+    public function testAssignProductToCategory(int $productId): int
+    {
+        $categoryId = 3;
+
+        $payload = [
+            'categoryId' => $categoryId,
+        ];
+
+        $this->createItem(
+            '/products/' . $productId . '/assign-to-categories',
+            $payload,
+            ['product_write'],
+            Response::HTTP_NO_CONTENT
+        );
+
+        return $productId;
+    }
+
+    /**
+     * @depends testAddProduct
+     */
+    public function testSetAssociatedProductCategories(int $productId): int
+    {
+        $defaultCategoryId = 5;
+        $categoryIds = [3, 4, $defaultCategoryId];
+
+        $payload = [
+            'categoryIds' => $categoryIds,
+            'defaultCategoryId' => $defaultCategoryId,
+        ];
+
+        $this->createItem(
+            '/products/' . $productId . '/categories',
+            $payload,
+            ['product_write'],
+            Response::HTTP_NO_CONTENT
+        );
+
+        return $productId;
+    }
+
+    /**
+     * @depends testSetAssociatedProductCategories
+     */
+    public function testRemoveAllAssociatedProductCategories(int $productId): void
+    {
+        $this->deleteItem('/products/' . $productId . '/categories', ['product_write']);
     }
 
     /**
