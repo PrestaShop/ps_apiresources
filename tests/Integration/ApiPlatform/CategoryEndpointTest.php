@@ -124,6 +124,7 @@ class CategoryEndpointTest extends ApiTestCase
 
         $this->assertSame($postData['names'], $category['names']);
         $this->assertSame($postData['linkRewrites'], $category['linkRewrites']);
+        $this->assertSame($postData['parentCategoryId'], $category['parentCategoryId']);
 
         return $categoryId;
     }
@@ -150,6 +151,8 @@ class CategoryEndpointTest extends ApiTestCase
                 'fr-FR' => 'categorie-fr',
             ]
         );
+
+        $this->assertSame(2, $category['parentCategoryId']);
 
         return $categoryId;
     }
