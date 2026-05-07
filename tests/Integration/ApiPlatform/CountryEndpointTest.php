@@ -46,6 +46,7 @@ class CountryEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => ['POST', '/countries'];
         yield 'get endpoint' => ['GET', '/countries/1'];
+        yield 'delete endpoint' => ['DELETE', '/countries/1'];
     }
 
     public function testAddCountry(): int
@@ -152,6 +153,20 @@ class CountryEndpointTest extends ApiTestCase
             'displayTaxLabel' => true,
             'shopIds' => [1],
         ], $country);
+    }
+
+    /**
+     * @depends testAddCountry
+     */
+    public function testRemoveCountry(int $countryId): void
+    {
+        // Delete the item
+        $return = $this->deleteItem('/countries/' . $countryId, ['country_write']);
+        // This endpoint return empty response and 204 HTTP code
+        $this->assertNull($return);
+
+        // Getting the item should result in a 404 now
+        $this->getItem('/countries/' . $countryId, ['country_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testGetNonExistentCountry(): void
