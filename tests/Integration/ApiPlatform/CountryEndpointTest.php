@@ -158,6 +158,44 @@ class CountryEndpointTest extends ApiTestCase
     /**
      * @depends testAddCountry
      */
+    public function testEditCountry(int $countryId): int
+    {
+        $updatedCountry = $this->partialUpdateItem('/countries/' . $countryId, [
+            'enabled' => false,
+            'callPrefix' => 9999,
+            // Names must be always provided because EditCountryCommand::getLocalizedNames() return type is not nullable.
+            'names' => [
+                'fr-FR' => 'My Country FR',
+                'en-US' => 'My Country EN2',
+            ],
+        ], ['country_write']);
+
+        $this->assertEquals([
+            'countryId' => $countryId,
+            'names' => [
+                'en-US' => 'My Country EN2',
+                'fr-FR' => 'My Country FR',
+            ],
+            'isoCode' => 'ZZ',
+            'callPrefix' => 9999,
+            'defaultCurrencyId' => 0,
+            'zoneId' => 1,
+            'needZipCode' => false,
+            'zipCodeFormat' => null,
+            'addressFormat' => '',
+            'enabled' => false,
+            'containsStates' => false,
+            'needIdNumber' => false,
+            'displayTaxLabel' => true,
+            'shopIds' => [1],
+        ], $updatedCountry);
+
+        return $countryId;
+    }
+
+    /**
+     * @depends testEditCountry
+     */
     public function testRemoveCountry(int $countryId): void
     {
         // Delete the item
