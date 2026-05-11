@@ -166,7 +166,7 @@ class CartEndpointTest extends ApiTestCase
         // Assert the full response structure of the created cart
         $this->assertEquals([
             'cartId' => $cartId,
-            'customerId' => null,
+            'customerId' => self::FIXTURE_CUSTOMER_ID,
             'currencyId' => $cart['currencyId'],
             'langId' => $cart['langId'],
             'products' => [],
@@ -188,7 +188,7 @@ class CartEndpointTest extends ApiTestCase
 
         $this->assertEquals([
             'cartId' => $cartId,
-            'customerId' => null,
+            'customerId' => self::FIXTURE_CUSTOMER_ID,
             'currencyId' => $cart['currencyId'],
             'langId' => $cart['langId'],
             'products' => [],
@@ -352,6 +352,8 @@ class CartEndpointTest extends ApiTestCase
             'customerId' => self::FIXTURE_CUSTOMER_ID,
             'cartId' => $cartId,
         ], $result);
+
+        $this->deleteItem('/carts/' . $cartId, ['cart_write']);
     }
 
     public function testGetCartForViewing(): void
@@ -374,20 +376,28 @@ class CartEndpointTest extends ApiTestCase
         $this->assertIsInt($cartView['currencyId']);
         $this->assertIsArray($cartView['customerInformation']);
         $this->assertIsArray($cartView['cartSummary']);
+
+        $this->deleteItem('/carts/' . $cartId, ['cart_write']);
     }
 
     public function testBulkDeleteCarts(): void
     {
-        // Create two carts to delete
         $cart1 = $this->createItem('/carts', ['customerId' => self::FIXTURE_CUSTOMER_ID], ['cart_write']);
-        $cart2 = $this->createItem('/carts', ['customerId' => self::FIXTURE_CUSTOMER_ID], ['cart_write']);
-
         $cart1Id = $cart1['cartId'];
+
+        // Add a product to cart1 so it is no longer empty, forcing a new cart to be created for cart2
+        $this->createItem('/carts/' . $cart1Id . '/products', [
+            'productId' => self::FIXTURE_PRODUCT_ID,
+            'quantity' => 1,
+        ], ['cart_write'], Response::HTTP_CREATED);
+
+        $cart2 = $this->createItem('/carts', ['customerId' => self::FIXTURE_CUSTOMER_ID], ['cart_write']);
         $cart2Id = $cart2['cartId'];
+
+        $this->assertNotEquals($cart1Id, $cart2Id);
 
         $this->bulkDeleteItems('/carts/bulk-delete', ['cartIds' => [$cart1Id, $cart2Id]], ['cart_write']);
 
-        // Verify both carts are gone
         $this->getItem('/carts/' . $cart1Id, ['cart_read'], Response::HTTP_NOT_FOUND);
         $this->getItem('/carts/' . $cart2Id, ['cart_read'], Response::HTTP_NOT_FOUND);
     }
