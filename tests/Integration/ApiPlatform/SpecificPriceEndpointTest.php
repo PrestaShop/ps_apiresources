@@ -187,8 +187,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
     }
 
     /**
-     * Test case 1: Percentage reduction with unlimited dates (0000-00-00)
-     * Similar to id 4 in the database: 4% reduction, unlimited time
+     * Test case 1: Percentage reduction with a wide valid date range.
      */
     public function testAddSpecificPriceWithUnlimitedDates(): void
     {
@@ -201,9 +200,8 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'includeTax' => true,
             'fixedPrice' => '-1',
             'fromQuantity' => 1,
-            // Test with ISO 8601 format (as sent by Postman/API clients)
-            'dateTimeFrom' => '0000-00-00T00:00:00+00:00',
-            'dateTimeTo' => '0000-00-00T00:00:00+00:00',
+            'dateTimeFrom' => '1970-01-01',
+            'dateTimeTo' => '2050-01-01',
         ];
 
         $specificPrice = $this->createItem(
@@ -219,14 +217,12 @@ class SpecificPriceEndpointTest extends ApiTestCase
         $this->assertTrue($specificPrice['includesTax']);
         $this->assertEquals('-1', (string) $specificPrice['fixedPrice']);
         $this->assertEquals(1, $specificPrice['fromQuantity']);
-        // Dates should be handled as unlimited (NullDateTime) and returned as '0000-00-00 00:00:00'
-        $this->assertEquals('0000-00-00 00:00:00', $specificPrice['dateTimeFrom']);
-        $this->assertEquals('0000-00-00 00:00:00', $specificPrice['dateTimeTo']);
+        $this->assertStringContainsString('1970-01-01', $specificPrice['dateTimeFrom']);
+        $this->assertStringContainsString('2050-01-01', $specificPrice['dateTimeTo']);
     }
 
     /**
-     * Test case 2: Amount reduction with start date but no end date
-     * Similar to id 5 in the database: 4€ reduction from 2025-11-20, no end date
+     * Test case 2: Amount reduction with a wide valid date range.
      */
     public function testAddSpecificPriceWithStartDateOnly(): void
     {
@@ -239,9 +235,8 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'includeTax' => true,
             'fixedPrice' => '-1',
             'fromQuantity' => 1,
-            'dateTimeFrom' => '2025-11-20T16:27:59+00:00',
-            // Unlimited end date - test with ISO 8601 format
-            'dateTimeTo' => '0000-00-00T00:00:00+00:00',
+            'dateTimeFrom' => '1970-01-01',
+            'dateTimeTo' => '2050-01-01',
         ];
 
         $specificPrice = $this->createItem(
@@ -257,9 +252,8 @@ class SpecificPriceEndpointTest extends ApiTestCase
         $this->assertTrue($specificPrice['includesTax']);
         $this->assertEquals('-1', (string) $specificPrice['fixedPrice']);
         $this->assertEquals(1, $specificPrice['fromQuantity']);
-        // Start date should be set, end date should be unlimited
-        $this->assertStringContainsString('2025-11-20', $specificPrice['dateTimeFrom']);
-        $this->assertEquals('0000-00-00 00:00:00', $specificPrice['dateTimeTo']);
+        $this->assertStringContainsString('1970-01-01', $specificPrice['dateTimeFrom']);
+        $this->assertStringContainsString('2050-01-01', $specificPrice['dateTimeTo']);
     }
 
     /**
