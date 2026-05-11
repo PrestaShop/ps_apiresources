@@ -45,8 +45,6 @@ use Symfony\Component\HttpFoundation\Response;
                 '[_context][langId]' => '[languageId]',
             ],
             ApiResourceMapping: [
-                '[reductionValue]' => '[reductionValue]',
-                '[includesTax]' => '[includesTax]',
                 '[fixedPrice][value]' => '[fixedPrice]',
             ],
             itemsField: 'specificPrices',

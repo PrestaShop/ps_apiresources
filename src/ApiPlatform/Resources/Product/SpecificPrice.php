@@ -38,6 +38,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -58,6 +59,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: SpecificPrice::QUERY_MAPPING,
             CQRSCommandMapping: SpecificPrice::CREATE_COMMAND_MAPPING,
+            validationContext: ['groups' => ['Default', 'Create']],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/products/specific-prices/{specificPriceId}',
@@ -68,6 +70,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: SpecificPrice::QUERY_MAPPING,
             CQRSCommandMapping: SpecificPrice::UPDATE_COMMAND_MAPPING,
+            validationContext: ['groups' => ['Default', 'Update']],
         ),
         new CQRSDelete(
             uriTemplate: '/products/specific-prices/{specificPriceId}',
@@ -89,20 +92,28 @@ class SpecificPrice
     #[ApiProperty(identifier: true)]
     public int $specificPriceId;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public int $productId;
 
+    #[Assert\NotBlank(groups: ['Create'])]
     public string $reductionType;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public DecimalNumber $reductionValue;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $includesTax;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public ?DecimalNumber $fixedPrice = null;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public int $fromQuantity;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public ?\DateTimeImmutable $dateTimeFrom = null;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public ?\DateTimeImmutable $dateTimeTo = null;
 
     public ?int $combinationId = null;
@@ -117,6 +128,16 @@ class SpecificPrice
 
     public ?int $customerId = null;
 
+    #[ApiProperty(openapiContext: [
+        'type' => 'object',
+        'nullable' => true,
+        'properties' => [
+            'id' => ['type' => 'integer'],
+            'firstname' => ['type' => 'string'],
+            'lastname' => ['type' => 'string'],
+            'email' => ['type' => 'string'],
+        ],
+    ])]
     public ?array $customerInfo = null;
 
     public const QUERY_MAPPING = [
@@ -130,6 +151,7 @@ class SpecificPrice
         '[dateTimeFrom]' => '[dateTimeFrom]',
         '[dateTimeTo]' => '[dateTimeTo]',
         '[productId]' => '[productId]',
+        '[customerInfo][id]' => '[customerId]',
         '[customerInfo]' => '[customerInfo]',
         '[combinationId]' => '[combinationId]',
         '[shopId]' => '[shopId]',
@@ -142,7 +164,7 @@ class SpecificPrice
         '[productId]' => '[productId]',
         '[reductionType]' => '[reductionType]',
         '[reductionValue]' => '[reductionValue]',
-        '[includeTax]' => '[includeTax]',
+        '[includesTax]' => '[includeTax]',
         '[fixedPrice]' => '[fixedPrice]',
         '[fromQuantity]' => '[fromQuantity]',
         '[dateTimeFrom]' => '[dateTimeFrom]',

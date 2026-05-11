@@ -44,7 +44,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'product_write',
             ],
             CQRSCommandMapping: SpecificPricePriority::COMMAND_MAPPING,
-            validationContext: ['groups' => ['update']],
+            validationContext: ['groups' => ['Default', 'Update']],
         ),
         new CQRSDelete(
             uriTemplate: '/products/{productId}/specific-price-priorities',
@@ -68,7 +68,7 @@ class SpecificPricePriority
     /**
      * @var string[]|null
      */
-    #[Assert\NotBlank(groups: ['update'])]
+    #[Assert\NotBlank(groups: ['Update'])]
     #[Assert\All([
         'constraints' => [
             new Assert\Choice([
@@ -81,9 +81,9 @@ class SpecificPricePriority
                 'message' => 'Invalid priority value. Valid values are: id_group, id_currency, id_country, id_shop',
             ]),
         ],
-        'groups' => ['update'],
+        'groups' => ['Update'],
     ])]
-    #[Assert\Unique(message: 'Priorities cannot duplicate', groups: ['update'])]
+    #[Assert\Unique(message: 'Priorities cannot duplicate', groups: ['Update'])]
     public ?array $priorities = null;
 
     public const COMMAND_MAPPING = [

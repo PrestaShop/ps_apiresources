@@ -38,13 +38,22 @@ class SpecificPriceEndpointTest extends ApiTestCase
         self::createApiClient(['product_write', 'product_read']);
     }
 
-    public static function tearDownBeforeClass(): void
+    public static function tearDownAfterClass(): void
     {
+        parent::tearDownAfterClass();
         ProductResetter::resetProducts();
     }
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get endpoint' => [
+            'GET',
+            '/products/specific-prices/{specificPriceId}',
+        ];
+        yield 'list endpoint' => [
+            'GET',
+            '/products/1/specific-prices',
+        ];
         yield 'create endpoint' => [
             'POST',
             '/products/specific-prices',
@@ -91,7 +100,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_PERCENTAGE,
             'reductionValue' => '10.5',
-            'includeTax' => true,
+            'includesTax' => true,
             'fixedPrice' => '-1', // Initial price
             'fromQuantity' => 1,
             'dateTimeFrom' => '2024-01-01T00:00:00+00:00',
@@ -129,7 +138,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_AMOUNT,
             'reductionValue' => '5.50',
-            'includeTax' => false,
+            'includesTax' => false,
             'fixedPrice' => '-1',
             'fromQuantity' => 2,
             'dateTimeFrom' => '2024-01-01T00:00:00+00:00',
@@ -159,7 +168,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_PERCENTAGE,
             'reductionValue' => '15',
-            'includeTax' => true,
+            'includesTax' => true,
             'fixedPrice' => '80.00',
             'fromQuantity' => 3,
             'dateTimeFrom' => '2024-01-01T00:00:00+00:00',
@@ -197,7 +206,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_PERCENTAGE,
             'reductionValue' => '4.0',
-            'includeTax' => true,
+            'includesTax' => true,
             'fixedPrice' => '-1',
             'fromQuantity' => 1,
             'dateTimeFrom' => '1970-01-01',
@@ -232,7 +241,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_AMOUNT,
             'reductionValue' => '4.0',
-            'includeTax' => true,
+            'includesTax' => true,
             'fixedPrice' => '-1',
             'fromQuantity' => 1,
             'dateTimeFrom' => '1970-01-01',
@@ -268,7 +277,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_AMOUNT,
             'reductionValue' => '0.0',
-            'includeTax' => false,
+            'includesTax' => false,
             'fixedPrice' => '12.0',
             'fromQuantity' => 1,
             'dateTimeFrom' => '2025-11-27T16:28:32+00:00',
@@ -311,7 +320,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_AMOUNT,
             'reductionValue' => '3.0',
-            'includeTax' => false, // Tax excluded (hors taxe)
+            'includesTax' => false, // Tax excluded (hors taxe)
             'fixedPrice' => '-1',
             'fromQuantity' => 1,
             'dateTimeFrom' => '2025-11-29T16:31:10+00:00',
@@ -343,33 +352,11 @@ class SpecificPriceEndpointTest extends ApiTestCase
         $this->assertStringContainsString('2025-12-31', $specificPrice['dateTimeTo']);
     }
 
-    public function testUpdateSpecificPrice(): void
+    /**
+     * @depends testAddSpecificPrice
+     */
+    public function testUpdateSpecificPrice(int $specificPriceId): int
     {
-        $productId = $this->createTestProduct();
-
-        // First, create a specific price
-        $postData = [
-            'productId' => $productId,
-            'reductionType' => Reduction::TYPE_PERCENTAGE,
-            'reductionValue' => '10.0',
-            'includeTax' => true,
-            'fixedPrice' => '-1',
-            'fromQuantity' => 1,
-            'dateTimeFrom' => '2024-01-01T00:00:00+00:00',
-            'dateTimeTo' => '2024-12-31T23:59:59+00:00',
-        ];
-
-        $specificPrice = $this->createItem(
-            '/products/specific-prices',
-            $postData,
-            ['product_write']
-        );
-
-        $specificPriceId = $specificPrice['specificPriceId'];
-        $this->assertIsInt($specificPriceId);
-        $this->assertGreaterThan(0, $specificPriceId);
-
-        // Then, update it (PATCH request - partial update)
         $patchData = [
             'reductionType' => Reduction::TYPE_AMOUNT,
             'reductionValue' => '15.50',
@@ -390,6 +377,8 @@ class SpecificPriceEndpointTest extends ApiTestCase
         $this->assertEquals('15.5', (string) $updatedSpecificPrice['reductionValue']);
         $this->assertFalse($updatedSpecificPrice['includesTax']);
         $this->assertEquals(2, $updatedSpecificPrice['fromQuantity']);
+
+        return $specificPriceId;
     }
 
     public function testUpdateSpecificPriceWithPartialFields(): void
@@ -401,7 +390,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_PERCENTAGE,
             'reductionValue' => '10.0',
-            'includeTax' => true,
+            'includesTax' => true,
             'fixedPrice' => '-1',
             'fromQuantity' => 1,
             'dateTimeFrom' => '2024-01-01T00:00:00+00:00',
@@ -441,33 +430,11 @@ class SpecificPriceEndpointTest extends ApiTestCase
         $this->assertEquals(3, $updatedSpecificPrice['groupId']); // Should remain unchanged
     }
 
-    public function testDeleteSpecificPrice(): void
+    /**
+     * @depends testUpdateSpecificPrice
+     */
+    public function testDeleteSpecificPrice(int $specificPriceId): void
     {
-        $productId = $this->createTestProduct();
-
-        // First, create a specific price
-        $postData = [
-            'productId' => $productId,
-            'reductionType' => Reduction::TYPE_PERCENTAGE,
-            'reductionValue' => '10.0',
-            'includeTax' => true,
-            'fixedPrice' => '-1',
-            'fromQuantity' => 1,
-            'dateTimeFrom' => '2024-01-01T00:00:00+00:00',
-            'dateTimeTo' => '2024-12-31T23:59:59+00:00',
-        ];
-
-        $specificPrice = $this->createItem(
-            '/products/specific-prices',
-            $postData,
-            ['product_write']
-        );
-
-        $specificPriceId = $specificPrice['specificPriceId'];
-        $this->assertIsInt($specificPriceId);
-        $this->assertGreaterThan(0, $specificPriceId);
-
-        // Then, delete it
         $this->deleteItem(
             '/products/specific-prices/' . $specificPriceId,
             ['product_write'],
@@ -475,11 +442,30 @@ class SpecificPriceEndpointTest extends ApiTestCase
         );
     }
 
+    public function testInvalidSpecificPrice(): void
+    {
+        $validationErrorsResponse = $this->createItem('/products/specific-prices', [
+            'reductionType' => '',
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+
+        $this->assertValidationErrors([
+            ['propertyPath' => 'productId'],
+            ['propertyPath' => 'reductionType'],
+            ['propertyPath' => 'reductionValue'],
+            ['propertyPath' => 'includesTax'],
+            ['propertyPath' => 'fixedPrice'],
+            ['propertyPath' => 'fromQuantity'],
+            ['propertyPath' => 'dateTimeFrom'],
+            ['propertyPath' => 'dateTimeTo'],
+        ], $validationErrorsResponse);
+    }
+
     // ============================================
     // Tests for Specific Price Priority endpoints
     // ============================================
 
-    public function testSetSpecificPricePriority(): void
+    public function testSetSpecificPricePriority(): int
     {
         $productId = $this->createTestProduct();
 
@@ -498,6 +484,8 @@ class SpecificPriceEndpointTest extends ApiTestCase
             ['product_write'],
             Response::HTTP_NO_CONTENT
         );
+
+        return $productId;
     }
 
     public function testSetSpecificPricePriorityWithDifferentOrder(): void
@@ -540,25 +528,35 @@ class SpecificPriceEndpointTest extends ApiTestCase
         );
     }
 
-    public function testRemoveSpecificPricePriority(): void
+    public function testInvalidSpecificPricePriority(): void
     {
         $productId = $this->createTestProduct();
 
-        // First, set a priority
-        $patchData = [
-            'priorities' => [
-                'id_group',
-                'id_currency',
-            ],
-        ];
-        $this->partialUpdateItem(
+        $validationErrorsResponse = $this->partialUpdateItem(
             '/products/' . $productId . '/specific-price-priorities',
-            $patchData,
+            [
+                'priorities' => [
+                    'id_shop',
+                    'invalid_priority',
+                    'id_shop',
+                ],
+            ],
             ['product_write'],
-            Response::HTTP_NO_CONTENT
+            Response::HTTP_UNPROCESSABLE_ENTITY
         );
+        $this->assertIsArray($validationErrorsResponse);
 
-        // Then, remove it (should return to default priorities)
+        $this->assertValidationErrors([
+            ['propertyPath' => 'priorities[1]'],
+            ['propertyPath' => 'priorities'],
+        ], $validationErrorsResponse);
+    }
+
+    /**
+     * @depends testSetSpecificPricePriority
+     */
+    public function testRemoveSpecificPricePriority(int $productId): void
+    {
         $this->deleteItem(
             '/products/' . $productId . '/specific-price-priorities',
             ['product_write'],
@@ -575,7 +573,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_PERCENTAGE,
             'reductionValue' => '10.0',
-            'includeTax' => true,
+            'includesTax' => true,
             'fixedPrice' => '-1',
             'fromQuantity' => 1,
             'dateTimeFrom' => '2024-01-01T00:00:00+00:00',
@@ -617,7 +615,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_PERCENTAGE,
             'reductionValue' => '10.0',
-            'includeTax' => true,
+            'includesTax' => true,
             'fixedPrice' => '-1',
             'fromQuantity' => 1,
             'dateTimeFrom' => '2024-01-01T00:00:00+00:00',
@@ -628,7 +626,7 @@ class SpecificPriceEndpointTest extends ApiTestCase
             'productId' => $productId,
             'reductionType' => Reduction::TYPE_AMOUNT,
             'reductionValue' => '5.50',
-            'includeTax' => false,
+            'includesTax' => false,
             'fixedPrice' => '-1',
             'fromQuantity' => 5,
             'dateTimeFrom' => '2024-06-01T00:00:00+00:00',
