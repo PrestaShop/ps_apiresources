@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
@@ -72,9 +73,11 @@ class SpecificPriceList
 
     public int $fromQuantity;
 
-    public ?\DateTimeImmutable $dateTimeFrom = null;
+    #[ApiProperty(openapiContext: ['type' => 'string', 'format' => 'date-time', 'nullable' => true])]
+    public ?string $dateTimeFrom = null;
 
-    public ?\DateTimeImmutable $dateTimeTo = null;
+    #[ApiProperty(openapiContext: ['type' => 'string', 'format' => 'date-time', 'nullable' => true])]
+    public ?string $dateTimeTo = null;
 
     public ?string $combinationName = null;
 

@@ -110,11 +110,13 @@ class SpecificPrice
     #[Assert\NotNull(groups: ['Create'])]
     public int $fromQuantity;
 
+    #[ApiProperty(openapiContext: ['type' => 'string', 'format' => 'date-time', 'nullable' => true])]
     #[Assert\NotNull(groups: ['Create'])]
-    public ?\DateTimeImmutable $dateTimeFrom = null;
+    public ?string $dateTimeFrom = null;
 
+    #[ApiProperty(openapiContext: ['type' => 'string', 'format' => 'date-time', 'nullable' => true])]
     #[Assert\NotNull(groups: ['Create'])]
-    public ?\DateTimeImmutable $dateTimeTo = null;
+    public ?string $dateTimeTo = null;
 
     public ?int $combinationId = null;
 
