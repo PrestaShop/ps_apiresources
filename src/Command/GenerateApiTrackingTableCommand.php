@@ -91,12 +91,15 @@ class GenerateApiTrackingTableCommand extends Command
             $implementedCount = $this->countImplementedEndpoints($domainGroups);
             $inProgressCount = $this->countInProgressEndpoints($domainGroups);
             $percentage = $totalEndpoints > 0 ? round(($implementedCount / $totalEndpoints) * 100, 1) : 0;
+            $projectedPercentage = $totalEndpoints > 0 ? round((($implementedCount + $inProgressCount) / $totalEndpoints) * 100, 1) : 0;
 
             $io->success([
                 'API tracking table generated successfully!',
                 sprintf('📁 Saved to: %s', $outputFile),
                 sprintf('📊 Summary: %d implemented, %d in progress, %d missing (%s%% complete)',
                     $implementedCount, $inProgressCount, $totalEndpoints - $implementedCount - $inProgressCount, $percentage),
+                sprintf('🔮 Projected after merging open PRs: %s%% (+%s%%)',
+                    $projectedPercentage, round($projectedPercentage - $percentage, 1)),
             ]);
 
             return Command::SUCCESS;
@@ -410,6 +413,7 @@ class GenerateApiTrackingTableCommand extends Command
         $inProgressCount = $this->countInProgressEndpoints($domainGroups);
         $missingCount = $totalEndpoints - $implementedCount - $inProgressCount;
         $percentage = $totalEndpoints > 0 ? round(($implementedCount / $totalEndpoints) * 100, 1) : 0;
+        $projectedPercentage = $totalEndpoints > 0 ? round((($implementedCount + $inProgressCount) / $totalEndpoints) * 100, 1) : 0;
 
         $markdown = "# PrestaShop API Endpoints - Tracking\n\n";
         $markdown .= "This table tracks the progress of API endpoint implementations for PrestaShop CQRS commands and queries.\n\n";
@@ -418,7 +422,8 @@ class GenerateApiTrackingTableCommand extends Command
         $markdown .= "- **Implemented**: $implementedCount ✅\n";
         $markdown .= "- **In Progress**: $inProgressCount 🚧\n";
         $markdown .= "- **Missing**: $missingCount ❌\n";
-        $markdown .= "- **Progress**: $percentage%\n\n";
+        $markdown .= "- **Progress**: $percentage%\n";
+        $markdown .= "- **Projected progress (if all open PRs merged)**: $projectedPercentage% 🔮\n\n";
         $markdown .= "---\n\n";
 
         foreach ($domainGroups as $domain => $endpoints) {
