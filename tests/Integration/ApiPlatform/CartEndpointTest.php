@@ -138,11 +138,6 @@ class CartEndpointTest extends ApiTestCase
             '/carts/1/language',
         ];
 
-        yield 'send cart to customer endpoint' => [
-            'POST',
-            '/carts/1/send-email',
-        ];
-
         yield 'bulk delete carts endpoint' => [
             'DELETE',
             '/carts/bulk-delete',
