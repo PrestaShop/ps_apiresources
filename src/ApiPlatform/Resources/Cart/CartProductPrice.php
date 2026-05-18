@@ -28,6 +28,7 @@ use PrestaShop\PrestaShop\Core\Domain\Cart\Command\UpdateProductPriceInCartComma
 use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartException;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartNotFoundException;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -62,7 +63,6 @@ class CartProductPrice
     public int $combinationId;
 
     #[Assert\NotBlank]
-    #[Assert\PositiveOrZero]
-    #[ApiProperty(openapiContext: ['type' => 'number', 'format' => 'float', 'example' => 19.99])]
-    public float $price;
+    #[ApiProperty(openapiContext: ['type' => 'string', 'example' => '19.99'])]
+    public DecimalNumber $price;
 }
