@@ -411,4 +411,109 @@ class CartEndpointTest extends ApiTestCase
             ],
         ], $validationErrors);
     }
+
+    public function testAddProductToCartInvalidData(): void
+    {
+        $validationErrors = $this->createItem('/carts/1/products', [
+            'productId' => -1,
+            'quantity' => -1,
+        ], ['cart_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'productId',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'quantity',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrors);
+    }
+
+    public function testUpdateProductQuantityInvalidData(): void
+    {
+        $validationErrors = $this->partialUpdateItem('/carts/1/products/quantity', [
+            'productId' => -1,
+            'quantity' => -1,
+        ], ['cart_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'productId',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'quantity',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrors);
+    }
+
+    public function testUpdateCartAddressesInvalidData(): void
+    {
+        $validationErrors = $this->partialUpdateItem('/carts/1/addresses', [
+            'deliveryAddressId' => -1,
+            'invoiceAddressId' => -1,
+        ], ['cart_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'deliveryAddressId',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'invoiceAddressId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrors);
+    }
+
+    public function testUpdateCartCarrierInvalidData(): void
+    {
+        $validationErrors = $this->partialUpdateItem('/carts/1/carrier', [
+            'carrierId' => -1,
+        ], ['cart_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'carrierId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrors);
+    }
+
+    public function testUpdateCartCurrencyInvalidData(): void
+    {
+        $validationErrors = $this->partialUpdateItem('/carts/1/currency', [
+            'currencyId' => -1,
+        ], ['cart_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'currencyId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrors);
+    }
+
+    public function testUpdateCartLanguageInvalidData(): void
+    {
+        $validationErrors = $this->partialUpdateItem('/carts/1/language', [
+            'languageId' => -1,
+        ], ['cart_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'languageId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrors);
+    }
 }
