@@ -100,6 +100,14 @@ class Cart
                 'availableStock' => ['type' => 'integer'],
                 'availableOutOfStock' => ['type' => 'boolean'],
                 'gift' => ['type' => 'boolean'],
+                'customization' => [
+                    'nullable' => true,
+                    'type' => 'object',
+                    'properties' => [
+                        'customizationId' => ['type' => 'integer'],
+                        'customizationFieldsData' => ['type' => 'array'],
+                    ],
+                ],
             ],
         ],
     ])]
