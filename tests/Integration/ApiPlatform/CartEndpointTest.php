@@ -276,6 +276,10 @@ class CartEndpointTest extends ApiTestCase
             'invoiceAddressId' => self::FIXTURE_ADDRESS_ID,
         ], ['cart_write']);
 
+        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $selectedAddress = array_filter($cart['addresses'], fn($a) => $a['addressId'] === self::FIXTURE_ADDRESS_ID);
+        $this->assertNotEmpty($selectedAddress);
+
         return $cartId;
     }
 
@@ -285,10 +289,14 @@ class CartEndpointTest extends ApiTestCase
     public function testUpdateCartCurrency(int $cartId): int
     {
         $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $currencyId = $cart['currencyId'];
 
         $this->partialUpdateItem('/carts/' . $cartId . '/currency', [
-            'currencyId' => $cart['currencyId'],
+            'currencyId' => $currencyId,
         ], ['cart_write']);
+
+        $updatedCart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $this->assertEquals($currencyId, $updatedCart['currencyId']);
 
         return $cartId;
     }
@@ -299,10 +307,14 @@ class CartEndpointTest extends ApiTestCase
     public function testUpdateCartLanguage(int $cartId): int
     {
         $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $languageId = $cart['langId'];
 
         $this->partialUpdateItem('/carts/' . $cartId . '/language', [
-            'languageId' => $cart['langId'],
+            'languageId' => $languageId,
         ], ['cart_write']);
+
+        $updatedCart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $this->assertEquals($languageId, $updatedCart['langId']);
 
         return $cartId;
     }
@@ -318,6 +330,13 @@ class CartEndpointTest extends ApiTestCase
             'recycledPackaging' => false,
             'giftMessage' => null,
         ], ['cart_write']);
+
+        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $this->assertArrayHasKey('shipping', $cart);
+        if ($cart['shipping'] !== null) {
+            $this->assertFalse($cart['shipping']['gift']);
+            $this->assertFalse($cart['shipping']['recycledPackaging']);
+        }
 
         return $cartId;
     }
