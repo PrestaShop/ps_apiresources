@@ -93,6 +93,7 @@ OAuth2 scope naming: `{entity_snake_case}_{action}`.
 | Localized fields — no `localized` prefix      | `$names`                 | `$localizedNames`              |
 | All public properties strictly typed          | `public int $contactId`  | `public $contactId`            |
 | Decimals — use `DecimalNumber`, never `float` | `public DecimalNumber $price` | `public float $price`     |
+| Dates — `DateTimeImmutable` is allowed        | `public DateTimeImmutable $dateAdd` | `public string $dateAdd`  |
 
 Array fields representing complex structures must include
 `#[ApiProperty(openapiContext: ['type' => 'array', 'items' => [...]])]`
@@ -161,13 +162,22 @@ the current usage pattern.
 
 ## Multi-shop
 
+> **Experimental — feature flag required.** Admin API support for
+> multistore is gated behind the `admin_api_multistore` feature flag
+> (Advanced Parameters → New & Experimental Features). The conventions
+> below describe how endpoints must be written so they behave correctly
+> in multistore, but they only take effect at runtime once the flag is
+> enabled. Without the flag, multistore context parameters are ignored
+> and the API falls back to single-shop behavior.
+
 When PrestaShop's multistore feature is **disabled**, the API
 automatically uses the default shop — no extra parameters are needed.
 
-When multistore is **enabled**, every API request **must** include a shop
-context parameter (otherwise the API returns 400). The
-`ShopContextListener` in the Core reads these parameters from the
-request and builds a `ShopConstraint` that CQRS commands/queries use:
+When multistore is **enabled** (and the `admin_api_multistore` feature
+flag is on), every API request **must** include a shop context
+parameter (otherwise the API returns 400). The `ShopContextListener` in
+the Core reads these parameters from the request and builds a
+`ShopConstraint` that CQRS commands/queries use:
 
 | Request parameter | Context built | Use case |
 |---|---|---|
@@ -247,10 +257,14 @@ See `Product.php`, `Combination.php`, `CombinationList.php`, and
   `#[LocalizedValue]`, `ApiResourceMapping`, `CQRSQueryMapping`, and
   `CQRSCommandMapping` instead. CI enforces this.
 - Don't expose Value Objects as DTO properties. Public properties must
-  be scalar (`int`, `string`, `bool`) or `array`. The single allowed
-  exception is `PrestaShop\Decimal\DecimalNumber`, which **must** be
-  used instead of `float` for any decimal / monetary value — never
-  `float`. This is checked by the CI.
+  be scalar (`int`, `string`, `bool`) or `array`. Two exceptions are
+  allowed:
+  - `PrestaShop\Decimal\DecimalNumber` — which **must** be used instead
+    of `float` for any decimal / monetary value (never `float`).
+  - `DateTimeImmutable` — allowed for date / datetime properties.
+
+  This is enforced by the `ApiResourcePropertyTypeRule` PHPStan rule in
+  CI.
 - Don't return raw command results. If the endpoint should return data,
   define proper DTO properties and wire a `CQRSQuery`.
 - Don't declare an operation without a scope.
