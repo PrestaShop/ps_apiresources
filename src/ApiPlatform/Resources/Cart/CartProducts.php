@@ -38,7 +38,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSCreate(
             uriTemplate: '/carts/{cartId}/products',
             requirements: ['cartId' => '\d+'],
-            validationContext: ['groups' => ['Default', 'Add']],
+            validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddProductToCartCommand::class,
             scopes: ['cart_write'],
         ),
@@ -59,12 +59,12 @@ class CartProducts
     #[ApiProperty(identifier: true)]
     public int $cartId;
 
-    #[Assert\NotBlank(groups: ['Add'])]
-    #[Assert\Positive(groups: ['Add'])]
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Positive(groups: ['Create'])]
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $productId;
 
-    #[Assert\Positive(groups: ['Add'])]
+    #[Assert\Positive(groups: ['Create'])]
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $quantity = 0;
 
