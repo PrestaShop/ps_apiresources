@@ -161,13 +161,22 @@ the current usage pattern.
 
 ## Multi-shop
 
+> **Experimental — feature flag required.** Admin API support for
+> multistore is gated behind the `admin_api_multistore` feature flag
+> (Advanced Parameters → New & Experimental Features). The conventions
+> below describe how endpoints must be written so they behave correctly
+> in multistore, but they only take effect at runtime once the flag is
+> enabled. Without the flag, multistore context parameters are ignored
+> and the API falls back to single-shop behavior.
+
 When PrestaShop's multistore feature is **disabled**, the API
 automatically uses the default shop — no extra parameters are needed.
 
-When multistore is **enabled**, every API request **must** include a shop
-context parameter (otherwise the API returns 400). The
-`ShopContextListener` in the Core reads these parameters from the
-request and builds a `ShopConstraint` that CQRS commands/queries use:
+When multistore is **enabled** (and the `admin_api_multistore` feature
+flag is on), every API request **must** include a shop context
+parameter (otherwise the API returns 400). The `ShopContextListener` in
+the Core reads these parameters from the request and builds a
+`ShopConstraint` that CQRS commands/queries use:
 
 | Request parameter | Context built | Use case |
 |---|---|---|
