@@ -23,7 +23,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -64,11 +63,6 @@ class SearchAliasEndpointTest extends ApiTestCase
             '/search-aliases/dress',
         ];
 
-        yield 'delete endpoint' => [
-            'DELETE',
-            '/search-aliases',
-        ];
-
         yield 'list endpoint' => [
             'GET',
             '/search-aliases',
@@ -94,6 +88,32 @@ class SearchAliasEndpointTest extends ApiTestCase
                     'alias' => 'test-clothing',
                     'enabled' => true,
                 ],
+            ],
+        ];
+
+        $createResponse = $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_CREATED);
+
+        $expectedCreateResponse = [
+            'searchTerm' => self::SEARCH_TERM,
+            'aliases' => [
+                [
+                    'alias' => 'test-clothing',
+                    'enabled' => 1,
+                    'active' => 1,
+                ],
+                [
+                    'alias' => 'test-dres',
+                    'enabled' => 1,
+                    'active' => 1,
+                ],
+            ],
+        ];
+        $this->assertEquals($expectedCreateResponse, $createResponse);
+
+        // POST another data to test merging data on create
+        $postData = [
+            'searchTerm' => self::SEARCH_TERM,
+            'aliases' => [
                 [
                     'alias' => 'test-garment',
                     'enabled' => false,
@@ -101,14 +121,81 @@ class SearchAliasEndpointTest extends ApiTestCase
             ],
         ];
 
-        // So far alias create endpoint cannot return the created entity because of things missing in the API core,
-        // and the CQRS commands/queries also need some adjustments This will have to be improved later
-        $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_NO_CONTENT);
+        $createResponse = $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_CREATED);
+
+        $expectedCreateResponse = [
+            'searchTerm' => self::SEARCH_TERM,
+            'aliases' => [
+                [
+                    'alias' => 'test-clothing',
+                    'enabled' => 1,
+                    'active' => 1,
+                ],
+                [
+                    'alias' => 'test-dres',
+                    'enabled' => 1,
+                    'active' => 1,
+                ],
+                [
+                    'alias' => 'test-garment',
+                    'enabled' => 0,
+                    'active' => 0,
+                ],
+            ],
+        ];
+        $this->assertEquals($expectedCreateResponse, $createResponse);
 
         // Verify the aliases were actually created in the database
         $this->assertSearchAliasExistsInDatabase(self::SEARCH_TERM, 'test-dres', true);
         $this->assertSearchAliasExistsInDatabase(self::SEARCH_TERM, 'test-clothing', true);
         $this->assertSearchAliasExistsInDatabase(self::SEARCH_TERM, 'test-garment', false);
+
+        // POST with search term with space to check that it works and is properly encoded in the URL
+        $postData = [
+            'searchTerm' => 'summer dress',
+            'aliases' => [
+                [
+                    'alias' => 'summer-dres',
+                    'enabled' => true,
+                ],
+                [
+                    'alias' => 'summer-clothing',
+                    'enabled' => true,
+                ],
+                [
+                    'alias' => 'summer-garment',
+                    'enabled' => false,
+                ],
+            ],
+        ];
+        $createResponse = $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_CREATED);
+
+        $expectedCreateResponse = [
+            'searchTerm' => 'summer dress',
+            'aliases' => [
+                [
+                    'alias' => 'summer-clothing',
+                    'enabled' => 1,
+                    'active' => 1,
+                ],
+                [
+                    'alias' => 'summer-dres',
+                    'enabled' => 1,
+                    'active' => 1,
+                ],
+                [
+                    'alias' => 'summer-garment',
+                    'enabled' => 0,
+                    'active' => 0,
+                ],
+            ],
+        ];
+        $this->assertEquals($expectedCreateResponse, $createResponse);
+
+        // Then verify data in database
+        $this->assertSearchAliasExistsInDatabase('summer dress', 'summer-dres', true);
+        $this->assertSearchAliasExistsInDatabase('summer dress', 'summer-clothing', true);
+        $this->assertSearchAliasExistsInDatabase('summer dress', 'summer-garment', false);
     }
 
     /**
@@ -161,7 +248,7 @@ class SearchAliasEndpointTest extends ApiTestCase
                 ],
             ],
         ];
-        $this->updateItem('/search-aliases/' . self::SEARCH_TERM, $updateData, ['search_alias_write'], Response::HTTP_NO_CONTENT);
+        $updateResponse = $this->updateItem('/search-aliases/' . self::SEARCH_TERM, $updateData, ['search_alias_write'], Response::HTTP_OK);
 
         // Verify the update
         $updatedGetData = [
@@ -181,6 +268,7 @@ class SearchAliasEndpointTest extends ApiTestCase
         ];
         $response = $this->getItem('/search-aliases/' . self::SEARCH_TERM, ['search_alias_read']);
         $this->assertEquals($updatedGetData, $response);
+        $this->assertEquals($updatedGetData, $updateResponse);
     }
 
     /**
@@ -202,9 +290,9 @@ class SearchAliasEndpointTest extends ApiTestCase
                 ],
             ],
         ];
-        $this->updateItem('/search-aliases/' . self::SEARCH_TERM, $fullUpdatedData, ['search_alias_write'], Response::HTTP_NO_CONTENT);
+        $updateResponse = $this->updateItem('/search-aliases/' . self::SEARCH_TERM, $fullUpdatedData, ['search_alias_write'], Response::HTTP_OK);
 
-        // Verify the update (the url changed since the search term was changed)
+        // Verify the update response
         $fullyUpdatedGetData = [
             'searchTerm' => self::UPDATE_SEARCH_TERM,
             'aliases' => [
@@ -220,6 +308,9 @@ class SearchAliasEndpointTest extends ApiTestCase
                 ],
             ],
         ];
+        $this->assertEquals($fullyUpdatedGetData, $updateResponse);
+
+        // Verify the update via GET (the url changed since the search term was changed)
         $response = $this->getItem('/search-aliases/' . self::UPDATE_SEARCH_TERM, ['search_alias_read']);
         $this->assertEquals($fullyUpdatedGetData, $response);
 
@@ -237,7 +328,7 @@ class SearchAliasEndpointTest extends ApiTestCase
         // List them
         $response = $this->listItems('/search-aliases', ['search_alias_read']);
 
-        $this->assertEquals(2, $response['totalItems']);
+        $this->assertEquals(3, $response['totalItems']);
         $this->assertIsArray($response['items']);
 
         // Find our test items
@@ -261,15 +352,35 @@ class SearchAliasEndpointTest extends ApiTestCase
                 ],
             ],
             [
-                'search' => self::UPDATE_SEARCH_TERM,
+                'search' => 'summer dress',
                 'aliases' => [
                     [
                         'id_alias' => $response['items'][1]['aliases'][0]['id_alias'],
-                        'alias' => 'new-another-updated-alias',
+                        'alias' => 'summer-clothing',
                         'active' => 1,
                     ],
                     [
                         'id_alias' => $response['items'][1]['aliases'][1]['id_alias'],
+                        'alias' => 'summer-dres',
+                        'active' => 1,
+                    ],
+                    [
+                        'id_alias' => $response['items'][1]['aliases'][2]['id_alias'],
+                        'alias' => 'summer-garment',
+                        'active' => 0,
+                    ],
+                ],
+            ],
+            [
+                'search' => self::UPDATE_SEARCH_TERM,
+                'aliases' => [
+                    [
+                        'id_alias' => $response['items'][2]['aliases'][0]['id_alias'],
+                        'alias' => 'new-another-updated-alias',
+                        'active' => 1,
+                    ],
+                    [
+                        'id_alias' => $response['items'][2]['aliases'][1]['id_alias'],
                         'alias' => 'new-updated-alias',
                         'active' => 0,
                     ],
@@ -309,25 +420,6 @@ class SearchAliasEndpointTest extends ApiTestCase
         $this->assertEquals($expectedList, $response['items']);
     }
 
-    /**
-     * @depends testListSearchAliasesWithFilters
-     */
-    public function testDeleteSearchAlias(): void
-    {
-        // Verify it exists
-        $this->getItem('/search-aliases/' . self::UPDATE_SEARCH_TERM, ['search_alias_read']);
-
-        // Delete the search (searchTerm must be passed via json)
-        $this->requestApi(Request::METHOD_DELETE, '/search-aliases', [
-            'searchTerm' => self::UPDATE_SEARCH_TERM,
-        ], ['search_alias_write'], Response::HTTP_NO_CONTENT);
-
-        // Verify it's deleted (returns empty aliases, not 404)
-        // @todo this is a hack way to check the alias is removed, but it should return a 404
-        $response = $this->getItem('/search-aliases/' . self::SEARCH_TERM, ['search_alias_read']);
-        $this->assertEquals([], $response['aliases']);
-    }
-
     public function testBulkDeleteSearchAliases(): void
     {
         $searchAliases = ['searchAlias1', 'searchAlias2'];
@@ -342,7 +434,7 @@ class SearchAliasEndpointTest extends ApiTestCase
                     ],
                 ],
             ];
-            $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_NO_CONTENT);
+            $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_CREATED);
         }
 
         // Verify they exist
@@ -370,8 +462,6 @@ class SearchAliasEndpointTest extends ApiTestCase
         $this->getItem('/search-aliases/test', [], Response::HTTP_UNAUTHORIZED);
         $this->createItem('/search-aliases', [], [], Response::HTTP_UNAUTHORIZED);
         $this->updateItem('/search-aliases/test', [], [], Response::HTTP_UNAUTHORIZED);
-        $this->deleteItem('/search-aliases', [], Response::HTTP_UNAUTHORIZED);
-        $this->deleteItem('/search-aliases/bulk-delete', [], Response::HTTP_UNAUTHORIZED);
 
         // Test list endpoint with insufficient scope returns 403
         try {
@@ -394,15 +484,9 @@ class SearchAliasEndpointTest extends ApiTestCase
 
     public function testCreateSearchAliasWithInvalidData(): void
     {
-        // Test with empty search term - should return 422 with validation errors
+        // Test with empty aliases - should return 422 with validation errors
         $postData = [
-            'searchTerm' => '',
-            'aliases' => [
-                [
-                    'alias' => 'test-alias',
-                    'enabled' => true,
-                ],
-            ],
+            'aliases' => [],
         ];
 
         $validationErrorsResponse = $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -416,17 +500,6 @@ class SearchAliasEndpointTest extends ApiTestCase
                 'propertyPath' => 'searchTerm',
                 'message' => 'This value is too short. It should have 1 character or more.',
             ],
-        ], $validationErrorsResponse);
-
-        // Test with empty aliases - should return 422 with validation errors
-        $postData = [
-            'searchTerm' => 'test-search',
-            'aliases' => [],
-        ];
-
-        $validationErrorsResponse = $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        $this->assertIsArray($validationErrorsResponse);
-        $this->assertValidationErrors([
             [
                 'propertyPath' => 'aliases',
                 'message' => 'This value should not be blank.',
@@ -439,7 +512,6 @@ class SearchAliasEndpointTest extends ApiTestCase
 
         // Test with missing alias field - should return 422 with validation errors
         $postData = [
-            'searchTerm' => 'test-search',
             'aliases' => [
                 [
                     'enabled' => true,
@@ -468,7 +540,6 @@ class SearchAliasEndpointTest extends ApiTestCase
     private function createTestSearchAlias2(): void
     {
         $postData = [
-            'searchTerm' => self::SECOND_SEARCH_TERM,
             'aliases' => [
                 [
                     'alias' => 'test-telephone',

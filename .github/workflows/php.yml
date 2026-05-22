@@ -74,7 +74,7 @@ jobs:
           run: composer install
 
         - name: Run header-stamp
-          run: php vendor/bin/header-stamp --license=vendor/prestashop/header-stamp/assets/afl.txt --exclude=vendor --dry-run
+          run: composer header-stamp
 
     phpunit:
       name: PHPUnit Tests
@@ -123,3 +123,36 @@ jobs:
 
         - name: Run Rector dry-run
           run: composer rector
+
+    phpstan:
+      name: PHPStan (${{ matrix.presta_version }})
+      runs-on: ubuntu-latest
+      strategy:
+          matrix:
+              presta_version: ['9.0.3', '9.1.x', 'develop']
+          fail-fast: false
+      env:
+          PHPRC: ${{ github.workspace }}/${{ github.event.repository.name }}/.phpstan-php-ini
+      steps:
+          - name: Checkout repository
+            uses: actions/checkout@v4
+            with:
+                path: ${{ github.event.repository.name }}
+
+          - name: Prepare PHP env (define constants before bootstrap)
+            run: |
+                mkdir -p ${{ github.event.repository.name }}/.phpstan-php-ini
+                {
+                  echo "auto_prepend_file=$GITHUB_WORKSPACE/${{ github.event.repository.name }}/tests/PHPStan/prepend-constants.php"
+                  echo "memory_limit=512M"
+                } > ${{ github.event.repository.name }}/.phpstan-php-ini/php.ini
+
+          - name: Run PHPStan
+            uses: PrestaShop/.github/.github/actions/php-ci/phpstan@master
+            with:
+                php-version: '8.1'
+                presta-version: ${{ matrix.presta_version }}
+                module-name: ${{ github.event.repository.name }}
+                phpstan-level: '5'
+                phpstan-config: tests/PHPStan/phpstan-${{ matrix.presta_version }}.neon
+                phpstan-config-merge: 'false'

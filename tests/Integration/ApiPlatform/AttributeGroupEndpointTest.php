@@ -22,16 +22,12 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
-use Tests\Resources\Resetter\LanguageResetter;
 
 class AttributeGroupEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        // Add the fr-FR language to test multi lang values accurately
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
         self::resetTables();
         // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients
         self::createApiClient(['attribute_group_write', 'attribute_group_read']);
@@ -40,8 +36,6 @@ class AttributeGroupEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        // Reset DB as it was before this test
-        LanguageResetter::resetLanguages();
         self::resetTables();
     }
 

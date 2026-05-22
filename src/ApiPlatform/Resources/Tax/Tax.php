@@ -24,6 +24,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Tax;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Command\AddTaxCommand;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Command\DeleteTaxCommand;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Command\EditTaxCommand;
@@ -87,7 +89,7 @@ class Tax
     public array $names;
 
     #[Assert\NotNull(groups: ['Create'])]
-    public float $rate;
+    public DecimalNumber $rate;
 
     #[Assert\NotNull(groups: ['Create'])]
     public bool $enabled;

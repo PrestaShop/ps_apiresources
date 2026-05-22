@@ -31,7 +31,9 @@ class AddressEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer', 'cart']);
+        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer']);
+        DatabaseDump::restoreMatchingTables('*cart*');
+        DatabaseDump::restoreMatchingTables('*order*');
         self::createApiClient(['address_write', 'address_read']);
     }
 
@@ -39,7 +41,9 @@ class AddressEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         // Reset DB as it was before this test
-        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer', 'cart']);
+        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer']);
+        DatabaseDump::restoreMatchingTables('*cart*');
+        DatabaseDump::restoreMatchingTables('*order*');
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -168,34 +172,39 @@ class AddressEndpointTest extends ApiTestCase
 
     public function testUpdateCartAddress(): void
     {
-        $updatedData = [
-            'addressType' => 'delivery_address',
-            'addressAlias' => 'Cart updated',
-            'firstName' => 'John NEW',
-            'lastName' => 'CART DELIVERY',
-            'address' => '42 street Example',
-            'address2' => 'line 42',
-            'city' => 'Orleans',
-            'postCode' => '45000',
-            'countryId' => 8,
-            'stateId' => 0,
-            'company' => 'Test Company',
-            'homePhone' => '0238123456',
-            'mobilePhone' => '0612345678',
-            'other' => 'other data',
-            'dni' => '123456798',
-            'vatNumber' => 'FR66497916635',
+        $expectedData = [
+            'cartId' => 1,
+            'customerId' => 1,
+            'addressAlias' => 'My address',
+            'firstName' => 'John',
+            'lastName' => 'DOE',
+            'address' => '16, Main street',
+            'address2' => '2nd floor',
+            'city' => 'Miami',
+            'postCode' => '33133',
+            'countryId' => 21,
+            'stateId' => 12,
+            'homePhone' => '0102030405',
+            'mobilePhone' => '',
+            'company' => 'My Company',
+            'vatNumber' => '',
+            'other' => '',
+            'dni' => '',
+        ];
+        $addressTypes = [
+            'invoice_address',
+            'delivery_address',
         ];
 
-        // Use cart ID 1 from test database
-        $updated = $this->partialUpdateItem('/addresses/carts/1', $updatedData, ['address_write']);
-        $this->assertEquals(1, $updated['cartId']);
-
-        // Verify all updated fields are returned (addressType is not returned, it's only an input parameter)
-        foreach ($updatedData as $key => $value) {
-            if ($key !== 'addressType') {
-                $this->assertEquals($value, $updated[$key], 'Cart address update mismatch for key: ' . $key);
-            }
+        foreach ($addressTypes as $addressType) {
+            // Use cart ID 1 from test database
+            $updatedCart = $this->partialUpdateItem('/addresses/carts/1', [
+                'addressType' => $addressType,
+            ], ['address_write']);
+            // The addressId may have been updated if the address was already used and duplicated
+            $expectedData['addressId'] = $updatedCart['addressId'];
+            // addressType is not in the result anyway
+            $this->assertEquals($expectedData, $updatedCart);
         }
     }
 
@@ -260,26 +269,21 @@ class AddressEndpointTest extends ApiTestCase
         $order->save();
         $orderId = $order->id;
 
-        $updatedData = [
-            'addressType' => 'invoice_address',
-            'addressAlias' => 'Test',
-            'firstName' => 'John',
-            'lastName' => 'Doe',
-            'address' => '1 street Example',
-            'city' => 'Orleans',
-            'postCode' => '45000',
-            'countryId' => 8,
-            'stateId' => 0,
+        $addressTypes = [
+            'invoice_address',
+            'delivery_address',
         ];
 
-        $updated = $this->partialUpdateItem('/addresses/orders/' . $orderId, $updatedData, ['address_write']);
-        $this->assertEquals($orderId, $updated['orderId']);
-
-        // Verify all updated fields are returned (addressType is not returned, it's only an input parameter)
-        foreach ($updatedData as $key => $value) {
-            if ($key !== 'addressType') {
-                $this->assertEquals($value, $updated[$key], 'Order address update mismatch for key: ' . $key);
-            }
+        foreach ($addressTypes as $addressType) {
+            $updatedAddress = $this->partialUpdateItem('/addresses/orders/' . $orderId, [
+                'addressType' => $addressType,
+            ], ['address_write']);
+            // The addressId may have been updated if the address was already used and duplicated
+            $expectedAddress['addressId'] = $updatedAddress['addressId'];
+            // The returned JSON contains the address + the orderId from the URL
+            $expectedAddress['orderId'] = $orderId;
+            // addressType is not in the result anyway
+            $this->assertEquals($expectedAddress, $updatedAddress);
         }
 
         // Cleanup: delete the order

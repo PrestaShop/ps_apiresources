@@ -32,9 +32,6 @@ class TitleEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        // Add the fr-FR language to test multi lang values accurately
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
         DatabaseDump::restoreTables(['gender', 'gender_lang']);
         self::createApiClient(['title_write', 'title_read']);
     }

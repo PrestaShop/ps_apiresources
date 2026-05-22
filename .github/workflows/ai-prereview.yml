@@ -1,0 +1,72 @@
+name: Claude Pre-Review
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+concurrency:
+  group: ai-prereview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check-diff:
+    name: Check for code changes
+    if: github.event.label.name == 'Need AI review'
+    runs-on: ubuntu-latest
+    outputs:
+      has-code-changes: ${{ steps.check.outputs.has-code-changes }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check for code changes
+        id: check
+        run: |
+          CODE=$(gh pr diff ${{ github.event.pull_request.number }} --repo "${{ github.repository }}" --name-only | \
+            grep -vE '\.(lock|md)$|^vendor/' | wc -l | tr -d ' ')
+          if [ "$CODE" = "0" ]; then
+            echo "has-code-changes=false" >> "$GITHUB_OUTPUT"
+            echo "No code changes — skipping Claude." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has-code-changes=true" >> "$GITHUB_OUTPUT"
+            echo "$CODE file(s) with code changes detected." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  load-prompt:
+    name: Load review prompt
+    needs: check-diff
+    if: needs.check-diff.outputs.has-code-changes == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      prompt: ${{ steps.prompt.outputs.content }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Load review prompt
+        id: prompt
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          PROMPT=$(envsubst '${PR_NUMBER} ${REPO} ${PR_TITLE} ${PR_AUTHOR}' < .claude/REVIEW_PROMPT.md)
+          {
+            echo "content<<PROMPT_EOF"
+            echo "$PROMPT"
+            echo "PROMPT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  ai-guarded-review:
+    name: AI guarded review
+    needs: load-prompt
+    uses: PrestaShop/.github/.github/workflows/ai-guarded-review.yml@master
+    with:
+      team-slug: prestashop-sa
+      actor: ${{ github.event.sender.login }}
+      pr-number: ${{ github.event.pull_request.number }}
+      repository: ${{ github.repository }}
+      prompt: ${{ needs.load-prompt.outputs.prompt }}
+    secrets:
+      org-read-token: ${{ secrets.JARVIS_TOKEN }}
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+      anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

@@ -1,5 +1,6 @@
 ## Directories
 /vendor
+/var
 
 ## Files
 .php-cs-fixer.cache

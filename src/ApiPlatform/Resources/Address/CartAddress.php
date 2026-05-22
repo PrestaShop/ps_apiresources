@@ -29,9 +29,7 @@ use PrestaShop\PrestaShop\Core\Domain\Address\Query\GetCustomerAddressForEditing
 use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\InvalidAddressTypeException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\Country\ValueObject\CountryId;
 use PrestaShop\PrestaShop\Core\Domain\State\Exception\StateConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\State\ValueObject\StateIdInterface;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -63,6 +61,10 @@ class CartAddress
     #[ApiProperty(identifier: true)]
     public int $cartId = 0;
 
+    public int $addressId;
+
+    public int $customerId;
+
     public string $addressType;
 
     // Optional address fields for update
@@ -92,9 +94,9 @@ class CartAddress
     ])]
     public ?string $postCode = null;
 
-    public ?CountryId $countryId = null;
+    public ?int $countryId = null;
 
-    public ?StateIdInterface $stateId = null;
+    public ?int $stateId = null;
 
     #[TypedRegex([
         'type' => TypedRegex::TYPE_PHONE_NUMBER,
@@ -118,7 +120,9 @@ class CartAddress
     public ?string $dni = null;
 
     public const QUERY_MAPPING = [
-        '[id]' => '[addressId]',
+        // This is to handle NoStateId that is not normalized properly, it was fixed in 9.1 with
+        // https://github.com/PrestaShop/PrestaShop/pull/40912
+        '[stateId][value]' => '[stateId]',
     ];
 
     public const COMMAND_MAPPING = [

@@ -18,46 +18,38 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\DiscountType;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchEngine;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Query\GetDiscountTypes;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use PrestaShop\PrestaShop\Core\Search\Filters\SearchEngineFilters;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
+use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 
 #[ApiResource(
     operations: [
-        new CQRSGetCollection(
-            uriTemplate: '/discount-types',
-            CQRSQuery: GetDiscountTypes::class,
-            scopes: ['discount_read'],
-            CQRSQueryMapping: [],
+        new PaginatedList(
+            uriTemplate: '/search-engines',
+            provider: QueryListProvider::class,
+            scopes: ['search_engine_read'],
+            gridDataFactory: 'prestashop.core.grid.data_provider.search_engines',
             ApiResourceMapping: [
-                '[type]' => '[type]',
-                '[localizedNames]' => '[names]',
-                '[localizedDescriptions]' => '[descriptions]',
-                '[core]' => '[core]',
-                '[enabled]' => '[enabled]',
+                '[id_search_engine]' => '[searchEngineId]',
+                '[getvar]' => '[queryKey]',
+            ],
+            filtersClass: SearchEngineFilters::class,
+            filtersMapping: [
+                '[searchEngineId]' => '[id_search_engine]',
             ],
         ),
     ],
-    normalizationContext: ['skip_null_values' => false],
 )]
-class DiscountTypeList
+class SearchEngineList
 {
     #[ApiProperty(identifier: true)]
-    public int $discountTypeId;
-
-    public string $type;
-
-    #[LocalizedValue]
-    public array $names;
-
-    #[LocalizedValue]
-    public array $descriptions;
-
-    public bool $core;
-
-    public bool $enabled;
+    public int $searchEngineId;
+    public string $server;
+    public string $queryKey;
 }

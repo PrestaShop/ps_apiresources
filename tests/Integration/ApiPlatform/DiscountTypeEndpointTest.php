@@ -46,13 +46,13 @@ class DiscountTypeEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/discount-types',
+            '/discounts/types',
         ];
     }
 
     public function testGetDiscountTypes(): void
     {
-        $discountTypes = $this->getItem('/discount-types', ['discount_read']);
+        $discountTypes = $this->getItem('/discounts/types', ['discount_read']);
         $this->assertIsArray($discountTypes);
         $this->assertGreaterThanOrEqual(1, count($discountTypes));
 
@@ -70,9 +70,11 @@ class DiscountTypeEndpointTest extends ApiTestCase
             'type' => 'cart_level',
             'names' => [
                 'en-US' => 'On cart amount',
+                'fr-FR' => 'On cart amount',
             ],
             'descriptions' => [
                 'en-US' => 'Discount applied to cart',
+                'fr-FR' => 'Discount applied to cart',
             ],
             'core' => true,
             'enabled' => true,

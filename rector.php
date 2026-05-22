@@ -21,6 +21,7 @@
 declare(strict_types=1);
 
 use PsApiResourcesTest\Rector\ApiResourceBooleanFieldsRector;
+use PsApiResourcesTest\Rector\ApiResourceScalarTypesRector;
 use PsApiResourcesTest\Rector\ApiResourceUriTemplateRector;
 use Rector\Config\RectorConfig;
 
@@ -37,4 +38,5 @@ return RectorConfig::configure()
     ->withRules([
         ApiResourceUriTemplateRector::class,
         ApiResourceBooleanFieldsRector::class,
+        ApiResourceScalarTypesRector::class,
     ]);
