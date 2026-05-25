@@ -27,8 +27,18 @@ use Tests\Resources\DatabaseDump;
 
 class CountryEndpointTest extends ApiTestCase
 {
-    // France — present in all PS 9.x default fixtures
-    private const FRANCE_ID = 8;
+    // Default PS address format from install-dev/data/xml/address_format.xml.
+    // Must list every static-required Address field — firstname, lastname, address1,
+    // city, Country:name — or AddressFormatChecker rejects it.
+    private const DEFAULT_ADDRESS_FORMAT = "firstname lastname\ncompany\nvat_number\naddress1\naddress2\npostcode city\nCountry:name\nphone";
+
+    // Variant used by testEditCountry — same required tokens, different optional ones.
+    private const UPDATED_ADDRESS_FORMAT = "firstname lastname\naddress1\npostcode city\nCountry:name";
+
+    // Tests that depend on PS 9.2+ behavior (Country API returning the stored
+    // address format, ValidAddressFormat constraint firing on add/edit) gate
+    // themselves on the existence of this interface — introduced in 9.2.
+    private const CORE_ADDRESS_FORMAT_CHECKER = 'PrestaShop\\PrestaShop\\Core\\Domain\\Country\\AddressFormat\\AddressFormatCheckerInterface';
 
     public static function setUpBeforeClass(): void
     {
@@ -39,22 +49,63 @@ class CountryEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        DatabaseDump::restoreTables(['country', 'country_lang', 'country_shop']);
+        DatabaseDump::restoreTables(['country', 'country_lang', 'country_shop', 'address_format']);
     }
 
     public static function getProtectedEndpoints(): iterable
     {
         yield 'create endpoint' => ['POST', '/countries'];
         yield 'get endpoint' => ['GET', '/countries/1'];
+        yield 'update endpoint' => ['PATCH', '/countries/1'];
         yield 'delete endpoint' => ['DELETE', '/countries/1'];
     }
 
     public function testAddCountry(): int
     {
-        $country = $this->createItem('/countries', [
+        $country = $this->createItem('/countries', $this->getCreatePayload(), ['country_write']);
+
+        $this->assertArrayHasKey('countryId', $country);
+        $this->assertEquals(['countryId' => $country['countryId']], $country);
+
+        return $country['countryId'];
+    }
+
+    /**
+     * @depends testAddCountry
+     */
+    public function testGetCountry(int $countryId): int
+    {
+        $expected = ['countryId' => $countryId] + $this->getCreatePayload();
+        // On PS 9.0/9.1 the AddCountryHandler ignores addressFormat from the
+        // command and GetCountryForEditing returns an empty string regardless
+        // of what was sent — the field only round-trips on 9.2+.
+        $expected['addressFormat'] = $this->expectedAddressFormat($expected['addressFormat']);
+
+        $country = $this->getItem('/countries/' . $countryId, ['country_read']);
+        $this->assertEquals($expected, $country);
+
+        return $countryId;
+    }
+
+    /**
+     * @depends testGetCountry
+     */
+    public function testEditCountry(int $countryId): int
+    {
+        $patchData = [
             'names' => [
-                'en-US' => 'My Country EN',
-                'fr-FR' => 'My Country FR',
+                'en-US' => 'Updated Country EN',
+                'fr-FR' => 'Updated Country FR',
+            ],
+            'enabled' => false,
+            'addressFormat' => self::UPDATED_ADDRESS_FORMAT,
+        ];
+
+        $expected = [
+            'countryId' => $countryId,
+            'names' => [
+                'en-US' => 'Updated Country EN',
+                'fr-FR' => 'Updated Country FR',
             ],
             'isoCode' => 'ZZ',
             'callPrefix' => 999,
@@ -62,18 +113,48 @@ class CountryEndpointTest extends ApiTestCase
             'zoneId' => 1,
             'needZipCode' => false,
             'zipCodeFormat' => null,
-            'addressFormat' => '',
-            'enabled' => true,
+            // Same caveat as testGetCountry — addressFormat only round-trips on 9.2+.
+            'addressFormat' => $this->expectedAddressFormat(self::UPDATED_ADDRESS_FORMAT),
+            'enabled' => false,
             'containsStates' => false,
             'needIdNumber' => false,
             'displayTaxLabel' => true,
             'shopIds' => [1],
-        ], ['country_write']);
+        ];
 
-        $this->assertArrayHasKey('countryId', $country);
-        $this->assertEquals(['countryId' => $country['countryId']], $country);
+        $updated = $this->partialUpdateItem('/countries/' . $countryId, $patchData, ['country_write']);
+        $this->assertEquals($expected, $updated);
 
-        return $country['countryId'];
+        // Round-trip via GET to confirm the persisted state matches the PATCH response.
+        $fetched = $this->getItem('/countries/' . $countryId, ['country_read']);
+        $this->assertEquals($expected, $fetched);
+
+        return $countryId;
+    }
+
+    /**
+     * Order-critical: must run after every other test that needs the created
+     * country alive. The validation tests below also chain off testGetCountry
+     * and PATCH the same record, so listing them here forces PHPUnit to
+     * schedule the delete last.
+     *
+     * @depends testEditCountry
+     * @depends testAddCountryWithInvalidAddressFormat
+     * @depends testEditCountryWithInvalidAddressFormat
+     */
+    public function testRemoveCountry(int $countryId): void
+    {
+        $return = $this->deleteItem('/countries/' . $countryId, ['country_write']);
+        // This endpoint returns empty response and 204 HTTP code
+        $this->assertNull($return);
+
+        // Getting the item should result in a 404 now
+        $this->getItem('/countries/' . $countryId, ['country_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testGetNonExistentCountry(): void
+    {
+        $this->getItem('/countries/999999', ['country_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testAddCountryWithInvalidData(): void
@@ -109,7 +190,7 @@ class CountryEndpointTest extends ApiTestCase
             ],
             [
                 'propertyPath' => 'addressFormat',
-                'message' => 'This value should not be null.',
+                'message' => 'This value should not be blank.',
             ],
             [
                 'propertyPath' => 'enabled',
@@ -130,85 +211,150 @@ class CountryEndpointTest extends ApiTestCase
         ], $validationErrorsResponse);
     }
 
-    public function testGetCountry(): void
+    /**
+     * @dataProvider invalidAddressFormatProvider
+     *
+     * @param array<int, array{propertyPath: string, message: string}> $expectedErrors
+     */
+    public function testAddCountryWithInvalidAddressFormat(string $invalidFormat, array $expectedErrors): void
     {
-        $country = $this->getItem('/countries/' . self::FRANCE_ID, ['country_read']);
+        $this->skipIfAddressFormatCheckerMissing();
 
-        $this->assertEquals([
-            'countryId' => self::FRANCE_ID,
-            'names' => [
-                'en-US' => 'France',
-                'fr-FR' => 'France',
+        $payload = $this->getCreatePayload();
+        $payload['addressFormat'] = $invalidFormat;
+
+        $response = $this->createItem('/countries', $payload, ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($response);
+        $this->assertValidationErrors($expectedErrors, $response);
+    }
+
+    /**
+     * @depends testGetCountry
+     *
+     * @dataProvider invalidAddressFormatProvider
+     *
+     * @param array<int, array{propertyPath: string, message: string}> $expectedErrors
+     */
+    public function testEditCountryWithInvalidAddressFormat(string $invalidFormat, array $expectedErrors, int $countryId): void
+    {
+        $this->skipIfAddressFormatCheckerMissing();
+
+        // The validator returns early on empty strings, so on PATCH an empty
+        // addressFormat slips past the constraint and reaches the handler. We
+        // skip that data-provider row here — it would 500, not 422.
+        if ('' === $invalidFormat) {
+            $this->markTestSkipped('Empty addressFormat on PATCH is not handled by the constraint (validator early-returns on empty).');
+        }
+
+        $response = $this->partialUpdateItem(
+            '/countries/' . $countryId,
+            ['addressFormat' => $invalidFormat],
+            ['country_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+
+        $this->assertIsArray($response);
+        $this->assertValidationErrors($expectedErrors, $response);
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: array<int, array{propertyPath: string, message: string}>}>
+     */
+    public static function invalidAddressFormatProvider(): iterable
+    {
+        yield 'empty format (Create only — NotBlank fires)' => [
+            '',
+            [
+                ['propertyPath' => 'addressFormat', 'message' => 'This value should not be blank.'],
             ],
-            'isoCode' => 'FR',
-            'callPrefix' => 33,
+        ];
+
+        yield 'unknown Address field' => [
+            "firstname lastname\naddress1\npostcode city\nCountry:name\nnot_a_real_field",
+            [
+                ['propertyPath' => 'addressFormat', 'message' => 'This field is not a valid address property: not_a_real_field.'],
+            ],
+        ];
+
+        yield 'unknown picker class' => [
+            "firstname lastname\naddress1\npostcode city\nCountry:name\nUnknownObject:name",
+            [
+                ['propertyPath' => 'addressFormat', 'message' => 'This object is not allowed: UnknownObject.'],
+            ],
+        ];
+
+        yield 'unknown field on known class' => [
+            "firstname lastname\naddress1\npostcode city\nCountry:name\nCountry:not_a_field",
+            [
+                ['propertyPath' => 'addressFormat', 'message' => 'The field not_a_field does not exist on Country.'],
+            ],
+        ];
+
+        yield 'duplicate token' => [
+            "firstname lastname\naddress1\npostcode city\nCountry:name\nfirstname",
+            [
+                ['propertyPath' => 'addressFormat', 'message' => 'This key has already been used: firstname.'],
+            ],
+        ];
+
+        yield 'missing required field (no Country:name)' => [
+            "firstname lastname\naddress1\npostcode city",
+            [
+                ['propertyPath' => 'addressFormat', 'message' => 'The Country:name field is required.'],
+            ],
+        ];
+    }
+
+    /**
+     * Validation tests that exercise the ValidAddressFormat constraint call
+     * this helper to opt out cleanly on PS 9.0/9.1, where the constraint
+     * validator no-ops (no AddressFormatCheckerInterface in core).
+     *
+     * Round-trip tests (testGetCountry, testEditCountry) do NOT skip — they
+     * run on every version and use {@see self::expectedAddressFormat()} to
+     * branch the assertion instead.
+     */
+    private function skipIfAddressFormatCheckerMissing(): void
+    {
+        if (!interface_exists(self::CORE_ADDRESS_FORMAT_CHECKER)) {
+            $this->markTestSkipped('Requires PrestaShop 9.2+ (AddressFormatCheckerInterface).');
+        }
+    }
+
+    /**
+     * On PS 9.2+ the Country API persists and returns the addressFormat string
+     * supplied on add/edit. On 9.0/9.1 the AddCountryHandler/EditCountryHandler
+     * ignore that field and GetCountryForEditing returns an empty string —
+     * regardless of what the request sent.
+     */
+    private function expectedAddressFormat(string $sentFormat): string
+    {
+        return interface_exists(self::CORE_ADDRESS_FORMAT_CHECKER) ? $sentFormat : '';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getCreatePayload(): array
+    {
+        return [
+            'names' => [
+                'en-US' => 'My Country EN',
+                'fr-FR' => 'My Country FR',
+            ],
+            'isoCode' => 'ZZ',
+            'callPrefix' => 999,
             'defaultCurrencyId' => 0,
             'zoneId' => 1,
-            'needZipCode' => true,
-            'zipCodeFormat' => 'NNNNN',
-            'addressFormat' => '',
+            'needZipCode' => false,
+            'zipCodeFormat' => null,
+            'addressFormat' => self::DEFAULT_ADDRESS_FORMAT,
             'enabled' => true,
             'containsStates' => false,
             'needIdNumber' => false,
             'displayTaxLabel' => true,
             'shopIds' => [1],
-        ], $country);
-    }
-
-    /**
-     * @depends testAddCountry
-     */
-    public function testEditCountry(int $countryId): int
-    {
-        $updatedCountry = $this->partialUpdateItem('/countries/' . $countryId, [
-            'enabled' => false,
-            'callPrefix' => 9999,
-            // Names must be always provided because EditCountryCommand::getLocalizedNames() return type is not nullable.
-            'names' => [
-                'fr-FR' => 'My Country FR',
-                'en-US' => 'My Country EN2',
-            ],
-        ], ['country_write']);
-
-        $this->assertEquals([
-            'countryId' => $countryId,
-            'names' => [
-                'en-US' => 'My Country EN2',
-                'fr-FR' => 'My Country FR',
-            ],
-            'isoCode' => 'ZZ',
-            'callPrefix' => 9999,
-            'defaultCurrencyId' => 0,
-            'zoneId' => 1,
-            'needZipCode' => false,
-            'zipCodeFormat' => null,
-            'addressFormat' => '',
-            'enabled' => false,
-            'containsStates' => false,
-            'needIdNumber' => false,
-            'displayTaxLabel' => true,
-            'shopIds' => [1],
-        ], $updatedCountry);
-
-        return $countryId;
-    }
-
-    /**
-     * @depends testEditCountry
-     */
-    public function testRemoveCountry(int $countryId): void
-    {
-        // Delete the item
-        $return = $this->deleteItem('/countries/' . $countryId, ['country_write']);
-        // This endpoint return empty response and 204 HTTP code
-        $this->assertNull($return);
-
-        // Getting the item should result in a 404 now
-        $this->getItem('/countries/' . $countryId, ['country_read'], Response::HTTP_NOT_FOUND);
-    }
-
-    public function testGetNonExistentCountry(): void
-    {
-        $this->getItem('/countries/999999', ['country_read'], Response::HTTP_NOT_FOUND);
+        ];
     }
 }

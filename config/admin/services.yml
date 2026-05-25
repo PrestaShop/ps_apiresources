@@ -29,6 +29,15 @@ services:
     arguments:
       - '@prestashop.adapter.legacy.configuration'
 
+  # Validates the addressFormat string on the Country API resource.
+  # Delegates to the core AddressFormatCheckerInterface when present (PS 9.2+);
+  # on older PrestaShop versions the alias is missing, the argument resolves
+  # to null and the validator becomes a no-op (backward-compatible behavior).
+  PrestaShop\Module\APIResources\Validation\Constraints\ValidAddressFormatValidator:
+    autoconfigure: true
+    arguments:
+      $checker: '@?PrestaShop\PrestaShop\Core\Domain\Country\AddressFormat\AddressFormatCheckerInterface'
+
   PrestaShop\Module\APIResources\Command\GenerateApiTrackingTableCommand:
     tags:
       - { name: 'console.command' }
