@@ -58,6 +58,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSPartialUpdate(
             uriTemplate: '/countries/{countryId}',
             requirements: ['countryId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditCountryCommand::class,
             CQRSQuery: GetCountryForEditing::class,
             scopes: ['country_write'],

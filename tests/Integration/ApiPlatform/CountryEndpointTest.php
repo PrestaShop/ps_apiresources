@@ -133,7 +133,14 @@ class CountryEndpointTest extends ApiTestCase
     }
 
     /**
+     * Order-critical: must run after every other test that needs the created
+     * country alive. The validation tests below also chain off testGetCountry
+     * and PATCH the same record, so listing them here forces PHPUnit to
+     * schedule the delete last.
+     *
      * @depends testEditCountry
+     * @depends testAddCountryWithInvalidAddressFormat
+     * @depends testEditCountryWithInvalidAddressFormat
      */
     public function testRemoveCountry(int $countryId): void
     {
