@@ -95,7 +95,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                     [
                         'name' => 'orderId',
                         'in' => 'query',
-                        'required' => false,
+                        'required' => true,
                         'schema' => [
                             'type' => 'integer',
                         ],
