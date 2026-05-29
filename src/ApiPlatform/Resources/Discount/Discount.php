@@ -47,6 +47,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetDiscountForEditing::class,
             scopes: ['discount_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
+            experimentalOperation: true,
         ),
         new CQRSCreate(
             uriTemplate: '/discounts',
@@ -56,6 +57,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['discount_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            experimentalOperation: true,
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/discounts/{discountId}',
@@ -65,6 +67,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['discount_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            experimentalOperation: true,
         ),
         new CQRSDelete(
             uriTemplate: '/discounts/{discountId}',
@@ -72,6 +75,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'discount_write',
             ],
+            experimentalOperation: true,
         ),
         new CQRSCreate(
             uriTemplate: '/discounts/{discountId}/duplicate',
@@ -81,6 +85,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['discount_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             allowEmptyBody: true,
+            experimentalOperation: true,
             openapi: new OpenApiOperation(
                 summary: 'Duplicate a Discount resource.',
                 description: 'Creates a copy of an existing Discount resource.',

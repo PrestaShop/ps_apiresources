@@ -41,6 +41,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             gridDataFactory: 'prestashop.core.grid.data.factory.discount',
             filtersClass: DiscountFilters::class,
+            experimentalOperation: true,
         ),
     ],
     exceptionToStatus: [
