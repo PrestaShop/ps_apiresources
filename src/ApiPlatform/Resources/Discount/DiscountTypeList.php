@@ -40,6 +40,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
                 '[core]' => '[core]',
                 '[enabled]' => '[enabled]',
             ],
+            experimentalOperation: true,
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
