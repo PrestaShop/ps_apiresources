@@ -41,6 +41,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'discount_write',
             ],
+            experimentalOperation: true,
         ),
     ],
     exceptionToStatus: [
