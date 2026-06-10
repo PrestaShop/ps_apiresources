@@ -85,6 +85,11 @@ class CategoryEndpointTest extends ApiTestCase
             '/categories/3/status',
         ];
 
+        yield 'get status endpoint' => [
+            'GET',
+            '/categories/3/status',
+        ];
+
         yield 'delete thumbnail endpoint' => [
             'DELETE',
             '/categories/3/thumbnail',
@@ -218,6 +223,35 @@ class CategoryEndpointTest extends ApiTestCase
 
         $category = $this->getItem('/categories/3', ['category_read']);
         $this->assertTrue($category['enabled']);
+    }
+
+    public function testGetCategoryStatus(): void
+    {
+        // Force a known status, then read it back through the dedicated status endpoint
+        $this->requestApi(
+            Request::METHOD_PATCH,
+            '/categories/3/status',
+            ['enabled' => false],
+            ['category_write'],
+            Response::HTTP_OK
+        );
+
+        $status = $this->getItem('/categories/3/status', ['category_read']);
+        $this->assertEquals(3, $status['categoryId']);
+        $this->assertFalse($status['enabled']);
+
+        // Re-enable and assert the status endpoint reflects the change
+        $this->requestApi(
+            Request::METHOD_PATCH,
+            '/categories/3/status',
+            ['enabled' => true],
+            ['category_write'],
+            Response::HTTP_OK
+        );
+
+        $status = $this->getItem('/categories/3/status', ['category_read']);
+        $this->assertEquals(3, $status['categoryId']);
+        $this->assertTrue($status['enabled']);
     }
 
     public function testDeleteCategoryThumbnail(): void
