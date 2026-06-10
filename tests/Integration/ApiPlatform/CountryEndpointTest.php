@@ -59,6 +59,17 @@ class CountryEndpointTest extends ApiTestCase
         yield 'update endpoint' => ['PATCH', '/countries/1'];
         yield 'delete endpoint' => ['DELETE', '/countries/1'];
         yield 'list endpoint' => ['GET', '/countries'];
+        yield 'get required fields endpoint' => ['GET', '/countries/1/required-fields'];
+    }
+
+    public function testGetCountryRequiredFields(): void
+    {
+        $requiredFields = $this->getItem('/countries/1/required-fields', ['country_read']);
+
+        $this->assertEquals(['countryId', 'stateRequired', 'dniRequired'], array_keys($requiredFields));
+        $this->assertSame(1, $requiredFields['countryId']);
+        $this->assertIsBool($requiredFields['stateRequired']);
+        $this->assertIsBool($requiredFields['dniRequired']);
     }
 
     public function testAddCountry(): int
