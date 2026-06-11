@@ -121,9 +121,14 @@ class OrderState
     #[Assert\NotNull(groups: ['Create'])]
     public array $templates;
 
+    public bool $isDeleted;
+
     public const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
         '[localizedTemplates]' => '[templates]',
+        // EditableOrderState exposes isSendEmailEnabled() and isDeleted()
+        '[sendEmailEnabled]' => '[sendEmail]',
+        '[deleted]' => '[isDeleted]',
     ];
 
     // AddOrderStateCommand expects "localizedNames" / "localizedTemplates"
