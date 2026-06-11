@@ -106,7 +106,7 @@ class OrderStateEndpointTest extends ApiTestCase
         $this->assertFalse($orderState['shipped']);
         $this->assertFalse($orderState['paid']);
         $this->assertFalse($orderState['delivery']);
-        $this->assertFalse($orderState['isDeleted']);
+        $this->assertFalse($orderState['deleted']);
         $this->assertArrayHasKey('templates', $orderState);
 
         return $orderStateId;
@@ -145,7 +145,7 @@ class OrderStateEndpointTest extends ApiTestCase
 
         // Order states are soft-deleted: the record still exists but is flagged as deleted
         $deleted = $this->getItem('/order-states/' . $orderStateId, ['order_state_read']);
-        $this->assertTrue($deleted['isDeleted']);
+        $this->assertTrue($deleted['deleted']);
     }
 
     public function testBulkDeleteOrderStates(): void
@@ -158,7 +158,7 @@ class OrderStateEndpointTest extends ApiTestCase
         ], ['order_state_write']);
 
         // Order states are soft-deleted: still readable but flagged as deleted
-        $this->assertTrue($this->getItem('/order-states/' . $firstId, ['order_state_read'])['isDeleted']);
-        $this->assertTrue($this->getItem('/order-states/' . $secondId, ['order_state_read'])['isDeleted']);
+        $this->assertTrue($this->getItem('/order-states/' . $firstId, ['order_state_read'])['deleted']);
+        $this->assertTrue($this->getItem('/order-states/' . $secondId, ['order_state_read'])['deleted']);
     }
 }
