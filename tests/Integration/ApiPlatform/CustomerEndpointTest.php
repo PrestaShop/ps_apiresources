@@ -59,6 +59,16 @@ class CustomerEndpointTest extends ApiTestCase
             '/customers/1/details',
         ];
 
+        yield 'get customer orders endpoint' => [
+            'GET',
+            '/customers/1/orders',
+        ];
+
+        yield 'get customer carts endpoint' => [
+            'GET',
+            '/customers/1/carts',
+        ];
+
         yield 'update customer endpoint' => [
             'PATCH',
             '/customers/1',
@@ -536,6 +546,32 @@ class CustomerEndpointTest extends ApiTestCase
         );
         // This endpoint returns an empty response and a 204 HTTP code
         $this->assertNull($return);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testGetCustomerOrders(int $customerId): void
+    {
+        $response = $this->getItem('/customers/' . $customerId . '/orders', ['customer_read']);
+
+        // A freshly created customer has no orders yet
+        $this->assertSame($customerId, $response['customerId']);
+        $this->assertArrayHasKey('orders', $response);
+        $this->assertSame([], $response['orders']);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testGetCustomerCarts(int $customerId): void
+    {
+        $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
+
+        // A freshly created customer has no carts yet
+        $this->assertSame($customerId, $response['customerId']);
+        $this->assertArrayHasKey('carts', $response);
+        $this->assertSame([], $response['carts']);
     }
 
     /**
