@@ -22,15 +22,7 @@ jobs:
     strategy:
       matrix:
         php: ${{ fromJSON(needs.workflow_matrix_generator.outputs.dynamic_matrix) }}
-        prestashop_version: ['develop', '9.0.3', '9.1.x']
-        exclude:
-          # 9.0.3 doesn't support PHP 8.5
-          - php: '8.5'
-            prestashop_version: '9.0.3'
-        include:
-          # Since 8.4 is the boundary gor 9.0.3 it should be included despite the dynamic matrix
-          - php: '8.4'
-            prestashop_version: '9.0.3'
+        prestashop_version: ['develop', '9.1.x']
       fail-fast: false
     steps:
       - name: Checkout Module
