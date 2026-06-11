@@ -64,6 +64,11 @@ class CustomerEndpointTest extends ApiTestCase
             '/customers/1',
         ];
 
+        yield 'set private note endpoint' => [
+            'PATCH',
+            '/customers/1/private-notes',
+        ];
+
         yield 'delete customer endpoint' => [
             'DELETE',
             '/customers/1',
@@ -516,6 +521,21 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('email', $customer);
         $this->assertArrayHasKey('defaultGroupId', $customer);
         $this->assertArrayHasKey('groupIds', $customer);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testSetCustomerPrivateNote(int $customerId): void
+    {
+        $return = $this->partialUpdateItem(
+            '/customers/' . $customerId . '/private-notes',
+            ['privateNote' => 'A private note about this customer'],
+            ['customer_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        // This endpoint returns an empty response and a 204 HTTP code
+        $this->assertNull($return);
     }
 
     /**
