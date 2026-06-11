@@ -23,7 +23,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class OrderStateEndpointTest extends ApiTestCase
@@ -107,6 +106,7 @@ class OrderStateEndpointTest extends ApiTestCase
         $this->assertFalse($orderState['shipped']);
         $this->assertFalse($orderState['paid']);
         $this->assertFalse($orderState['delivery']);
+        $this->assertFalse($orderState['isDeleted']);
         $this->assertArrayHasKey('templates', $orderState);
 
         return $orderStateId;
@@ -143,7 +143,9 @@ class OrderStateEndpointTest extends ApiTestCase
         // This endpoint returns an empty response and a 204 HTTP code
         $this->assertNull($return);
 
-        $this->getItem('/order-states/' . $orderStateId, ['order_state_read'], Response::HTTP_NOT_FOUND);
+        // Order states are soft-deleted: the record still exists but is flagged as deleted
+        $deleted = $this->getItem('/order-states/' . $orderStateId, ['order_state_read']);
+        $this->assertTrue($deleted['isDeleted']);
     }
 
     public function testBulkDeleteOrderStates(): void
@@ -155,7 +157,8 @@ class OrderStateEndpointTest extends ApiTestCase
             'orderStateIds' => [$firstId, $secondId],
         ], ['order_state_write']);
 
-        $this->getItem('/order-states/' . $firstId, ['order_state_read'], Response::HTTP_NOT_FOUND);
-        $this->getItem('/order-states/' . $secondId, ['order_state_read'], Response::HTTP_NOT_FOUND);
+        // Order states are soft-deleted: still readable but flagged as deleted
+        $this->assertTrue($this->getItem('/order-states/' . $firstId, ['order_state_read'])['isDeleted']);
+        $this->assertTrue($this->getItem('/order-states/' . $secondId, ['order_state_read'])['isDeleted']);
     }
 }
