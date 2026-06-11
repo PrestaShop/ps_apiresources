@@ -533,12 +533,11 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testGetCustomerOrders(int $customerId): void
     {
-        $response = $this->getItem('/customers/' . $customerId . '/orders', ['customer_read']);
+        $orders = $this->getItem('/customers/' . $customerId . '/orders', ['customer_read']);
 
-        // A freshly created customer has no orders yet
-        $this->assertSame($customerId, $response['customerId']);
-        $this->assertArrayHasKey('orders', $response);
-        $this->assertSame([], $response['orders']);
+        // The endpoint returns a collection; a freshly created customer has no orders yet
+        $this->assertIsArray($orders);
+        $this->assertEmpty($orders);
     }
 
     /**
@@ -546,12 +545,11 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testGetCustomerCarts(int $customerId): void
     {
-        $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
+        $carts = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
 
-        // A freshly created customer has no carts yet
-        $this->assertSame($customerId, $response['customerId']);
-        $this->assertArrayHasKey('carts', $response);
-        $this->assertSame([], $response['carts']);
+        // The endpoint returns a collection; a freshly created customer has no carts yet
+        $this->assertIsArray($carts);
+        $this->assertEmpty($carts);
     }
 
     /**

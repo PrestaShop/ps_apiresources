@@ -22,36 +22,26 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerOrders;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use Symfony\Component\HttpFoundation\Response;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerCarts;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 
 #[ApiResource(
     operations: [
-        new CQRSGet(
-            uriTemplate: '/customers/{customerId}/orders',
-            requirements: ['customerId' => '\d+'],
-            CQRSQuery: GetCustomerOrders::class,
+        new CQRSGetCollection(
+            uriTemplate: '/customers/{customerId}/carts',
+            CQRSQuery: GetCustomerCarts::class,
             scopes: ['customer_read'],
-            CQRSQueryMapping: [
-                '[_queryResult]' => '[orders]',
-            ],
         ),
     ],
-    exceptionToStatus: [
-        CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
-    ],
 )]
-class CustomerOrders
+class CustomerCart
 {
-    #[ApiProperty(identifier: true)]
     public int $customerId;
 
-    /**
-     * @var array<array{orderId: int, orderPlacedDate: string, paymentMethodName: string, orderStatus: string, orderProductsCount: int, totalPaid: string}>
-     */
-    public array $orders;
+    public int $cartId;
+
+    public string $creationDate;
+
+    public string $totalPrice;
 }
