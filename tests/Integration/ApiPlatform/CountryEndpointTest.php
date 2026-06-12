@@ -159,10 +159,15 @@ class CountryEndpointTest extends ApiTestCase
         $this->assertIsString($testCountry['zoneName']);
         $this->assertNotEmpty($testCountry['zoneName']);
 
-        // Filtering by the boolean status also matches the (disabled) created country.
-        $disabled = $this->listItems('/countries', ['country_read'], ['enabled' => false]);
+        // Filtering by the boolean status (combined with isoCode to avoid relying
+        // on the default pagination window) matches the disabled created country.
+        $disabled = $this->listItems('/countries', ['country_read'], ['isoCode' => 'ZZ', 'enabled' => false]);
+        $this->assertNotEmpty($disabled['items']);
         $disabledIds = array_column($disabled['items'], 'countryId');
         $this->assertContains($countryId, $disabledIds);
+        foreach ($disabled['items'] as $disabledCountry) {
+            $this->assertFalse($disabledCountry['enabled']);
+        }
 
         // Sorting parameters are honoured and echoed back in the response.
         $sorted = $this->listItems('/countries?orderBy=countryId&sortOrder=desc', ['country_read']);
