@@ -58,6 +58,7 @@ class CountryEndpointTest extends ApiTestCase
         yield 'get endpoint' => ['GET', '/countries/1'];
         yield 'update endpoint' => ['PATCH', '/countries/1'];
         yield 'delete endpoint' => ['DELETE', '/countries/1'];
+        yield 'list endpoint' => ['GET', '/countries'];
     }
 
     public function testAddCountry(): int
@@ -133,12 +134,75 @@ class CountryEndpointTest extends ApiTestCase
     }
 
     /**
+     * @depends testEditCountry
+     */
+    public function testListCountries(int $countryId): int
+    {
+        // Every exposed field is sortable; sorting by countryId in descending order
+        // also puts the country created by the previous tests first
+        foreach (['countryId', 'name', 'isoCode', 'callPrefix', 'zoneName', 'enabled'] as $orderBy) {
+            $paginatedCountries = $this->listItems('/countries?orderBy=' . $orderBy . '&sortOrder=desc', ['country_read']);
+            $this->assertGreaterThanOrEqual(1, $paginatedCountries['totalItems']);
+
+            // Check the details to make sure filters mapping is correct
+            $this->assertEquals($orderBy, $paginatedCountries['orderBy']);
+        }
+
+        $expectedCountry = [
+            'countryId' => $countryId,
+            'name' => 'Updated Country EN',
+            'isoCode' => 'ZZ',
+            'callPrefix' => 999,
+            // The country was created with zoneId 1, which is Europe in the default fixtures
+            'zoneName' => 'Europe',
+            // It was disabled by testEditCountry
+            'enabled' => false,
+        ];
+
+        // Test country has the highest ID so it comes first when sorted by countryId desc
+        $paginatedCountries = $this->listItems('/countries?orderBy=countryId&sortOrder=desc', ['country_read']);
+        $this->assertEquals($expectedCountry, $paginatedCountries['items'][0]);
+
+        // Pagination: the default fixtures contain way more than ten countries
+        $paginatedCountries = $this->listItems('/countries?limit=10', ['country_read']);
+        $this->assertEquals(10, $paginatedCountries['limit']);
+        $this->assertCount(10, $paginatedCountries['items']);
+        $this->assertGreaterThan(10, $paginatedCountries['totalItems']);
+
+        // Filtering: the ZZ iso code only matches the test country
+        $filteredCountries = $this->listItems('/countries', ['country_read'], [
+            'isoCode' => 'ZZ',
+        ]);
+        $this->assertEquals(1, $filteredCountries['totalItems']);
+        $this->assertEquals($expectedCountry, $filteredCountries['items'][0]);
+
+        // Check the filters details
+        $this->assertEquals([
+            'isoCode' => 'ZZ',
+        ], $filteredCountries['filters']);
+
+        // Filtering on the exact country ID also matches the test country only
+        $filteredCountries = $this->listItems('/countries', ['country_read'], [
+            'countryId' => $countryId,
+        ]);
+        $this->assertEquals(1, $filteredCountries['totalItems']);
+        $this->assertEquals($expectedCountry, $filteredCountries['items'][0]);
+
+        return $countryId;
+    }
+
+    public function testListCountriesWithInvalidOrderBy(): void
+    {
+        $this->requestApi('GET', '/countries?orderBy=INVALID_FILTER&sortOrder=desc', null, ['country_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
      * Order-critical: must run after every other test that needs the created
      * country alive. The validation tests below also chain off testGetCountry
      * and PATCH the same record, so listing them here forces PHPUnit to
      * schedule the delete last.
      *
-     * @depends testEditCountry
+     * @depends testListCountries
      * @depends testAddCountryWithInvalidAddressFormat
      * @depends testEditCountryWithInvalidAddressFormat
      */
