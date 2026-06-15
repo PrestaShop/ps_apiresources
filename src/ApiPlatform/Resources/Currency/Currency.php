@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Currency;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\AddCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\DeleteCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\EditCurrencyCommand;
@@ -97,7 +98,7 @@ class Currency
     public string $isoCode;
 
     #[Assert\NotNull(groups: ['Create'])]
-    public float $exchangeRate;
+    public DecimalNumber $exchangeRate;
 
     #[Assert\NotNull(groups: ['Create'])]
     public bool $enabled;
