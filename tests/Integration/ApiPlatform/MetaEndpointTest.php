@@ -69,9 +69,9 @@ class MetaEndpointTest extends ApiTestCase
 
         $this->assertIsArray($pages);
         $this->assertNotEmpty($pages);
+        // "page" is always present; title/description may be omitted when null
         $this->assertArrayHasKey('page', $pages[0]);
-        $this->assertArrayHasKey('title', $pages[0]);
-        $this->assertArrayHasKey('description', $pages[0]);
+        $this->assertIsString($pages[0]['page']);
     }
 
     public function testAddMeta(): int

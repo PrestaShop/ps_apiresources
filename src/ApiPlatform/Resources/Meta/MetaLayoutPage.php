@@ -39,7 +39,8 @@ class MetaLayoutPage
 {
     public string $page;
 
-    public string $title;
+    // Some pages have no default title/description (notably on PrestaShop 9.0.x)
+    public ?string $title = null;
 
-    public string $description;
+    public ?string $description = null;
 }
