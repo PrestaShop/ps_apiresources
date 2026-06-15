@@ -24,17 +24,27 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Meta;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Meta\Command\AddMetaCommand;
 use PrestaShop\PrestaShop\Core\Domain\Meta\Command\EditMetaCommand;
 use PrestaShop\PrestaShop\Core\Domain\Meta\Exception\MetaConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Meta\Exception\MetaNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Meta\Query\GetMetaForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
+        new CQRSCreate(
+            uriTemplate: '/metas',
+            validationContext: ['groups' => ['Default', 'Create']],
+            CQRSCommand: AddMetaCommand::class,
+            CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
+            scopes: ['meta_write'],
+        ),
         new CQRSGet(
             uriTemplate: '/metas/{metaId}',
             requirements: ['metaId' => '\d+'],
@@ -64,6 +74,7 @@ class Meta
     #[ApiProperty(identifier: true)]
     public int $metaId;
 
+    #[Assert\NotBlank(groups: ['Create'])]
     public string $pageName;
 
     #[LocalizedValue]
@@ -73,6 +84,7 @@ class Meta
     public array $metaDescriptions;
 
     #[LocalizedValue]
+    #[Assert\NotBlank(groups: ['Create'])]
     public array $urlRewrites;
 
     // EditableMeta exposes getLocalisedPageTitles / getLocalisedMetaDescriptions / getLocalisedUrlRewrites
@@ -80,6 +92,13 @@ class Meta
         '[localisedPageTitles]' => '[pageTitles]',
         '[localisedMetaDescriptions]' => '[metaDescriptions]',
         '[localisedUrlRewrites]' => '[urlRewrites]',
+    ];
+
+    // AddMetaCommand expects localisedPageTitle / localisedMetaDescription / localisedRewriteUrls (singular title/description)
+    public const CREATE_COMMAND_MAPPING = [
+        '[pageTitles]' => '[localisedPageTitle]',
+        '[metaDescriptions]' => '[localisedMetaDescription]',
+        '[urlRewrites]' => '[localisedRewriteUrls]',
     ];
 
     // EditMetaCommand expects localisedPageTitles / localisedMetaDescriptions / localisedRewriteUrls

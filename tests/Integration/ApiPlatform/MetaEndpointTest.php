@@ -51,6 +51,48 @@ class MetaEndpointTest extends ApiTestCase
             'PATCH',
             '/metas/1',
         ];
+
+        yield 'create endpoint' => [
+            'POST',
+            '/metas',
+        ];
+
+        yield 'get pages endpoint' => [
+            'GET',
+            '/metas/pages',
+        ];
+    }
+
+    public function testGetPagesForLayout(): void
+    {
+        $pages = $this->getItem('/metas/pages', ['meta_read']);
+
+        $this->assertIsArray($pages);
+        $this->assertNotEmpty($pages);
+        $this->assertArrayHasKey('page', $pages[0]);
+        $this->assertArrayHasKey('title', $pages[0]);
+        $this->assertArrayHasKey('description', $pages[0]);
+    }
+
+    public function testAddMeta(): int
+    {
+        // Pick a valid page name from the same source AddMeta validates against
+        $pages = $this->getItem('/metas/pages', ['meta_read']);
+        $this->assertNotEmpty($pages);
+        $pageName = $pages[0]['page'];
+
+        $meta = $this->createItem('/metas', [
+            'pageName' => $pageName,
+            'urlRewrites' => [
+                'en-US' => 'my-custom-meta-page',
+                'fr-FR' => 'ma-page-meta-perso',
+            ],
+        ], ['meta_write']);
+
+        $this->assertArrayHasKey('metaId', $meta);
+        $this->assertEquals(['metaId' => $meta['metaId']], $meta);
+
+        return $meta['metaId'];
     }
 
     public function testGetMeta(): void
