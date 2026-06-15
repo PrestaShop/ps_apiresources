@@ -76,13 +76,10 @@ class MetaEndpointTest extends ApiTestCase
 
     public function testAddMeta(): int
     {
-        // Pick a valid page name from the same source AddMeta validates against
-        $pages = $this->getItem('/metas/pages', ['meta_read']);
-        $this->assertNotEmpty($pages);
-        $pageName = $pages[0]['page'];
-
+        // AddMeta only accepts a page that does NOT yet have a meta record.
+        // "newproducts" is a standard controller with no default meta in the fixtures.
         $meta = $this->createItem('/metas', [
-            'pageName' => $pageName,
+            'pageName' => 'newproducts',
             'urlRewrites' => [
                 'en-US' => 'my-custom-meta-page',
                 'fr-FR' => 'ma-page-meta-perso',
