@@ -39,7 +39,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -85,9 +84,6 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
-    // EditableCurrency::isEnabled() returns an int (legacy), so relax strict type
-    // enforcement when denormalizing the query result into the resource.
-    denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
     exceptionToStatus: [
         CurrencyNotFoundException::class => Response::HTTP_NOT_FOUND,
         CurrencyConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -135,4 +131,13 @@ class Currency
     public const QUERY_MAPPING = [
         '[associatedShopIds]' => '[shopIds]',
     ];
+
+    // EditableCurrency::isEnabled() returns an int, so coerce it through a setter
+    // (same approach as the Title resource's setGender()).
+    public function setEnabled(int|bool $enabled): self
+    {
+        $this->enabled = (bool) $enabled;
+
+        return $this;
+    }
 }
