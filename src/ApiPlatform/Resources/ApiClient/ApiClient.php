@@ -28,6 +28,8 @@ use PrestaShop\PrestaShop\Core\Domain\ApiClient\ApiClientSettings;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\AddApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\DeleteApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\EditApiClientCommand;
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\ForceApiClientSecretCommand;
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\GenerateApiClientSecretCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Exception\ApiClientConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Exception\ApiClientNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Query\GetApiClientForEditing;
@@ -35,6 +37,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -65,6 +68,25 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: EditApiClientCommand::class,
             CQRSQuery: GetApiClientForEditing::class,
             scopes: ['api_client_write']
+        ),
+        // Regenerate the secret: returns the newly generated secret
+        new CQRSUpdate(
+            uriTemplate: '/api-clients/{apiClientId}/secrets',
+            requirements: ['apiClientId' => '\d+'],
+            CQRSCommand: GenerateApiClientSecretCommand::class,
+            CQRSQueryMapping: [
+                '[_queryResult]' => '[secret]',
+            ],
+            scopes: ['api_client_write'],
+        ),
+        // Force a specific secret value (no content returned)
+        new CQRSPartialUpdate(
+            uriTemplate: '/api-clients/{apiClientId}/secrets',
+            requirements: ['apiClientId' => '\d+'],
+            read: false,
+            output: false,
+            CQRSCommand: ForceApiClientSecretCommand::class,
+            scopes: ['api_client_write'],
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
