@@ -61,6 +61,16 @@ class ApiClientEndpointTest extends ApiTestCase
             'GET',
             '/api-clients',
         ];
+
+        yield 'generate secret endpoint' => [
+            'PUT',
+            '/api-clients/1/secrets',
+        ];
+
+        yield 'force secret endpoint' => [
+            'PATCH',
+            '/api-clients/1/secrets',
+        ];
     }
 
     public function testAddApiClient(): int
@@ -95,6 +105,36 @@ class ApiClientEndpointTest extends ApiTestCase
         $this->assertEquals($itemsCount + 1, $newItemsCount);
 
         return $apiClientId;
+    }
+
+    /**
+     * @depends testAddApiClient
+     */
+    public function testGenerateApiClientSecret(int $apiClientId): int
+    {
+        $response = $this->updateItem('/api-clients/' . $apiClientId . '/secrets', [], ['api_client_write']);
+
+        // Regenerating returns the new secret
+        $this->assertArrayHasKey('secret', $response);
+        $this->assertIsString($response['secret']);
+        $this->assertNotEmpty($response['secret']);
+
+        return $apiClientId;
+    }
+
+    /**
+     * @depends testGenerateApiClientSecret
+     */
+    public function testForceApiClientSecret(int $apiClientId): void
+    {
+        // Forcing a specific secret returns an empty 204 response
+        $return = $this->partialUpdateItem(
+            '/api-clients/' . $apiClientId . '/secrets',
+            ['secret' => 'ForcedSecretValue1234567890abcdef'],
+            ['api_client_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        $this->assertNull($return);
     }
 
     /**
