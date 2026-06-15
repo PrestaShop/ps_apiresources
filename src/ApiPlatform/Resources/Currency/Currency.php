@@ -39,6 +39,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -84,6 +85,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
+    // EditableCurrency::isEnabled() returns an int (legacy), so relax strict type
+    // enforcement when denormalizing the query result into the resource.
+    denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
     exceptionToStatus: [
         CurrencyNotFoundException::class => Response::HTTP_NOT_FOUND,
         CurrencyConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
