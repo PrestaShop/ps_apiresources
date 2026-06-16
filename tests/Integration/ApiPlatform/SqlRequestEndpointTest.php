@@ -50,6 +50,8 @@ class SqlRequestEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => ['POST', '/sql-requests'];
         yield 'get endpoint' => ['GET', '/sql-requests/1'];
+        yield 'update endpoint' => ['PATCH', '/sql-requests/1'];
+        yield 'delete endpoint' => ['DELETE', '/sql-requests/1'];
         yield 'bulk delete endpoint' => ['DELETE', '/sql-requests/bulk-delete'];
     }
 
@@ -83,6 +85,32 @@ class SqlRequestEndpointTest extends ApiTestCase
         );
 
         return $sqlRequestId;
+    }
+
+    /**
+     * @depends testGetSqlRequest
+     */
+    public function testEditSqlRequest(int $sqlRequestId): int
+    {
+        $updated = $this->partialUpdateItem('/sql-requests/' . $sqlRequestId, [
+            'name' => 'My SQL Request Updated',
+        ], ['sql_management_write']);
+
+        $this->assertSame('My SQL Request Updated', $updated['name']);
+        $this->assertSame($this->validSql(), $updated['sql']);
+
+        return $sqlRequestId;
+    }
+
+    /**
+     * @depends testEditSqlRequest
+     */
+    public function testDeleteSqlRequest(int $sqlRequestId): void
+    {
+        $return = $this->deleteItem('/sql-requests/' . $sqlRequestId, ['sql_management_write']);
+        $this->assertNull($return);
+
+        $this->getItem('/sql-requests/' . $sqlRequestId, ['sql_management_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkDeleteSqlRequests(): void
