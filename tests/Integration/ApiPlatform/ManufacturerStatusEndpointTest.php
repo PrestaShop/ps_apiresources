@@ -52,6 +52,7 @@ class ManufacturerStatusEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'set-status endpoint' => ['PUT', '/manufacturers/1/set-status'];
+        yield 'bulk update status endpoint' => ['PUT', '/manufacturers/bulk-update-status'];
         yield 'delete logo endpoint' => ['DELETE', '/manufacturers/1/logo'];
     }
 
@@ -93,6 +94,25 @@ class ManufacturerStatusEndpointTest extends ApiTestCase
         );
         $manufacturer = $this->getItem('/manufacturers/' . $manufacturerId, ['manufacturer_read']);
         $this->assertTrue($manufacturer['enabled']);
+    }
+
+    public function testBulkUpdateManufacturerStatus(): void
+    {
+        $firstId = $this->createManufacturer();
+        $secondId = $this->createManufacturer();
+
+        // Disable both manufacturers at once
+        $this->updateItem(
+            '/manufacturers/bulk-update-status',
+            ['manufacturerIds' => [$firstId, $secondId], 'enabled' => false],
+            ['manufacturer_write'],
+            Response::HTTP_NO_CONTENT
+        );
+
+        foreach ([$firstId, $secondId] as $id) {
+            $manufacturer = $this->getItem('/manufacturers/' . $id, ['manufacturer_read']);
+            $this->assertFalse($manufacturer['enabled']);
+        }
     }
 
     public function testDeleteManufacturerLogo(): void
