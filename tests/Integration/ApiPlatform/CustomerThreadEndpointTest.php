@@ -22,10 +22,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use CustomerThread;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
-use Validate;
 
 class CustomerThreadEndpointTest extends ApiTestCase
 {
@@ -59,7 +57,7 @@ class CustomerThreadEndpointTest extends ApiTestCase
 
     private function createCustomerThread(string $status = 'open'): int
     {
-        $thread = new CustomerThread();
+        $thread = new \CustomerThread();
         $thread->id_lang = 1;
         $thread->id_contact = 1;
         $thread->id_shop = 1;
@@ -83,7 +81,7 @@ class CustomerThreadEndpointTest extends ApiTestCase
             Response::HTTP_NO_CONTENT
         );
 
-        $thread = new CustomerThread($customerThreadId);
+        $thread = new \CustomerThread($customerThreadId);
         $this->assertSame('closed', $thread->status);
     }
 
@@ -106,7 +104,7 @@ class CustomerThreadEndpointTest extends ApiTestCase
         $return = $this->deleteItem('/customer-threads/' . $customerThreadId, ['customer_service_write']);
         $this->assertNull($return);
 
-        $this->assertFalse(Validate::isLoadedObject(new CustomerThread($customerThreadId)));
+        $this->assertFalse(\Validate::isLoadedObject(new \CustomerThread($customerThreadId)));
     }
 
     public function testBulkDeleteCustomerThreads(): void
@@ -118,7 +116,7 @@ class CustomerThreadEndpointTest extends ApiTestCase
             'customerThreadIds' => [$firstId, $secondId],
         ], ['customer_service_write']);
 
-        $this->assertFalse(Validate::isLoadedObject(new CustomerThread($firstId)));
-        $this->assertFalse(Validate::isLoadedObject(new CustomerThread($secondId)));
+        $this->assertFalse(\Validate::isLoadedObject(new \CustomerThread($firstId)));
+        $this->assertFalse(\Validate::isLoadedObject(new \CustomerThread($secondId)));
     }
 }
