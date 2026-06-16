@@ -57,6 +57,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             requirements: ['sqlRequestId' => '\d+'],
             CQRSQuery: GetSqlRequestForEditing::class,
             scopes: ['sql_management_read'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            ApiResourceMapping: self::RESOURCE_MAPPING,
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/sql-requests/{sqlRequestId}',
@@ -65,6 +67,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: EditSqlRequestCommand::class,
             CQRSQuery: GetSqlRequestForEditing::class,
             scopes: ['sql_management_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            ApiResourceMapping: self::RESOURCE_MAPPING,
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
@@ -83,4 +87,20 @@ class SqlRequest
 
     #[Assert\NotBlank(groups: ['Create'])]
     public string $sql;
+
+    /**
+     * GetSqlRequestForEditing expects a $requestSqlId constructor argument (legacy naming),
+     * so the sqlRequestId URI variable must be renamed when the query is built.
+     */
+    public const QUERY_MAPPING = [
+        '[sqlRequestId]' => '[requestSqlId]',
+    ];
+
+    /**
+     * The query mapping above also renames the query result key, so map it back to the
+     * sqlRequestId resource identifier when denormalizing the response.
+     */
+    public const RESOURCE_MAPPING = [
+        '[requestSqlId]' => '[sqlRequestId]',
+    ];
 }
