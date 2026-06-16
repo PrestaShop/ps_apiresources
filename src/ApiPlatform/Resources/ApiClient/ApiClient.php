@@ -73,6 +73,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSUpdate(
             uriTemplate: '/api-clients/{apiClientId}/secrets',
             requirements: ['apiClientId' => '\d+'],
+            allowEmptyBody: true,
             CQRSCommand: GenerateApiClientSecretCommand::class,
             CQRSQueryMapping: [
                 '[_queryResult]' => '[secret]',
