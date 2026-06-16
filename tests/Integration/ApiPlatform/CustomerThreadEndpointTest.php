@@ -63,7 +63,7 @@ class CustomerThreadEndpointTest extends ApiTestCase
         $thread->id_shop = 1;
         $thread->id_customer = 0;
         $thread->email = 'thread-test@example.com';
-        $thread->token = 'token-' . uniqid();
+        $thread->token = bin2hex(random_bytes(6));
         $thread->status = $status;
         $thread->add();
 
