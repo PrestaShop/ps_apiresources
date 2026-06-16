@@ -55,7 +55,6 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSPartialUpdate(
             uriTemplate: '/order-return-states/{orderReturnStateId}',
             requirements: ['orderReturnStateId' => '\d+'],
-            read: false,
             CQRSCommand: EditOrderReturnStateCommand::class,
             CQRSQuery: GetOrderReturnStateForEditing::class,
             scopes: ['order_return_state_write'],
@@ -64,7 +63,6 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSDelete(
             uriTemplate: '/order-return-states/{orderReturnStateId}',
             requirements: ['orderReturnStateId' => '\d+'],
-            output: false,
             CQRSCommand: DeleteOrderReturnStateCommand::class,
             scopes: ['order_return_state_write'],
         ),
