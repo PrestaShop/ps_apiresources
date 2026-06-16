@@ -25,15 +25,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SqlRequest;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Command\AddSqlRequestCommand;
-use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Command\DeleteSqlRequestCommand;
-use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Command\EditSqlRequestCommand;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Exception\SqlRequestConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Exception\SqlRequestNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Query\GetSqlRequestForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -45,28 +41,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: AddSqlRequestCommand::class,
             scopes: ['sql_management_write'],
         ),
-        new CQRSDelete(
-            uriTemplate: '/sql-requests/{sqlRequestId}',
-            requirements: ['sqlRequestId' => '\d+'],
-            output: false,
-            CQRSCommand: DeleteSqlRequestCommand::class,
-            scopes: ['sql_management_write'],
-        ),
         new CQRSGet(
             uriTemplate: '/sql-requests/{sqlRequestId}',
             requirements: ['sqlRequestId' => '\d+'],
             CQRSQuery: GetSqlRequestForEditing::class,
             scopes: ['sql_management_read'],
-            CQRSQueryMapping: self::QUERY_MAPPING,
-            ApiResourceMapping: self::RESOURCE_MAPPING,
-        ),
-        new CQRSPartialUpdate(
-            uriTemplate: '/sql-requests/{sqlRequestId}',
-            requirements: ['sqlRequestId' => '\d+'],
-            read: false,
-            CQRSCommand: EditSqlRequestCommand::class,
-            CQRSQuery: GetSqlRequestForEditing::class,
-            scopes: ['sql_management_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             ApiResourceMapping: self::RESOURCE_MAPPING,
         ),
