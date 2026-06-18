@@ -175,6 +175,38 @@ class TaxRuleEndpointTest extends ApiTestCase
         );
     }
 
+    public function testListTaxRuleWithoutTax(): void
+    {
+        // A tax rule with id_tax = 0 has no associated tax: rate and taxName must be null, not a 500 error
+        $taxRulesGroup = new \TaxRulesGroup();
+        $taxRulesGroup->name = 'API Test No Tax Group';
+        $taxRulesGroup->active = true;
+        $this->assertNotFalse($taxRulesGroup->add());
+
+        $countryId = (int) \Country::getByIso('FR');
+        $taxRule = new \TaxRule();
+        $taxRule->id_tax_rules_group = (int) $taxRulesGroup->id;
+        $taxRule->id_country = $countryId;
+        $taxRule->id_state = 0;
+        $taxRule->zipcode_from = '0';
+        $taxRule->zipcode_to = '0';
+        $taxRule->id_tax = 0;
+        $taxRule->behavior = 0;
+        $taxRule->description = 'API test rule no tax';
+        $this->assertNotFalse($taxRule->add());
+        $noTaxRuleId = (int) $taxRule->id;
+
+        $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
+            'taxRulesGroupId' => (int) $taxRulesGroup->id,
+        ]);
+
+        $this->assertEquals(1, $taxRules['totalItems']);
+        $noTaxItem = $taxRules['items'][0];
+        $this->assertEquals($noTaxRuleId, $noTaxItem['taxRuleId']);
+        $this->assertNull($noTaxItem['rate'] ?? null, 'rate must be null or absent when no tax is associated');
+        $this->assertNull($noTaxItem['taxName'] ?? null, 'taxName must be null or absent when no tax is associated');
+    }
+
     /**
      * Creates a dedicated tax rules group containing three tax rules (France, Italy, Germany)
      * sharing the same tax, so the listing assertions rely on deterministic data.

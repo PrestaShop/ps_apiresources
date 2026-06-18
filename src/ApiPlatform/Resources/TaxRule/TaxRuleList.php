@@ -78,15 +78,15 @@ class TaxRuleList
 
     public int $behavior;
 
-    public DecimalNumber $rate;
+    public ?DecimalNumber $rate = null;
 
-    public string $taxName;
+    public ?string $taxName = null;
 
     public string $description;
 
-    public function setRate(string $rate): self
+    public function setRate(?string $rate): self
     {
-        $this->rate = new DecimalNumber($rate);
+        $this->rate = $rate !== null ? new DecimalNumber($rate) : null;
 
         return $this;
     }
