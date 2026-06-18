@@ -58,6 +58,7 @@ class CountryEndpointTest extends ApiTestCase
         yield 'get endpoint' => ['GET', '/countries/1'];
         yield 'update endpoint' => ['PATCH', '/countries/1'];
         yield 'delete endpoint' => ['DELETE', '/countries/1'];
+        yield 'list endpoint' => ['GET', '/countries'];
     }
 
     public function testAddCountry(): int
@@ -133,12 +134,70 @@ class CountryEndpointTest extends ApiTestCase
     }
 
     /**
+     * @depends testEditCountry
+     */
+    public function testListCountries(int $countryId): int
+    {
+        // Plain listing returns a paginated, structured collection.
+        $countries = $this->listItems('/countries', ['country_read']);
+        $this->assertGreaterThanOrEqual(1, $countries['totalItems']);
+        $this->assertNotEmpty($countries['items']);
+
+        // Filtering by isoCode isolates the country created earlier in this test class.
+        $filtered = $this->listItems('/countries', ['country_read'], ['isoCode' => 'ZZ']);
+        $this->assertEquals(1, $filtered['totalItems']);
+        $this->assertEquals(['isoCode' => 'ZZ'], $filtered['filters']);
+
+        $testCountry = $filtered['items'][0];
+        // testEditCountry left the record with these values (default lang name = en-US).
+        $this->assertEquals($countryId, $testCountry['countryId']);
+        $this->assertEquals('Updated Country EN', $testCountry['name']);
+        $this->assertEquals('ZZ', $testCountry['isoCode']);
+        $this->assertEquals(999, $testCountry['callPrefix']);
+        $this->assertFalse($testCountry['enabled']);
+        // zoneName comes from the zone grid join (z.name); zone 1 always has a name.
+        $this->assertIsString($testCountry['zoneName']);
+        $this->assertNotEmpty($testCountry['zoneName']);
+
+        // Filtering by the boolean status (combined with isoCode to avoid relying
+        // on the default pagination window) matches the disabled created country.
+        $disabled = $this->listItems('/countries', ['country_read'], ['isoCode' => 'ZZ', 'enabled' => false]);
+        $this->assertNotEmpty($disabled['items']);
+        $disabledIds = array_column($disabled['items'], 'countryId');
+        $this->assertContains($countryId, $disabledIds);
+        foreach ($disabled['items'] as $disabledCountry) {
+            $this->assertFalse($disabledCountry['enabled']);
+        }
+
+        // Sorting parameters are honoured and echoed back in the response.
+        $sorted = $this->listItems('/countries?orderBy=countryId&sortOrder=desc', ['country_read']);
+        $this->assertEquals('countryId', $sorted['orderBy']);
+        $this->assertEquals('desc', $sorted['sortOrder']);
+
+        // Pagination: a single-item first page, then the second page returns a different country.
+        $firstPage = $this->listItems('/countries?limit=1&offset=0&orderBy=countryId&sortOrder=asc', ['country_read']);
+        $this->assertCount(1, $firstPage['items']);
+        $this->assertEquals(1, $firstPage['limit']);
+        $this->assertEquals($countries['totalItems'], $firstPage['totalItems']);
+
+        $secondPage = $this->listItems('/countries?limit=1&offset=1&orderBy=countryId&sortOrder=asc', ['country_read']);
+        $this->assertCount(1, $secondPage['items']);
+        $this->assertNotEquals(
+            $firstPage['items'][0]['countryId'],
+            $secondPage['items'][0]['countryId']
+        );
+
+        return $countryId;
+    }
+
+    /**
      * Order-critical: must run after every other test that needs the created
      * country alive. The validation tests below also chain off testGetCountry
      * and PATCH the same record, so listing them here forces PHPUnit to
      * schedule the delete last.
      *
      * @depends testEditCountry
+     * @depends testListCountries
      * @depends testAddCountryWithInvalidAddressFormat
      * @depends testEditCountryWithInvalidAddressFormat
      */
