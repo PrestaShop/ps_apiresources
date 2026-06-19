@@ -32,6 +32,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
@@ -39,6 +40,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
     operations: [
         new CQRSGet(
             uriTemplate: '/products/images/{imageId}',
+            requirements: ['imageId' => '\d+'],
             CQRSQuery: GetProductImage::class,
             scopes: [
                 'product_read',
@@ -49,6 +51,7 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
             // We have to force POST request, because we cannot use PUT with files AND data
             method: CQRSUpdate::METHOD_POST,
             uriTemplate: '/products/images/{imageId}',
+            requirements: ['imageId' => '\d+'],
             inputFormats: ['multipart' => ['multipart/form-data']],
             status: Response::HTTP_OK,
             // Form data value are all string so we disable type enforcement
@@ -59,15 +62,11 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
                 'product_write',
             ],
             CQRSQueryMapping: ProductImage::QUERY_MAPPING,
-            CQRSCommandMapping: [
-                '[_context][shopConstraint]' => '[shopConstraint]',
-                '[image].pathName' => '[filePath]',
-                '[legends]' => '[localizedLegends]',
-                '[cover]' => '[isCover]',
-            ]
+            CQRSCommandMapping: ProductImage::COMMAND_MAPPING,
         ),
         new CQRSDelete(
             uriTemplate: '/products/images/{imageId}',
+            requirements: ['imageId' => '\d+'],
             CQRSCommand: DeleteProductImageCommand::class,
         ),
     ],
@@ -93,8 +92,17 @@ class ProductImage
 
     public array $shopIds;
 
+    public File $image;
+
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[localizedLegends]' => '[legends]',
+    ];
+
+    public const COMMAND_MAPPING = [
+        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[image].pathName' => '[filePath]',
+        '[legends]' => '[localizedLegends]',
+        '[cover]' => '[isCover]',
     ];
 }
