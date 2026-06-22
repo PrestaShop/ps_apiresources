@@ -62,7 +62,6 @@ class CartProductPrice
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 0])]
     public int $combinationId;
 
-    #[Assert\NotBlank]
     #[ApiProperty(openapiContext: ['type' => 'string', 'example' => '19.99'])]
     public DecimalNumber $price;
 }
