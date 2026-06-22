@@ -43,6 +43,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/carts/{cartId}',
             requirements: ['cartId' => '\d+'],
             CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['cart_read'],
         ),
         new CQRSCreate(
@@ -50,6 +51,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: CreateEmptyCustomerCartCommand::class,
             CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['cart_write'],
         ),
         new CQRSDelete(
@@ -183,4 +185,8 @@ class Cart
         ],
     ])]
     public array $summary;
+
+    public const QUERY_MAPPING = [
+        '[langId]' => '[languageId]',
+    ];
 }
