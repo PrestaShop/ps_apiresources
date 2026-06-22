@@ -51,6 +51,9 @@ services:
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\GetSearchTermAliasesQuerySerializer:
     autoconfigure: true
 
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\ProductBasicInformationNormalizer:
+    autoconfigure: true
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'
