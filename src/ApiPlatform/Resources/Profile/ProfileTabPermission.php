@@ -60,12 +60,12 @@ class ProfileTabPermission
     #[Assert\NotBlank]
     public string $permission;
 
-    public bool $active;
+    public bool $enabled;
 
     /**
      * UpdateTabPermissionsCommand expects an $isActive constructor argument.
      */
     public const COMMAND_MAPPING = [
-        '[active]' => '[isActive]',
+        '[enabled]' => '[isActive]',
     ];
 }
