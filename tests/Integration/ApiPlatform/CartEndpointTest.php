@@ -160,18 +160,14 @@ class CartEndpointTest extends ApiTestCase
         $this->assertIsInt($cartId);
         $this->assertGreaterThan(0, $cartId);
 
-        // Assert the full response structure of the created cart
-        $this->assertEquals([
-            'cartId' => $cartId,
-            'customerId' => self::FIXTURE_CUSTOMER_ID,
-            'currencyId' => $cart['currencyId'],
-            'languageId' => $cart['languageId'],
-            'products' => [],
-            'cartRules' => [],
-            'addresses' => $cart['addresses'],
-            'shipping' => $cart['shipping'],
-            'summary' => $cart['summary'],
-        ], $cart);
+        $this->assertSame(['cartId', 'customerId', 'currencyId', 'languageId', 'products', 'cartRules', 'addresses', 'shipping', 'summary'], array_keys($cart));
+        $this->assertSame(self::FIXTURE_CUSTOMER_ID, $cart['customerId']);
+        $this->assertIsInt($cart['currencyId']);
+        $this->assertIsInt($cart['languageId']);
+        $this->assertSame([], $cart['products']);
+        $this->assertSame([], $cart['cartRules']);
+        $this->assertIsArray($cart['addresses']);
+        $this->assertIsArray($cart['summary']);
 
         return $cartId;
     }
@@ -183,17 +179,15 @@ class CartEndpointTest extends ApiTestCase
     {
         $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
 
-        $this->assertEquals([
-            'cartId' => $cartId,
-            'customerId' => self::FIXTURE_CUSTOMER_ID,
-            'currencyId' => $cart['currencyId'],
-            'languageId' => $cart['languageId'],
-            'products' => [],
-            'cartRules' => [],
-            'addresses' => $cart['addresses'],
-            'shipping' => $cart['shipping'],
-            'summary' => $cart['summary'],
-        ], $cart);
+        $this->assertSame(['cartId', 'customerId', 'currencyId', 'languageId', 'products', 'cartRules', 'addresses', 'shipping', 'summary'], array_keys($cart));
+        $this->assertSame($cartId, $cart['cartId']);
+        $this->assertSame(self::FIXTURE_CUSTOMER_ID, $cart['customerId']);
+        $this->assertIsInt($cart['currencyId']);
+        $this->assertIsInt($cart['languageId']);
+        $this->assertSame([], $cart['products']);
+        $this->assertSame([], $cart['cartRules']);
+        $this->assertIsArray($cart['addresses']);
+        $this->assertIsArray($cart['summary']);
 
         return $cartId;
     }
@@ -380,17 +374,11 @@ class CartEndpointTest extends ApiTestCase
 
         $cartView = $this->getItem('/carts/' . $cartId . '/view', ['cart_read']);
 
-        $this->assertEquals([
-            'cartId' => $cartId,
-            'currencyId' => $cartView['currencyId'],
-            'customerInformation' => $cartView['customerInformation'],
-            'orderInformation' => $cartView['orderInformation'],
-            'cartSummary' => $cartView['cartSummary'],
-        ], $cartView);
-
-        $this->assertEquals($cartId, $cartView['cartId']);
+        $this->assertSame(['cartId', 'currencyId', 'customerInformation', 'orderInformation', 'cartSummary'], array_keys($cartView));
+        $this->assertSame($cartId, $cartView['cartId']);
         $this->assertIsInt($cartView['currencyId']);
         $this->assertIsArray($cartView['customerInformation']);
+        $this->assertIsArray($cartView['orderInformation']);
         $this->assertIsArray($cartView['cartSummary']);
 
         $this->deleteItem('/carts/' . $cartId, ['cart_write']);
