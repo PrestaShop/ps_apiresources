@@ -81,7 +81,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
         // Disable the "view" permission on the tab
         $this->updateItem(
             '/profiles/' . self::$profileId . '/tab-permissions',
-            ['tabId' => self::$tabId, 'permission' => 'view', 'active' => false],
+            ['tabId' => self::$tabId, 'permission' => 'view', 'enabled' => false],
             ['profile_write'],
             Response::HTTP_NO_CONTENT
         );
@@ -92,7 +92,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
         // Enable it
         $this->updateItem(
             '/profiles/' . self::$profileId . '/tab-permissions',
-            ['tabId' => self::$tabId, 'permission' => 'view', 'active' => true],
+            ['tabId' => self::$tabId, 'permission' => 'view', 'enabled' => true],
             ['profile_write'],
             Response::HTTP_NO_CONTENT
         );
@@ -105,7 +105,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
     {
         $this->updateItem(
             '/profiles/' . self::$profileId . '/tab-permissions',
-            ['tabId' => self::$tabId, 'permission' => 'not-a-permission', 'active' => true],
+            ['tabId' => self::$tabId, 'permission' => 'not-a-permission', 'enabled' => true],
             ['profile_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
@@ -116,7 +116,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
         // Handler throws on failure, so a 204 confirms the module permission was updated
         $this->updateItem(
             '/profiles/' . self::$profileId . '/module-permissions',
-            ['moduleId' => self::$moduleId, 'permission' => 'view', 'active' => true],
+            ['moduleId' => self::$moduleId, 'permission' => 'view', 'enabled' => true],
             ['profile_write'],
             Response::HTTP_NO_CONTENT
         );
