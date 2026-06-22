@@ -37,6 +37,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSCreate(
             uriTemplate: '/carts/{cartId}/customizations',
             requirements: ['cartId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddCustomizationCommand::class,
             scopes: ['cart_write'],
         ),
