@@ -223,7 +223,7 @@ class ShipmentEndpointTest extends ApiTestCase
                 'carrierId' => self::$carrierId,
             ],
             ['shipment_write'],
-            Response::HTTP_CREATED
+            Response::HTTP_NO_CONTENT
         );
 
         $shipmentCount = (int) \Db::getInstance()->getValue(
@@ -252,7 +252,7 @@ class ShipmentEndpointTest extends ApiTestCase
                 ],
             ],
             ['shipment_write'],
-            Response::HTTP_CREATED
+            Response::HTTP_NO_CONTENT
         );
 
         $mergedProducts = (int) \Db::getInstance()->getValue(

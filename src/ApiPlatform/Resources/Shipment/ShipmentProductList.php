@@ -22,13 +22,10 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Shipment;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\DeleteProductFromShipment;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Exception\ShipmentException;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Exception\ShipmentNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Query\GetShipmentProducts;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -40,12 +37,6 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQuery: GetShipmentProducts::class,
             scopes: ['shipment_read'],
         ),
-        new CQRSDelete(
-            uriTemplate: '/shipments/{shipmentId}/products/{orderDetailId}',
-            requirements: ['shipmentId' => '\d+', 'orderDetailId' => '\d+'],
-            CQRSCommand: DeleteProductFromShipment::class,
-            scopes: ['shipment_write'],
-        ),
     ],
     exceptionToStatus: [
         ShipmentNotFoundException::class => Response::HTTP_NOT_FOUND,
@@ -54,10 +45,7 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class ShipmentProductList
 {
-    #[ApiProperty(identifier: true)]
     public int $orderDetailId;
-
-    public int $shipmentId;
 
     public int $quantity;
 

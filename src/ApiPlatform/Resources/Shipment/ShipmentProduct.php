@@ -20,59 +20,35 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Shipment;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\DeleteProductFromShipment;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Exception\ShipmentException;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Exception\ShipmentNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\Shipment\Query\GetOrderShipments;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSGetCollection(
-            uriTemplate: '/orders/{orderId}/shipments',
-            requirements: ['orderId' => '\d+'],
-            CQRSQuery: GetOrderShipments::class,
-            scopes: ['shipment_read'],
-            ApiResourceMapping: [
-                '[id]' => '[shipmentId]',
-                '[carrierSummary]' => '[carrier]',
-            ],
+        new CQRSDelete(
+            uriTemplate: '/shipments/{shipmentId}/products/{orderDetailId}',
+            requirements: ['shipmentId' => '\d+', 'orderDetailId' => '\d+'],
+            CQRSCommand: DeleteProductFromShipment::class,
+            scopes: ['shipment_write'],
         ),
     ],
-    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         ShipmentNotFoundException::class => Response::HTTP_NOT_FOUND,
         ShipmentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class OrderShipmentList
+class ShipmentProduct
 {
+    #[ApiProperty(identifier: true)]
     public int $shipmentId;
 
-    public int $orderId;
-
-    /**
-     * @var array{id: int, name: string}
-     */
-    public array $carrier;
-
-    public int $addressId;
-
-    public DecimalNumber $shippingCostTaxExcluded;
-
-    public DecimalNumber $shippingCostTaxIncluded;
-
-    public int $productsCount;
-
-    public ?string $trackingNumber;
-
-    public ?string $shippedAt;
-
-    public ?string $deliveredAt;
-
-    public ?string $cancelledAt;
+    #[ApiProperty(identifier: true)]
+    public int $orderDetailId;
 }

@@ -41,7 +41,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             requirements: ['shipmentId' => '\d+'],
             CQRSQuery: GetShipmentForViewing::class,
             scopes: ['shipment_read'],
-            CQRSQueryMapping: [
+            ApiResourceMapping: [
                 '[id]' => '[shipmentId]',
                 '[carrierSummary]' => '[carrier]',
                 '[shippingAdressSummary]' => '[shippingAddress]',
