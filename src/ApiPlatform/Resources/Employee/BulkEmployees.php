@@ -29,18 +29,17 @@ use PrestaShop\PrestaShop\Core\Domain\Employee\Command\BulkDeleteEmployeeCommand
 use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\AdminEmployeeException;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeCannotChangeItselfException;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
+        new CQRSDelete(
             uriTemplate: '/employees/bulk-delete',
-            // No output, 204 code
-            output: false,
             CQRSCommand: BulkDeleteEmployeeCommand::class,
             scopes: ['employee_write'],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
