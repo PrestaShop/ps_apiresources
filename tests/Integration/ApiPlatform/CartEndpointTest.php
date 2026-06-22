@@ -165,7 +165,7 @@ class CartEndpointTest extends ApiTestCase
             'cartId' => $cartId,
             'customerId' => self::FIXTURE_CUSTOMER_ID,
             'currencyId' => $cart['currencyId'],
-            'langId' => $cart['langId'],
+            'languageId' => $cart['languageId'],
             'products' => [],
             'cartRules' => [],
             'addresses' => $cart['addresses'],
@@ -187,7 +187,7 @@ class CartEndpointTest extends ApiTestCase
             'cartId' => $cartId,
             'customerId' => self::FIXTURE_CUSTOMER_ID,
             'currencyId' => $cart['currencyId'],
-            'langId' => $cart['langId'],
+            'languageId' => $cart['languageId'],
             'products' => [],
             'cartRules' => [],
             'addresses' => $cart['addresses'],
@@ -309,14 +309,14 @@ class CartEndpointTest extends ApiTestCase
     public function testUpdateCartLanguage(int $cartId): int
     {
         $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $languageId = $cart['langId'];
+        $languageId = $cart['languageId'];
 
         $this->partialUpdateItem('/carts/' . $cartId . '/language', [
             'languageId' => $languageId,
         ], ['cart_write']);
 
         $updatedCart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $this->assertEquals($languageId, $updatedCart['langId']);
+        $this->assertEquals($languageId, $updatedCart['languageId']);
 
         return $cartId;
     }
