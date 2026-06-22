@@ -53,6 +53,8 @@ class CartEndpointTest extends ApiTestCase
             'cart',
             'cart_product',
             'cart_cart_rule',
+            'customization',
+            'customized_data',
         ]);
     }
 
