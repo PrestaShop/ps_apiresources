@@ -23,16 +23,27 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Employee\Command\AddEmployeeCommand;
+use PrestaShop\PrestaShop\Core\Crypto\Hashing;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class EmployeeActionsEndpointTest extends ApiTestCase
 {
+    private static int $profileId;
+
+    private static int $langId;
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
         self::createApiClient(['employee_write']);
+
+        // A non SuperAdmin profile so the seeded employees are never considered the "last admin",
+        // which would block the toggle/bulk status and bulk delete operations.
+        self::$profileId = (int) \Db::getInstance()->getValue(
+            'SELECT id_profile FROM `' . _DB_PREFIX_ . 'profile` WHERE id_profile <> 1 ORDER BY id_profile ASC'
+        );
+        self::$langId = (int) \Configuration::get('PS_LANG_DEFAULT');
     }
 
     public static function tearDownAfterClass(): void
@@ -114,32 +125,23 @@ class EmployeeActionsEndpointTest extends ApiTestCase
     }
 
     /**
-     * Seeds an employee through the CQRS command bus. The SUPER_ADMIN profile is used on
-     * purpose: the install super admin always remains, so the seeded employees are never the
-     * "only admin in shop" (which would block toggle/bulk operations), and the homepage
-     * accessibility check is skipped for the super admin profile.
+     * Seeds an employee directly through the legacy object model. AddEmployeeCommand cannot be
+     * used here because it checks that the context employee can grant the profile, and there is
+     * no authenticated employee in the API/test context.
      */
     private function createEmployee(string $email, bool $active): int
     {
-        $command = new AddEmployeeCommand(
-            'John',
-            'Doe',
-            $email,
-            'Pr3st@Sh0p!Test',
-            1,
-            (int) \Configuration::get('PS_LANG_DEFAULT'),
-            $active,
-            1,
-            [1],
-            false,
-            8,
-            72,
-            0
-        );
+        $employee = new \Employee();
+        $employee->id_profile = self::$profileId;
+        $employee->id_lang = self::$langId;
+        $employee->firstname = 'John';
+        $employee->lastname = 'Doe';
+        $employee->email = $email;
+        $employee->passwd = (new Hashing())->hash('Pr3st@Sh0p!Test');
+        $employee->active = $active;
+        $employee->add();
 
-        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
-
-        return $commandBus->handle($command)->getValue();
+        return (int) $employee->id;
     }
 
     private function getEmployeeActiveStatus(int $employeeId): bool
