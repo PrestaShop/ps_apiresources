@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Shipment\Query\GetOrderShipments;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -40,6 +41,11 @@ class ShipmentEndpointTest extends ApiTestCase
 
     public static function setUpBeforeClass(): void
     {
+        // The Shipment domain only exists since PrestaShop 9.1.0.
+        if (!class_exists(GetOrderShipments::class)) {
+            self::markTestSkipped('The Shipment domain is only available since PrestaShop 9.1.0.');
+        }
+
         parent::setUpBeforeClass();
         self::createApiClient(['shipment_read', 'shipment_write']);
 
