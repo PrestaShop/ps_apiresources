@@ -81,7 +81,7 @@ class Cart
     public int $currencyId;
 
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
-    public int $langId;
+    public int $languageId;
 
     #[ApiProperty(openapiContext: [
         'type' => 'array',
