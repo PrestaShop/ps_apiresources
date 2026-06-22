@@ -25,6 +25,7 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
+use Tests\Resources\Resetter\LanguageResetter;
 
 class OrderMessageEndpointTest extends ApiTestCase
 {
@@ -39,6 +40,7 @@ class OrderMessageEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         DatabaseDump::restoreTables(['order_message', 'order_message_lang']);
+        LanguageResetter::resetLanguages();
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -66,6 +68,11 @@ class OrderMessageEndpointTest extends ApiTestCase
         yield 'bulk delete endpoint' => [
             'DELETE',
             '/order-messages/bulk-delete',
+        ];
+
+        yield 'list endpoint' => [
+            'GET',
+            '/order-messages',
         ];
     }
 
@@ -172,5 +179,33 @@ class OrderMessageEndpointTest extends ApiTestCase
 
         $this->getItem('/order-messages/' . $firstId, ['order_message_read'], Response::HTTP_NOT_FOUND);
         $this->getItem('/order-messages/' . $secondId, ['order_message_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testEditOrderMessageMessagesOnly(): void
+    {
+        $orderMessageId = $this->createItem('/order-messages', [
+            'names' => ['en-US' => 'Messages only EN', 'fr-FR' => 'Messages only FR'],
+            'messages' => ['en-US' => 'Body EN', 'fr-FR' => 'Body FR'],
+        ], ['order_message_write'])['orderMessageId'];
+
+        // Partial update with only the messages: the request must succeed and the names must be preserved
+        $updated = $this->partialUpdateItem('/order-messages/' . $orderMessageId, [
+            'messages' => ['en-US' => 'Updated body EN', 'fr-FR' => 'Updated body FR'],
+        ], ['order_message_write']);
+
+        $this->assertSame(['en-US' => 'Updated body EN', 'fr-FR' => 'Updated body FR'], $updated['messages']);
+        $this->assertSame(['en-US' => 'Messages only EN', 'fr-FR' => 'Messages only FR'], $updated['names']);
+    }
+
+    public function testListOrderMessages(): void
+    {
+        $orderMessageId = $this->createItem('/order-messages', [
+            'names' => ['en-US' => 'Listed OM EN', 'fr-FR' => 'Listed OM FR'],
+            'messages' => ['en-US' => 'Listed body EN', 'fr-FR' => 'Listed body FR'],
+        ], ['order_message_write'])['orderMessageId'];
+
+        $list = $this->listItems('/order-messages', ['order_message_read']);
+        $this->assertGreaterThanOrEqual(1, $list['totalItems']);
+        $this->assertContains($orderMessageId, array_column($list['items'], 'orderMessageId'));
     }
 }
