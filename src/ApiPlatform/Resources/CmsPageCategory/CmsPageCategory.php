@@ -144,4 +144,13 @@ class CmsPageCategory
         '[metaDescriptions]' => '[localisedMetaDescription]',
         '[shopIds]' => '[shopAssociation]',
     ];
+
+    // The legacy query result may expose the status as a string ("1"/"0"), so we
+    // coerce it here to keep the typed bool property happy across versions.
+    public function setDisplayed(string|int|bool $displayed): self
+    {
+        $this->displayed = (bool) $displayed;
+
+        return $this;
+    }
 }
