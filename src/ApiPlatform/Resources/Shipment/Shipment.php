@@ -72,13 +72,11 @@ class Shipment
     /**
      * @var array{id: int, name: string}
      */
-    #[ApiProperty(writable: false)]
     public array $carrier;
 
     /**
      * @var array<string, string>
      */
-    #[ApiProperty(writable: false)]
     public array $shippingAddress;
 
     #[ApiProperty(readable: false)]
