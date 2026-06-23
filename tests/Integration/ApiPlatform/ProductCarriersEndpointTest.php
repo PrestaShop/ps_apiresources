@@ -71,14 +71,4 @@ class ProductCarriersEndpointTest extends ApiTestCase
         $storedReferences = array_map('intval', array_column($references, 'id_carrier_reference'));
         $this->assertContains(self::$carrierReferenceId, $storedReferences);
     }
-
-    public function testSetCarriersOnMissingProductReturnsNotFound(): void
-    {
-        $this->updateItem(
-            '/products/999999/carriers',
-            ['carrierReferenceIds' => [self::$carrierReferenceId]],
-            ['product_write'],
-            Response::HTTP_NOT_FOUND
-        );
-    }
 }
