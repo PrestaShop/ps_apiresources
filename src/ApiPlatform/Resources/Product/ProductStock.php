@@ -37,6 +37,9 @@ use Symfony\Component\HttpFoundation\Response;
             requirements: ['productId' => '\d+'],
             output: false,
             CQRSCommand: UpdateProductStockAvailableCommand::class,
+            CQRSCommandMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+            ],
             scopes: ['product_write'],
         ),
     ],
