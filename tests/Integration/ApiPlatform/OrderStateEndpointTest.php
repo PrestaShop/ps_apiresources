@@ -170,8 +170,11 @@ class OrderStateEndpointTest extends ApiTestCase
         // This endpoint returns an empty response and a 204 HTTP code
         $this->assertNull($return);
 
-        // Getting the item should result in a 404 now
-        $this->getItem('/order-states/' . $orderStateId, ['order_state_read'], Response::HTTP_NOT_FOUND);
+        // Order states are soft-deleted (existing orders may reference them): the record is
+        // flagged as deleted and no longer appears in the listing.
+        $orderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
+        $listedIds = array_column($orderStates['items'], 'orderStateId');
+        $this->assertNotContains($orderStateId, $listedIds);
     }
 
     /**
@@ -194,9 +197,11 @@ class OrderStateEndpointTest extends ApiTestCase
             'orderStateIds' => $bulkIds,
         ], ['order_state_write']);
 
-        // Assert the provided order states have been removed
+        // Soft-deleted order states no longer appear in the listing
+        $orderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
+        $listedIds = array_column($orderStates['items'], 'orderStateId');
         foreach ($bulkIds as $orderStateId) {
-            $this->getItem('/order-states/' . $orderStateId, ['order_state_read'], Response::HTTP_NOT_FOUND);
+            $this->assertNotContains($orderStateId, $listedIds);
         }
     }
 
