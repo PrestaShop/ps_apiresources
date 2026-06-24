@@ -82,7 +82,10 @@ use Symfony\Component\Validator\Constraints as Assert;
                 '[_context][shopConstraint]' => '[shopConstraint]',
                 '[_context][langId]' => '[languageId]',
                 '[_context][uriVariables][productId]' => '[productId]',
-                '[productId]' => '[productId]',
+            ],
+            ApiResourceMapping: [
+                '[combinations]' => '[items]',
+                '[totalCombinationsCount]' => '[totalItems]',
             ],
             validationContext: ['groups' => ['Default', 'Create']],
         ),
@@ -107,8 +110,8 @@ class GenerateProductCombinations
     public array $groupedAttributeIds;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'object']])]
-    public ?array $combinations = null;
+    public ?array $items = null;
 
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 2])]
-    public ?int $totalCombinationsCount = null;
+    public ?int $totalItems = null;
 }

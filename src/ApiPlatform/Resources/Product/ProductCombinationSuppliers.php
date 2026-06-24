@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\UpdateCombinationSuppliersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationSuppliers;
@@ -88,13 +89,12 @@ class ProductCombinationSuppliers
     #[ApiProperty(openapiContext: ['type' => 'string'])]
     public string $reference;
 
-    #[ApiProperty(openapiContext: ['type' => 'string', 'example' => '12.340'])]
-    public string $priceTaxExcluded;
+    public DecimalNumber $priceTaxExcluded;
 
     #[ApiProperty(openapiContext: ['type' => 'integer'])]
     public int $currencyId;
 
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'nullable' => true])]
+    #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'nullable' => true])]
     public ?int $combinationId = null;
 
     /**
