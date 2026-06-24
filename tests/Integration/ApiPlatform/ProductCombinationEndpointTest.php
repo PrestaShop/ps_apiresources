@@ -22,6 +22,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Context;
+use Employee;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetSuppliersCommand;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
@@ -33,7 +35,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
         // Ensure DB is restored before parent config/init
         DatabaseDump::restoreAllTables();
         parent::setUpBeforeClass();
-        self::createApiClient(['product_write']);
+        self::createApiClient(['product_write', 'product_read']);
     }
 
     public static function tearDownAfterClass(): void
@@ -94,8 +96,8 @@ class ProductCombinationEndpointTest extends ApiTestCase
         ];
 
         yield 'combination images clear endpoint' => [
-            'PATCH',
-            '/products/combinations/1/images/clears',
+            'DELETE',
+            '/products/combinations/1/images',
         ];
 
         yield 'update combination stock endpoint' => [
@@ -344,7 +346,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
         $toPatch = $combinations[0]['combinationId'];
 
         // Send both delta and fixed to trigger domain validation -> 422
-        \Context::getContext()->employee = new \Employee(1);
+        Context::getContext()->employee = new Employee(1);
         $errors = $this->partialUpdateItem('/products/combinations/' . $toPatch . '/stocks', [
             'deltaQuantity' => 5,
             'fixedQuantity' => 10,
@@ -378,7 +380,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
         $toPatch = $combinations[0]['combinationId'];
 
         // Update with delta only - command returns no body, stock can be verified through stock movements.
-        \Context::getContext()->employee = new \Employee(1);
+        Context::getContext()->employee = new Employee(1);
         $stockUpdated = $this->partialUpdateItem('/products/combinations/' . $toPatch . '/stocks', [
             'deltaQuantity' => 3,
             'location' => 'Rack A',
@@ -477,7 +479,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
         $targetId = $combinations[0]['combinationId'];
 
         // Add a stock movement so there is always at least one to assert against
-        \Context::getContext()->employee = new \Employee(1);
+        Context::getContext()->employee = new Employee(1);
         $this->partialUpdateItem('/products/combinations/' . $targetId . '/stocks', [
             'deltaQuantity' => 1,
         ], ['product_write'], Response::HTTP_NO_CONTENT);
@@ -696,9 +698,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('combinationId', $updated);
 
         // Clear images on the combination
-        $cleared = $this->partialUpdateItem('/products/combinations/' . $targetId . '/images/clears', null, ['product_write']);
-        $this->assertIsArray($cleared);
-        $this->assertArrayHasKey('combinationId', $cleared);
+        $this->deleteItem('/products/combinations/' . $targetId . '/images', ['product_write']);
     }
 
     public function testSetCombinationImagesInvalidPayload(): void

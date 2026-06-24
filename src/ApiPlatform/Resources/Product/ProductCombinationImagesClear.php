@@ -27,28 +27,22 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\RemoveAllCombinationImagesCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationForEditing;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSPartialUpdate(
-            uriTemplate: '/products/combinations/{combinationId}/images/clears',
+        new CQRSDelete(
+            uriTemplate: '/products/combinations/{combinationId}/images',
             requirements: ['combinationId' => '\\d+'],
+            output: false,
             CQRSCommand: RemoveAllCombinationImagesCommand::class,
-            // Return updated combination details
-            CQRSQuery: GetCombinationForEditing::class,
             scopes: [
                 'product_write',
             ],
             CQRSCommandMapping: [
                 '[_context][uriVariables][combinationId]' => '[combinationId]',
             ],
-            CQRSQueryMapping: ProductCombination::QUERY_MAPPING,
-            validationContext: ['groups' => ['Default', 'Update']],
-            allowEmptyBody: true,
         ),
     ],
     exceptionToStatus: [
@@ -59,6 +53,5 @@ use Symfony\Component\Validator\Constraints as Assert;
 class ProductCombinationImagesClear
 {
     #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 56])]
-    #[Assert\Positive(groups: ['Update'])]
     public int $combinationId;
 }
