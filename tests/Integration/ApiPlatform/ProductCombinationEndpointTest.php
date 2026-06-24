@@ -141,12 +141,17 @@ class ProductCombinationEndpointTest extends ApiTestCase
             [1, 2]
         ));
 
-        $this->createItem('/products/' . $productId . '/combinations', [
+        $generated = $this->createItem('/products/' . $productId . '/combinations', [
             'groupedAttributeIds' => [
                 1 => [2, 3],
                 2 => [10, 14],
             ],
         ], ['product_write']);
+        $this->assertIsArray($generated);
+        $this->assertArrayHasKey('items', $generated);
+        $this->assertArrayHasKey('totalItems', $generated);
+        $this->assertCount(4, $generated['items']);
+        $this->assertSame(4, $generated['totalItems']);
 
         // Ensure per-combination ProductSupplier rows exist (associate again now that combinations are created)
         $commandBus->handle(new SetSuppliersCommand(
@@ -696,6 +701,8 @@ class ProductCombinationEndpointTest extends ApiTestCase
         ], ['product_write']);
         $this->assertIsArray($updated);
         $this->assertArrayHasKey('combinationId', $updated);
+        $this->assertArrayHasKey('imageIds', $updated);
+        $this->assertEqualsCanonicalizing([$image1['imageId'], $image2['imageId']], $updated['imageIds']);
 
         // Clear images on the combination
         $this->deleteItem('/products/combinations/' . $targetId . '/images', ['product_write']);

@@ -115,8 +115,7 @@ class ProductCombination
 
     public ?int $lowStockThreshold = null;
 
-    #[ApiProperty(openapiContext: ['type' => 'string', 'format' => 'date-time', 'nullable' => true])]
-    public ?string $availableDate = null;
+    public ?\DateTimeImmutable $availableDate = null;
 
     #[ApiProperty(openapiContext: ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'nullable' => true])]
     #[LocalizedValue]
