@@ -34,9 +34,15 @@ class OrderInvoiceNoteEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
         self::createApiClient(['order_write']);
 
-        self::$orderInvoiceId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_order_invoice` FROM `' . _DB_PREFIX_ . 'order_invoice` ORDER BY `id_order_invoice` ASC'
+        // The demo fixtures ship no order invoices (they are generated on demand), so seed one.
+        $orderId = (int) \Db::getInstance()->getValue(
+            'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` ASC'
         );
+        $invoice = new \OrderInvoice();
+        $invoice->id_order = $orderId;
+        $invoice->number = 1;
+        $invoice->add();
+        self::$orderInvoiceId = (int) $invoice->id;
     }
 
     public static function tearDownAfterClass(): void
