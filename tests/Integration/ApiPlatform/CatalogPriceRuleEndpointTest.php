@@ -61,7 +61,8 @@ class CatalogPriceRuleEndpointTest extends ApiTestCase
             'fromQuantity' => 1,
             'shopId' => 1,
             'includeTax' => true,
-            'price' => '-1',
+            // price command arg is a float -> send a number, not a string (Symfony rejects string->float)
+            'price' => -1,
             'reductionType' => 'amount',
             'reductionValue' => '10',
         ];
