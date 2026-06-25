@@ -100,9 +100,9 @@ class CatalogPriceRuleEndpointTest extends ApiTestCase
     public function testAddCatalogPriceRule(): int
     {
         $rule = $this->createItem('/catalog-price-rules', $this->getCreateData(), ['catalog_price_rule_write']);
+        // A create without a query read-back returns only the generated identifier;
+        // the persisted values are asserted through the listing below.
         $this->assertArrayHasKey('catalogPriceRuleId', $rule);
-        $this->assertSame('Test catalog price rule', $rule['name']);
-        $this->assertSame('amount', $rule['reductionType']);
 
         return $rule['catalogPriceRuleId'];
     }
