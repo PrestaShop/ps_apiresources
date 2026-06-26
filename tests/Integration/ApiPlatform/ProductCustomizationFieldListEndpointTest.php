@@ -33,7 +33,7 @@ class ProductCustomizationFieldListEndpointTest extends ApiTestCase
 
         // A demo product (the customizable mug) already has a customization field.
         self::$productId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'customization_field` WHERE `deleted` = 0 ORDER BY `id_customization_field` ASC'
+            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'customization_field` ORDER BY `id_customization_field` ASC'
         );
     }
 
