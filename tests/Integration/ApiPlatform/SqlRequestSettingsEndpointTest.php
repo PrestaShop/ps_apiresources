@@ -53,7 +53,7 @@ class SqlRequestSettingsEndpointTest extends ApiTestCase
             Response::HTTP_NO_CONTENT
         );
 
-        $this->assertSame('utf-8', \Configuration::get('PS_ENCODING_FILE_MANAGER_SQL'));
+        $this->assertSame(1, (int) \Configuration::get('PS_ENCODING_FILE_MANAGER_SQL'));
         $this->assertSame(';', \Configuration::get('PS_SEPARATOR_FILE_MANAGER_SQL'));
     }
 }
