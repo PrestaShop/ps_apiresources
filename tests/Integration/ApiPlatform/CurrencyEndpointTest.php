@@ -146,4 +146,25 @@ class CurrencyEndpointTest extends ApiTestCase
             'currencyIds' => [$firstId, $secondId],
         ], ['currency_write'], Response::HTTP_NO_CONTENT);
     }
+
+    public function testInvalidCurrency(): void
+    {
+        // An empty isoCode violates the Create-group NotBlank constraint; exchangeRate
+        // and enabled are provided so isoCode is the only expected violation.
+        $response = $this->createItem('/currencies', [
+            'isoCode' => '',
+            'exchangeRate' => 1.0,
+            'enabled' => true,
+        ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($response);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'isoCode', 'message' => 'This value should not be blank.'],
+        ], $response);
+    }
+
+    public function testGetNonExistentCurrency(): void
+    {
+        $this->getItem('/currencies/999999', ['currency_read'], Response::HTTP_NOT_FOUND);
+    }
 }
