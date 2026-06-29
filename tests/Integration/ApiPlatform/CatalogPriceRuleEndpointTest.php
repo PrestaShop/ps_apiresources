@@ -93,6 +93,8 @@ class CatalogPriceRuleEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'create endpoint' => ['POST', '/catalog-price-rules'];
+        yield 'get endpoint' => ['GET', '/catalog-price-rules/1'];
+        yield 'update endpoint' => ['PATCH', '/catalog-price-rules/1'];
         yield 'delete endpoint' => ['DELETE', '/catalog-price-rules/1'];
         yield 'list endpoint' => ['GET', '/catalog-price-rules'];
     }
@@ -119,6 +121,57 @@ class CatalogPriceRuleEndpointTest extends ApiTestCase
         $first = $paginated['items'][0];
         $this->assertEquals($catalogPriceRuleId, $first['catalogPriceRuleId']);
         $this->assertSame('Test catalog price rule', $first['name']);
+    }
+
+    /**
+     * @depends testAddCatalogPriceRule
+     */
+    public function testGetCatalogPriceRule(int $catalogPriceRuleId): int
+    {
+        $rule = $this->getItem('/catalog-price-rules/' . $catalogPriceRuleId, ['catalog_price_rule_read']);
+
+        $this->assertEquals($catalogPriceRuleId, $rule['catalogPriceRuleId']);
+        $this->assertSame('Test catalog price rule', $rule['name']);
+        $this->assertEquals(0, $rule['currencyId']);
+        $this->assertEquals(0, $rule['countryId']);
+        $this->assertEquals(0, $rule['groupId']);
+        $this->assertEquals(1, $rule['fromQuantity']);
+        $this->assertEquals(1, $rule['shopId']);
+        $this->assertTrue($rule['includeTax']);
+        $this->assertEquals(-1.0, (float) $rule['price']);
+        // The reduction value object is read back as type + value, the type is preserved.
+        $this->assertSame('amount', $rule['reductionType']);
+        $this->assertEquals(10.0, (float) $rule['reductionValue']);
+
+        return $catalogPriceRuleId;
+    }
+
+    public function testUpdateCatalogPriceRule(): void
+    {
+        $catalogPriceRuleId = $this->createRule('Rule to update');
+
+        $updated = $this->partialUpdateItem(
+            '/catalog-price-rules/' . $catalogPriceRuleId,
+            [
+                'name' => 'Updated catalog price rule',
+                'fromQuantity' => 5,
+                // setReduction() is a two-parameter setter, so type and value must travel together.
+                'reductionType' => 'percentage',
+                'reductionValue' => '15',
+            ],
+            ['catalog_price_rule_write']
+        );
+
+        $this->assertSame('Updated catalog price rule', $updated['name']);
+        $this->assertEquals(5, $updated['fromQuantity']);
+        $this->assertSame('percentage', $updated['reductionType']);
+        $this->assertEquals(15.0, (float) $updated['reductionValue']);
+
+        // The update is persisted and visible on a fresh read.
+        $fetched = $this->getItem('/catalog-price-rules/' . $catalogPriceRuleId, ['catalog_price_rule_read']);
+        $this->assertSame('Updated catalog price rule', $fetched['name']);
+        $this->assertSame('percentage', $fetched['reductionType']);
+        $this->assertEquals(15.0, (float) $fetched['reductionValue']);
     }
 
     public function testDeleteCatalogPriceRule(): void
