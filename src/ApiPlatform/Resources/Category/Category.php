@@ -45,6 +45,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSGet(
             uriTemplate: '/categories/{categoryId}',
+            requirements: ['categoryId' => '\d+'],
             CQRSQuery: GetCategoryForEditing::class,
             scopes: [
                 'category_read',
