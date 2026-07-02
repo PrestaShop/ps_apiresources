@@ -46,8 +46,6 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class SetAddressRequiredFields
 {
-    /**
-     * @var string[] Allowed values: company, address2, postcode, other, phone, phone_mobile, vat_number, dni
-     */
+    // Allowed values: company, address2, postcode, other, phone, phone_mobile, vat_number, dni.
     public array $requiredFields;
 }
