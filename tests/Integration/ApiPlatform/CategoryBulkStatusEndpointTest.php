@@ -26,6 +26,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CategoryBulkStatusEndpointTest extends ApiTestCase
 {
+    private static int $categoryCounter = 0;
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -44,7 +46,7 @@ class CategoryBulkStatusEndpointTest extends ApiTestCase
         parent::tearDownAfterClass();
     }
 
-    public function getProtectedEndpoints(): iterable
+    public static function getProtectedEndpoints(): iterable
     {
         yield 'bulk enable categories endpoint' => ['PUT', '/categories/bulk-enable'];
         yield 'bulk disable categories endpoint' => ['PUT', '/categories/bulk-disable'];
@@ -83,8 +85,6 @@ class CategoryBulkStatusEndpointTest extends ApiTestCase
             $this->assertFalse((bool) (new \Category($categoryId))->active);
         }
     }
-
-    private static int $categoryCounter = 0;
 
     private function createCategory(bool $active): int
     {
