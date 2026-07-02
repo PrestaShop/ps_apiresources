@@ -54,7 +54,7 @@ class AddressRequiredFieldsEndpointTest extends ApiTestCase
         );
 
         $storedFields = \Db::getInstance()->executeS(
-            "SELECT `field_name` FROM `" . _DB_PREFIX_ . "required_field` WHERE `object_name` = 'CustomerAddress'"
+            'SELECT `field_name` FROM `' . _DB_PREFIX_ . "required_field` WHERE `object_name` = 'CustomerAddress'"
         );
         $fieldNames = array_column($storedFields ?: [], 'field_name');
 
