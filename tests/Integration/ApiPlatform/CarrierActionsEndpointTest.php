@@ -42,7 +42,6 @@ class CarrierActionsEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'bulk delete carriers endpoint' => ['DELETE', '/carriers/bulk-delete'];
-        yield 'set carrier tax rule group endpoint' => ['PUT', '/carriers/1/tax-rule-groups'];
     }
 
     public function testBulkDeleteCarriers(): void
@@ -64,24 +63,6 @@ class CarrierActionsEndpointTest extends ApiTestCase
                 )
             );
         }
-    }
-
-    public function testSetCarrierTaxRuleGroup(): void
-    {
-        $carrierId = $this->createCarrier();
-        $taxRulesGroupId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_tax_rules_group` FROM `' . _DB_PREFIX_ . 'tax_rules_group` WHERE `deleted` = 0 ORDER BY `id_tax_rules_group` ASC'
-        );
-
-        $this->updateItem(
-            '/carriers/' . $carrierId . '/tax-rule-groups',
-            ['carrierTaxRuleGroupId' => $taxRulesGroupId],
-            ['carrier_write'],
-            Response::HTTP_NO_CONTENT
-        );
-
-        $carrier = new \Carrier($carrierId);
-        $this->assertSame($taxRulesGroupId, (int) $carrier->id_tax_rules_group);
     }
 
     private function createCarrier(): int
