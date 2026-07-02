@@ -37,7 +37,7 @@ class CategoryBulkStatusEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         $ids = \Db::getInstance()->executeS(
-            "SELECT `id_category` FROM `" . _DB_PREFIX_ . "category` WHERE `id_category` > 1 AND `id_category` IN (SELECT `id_category` FROM `" . _DB_PREFIX_ . "category_lang` WHERE `name` = 'Test category gap')"
+            'SELECT `id_category` FROM `' . _DB_PREFIX_ . 'category` WHERE `id_category` > 1 AND `id_category` IN (SELECT `id_category` FROM `' . _DB_PREFIX_ . "category_lang` WHERE `name` = 'Test category gap')"
         );
         foreach ($ids ?: [] as $row) {
             (new \Category((int) $row['id_category']))->delete();
