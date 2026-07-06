@@ -52,27 +52,27 @@ class TaxRuleEndpointTest extends ApiTestCase
     {
         $fixtures = $this->createTaxRuleFixtures();
 
-        // Global listing without any filter returns tax rules across all groups
-        $allTaxRules = $this->listItems('/tax-rules', ['tax_rule_read']);
-        $this->assertGreaterThanOrEqual(3, $allTaxRules['totalItems']);
-
-        // Filtered by group the listing only contains the fixture rules, ordered by ID by default
+        // Filtered by group: works the same on every version, so also reveals whether the
+        // extended columns (taxRulesGroupId, countryId, stateId, taxName) exist on this Core.
         $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
             'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
         ]);
         $this->assertEquals(3, $taxRules['totalItems']);
+
+        $hasExtendedColumns = $taxRules['items'][0]['taxRulesGroupId'] !== null;
+
         $this->assertEquals(
             [
                 'taxRuleId' => $fixtures['taxRuleIds']['FR'],
-                'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
-                'countryId' => $fixtures['countryIds']['FR'],
+                'taxRulesGroupId' => $hasExtendedColumns ? $fixtures['taxRulesGroupId'] : null,
+                'countryId' => $hasExtendedColumns ? $fixtures['countryIds']['FR'] : null,
                 'countryName' => 'France',
-                'stateId' => 0,
+                'stateId' => $hasExtendedColumns ? 0 : null,
                 'stateName' => '--',
                 'zipcode' => '--',
                 'behavior' => 0,
                 'rate' => 10.0,
-                'taxName' => 'API Test Tax',
+                'taxName' => $hasExtendedColumns ? 'API Test Tax' : null,
                 'description' => 'API test rule FR',
             ],
             $taxRules['items'][0]
@@ -83,6 +83,16 @@ class TaxRuleEndpointTest extends ApiTestCase
             'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
         ], $taxRules['filters']);
 
+        // Unfiltered listing only works once the group filter is optional (9.2+); empty on older Core.
+        $allTaxRules = $this->listItems('/tax-rules', ['tax_rule_read']);
+        if ($hasExtendedColumns) {
+            $this->assertGreaterThanOrEqual(3, $allTaxRules['totalItems']);
+        } else {
+            $this->assertEquals(0, $allTaxRules['totalItems']);
+        }
+
+        $fixtures['hasExtendedColumns'] = $hasExtendedColumns;
+
         return $fixtures;
     }
 
@@ -91,7 +101,7 @@ class TaxRuleEndpointTest extends ApiTestCase
      */
     public function testFilterTaxRules(array $fixtures): array
     {
-        // Filter by behavior inside the fixtures group
+        // Filter by behavior: predates the extended columns, works everywhere
         $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
             'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
             'behavior' => 1,
@@ -100,24 +110,27 @@ class TaxRuleEndpointTest extends ApiTestCase
         $this->assertEquals($fixtures['taxRuleIds']['IT'], $taxRules['items'][0]['taxRuleId']);
         $this->assertEquals('Italy', $taxRules['items'][0]['countryName']);
 
-        // Filter by country name (partial match)
-        $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
-            'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
-            'countryName' => 'Germ',
-        ]);
-        $this->assertEquals(1, $taxRules['totalItems']);
-        $this->assertEquals($fixtures['taxRuleIds']['DE'], $taxRules['items'][0]['taxRuleId']);
+        // These filter keys only exist since the extended columns landed; ignored on older Core
+        if ($fixtures['hasExtendedColumns']) {
+            // Filter by country name (partial match)
+            $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
+                'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+                'countryName' => 'Germ',
+            ]);
+            $this->assertEquals(1, $taxRules['totalItems']);
+            $this->assertEquals($fixtures['taxRuleIds']['DE'], $taxRules['items'][0]['taxRuleId']);
 
-        // Filter by country id (exact match)
-        $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
-            'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
-            'countryId' => $fixtures['countryIds']['IT'],
-        ]);
-        $this->assertEquals(1, $taxRules['totalItems']);
-        $this->assertEquals($fixtures['taxRuleIds']['IT'], $taxRules['items'][0]['taxRuleId']);
-        $this->assertEquals($fixtures['countryIds']['IT'], $taxRules['items'][0]['countryId']);
+            // Filter by country id (exact match)
+            $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
+                'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+                'countryId' => $fixtures['countryIds']['IT'],
+            ]);
+            $this->assertEquals(1, $taxRules['totalItems']);
+            $this->assertEquals($fixtures['taxRuleIds']['IT'], $taxRules['items'][0]['taxRuleId']);
+            $this->assertEquals($fixtures['countryIds']['IT'], $taxRules['items'][0]['countryId']);
+        }
 
-        // Filter by tax name matches all the fixture rules (they share the same tax)
+        // Matches all fixture rules either way, since they share the same tax
         $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
             'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
             'taxName' => 'API Test Tax',

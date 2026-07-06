@@ -63,14 +63,16 @@ class TaxRuleList
     #[ApiProperty(identifier: true)]
     public int $taxRuleId;
 
-    public int $taxRulesGroupId;
+    // Null before PrestaShop 9.2 (column not selected by the grid query yet)
+    public ?int $taxRulesGroupId = null;
 
-    public int $countryId;
+    // Null before PrestaShop 9.2 (column not selected by the grid query yet)
+    public ?int $countryId = null;
 
     public string $countryName;
 
-    // 0 when the tax rule applies to the whole country (no state scope)
-    public int $stateId;
+    // 0 when scoped to a whole country, null before PrestaShop 9.2
+    public ?int $stateId = null;
 
     public string $stateName;
 
