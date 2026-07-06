@@ -41,20 +41,13 @@ class OrderStatusEndpointTest extends ApiTestCase
         self::$originalMailMethod = (int) \Configuration::get('PS_MAIL_METHOD');
         \Configuration::updateValue('PS_MAIL_METHOD', \Mail::METHOD_DISABLE);
 
-        // Use an order whose current (latest history) state is "logable" and only move it between
-        // logable states, so the transition never adjusts stock.
-        $order = \Db::getInstance()->getRow(
-            'SELECT oh.`id_order`, oh.`id_order_state`
-             FROM `' . _DB_PREFIX_ . 'order_history` oh
-             INNER JOIN `' . _DB_PREFIX_ . 'order_state` os ON os.`id_order_state` = oh.`id_order_state`
-             WHERE os.`logable` = 1
-             AND oh.`id_order_history` = (
-                 SELECT MAX(`id_order_history`) FROM `' . _DB_PREFIX_ . 'order_history` WHERE `id_order` = oh.`id_order`
-             )
-             ORDER BY oh.`id_order` DESC'
+        self::$orderId = (int) \Db::getInstance()->getValue(
+            'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` DESC'
         );
-        self::$orderId = (int) $order['id_order'];
-        self::$originalState = (int) $order['id_order_state'];
+        self::$originalState = (int) \Db::getInstance()->getValue(
+            'SELECT `id_order_state` FROM `' . _DB_PREFIX_ . 'order_history`
+             WHERE `id_order` = ' . self::$orderId . ' ORDER BY `id_order_history` DESC'
+        );
     }
 
     public static function tearDownAfterClass(): void
@@ -73,11 +66,12 @@ class OrderStatusEndpointTest extends ApiTestCase
 
     public function testUpdateOrderStatus(): void
     {
-        $newStateId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_order_state` FROM `' . _DB_PREFIX_ . 'order_state`
-             WHERE `deleted` = 0 AND `logable` = 1 AND `id_order_state` <> ' . self::$originalState . '
-             ORDER BY `id_order_state` ASC'
-        );
+        // "Processing in progress" / "Payment accepted" are both logable, non-error states,
+        // so moving between them (or from the current state) never adjusts stock.
+        $newStateId = (int) \Configuration::get('PS_OS_PREPARATION');
+        if ($newStateId === 0 || $newStateId === self::$originalState) {
+            $newStateId = (int) \Configuration::get('PS_OS_PAYMENT');
+        }
 
         $this->updateItem(
             '/orders/' . self::$orderId . '/status',
