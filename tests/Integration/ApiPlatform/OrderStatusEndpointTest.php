@@ -41,14 +41,20 @@ class OrderStatusEndpointTest extends ApiTestCase
         self::$originalMailMethod = (int) \Configuration::get('PS_MAIL_METHOD');
         \Configuration::updateValue('PS_MAIL_METHOD', \Mail::METHOD_DISABLE);
 
-        // Use an order whose current state is "logable" and only move it between logable states,
-        // so the transition never adjusts stock.
-        self::$orderId = (int) \Db::getInstance()->getValue(
-            'SELECT o.`id_order` FROM `' . _DB_PREFIX_ . 'orders` o
-             INNER JOIN `' . _DB_PREFIX_ . 'order_state` os ON os.`id_order_state` = o.`current_state`
-             WHERE os.`logable` = 1 ORDER BY o.`id_order` DESC'
+        // Use an order whose current (latest history) state is "logable" and only move it between
+        // logable states, so the transition never adjusts stock.
+        $order = \Db::getInstance()->getRow(
+            'SELECT oh.`id_order`, oh.`id_order_state`
+             FROM `' . _DB_PREFIX_ . 'order_history` oh
+             INNER JOIN `' . _DB_PREFIX_ . 'order_state` os ON os.`id_order_state` = oh.`id_order_state`
+             WHERE os.`logable` = 1
+             AND oh.`id_order_history` = (
+                 SELECT MAX(`id_order_history`) FROM `' . _DB_PREFIX_ . 'order_history` WHERE `id_order` = oh.`id_order`
+             )
+             ORDER BY oh.`id_order` DESC'
         );
-        self::$originalState = (int) (new \Order(self::$orderId))->getCurrentState();
+        self::$orderId = (int) $order['id_order'];
+        self::$originalState = (int) $order['id_order_state'];
     }
 
     public static function tearDownAfterClass(): void
