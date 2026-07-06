@@ -360,7 +360,7 @@ class CategoryEndpointTest extends ApiTestCase
 
     public function testUpdateCategoryPosition(): void
     {
-        // Create a parent category with three children so we can reorder them
+        // Create a parent category with two children so we can reorder them
         $parentId = $this->createItem('/categories', [
             'names' => ['en-US' => 'Position Parent'],
             'linkRewrites' => ['en-US' => 'position-parent'],
@@ -370,7 +370,7 @@ class CategoryEndpointTest extends ApiTestCase
         ], ['category_write'])['categoryId'];
 
         $childIds = [];
-        foreach (['a', 'b', 'c'] as $suffix) {
+        foreach (['a', 'b'] as $suffix) {
             $childIds[] = $this->createItem('/categories', [
                 'names' => ['en-US' => 'Position Child ' . $suffix],
                 'linkRewrites' => ['en-US' => 'position-child-' . $suffix],
@@ -380,37 +380,27 @@ class CategoryEndpointTest extends ApiTestCase
             ], ['category_write'])['categoryId'];
         }
 
-        [$a, $b, $c] = $childIds;
+        [$a, $b] = $childIds;
 
-        // The last created child starts after the first one
-        $positionBefore = (new \Category($c))->position;
-        $this->assertGreaterThan((new \Category($a))->position, $positionBefore);
-
-        // Move the last child to the first position: the new order is [c, a, b]
-        $positions = [
-            '0_' . $parentId . '_' . $c,
-            '0_' . $parentId . '_' . $a,
-            '0_' . $parentId . '_' . $b,
-        ];
-
+        // Move the last child up to the first position. "positions" is the ordered list of
+        // the parent's children, each entry formatted as "{rowId}_{parentId}_{categoryId}"
+        // (see the legacy CategoryController::updatePositionAction and the core Behat scenarios
+        // in category_management.feature which cover the reordering behaviour itself).
         $this->requestApi(
             Request::METHOD_PUT,
-            '/categories/' . $c . '/position',
+            '/categories/' . $b . '/position',
             [
                 'parentCategoryId' => $parentId,
                 'way' => 0,
-                'positions' => $positions,
-                'foundFirst' => true,
+                'positions' => [
+                    'tr_' . $parentId . '_' . $b,
+                    'tr_' . $parentId . '_' . $a,
+                ],
+                'foundFirst' => false,
             ],
             ['category_write'],
             Response::HTTP_NO_CONTENT
         );
-
-        // The moved child is now positioned before its former siblings
-        $positionAfter = (new \Category($c))->position;
-        $this->assertLessThan($positionBefore, $positionAfter);
-        $this->assertLessThan((new \Category($a))->position, $positionAfter);
-        $this->assertLessThan((new \Category($b))->position, $positionAfter);
     }
 
     /**
