@@ -76,7 +76,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/categories/root',
+            uriTemplate: '/categories/roots',
             validationContext: [IframeValidationGroupsResolver::class, 'create'],
             CQRSCommand: AddRootCategoryCommand::class,
             CQRSQuery: GetCategoryForEditing::class,
@@ -87,7 +87,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::ADD_ROOT_COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/categories/root/{categoryId}',
+            uriTemplate: '/categories/roots/{categoryId}',
             requirements: ['categoryId' => '\d+'],
             validationContext: [IframeValidationGroupsResolver::class, 'update'],
             CQRSCommand: EditRootCategoryCommand::class,

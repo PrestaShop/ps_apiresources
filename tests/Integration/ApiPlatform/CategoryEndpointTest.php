@@ -102,17 +102,17 @@ class CategoryEndpointTest extends ApiTestCase
 
         yield 'create root endpoint' => [
             'POST',
-            '/categories/root',
+            '/categories/roots',
         ];
 
         yield 'patch root endpoint' => [
             'PATCH',
-            '/categories/root/2',
+            '/categories/roots/2',
         ];
 
         yield 'update position endpoint' => [
             'PUT',
-            '/categories/3/position',
+            '/categories/3/positions',
         ];
     }
 
@@ -313,7 +313,7 @@ class CategoryEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ];
 
-        $rootCategory = $this->createItem('/categories/root', $postData, ['category_write']);
+        $rootCategory = $this->createItem('/categories/roots', $postData, ['category_write']);
 
         $this->assertArrayHasKey('categoryId', $rootCategory);
         $this->assertSame($postData['names'], $rootCategory['names']);
@@ -334,7 +334,7 @@ class CategoryEndpointTest extends ApiTestCase
             ],
         ];
 
-        $updated = $this->partialUpdateItem('/categories/root/' . $categoryId, $patchData, ['category_write']);
+        $updated = $this->partialUpdateItem('/categories/roots/' . $categoryId, $patchData, ['category_write']);
         $this->assertSame($patchData['names'], $updated['names']);
 
         // Verify the GET reflects the change too
@@ -351,7 +351,7 @@ class CategoryEndpointTest extends ApiTestCase
         );
 
         $this->partialUpdateItem(
-            '/categories/root/' . $unknownCategoryId,
+            '/categories/roots/' . $unknownCategoryId,
             ['names' => ['en-US' => 'Does not matter']],
             ['category_write'],
             Response::HTTP_NOT_FOUND
@@ -388,7 +388,7 @@ class CategoryEndpointTest extends ApiTestCase
         // in category_management.feature which cover the reordering behaviour itself).
         $this->requestApi(
             Request::METHOD_PUT,
-            '/categories/' . $b . '/position',
+            '/categories/' . $b . '/positions',
             [
                 'parentCategoryId' => $parentId,
                 'way' => 0,

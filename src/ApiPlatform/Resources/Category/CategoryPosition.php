@@ -32,7 +32,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/categories/{categoryId}/position',
+            uriTemplate: '/categories/{categoryId}/positions',
             requirements: ['categoryId' => '\d+'],
             read: false,
             output: false,
