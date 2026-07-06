@@ -236,6 +236,7 @@ class Category
     /**
      * AddRootCategoryCommand takes the localized names and link rewrites as constructor
      * arguments named "name" and "linkRewrite" (no parent category, unlike AddCategoryCommand).
+     * The status maps to "isActive" (the command constructor argument / setter), not "isEnabled".
      */
     public const ADD_ROOT_COMMAND_MAPPING = [
         '[names]' => '[name]',

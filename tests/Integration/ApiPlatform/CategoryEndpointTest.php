@@ -318,6 +318,7 @@ class CategoryEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('categoryId', $rootCategory);
         $this->assertSame($postData['names'], $rootCategory['names']);
         $this->assertSame($postData['linkRewrites'], $rootCategory['linkRewrites']);
+        $this->assertTrue($rootCategory['enabled']);
 
         return $rootCategory['categoryId'];
     }
@@ -400,6 +401,26 @@ class CategoryEndpointTest extends ApiTestCase
             ],
             ['category_write'],
             Response::HTTP_NO_CONTENT
+        );
+    }
+
+    public function testInvalidUpdateCategoryPosition(): void
+    {
+        // The moved category is not present in the "positions" list, so the handler cannot
+        // resolve its new position and throws a CategoryException, mapped to 422.
+        $this->requestApi(
+            Request::METHOD_PUT,
+            '/categories/3/positions',
+            [
+                'parentCategoryId' => 2,
+                'way' => 0,
+                'positions' => [
+                    'tr_2_999999',
+                ],
+                'foundFirst' => false,
+            ],
+            ['category_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
         );
     }
 

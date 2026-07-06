@@ -61,7 +61,9 @@ class CategoryPosition
 
     /**
      * The full ordered list of the parent's children, each entry formatted as
-     * "{rowId}_{parentCategoryId}_{categoryId}" (the row id prefix is ignored by the handler).
+     * "{rowId}_{parentCategoryId}_{categoryId}". Only the two trailing segments are read by the
+     * handler; the leading row id (e.g. "tr_", "0_") is a legacy grid artifact and is ignored,
+     * so any prefix may be passed.
      */
     #[ApiProperty(openapiContext: [
         'type' => 'array',
