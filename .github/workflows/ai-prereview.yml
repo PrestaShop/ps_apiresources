@@ -5,7 +5,10 @@ on:
     types: [labeled]
 
 concurrency:
-  group: ai-prereview-${{ github.event.pull_request.number }}
+  # Scope the group to the label too: the workflow fires on any `labeled` event but
+  # only does work for `Need AI review`. Keying on the PR number alone let an unrelated
+  # label (e.g. `Waiting for author`) cancel an in-progress review via cancel-in-progress.
+  group: ai-prereview-${{ github.event.pull_request.number }}-${{ github.event.label.name }}
   cancel-in-progress: true
 
 jobs:
