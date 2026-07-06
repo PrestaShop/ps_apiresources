@@ -63,6 +63,21 @@ class CartEmailEndpointTest extends ApiTestCase
         );
     }
 
+    public function testSendUnknownCartReturnsNotFound(): void
+    {
+        $unknownCartId = 1 + (int) \Db::getInstance()->getValue(
+            'SELECT MAX(`id_cart`) FROM `' . _DB_PREFIX_ . 'cart`'
+        );
+
+        $this->requestApi(
+            'PUT',
+            '/carts/' . $unknownCartId . '/emails',
+            null,
+            ['cart_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
     private function createCustomerCart(): int
     {
         $customerId = (int) \Db::getInstance()->getValue(
@@ -76,6 +91,20 @@ class CartEmailEndpointTest extends ApiTestCase
         $cart->id_shop = 1;
         $cart->add();
 
+        // A cart with a product is more representative of a real "send to customer" case.
+        $cart->updateQty(1, $this->getSimpleInStockProductId());
+
         return (int) $cart->id;
+    }
+
+    private function getSimpleInStockProductId(): int
+    {
+        return (int) \Db::getInstance()->getValue(
+            'SELECT sa.`id_product` FROM `' . _DB_PREFIX_ . 'stock_available` sa
+             INNER JOIN `' . _DB_PREFIX_ . 'product` p ON p.`id_product` = sa.`id_product`
+             WHERE sa.`quantity` > 0 AND sa.`id_product_attribute` = 0 AND p.`active` = 1
+             AND sa.`id_product` NOT IN (SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product_attribute`)
+             ORDER BY sa.`id_product` ASC'
+        );
     }
 }
