@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\DatabaseDump;
 
 class CartEmailEndpointTest extends ApiTestCase
 {
@@ -33,6 +34,8 @@ class CartEmailEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
         self::createApiClient(['cart_write']);
 
+        DatabaseDump::restoreTables(['cart', 'cart_product']);
+
         // Disable real email sending so Mail::send() succeeds without an SMTP server.
         self::$originalMailMethod = (int) \Configuration::get('PS_MAIL_METHOD');
         \Configuration::updateValue('PS_MAIL_METHOD', \Mail::METHOD_DISABLE);
@@ -41,6 +44,8 @@ class CartEmailEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         \Configuration::updateValue('PS_MAIL_METHOD', self::$originalMailMethod);
+
+        DatabaseDump::restoreTables(['cart', 'cart_product']);
 
         parent::tearDownAfterClass();
     }
