@@ -30,8 +30,6 @@ class OrderPartialRefundEndpointTest extends ApiTestCase
 
     private static int $orderId;
 
-    private static int $originalState;
-
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -41,24 +39,22 @@ class OrderPartialRefundEndpointTest extends ApiTestCase
         self::$originalMailMethod = (int) \Configuration::get('PS_MAIL_METHOD');
         \Configuration::updateValue('PS_MAIL_METHOD', \Mail::METHOD_DISABLE);
 
+        // Use an order that is ALREADY delivered (has a delivery-flagged state in its history):
+        // partial refund is allowed on it, and with restockRefundedProducts=false it never
+        // reinjects stock. We don't change its state ourselves (delivering an order would
+        // decrement stock, which is not possible without an employee in the API context).
         self::$orderId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` DESC'
+            'SELECT oh.`id_order`
+             FROM `' . _DB_PREFIX_ . 'order_history` oh
+             INNER JOIN `' . _DB_PREFIX_ . 'order_state` os ON os.`id_order_state` = oh.`id_order_state`
+             WHERE os.`delivery` = 1
+             GROUP BY oh.`id_order`
+             ORDER BY oh.`id_order` DESC'
         );
-        self::$originalState = (int) \Db::getInstance()->getValue(
-            'SELECT `id_order_state` FROM `' . _DB_PREFIX_ . 'order_history`
-             WHERE `id_order` = ' . self::$orderId . ' ORDER BY `id_order_history` DESC'
-        );
-
-        // Make the order paid and delivered so a partial refund is allowed and, with
-        // restockRefundedProducts=false, never reinjects stock.
-        $order = new \Order(self::$orderId);
-        $order->setCurrentState((int) \Configuration::get('PS_OS_PAYMENT'));
-        $order->setCurrentState((int) \Configuration::get('PS_OS_DELIVERED'));
     }
 
     public static function tearDownAfterClass(): void
     {
-        (new \Order(self::$orderId))->setCurrentState(self::$originalState);
         \Configuration::updateValue('PS_MAIL_METHOD', self::$originalMailMethod);
 
         parent::tearDownAfterClass();
@@ -71,6 +67,10 @@ class OrderPartialRefundEndpointTest extends ApiTestCase
 
     public function testIssuePartialRefund(): void
     {
+        if (self::$orderId === 0) {
+            $this->markTestSkipped('No delivered order available in the fixtures.');
+        }
+
         $orderDetailId = (int) \Db::getInstance()->getValue(
             'SELECT `id_order_detail` FROM `' . _DB_PREFIX_ . 'order_detail`
              WHERE `id_order` = ' . self::$orderId . ' ORDER BY `id_order_detail` ASC'
