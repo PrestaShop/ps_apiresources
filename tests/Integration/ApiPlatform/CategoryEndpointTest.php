@@ -99,6 +99,21 @@ class CategoryEndpointTest extends ApiTestCase
             'DELETE',
             '/categories/bulk-delete/associate_and_disable',
         ];
+
+        yield 'create root endpoint' => [
+            'POST',
+            '/categories/root',
+        ];
+
+        yield 'patch root endpoint' => [
+            'PATCH',
+            '/categories/root/2',
+        ];
+
+        yield 'update position endpoint' => [
+            'PUT',
+            '/categories/3/position',
+        ];
     }
 
     public function testAddCategory(): int
@@ -281,6 +296,121 @@ class CategoryEndpointTest extends ApiTestCase
         foreach ($bulkCategories as $categoryId) {
             $this->getItem('/categories/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
         }
+    }
+
+    public function testAddRootCategory(): int
+    {
+        $postData = [
+            'names' => [
+                'en-US' => 'Root Category EN',
+                'fr-FR' => 'Catégorie racine FR',
+            ],
+            'linkRewrites' => [
+                'en-US' => 'root-category-en',
+                'fr-FR' => 'categorie-racine-fr',
+            ],
+            'enabled' => true,
+            'shopIds' => [1],
+        ];
+
+        $rootCategory = $this->createItem('/categories/root', $postData, ['category_write']);
+
+        $this->assertArrayHasKey('categoryId', $rootCategory);
+        $this->assertSame($postData['names'], $rootCategory['names']);
+        $this->assertSame($postData['linkRewrites'], $rootCategory['linkRewrites']);
+
+        return $rootCategory['categoryId'];
+    }
+
+    /**
+     * @depends testAddRootCategory
+     */
+    public function testEditRootCategory(int $categoryId): int
+    {
+        $patchData = [
+            'names' => [
+                'en-US' => 'Root Category EN edited',
+                'fr-FR' => 'Catégorie racine FR modifiée',
+            ],
+        ];
+
+        $updated = $this->partialUpdateItem('/categories/root/' . $categoryId, $patchData, ['category_write']);
+        $this->assertSame($patchData['names'], $updated['names']);
+
+        // Verify the GET reflects the change too
+        $fetched = $this->getItem('/categories/' . $categoryId, ['category_read']);
+        $this->assertSame($patchData['names'], $fetched['names']);
+
+        return $categoryId;
+    }
+
+    public function testEditUnknownRootCategoryReturnsNotFound(): void
+    {
+        $unknownCategoryId = 1 + (int) \Db::getInstance()->getValue(
+            'SELECT MAX(`id_category`) FROM `' . _DB_PREFIX_ . 'category`'
+        );
+
+        $this->partialUpdateItem(
+            '/categories/root/' . $unknownCategoryId,
+            ['names' => ['en-US' => 'Does not matter']],
+            ['category_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
+    public function testUpdateCategoryPosition(): void
+    {
+        // Create a parent category with three children so we can reorder them
+        $parentId = $this->createItem('/categories', [
+            'names' => ['en-US' => 'Position Parent'],
+            'linkRewrites' => ['en-US' => 'position-parent'],
+            'isActive' => true,
+            'parentCategoryId' => 2,
+            'shopIds' => [1],
+        ], ['category_write'])['categoryId'];
+
+        $childIds = [];
+        foreach (['a', 'b', 'c'] as $suffix) {
+            $childIds[] = $this->createItem('/categories', [
+                'names' => ['en-US' => 'Position Child ' . $suffix],
+                'linkRewrites' => ['en-US' => 'position-child-' . $suffix],
+                'isActive' => true,
+                'parentCategoryId' => $parentId,
+                'shopIds' => [1],
+            ], ['category_write'])['categoryId'];
+        }
+
+        [$a, $b, $c] = $childIds;
+
+        // The last created child starts after the first one
+        $positionBefore = (new \Category($c))->position;
+        $this->assertGreaterThan((new \Category($a))->position, $positionBefore);
+
+        // Move the last child to the first position: the new order is [c, a, b]
+        $positions = [
+            '0_' . $parentId . '_' . $c,
+            '0_' . $parentId . '_' . $a,
+            '0_' . $parentId . '_' . $b,
+        ];
+
+        $this->requestApi(
+            Request::METHOD_PUT,
+            '/categories/' . $c . '/position',
+            [
+                'parentCategoryId' => $parentId,
+                'way' => 0,
+                'positions' => $positions,
+                'foundFirst' => true,
+            ],
+            ['category_write'],
+            Response::HTTP_NO_CONTENT
+        );
+
+        // The moved child is now positioned before its former siblings
+        $positionAfter = (new \Category($c))->position;
+        $this->assertLessThan($positionBefore, $positionAfter);
+        $this->assertLessThan((new \Category($a))->position, $positionAfter);
+        $this->assertLessThan((new \Category($b))->position, $positionAfter);
     }
 
     /**

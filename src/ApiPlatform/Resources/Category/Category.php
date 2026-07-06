@@ -26,9 +26,11 @@ use PrestaShop\Module\APIResources\Validation\IframeValidationGroupsResolver;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddRootCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCoverImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryThumbnailImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\EditCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\EditRootCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\SetCategoryIsEnabledCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
@@ -72,6 +74,29 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+        ),
+        new CQRSCreate(
+            uriTemplate: '/categories/root',
+            validationContext: [IframeValidationGroupsResolver::class, 'create'],
+            CQRSCommand: AddRootCategoryCommand::class,
+            CQRSQuery: GetCategoryForEditing::class,
+            scopes: [
+                'category_write',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::ADD_ROOT_COMMAND_MAPPING,
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/categories/root/{categoryId}',
+            requirements: ['categoryId' => '\d+'],
+            validationContext: [IframeValidationGroupsResolver::class, 'update'],
+            CQRSCommand: EditRootCategoryCommand::class,
+            CQRSQuery: GetCategoryForEditing::class,
+            scopes: [
+                'category_write',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::EDIT_ROOT_COMMAND_MAPPING,
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/categories/{categoryId}/status',
@@ -206,5 +231,31 @@ class Category
         '[metaTitles]' => '[localizedMetaTitles]',
         '[metaDescriptions]' => '[localizedMetaDescriptions]',
         '[linkRewrites]' => '[localizedLinkRewrites]',
+    ];
+
+    /**
+     * AddRootCategoryCommand takes the localized names and link rewrites as constructor
+     * arguments named "name" and "linkRewrite" (no parent category, unlike AddCategoryCommand).
+     */
+    public const ADD_ROOT_COMMAND_MAPPING = [
+        '[names]' => '[name]',
+        '[linkRewrites]' => '[linkRewrite]',
+        '[enabled]' => '[isActive]',
+        '[descriptions]' => '[localizedDescriptions]',
+        '[additionalDescriptions]' => '[localizedAdditionalDescriptions]',
+        '[shopIds]' => '[associatedShopIds]',
+        '[metaTitles]' => '[localizedMetaTitles]',
+        '[metaDescriptions]' => '[localizedMetaDescriptions]',
+    ];
+
+    public const EDIT_ROOT_COMMAND_MAPPING = [
+        '[names]' => '[localizedNames]',
+        '[linkRewrites]' => '[localizedLinkRewrites]',
+        '[enabled]' => '[isActive]',
+        '[descriptions]' => '[localizedDescriptions]',
+        '[additionalDescriptions]' => '[localizedAdditionalDescriptions]',
+        '[shopIds]' => '[associatedShopIds]',
+        '[metaTitles]' => '[localizedMetaTitles]',
+        '[metaDescriptions]' => '[localizedMetaDescriptions]',
     ];
 }
