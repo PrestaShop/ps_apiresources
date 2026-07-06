@@ -68,6 +68,9 @@ class CartEmailEndpointTest extends ApiTestCase
         );
     }
 
+    // Note: the CartException => 422 mapping is not exercised here. The only way the handler
+    // raises a generic CartException is a mail-send failure or a cart whose customer no longer
+    // exists — states that cannot be reliably set up through this endpoint in an integration test.
     public function testSendUnknownCartReturnsNotFound(): void
     {
         $unknownCartId = 1 + (int) \Db::getInstance()->getValue(
