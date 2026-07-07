@@ -51,14 +51,28 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
 
     public function testSetCustomerRequiredFields(): void
     {
-        // Setting an empty list clears the required fields - a valid, side-effect-safe value
-        $return = $this->updateItem(
+        $this->updateItem(
             '/customers/required-fields',
-            ['requiredFields' => []],
+            ['requiredFields' => ['company']],
             ['customer_write'],
             Response::HTTP_NO_CONTENT
         );
 
-        $this->assertNull($return);
+        $storedFields = \Db::getInstance()->executeS(
+            'SELECT `field_name` FROM `' . _DB_PREFIX_ . "required_field` WHERE `object_name` = 'Customer'"
+        );
+        $fieldNames = array_column($storedFields ?: [], 'field_name');
+
+        $this->assertContains('company', $fieldNames);
+    }
+
+    public function testSetInvalidCustomerRequiredFieldIsRejected(): void
+    {
+        $this->updateItem(
+            '/customers/required-fields',
+            ['requiredFields' => ['not_a_valid_field']],
+            ['customer_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
     }
 }

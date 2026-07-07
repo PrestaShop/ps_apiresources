@@ -25,7 +25,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\SetRequiredFieldsForCustomerCommand;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CannotSetRequiredFieldsForCustomerException;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\InvalidCustomerRequiredFieldsException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
@@ -36,6 +39,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
             scopes: ['customer_write'],
         ),
     ],
+    exceptionToStatus: [
+        InvalidCustomerRequiredFieldsException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CannotSetRequiredFieldsForCustomerException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
 )]
 class CustomerRequiredFields
 {
@@ -45,5 +52,5 @@ class CustomerRequiredFields
      * @var string[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string'], 'example' => ['company', 'siret']])]
-    public array $requiredFields;
+    public array $requiredFields = [];
 }
