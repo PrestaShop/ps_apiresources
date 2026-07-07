@@ -1,0 +1,103 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderMessage;
+
+use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Command\AddOrderMessageCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Command\DeleteOrderMessageCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Command\EditOrderMessageCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Exception\OrderMessageConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Exception\OrderMessageNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Query\GetOrderMessageForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ApiResource(
+    operations: [
+        new CQRSCreate(
+            uriTemplate: '/order-messages',
+            validationContext: ['groups' => ['Default', 'Create']],
+            CQRSCommand: AddOrderMessageCommand::class,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
+            scopes: ['order_message_write'],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/order-messages/{orderMessageId}',
+            requirements: ['orderMessageId' => '\d+'],
+            output: false,
+            CQRSCommand: DeleteOrderMessageCommand::class,
+            scopes: ['order_message_write'],
+        ),
+        new CQRSGet(
+            uriTemplate: '/order-messages/{orderMessageId}',
+            requirements: ['orderMessageId' => '\d+'],
+            CQRSQuery: GetOrderMessageForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['order_message_read'],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/order-messages/{orderMessageId}',
+            requirements: ['orderMessageId' => '\d+'],
+            read: false,
+            CQRSCommand: EditOrderMessageCommand::class,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
+            CQRSQuery: GetOrderMessageForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['order_message_write'],
+        ),
+    ],
+    normalizationContext: ['skip_null_values' => false],
+    exceptionToStatus: [
+        OrderMessageNotFoundException::class => Response::HTTP_NOT_FOUND,
+        OrderMessageConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
+)]
+class OrderMessage
+{
+    #[ApiProperty(identifier: true)]
+    public int $orderMessageId;
+
+    #[LocalizedValue]
+    #[Assert\NotBlank(groups: ['Create'])]
+    public array $names;
+
+    #[LocalizedValue]
+    #[Assert\NotBlank(groups: ['Create'])]
+    public array $messages;
+
+    public const QUERY_MAPPING = [
+        '[localizedName]' => '[names]',
+        '[localizedMessage]' => '[messages]',
+    ];
+
+    public const COMMAND_MAPPING = [
+        '[names]' => '[localizedName]',
+        '[messages]' => '[localizedMessage]',
+    ];
+}

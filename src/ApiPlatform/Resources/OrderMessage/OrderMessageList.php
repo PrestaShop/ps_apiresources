@@ -18,47 +18,41 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderMessage;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Query\GetDiscountTypes;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Exception\OrderMessageNotFoundException;
+use PrestaShop\PrestaShop\Core\Search\Filters\OrderMessageFilters;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
+use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSGetCollection(
-            uriTemplate: '/discounts/types',
-            CQRSQuery: GetDiscountTypes::class,
-            scopes: ['discount_read'],
-            CQRSQueryMapping: [],
+        new PaginatedList(
+            uriTemplate: '/order-messages',
+            provider: QueryListProvider::class,
+            scopes: ['order_message_read'],
             ApiResourceMapping: [
-                '[type]' => '[type]',
-                '[localizedNames]' => '[names]',
-                '[localizedDescriptions]' => '[descriptions]',
-                '[core]' => '[core]',
-                '[enabled]' => '[enabled]',
+                '[id_order_message]' => '[orderMessageId]',
             ],
-            experimentalOperation: true,
+            gridDataFactory: 'prestashop.core.grid.data.factory.order_message',
+            filtersClass: OrderMessageFilters::class,
         ),
     ],
-    normalizationContext: ['skip_null_values' => false],
+    exceptionToStatus: [
+        OrderMessageNotFoundException::class => Response::HTTP_NOT_FOUND,
+    ],
 )]
-class DiscountTypeList
+class OrderMessageList
 {
     #[ApiProperty(identifier: true)]
-    public int $discountTypeId;
+    public int $orderMessageId;
 
-    public string $type;
+    public string $name;
 
-    #[LocalizedValue]
-    public array $names;
-
-    #[LocalizedValue]
-    public array $descriptions;
-
-    public bool $core;
-
-    public bool $enabled;
+    public string $message;
 }

@@ -18,45 +18,39 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturnState;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Command\BulkUpdateDiscountsStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\BulkDiscountException;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturnState\Command\BulkDeleteOrderReturnStateCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturnState\Exception\OrderReturnStateException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSPartialUpdate(
-            uriTemplate: '/discounts/bulk-update-status',
-            output: false,
-            CQRSCommand: BulkUpdateDiscountsStatusCommand::class,
-            CQRSCommandMapping: [
-                '[enabled]' => '[newStatus]',
-            ],
+        new CQRSDelete(
+            uriTemplate: '/order-return-states/bulk-delete',
+            CQRSCommand: BulkDeleteOrderReturnStateCommand::class,
             scopes: [
-                'discount_write',
+                'order_return_state_write',
             ],
-            experimentalOperation: true,
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
-        DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
-        BulkDiscountException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        OrderReturnStateException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkUpdateStatusDiscounts
+class BulkDeleteOrderReturnState
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $discountIds;
-
-    public bool $enabled;
+    public array $orderReturnStateIds;
 }

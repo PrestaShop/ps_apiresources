@@ -18,45 +18,39 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderMessage;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Command\BulkUpdateDiscountsStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\BulkDiscountException;
-use PrestaShop\PrestaShop\Core\Domain\Discount\Exception\DiscountNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Command\BulkDeleteOrderMessageCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderMessage\Exception\OrderMessageNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSPartialUpdate(
-            uriTemplate: '/discounts/bulk-update-status',
-            output: false,
-            CQRSCommand: BulkUpdateDiscountsStatusCommand::class,
-            CQRSCommandMapping: [
-                '[enabled]' => '[newStatus]',
-            ],
+        new CQRSDelete(
+            uriTemplate: '/order-messages/bulk-delete',
+            CQRSCommand: BulkDeleteOrderMessageCommand::class,
             scopes: [
-                'discount_write',
+                'order_message_write',
             ],
-            experimentalOperation: true,
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
-        DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
-        BulkDiscountException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        OrderMessageNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class BulkUpdateStatusDiscounts
+class BulkDeleteOrderMessages
 {
     /**
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
-    public array $discountIds;
-
-    public bool $enabled;
+    public array $orderMessageIds;
 }
