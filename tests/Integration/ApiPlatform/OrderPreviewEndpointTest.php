@@ -34,7 +34,7 @@ class OrderPreviewEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get order preview endpoint' => ['GET', '/orders/1/preview'];
+        yield 'get order preview endpoint' => ['GET', '/orders/1/previews'];
     }
 
     public function testGetOrderPreview(): void
