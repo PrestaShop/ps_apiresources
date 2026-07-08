@@ -30,13 +30,12 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/orders/{orderId}/previews',
+            uriTemplate: '/orders/{orderId}/preview',
             requirements: ['orderId' => '\d+'],
             CQRSQuery: GetOrderPreview::class,
             scopes: [
                 'order_read',
             ],
-            CQRSQueryMapping: self::QUERY_MAPPING,
         ),
     ],
     exceptionToStatus: [
@@ -48,10 +47,23 @@ class OrderPreview
     #[ApiProperty(identifier: true)]
     public int $orderId;
 
-    public array $invoiceDetails;
-
-    public array $shippingDetails;
-
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'description' => 'Products included in the order',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'id' => ['type' => 'integer'],
+                'name' => ['type' => 'string'],
+                'reference' => ['type' => 'string'],
+                'location' => ['type' => 'string'],
+                'quantity' => ['type' => 'integer'],
+                'unitPrice' => ['type' => 'string'],
+                'totalPrice' => ['type' => 'string'],
+                'totalTax' => ['type' => 'string'],
+            ],
+        ],
+    ])]
     public array $productDetails;
 
     public bool $taxIncluded;
@@ -61,8 +73,4 @@ class OrderPreview
     public string $invoiceAddressFormatted;
 
     public string $shippingAddressFormatted;
-
-    public const QUERY_MAPPING = [
-        '[orderId]' => '[orderId]',
-    ];
 }

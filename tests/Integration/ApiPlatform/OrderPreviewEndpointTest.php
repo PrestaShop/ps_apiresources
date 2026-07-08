@@ -26,15 +26,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class OrderPreviewEndpointTest extends ApiTestCase
 {
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-        self::createApiClient(['order_read']);
-    }
-
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get order preview endpoint' => ['GET', '/orders/1/previews'];
+        yield 'get order preview endpoint' => ['GET', '/orders/1/preview'];
     }
 
     public function testGetOrderPreview(): void
@@ -43,21 +37,26 @@ class OrderPreviewEndpointTest extends ApiTestCase
             'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` ASC'
         );
 
-        $preview = $this->getItem('/orders/' . $orderId . '/previews', ['order_read']);
+        $preview = $this->getItem('/orders/' . $orderId . '/preview', ['order_read']);
 
-        $this->assertArrayHasKey('orderId', $preview);
         $this->assertSame($orderId, $preview['orderId']);
-        $this->assertArrayHasKey('invoiceDetails', $preview);
-        $this->assertArrayHasKey('shippingDetails', $preview);
-        $this->assertArrayHasKey('productDetails', $preview);
-        $this->assertArrayHasKey('taxIncluded', $preview);
-        $this->assertArrayHasKey('virtual', $preview);
-        $this->assertArrayHasKey('invoiceAddressFormatted', $preview);
-        $this->assertArrayHasKey('shippingAddressFormatted', $preview);
+        $this->assertIsBool($preview['taxIncluded']);
+        $this->assertIsBool($preview['virtual']);
+        $this->assertNotEmpty($preview['invoiceAddressFormatted']);
+        $this->assertNotEmpty($preview['shippingAddressFormatted']);
+        $this->assertIsArray($preview['productDetails']);
+        $this->assertNotEmpty($preview['productDetails']);
+
+        $firstProduct = $preview['productDetails'][0];
+        $this->assertArrayHasKey('id', $firstProduct);
+        $this->assertArrayHasKey('name', $firstProduct);
+        $this->assertArrayHasKey('quantity', $firstProduct);
+        $this->assertArrayHasKey('unitPrice', $firstProduct);
+        $this->assertArrayHasKey('totalPrice', $firstProduct);
     }
 
     public function testGetNonExistentOrderPreviewReturnsNotFound(): void
     {
-        $this->requestApi('GET', '/orders/999999/previews', null, ['order_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/orders/999999/preview', ['order_read'], Response::HTTP_NOT_FOUND);
     }
 }
