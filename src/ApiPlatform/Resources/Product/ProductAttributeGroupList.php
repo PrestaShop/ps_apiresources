@@ -18,12 +18,17 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\AttributeGroup\Query\GetProductAttributeGroups;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
@@ -36,7 +41,16 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             CQRSQueryMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
             ],
+            ApiResourceMapping: [
+                '[localizedNames]' => '[names]',
+                '[localizedPublicNames]' => '[publicNames]',
+                '[isColorGroup]' => '[colorGroup]',
+                '[groupType]' => '[type]',
+            ],
         ),
+    ],
+    exceptionToStatus: [
+        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class ProductAttributeGroupList
@@ -44,20 +58,35 @@ class ProductAttributeGroupList
     public int $attributeGroupId;
 
     #[LocalizedValue]
-    public array $localizedNames;
+    public array $names;
 
     #[LocalizedValue]
-    public array $localizedPublicNames;
+    public array $publicNames;
 
-    public string $groupType;
+    public string $type;
 
-    /**
-     * True when the group represents color swatches.
-     * Property name follows the Rector rule that strips the `is` prefix.
-     */
     public bool $colorGroup;
 
     public int $position;
 
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'array',
+            'description' => 'Attributes belonging to the group. Nested `localizedNames` are keyed by language id.',
+            'items' => [
+                'type' => 'object',
+                'properties' => [
+                    'attributeId' => ['type' => 'integer'],
+                    'position' => ['type' => 'integer'],
+                    'color' => ['type' => 'string'],
+                    'localizedNames' => [
+                        'type' => 'object',
+                        'additionalProperties' => ['type' => 'string'],
+                    ],
+                    'textureFilePath' => ['type' => 'string', 'nullable' => true],
+                ],
+            ],
+        ]
+    )]
     public ?array $attributes;
 }

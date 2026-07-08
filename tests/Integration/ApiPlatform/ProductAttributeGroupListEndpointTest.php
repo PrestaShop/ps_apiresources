@@ -22,6 +22,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Symfony\Component\HttpFoundation\Response;
+
 class ProductAttributeGroupListEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
@@ -45,11 +47,24 @@ class ProductAttributeGroupListEndpointTest extends ApiTestCase
         $result = $this->getItem('/products/' . $productId . '/attribute-groups', ['product_read']);
 
         $this->assertNotEmpty($result);
-        $this->assertArrayHasKey('attributeGroupId', $result[0]);
-        $this->assertArrayHasKey('localizedNames', $result[0]);
-        $this->assertArrayHasKey('groupType', $result[0]);
-        $this->assertArrayHasKey('colorGroup', $result[0]);
-        $this->assertArrayHasKey('position', $result[0]);
-        $this->assertArrayHasKey('attributes', $result[0]);
+        $first = $result[0];
+        $this->assertArrayHasKey('attributeGroupId', $first);
+        $this->assertIsInt($first['attributeGroupId']);
+        $this->assertArrayHasKey('names', $first);
+        $this->assertIsArray($first['names']);
+        $this->assertArrayHasKey('publicNames', $first);
+        $this->assertIsArray($first['publicNames']);
+        $this->assertArrayHasKey('type', $first);
+        $this->assertIsString($first['type']);
+        $this->assertArrayHasKey('colorGroup', $first);
+        $this->assertIsBool($first['colorGroup']);
+        $this->assertArrayHasKey('position', $first);
+        $this->assertIsInt($first['position']);
+        $this->assertArrayHasKey('attributes', $first);
+    }
+
+    public function testGetAttributeGroupsForNonExistentProduct(): void
+    {
+        $this->getItem('/products/99999999/attribute-groups', ['product_read'], Response::HTTP_NOT_FOUND);
     }
 }
