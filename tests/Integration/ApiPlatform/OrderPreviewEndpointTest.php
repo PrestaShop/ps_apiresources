@@ -43,7 +43,7 @@ class OrderPreviewEndpointTest extends ApiTestCase
             'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` ASC'
         );
 
-        $preview = $this->getItem('/orders/' . $orderId . '/preview', ['order_read']);
+        $preview = $this->getItem('/orders/' . $orderId . '/previews', ['order_read']);
 
         $this->assertArrayHasKey('orderId', $preview);
         $this->assertSame($orderId, $preview['orderId']);
@@ -58,6 +58,6 @@ class OrderPreviewEndpointTest extends ApiTestCase
 
     public function testGetNonExistentOrderPreviewReturnsNotFound(): void
     {
-        $this->requestApi('GET', '/orders/999999/preview', null, ['order_read'], Response::HTTP_NOT_FOUND);
+        $this->requestApi('GET', '/orders/999999/previews', null, ['order_read'], Response::HTTP_NOT_FOUND);
     }
 }
