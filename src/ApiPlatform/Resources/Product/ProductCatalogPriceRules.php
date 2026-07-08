@@ -48,7 +48,7 @@ class ProductCatalogPriceRules
     public int $totalCount;
 
     public const QUERY_MAPPING = [
-        '[_context][langId]' => '[languageId]',
+        '[_context][langId]' => '[langId]',
         '[productId]' => '[productId]',
     ];
 }
