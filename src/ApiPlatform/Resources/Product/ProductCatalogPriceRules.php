@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -43,6 +45,27 @@ class ProductCatalogPriceRules
     #[ApiProperty(identifier: true)]
     public int $productId;
 
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'catalogPriceRuleId' => ['type' => 'integer'],
+                'catalogPriceRuleName' => ['type' => 'string'],
+                'fromQuantity' => ['type' => 'integer'],
+                'reductionType' => ['type' => 'string'],
+                'reduction' => ['type' => 'string'],
+                'taxIncluded' => ['type' => 'boolean'],
+                'dateStart' => ['type' => 'string', 'format' => 'date-time'],
+                'dateEnd' => ['type' => 'string', 'format' => 'date-time'],
+                'shopName' => ['type' => 'string', 'nullable' => true],
+                'currencyName' => ['type' => 'string', 'nullable' => true],
+                'countryName' => ['type' => 'string', 'nullable' => true],
+                'groupName' => ['type' => 'string', 'nullable' => true],
+                'currencyIso' => ['type' => 'string', 'nullable' => true],
+            ],
+        ],
+    ])]
     public array $catalogPriceRules;
 
     public int $totalCount;

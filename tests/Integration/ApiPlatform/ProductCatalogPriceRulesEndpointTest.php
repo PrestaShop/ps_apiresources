@@ -24,12 +24,6 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 class ProductCatalogPriceRulesEndpointTest extends ApiTestCase
 {
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-        self::createApiClient(['catalog_price_rule_read']);
-    }
-
     public static function getProtectedEndpoints(): iterable
     {
         yield 'list product catalog price rules endpoint' => ['GET', '/products/1/catalog-price-rules'];
@@ -46,6 +40,9 @@ class ProductCatalogPriceRulesEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('productId', $result);
         $this->assertSame($productId, $result['productId']);
         $this->assertArrayHasKey('catalogPriceRules', $result);
+        $this->assertIsArray($result['catalogPriceRules']);
         $this->assertArrayHasKey('totalCount', $result);
+        $this->assertIsInt($result['totalCount']);
+        $this->assertSame(count($result['catalogPriceRules']), $result['totalCount']);
     }
 }
