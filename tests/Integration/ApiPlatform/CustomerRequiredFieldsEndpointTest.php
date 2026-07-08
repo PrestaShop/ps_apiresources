@@ -53,7 +53,7 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
     {
         $this->updateItem(
             '/customers/required-fields',
-            ['requiredFields' => ['company']],
+            ['requiredFields' => ['newsletter']],
             ['customer_write'],
             Response::HTTP_NO_CONTENT
         );
@@ -63,7 +63,7 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
         );
         $fieldNames = array_column($storedFields ?: [], 'field_name');
 
-        $this->assertContains('company', $fieldNames);
+        $this->assertContains('newsletter', $fieldNames);
     }
 
     public function testSetInvalidCustomerRequiredFieldIsRejected(): void

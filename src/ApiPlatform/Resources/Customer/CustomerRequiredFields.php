@@ -47,10 +47,10 @@ use Symfony\Component\HttpFoundation\Response;
 class CustomerRequiredFields
 {
     /**
-     * The customer fields that should be required (e.g. "company", "siret").
+     * The customer fields that should be required (e.g. "optin", "newsletter").
      *
      * @var string[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string'], 'example' => ['company', 'siret']])]
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string'], 'example' => ['optin', 'newsletter']])]
     public array $requiredFields = [];
 }
