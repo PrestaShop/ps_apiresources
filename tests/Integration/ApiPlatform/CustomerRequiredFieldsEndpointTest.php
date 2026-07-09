@@ -32,7 +32,7 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
     {
         parent::setUpBeforeClass();
         DatabaseDump::restoreTables(['required_field']);
-        self::createApiClient(['customer_write']);
+        self::createApiClient(['customer_read', 'customer_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -43,6 +43,11 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get required fields endpoint' => [
+            'GET',
+            '/customers/required-fields',
+        ];
+
         yield 'set required fields endpoint' => [
             'PUT',
             '/customers/required-fields',
@@ -64,6 +69,22 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
         $fieldNames = array_column($storedFields ?: [], 'field_name');
 
         $this->assertContains('newsletter', $fieldNames);
+    }
+
+    public function testGetCustomerRequiredFields(): void
+    {
+        // Set a known state through the write endpoint, then read it back through the GET endpoint.
+        $this->updateItem(
+            '/customers/required-fields',
+            ['requiredFields' => ['newsletter']],
+            ['customer_write'],
+            Response::HTTP_NO_CONTENT
+        );
+
+        $requiredFields = $this->getItem('/customers/required-fields', ['customer_read']);
+
+        $this->assertArrayHasKey('requiredFields', $requiredFields);
+        $this->assertContains('newsletter', $requiredFields['requiredFields']);
     }
 
     public function testSetInvalidCustomerRequiredFieldIsRejected(): void

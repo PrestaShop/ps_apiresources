@@ -27,11 +27,19 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\SetRequiredFieldsForCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CannotSetRequiredFieldsForCustomerException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\InvalidCustomerRequiredFieldsException;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetRequiredFieldsForCustomer;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
+        new CQRSGet(
+            uriTemplate: '/customers/required-fields',
+            CQRSQuery: GetRequiredFieldsForCustomer::class,
+            scopes: ['customer_read'],
+            CQRSQueryMapping: ['[_queryResult]' => '[requiredFields]'],
+        ),
         new CQRSUpdate(
             uriTemplate: '/customers/required-fields',
             output: false,
