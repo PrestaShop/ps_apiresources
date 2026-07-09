@@ -34,7 +34,7 @@ class AddressCreationCustomerInfoEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get customer address-creation info endpoint' => ['GET', '/customers/address-creation-info?customerEmail=foo@example.com'];
+        yield 'get customer address-creation info endpoint' => ['GET', '/customers/address-creation-infos?customerEmail=foo@example.com'];
     }
 
     public function testGetCustomerForAddressCreation(): void
@@ -45,7 +45,7 @@ class AddressCreationCustomerInfoEndpointTest extends ApiTestCase
         );
 
         $result = $this->getItem(
-            '/customers/address-creation-info?customerEmail=' . urlencode((string) $row['email']),
+            '/customers/address-creation-infos?customerEmail=' . urlencode((string) $row['email']),
             ['customer_read']
         );
 
@@ -60,7 +60,7 @@ class AddressCreationCustomerInfoEndpointTest extends ApiTestCase
     {
         $this->requestApi(
             'GET',
-            '/customers/address-creation-info?customerEmail=' . urlencode('nobody-' . uniqid() . '@example.invalid'),
+            '/customers/address-creation-infos?customerEmail=' . urlencode('nobody-' . uniqid() . '@example.invalid'),
             null,
             ['customer_read'],
             Response::HTTP_NOT_FOUND

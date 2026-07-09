@@ -22,9 +22,9 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
+use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
-use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerByEmailNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerForAddressCreation;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -33,7 +33,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/customers/address-creation-info',
+            uriTemplate: '/customers/address-creation-infos',
             CQRSQuery: GetCustomerForAddressCreation::class,
             scopes: [
                 'customer_read',
