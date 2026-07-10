@@ -10,7 +10,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: PHP syntax checker 8.1
               uses: prestashop/github-action-php-lint/8.1@master
@@ -38,10 +38,10 @@ jobs:
                 php-version: '8.1'
 
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Cache dependencies
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               with:
                 path: vendor
                 key: php-${{ hashFiles('composer.lock') }}
@@ -62,10 +62,10 @@ jobs:
             php-version: '8.1'
 
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v5
 
         - name: Cache dependencies
-          uses: actions/cache@v3
+          uses: actions/cache@v4
           with:
             path: vendor
             key: php-${{ hashFiles('composer.lock') }}
@@ -86,10 +86,10 @@ jobs:
             php-version: '8.1'
 
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v5
 
         - name: Cache dependencies
-          uses: actions/cache@v3
+          uses: actions/cache@v4
           with:
             path: vendor
             key: php-${{ hashFiles('composer.lock') }}
@@ -110,10 +110,10 @@ jobs:
             php-version: '8.1'
 
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v5
 
         - name: Cache dependencies
-          uses: actions/cache@v3
+          uses: actions/cache@v4
           with:
             path: vendor
             key: php-${{ hashFiles('composer.lock') }}
@@ -135,7 +135,7 @@ jobs:
           PHPRC: ${{ github.workspace }}/${{ github.event.repository.name }}/.phpstan-php-ini
       steps:
           - name: Checkout repository
-            uses: actions/checkout@v4
+            uses: actions/checkout@v5
             with:
                 path: ${{ github.event.repository.name }}
 
