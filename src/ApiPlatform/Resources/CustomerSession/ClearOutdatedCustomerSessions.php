@@ -20,24 +20,24 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Security;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CustomerSession;
 
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Security\Command\ClearOutdatedEmployeeSessionCommand;
+use PrestaShop\PrestaShop\Core\Domain\Security\Command\ClearOutdatedCustomerSessionCommand;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/employee-sessions/bulk-clear-outdated',
-            CQRSCommand: ClearOutdatedEmployeeSessionCommand::class,
+            uriTemplate: '/customer-sessions/bulk-clear-outdated',
+            CQRSCommand: ClearOutdatedCustomerSessionCommand::class,
             scopes: [
-                'employee_session_write',
+                'customer_session_write',
             ],
             allowEmptyBody: true,
         ),
     ],
 )]
-class ClearOutdatedEmployeeSessions
+class ClearOutdatedCustomerSessions
 {
 }
