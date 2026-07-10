@@ -44,8 +44,8 @@ class ClearOutdatedSessionsEndpointTest extends ApiTestCase
         \Db::getInstance()->insert('customer_session', [
             'id_customer' => 0,
             'token' => bin2hex(random_bytes(16)),
-            'date_add' => date('Y-m-d H:i:s', strtotime('-2 days')),
-            'date_upd' => date('Y-m-d H:i:s', strtotime('-2 days')),
+            'date_add' => date('Y-m-d H:i:s', strtotime('-1 year')),
+            'date_upd' => date('Y-m-d H:i:s', strtotime('-1 year')),
         ]);
         $seededId = (int) \Db::getInstance()->Insert_ID();
 
@@ -68,8 +68,8 @@ class ClearOutdatedSessionsEndpointTest extends ApiTestCase
         \Db::getInstance()->insert('employee_session', [
             'id_employee' => 0,
             'token' => bin2hex(random_bytes(16)),
-            'date_add' => date('Y-m-d H:i:s', strtotime('-2 days')),
-            'date_upd' => date('Y-m-d H:i:s', strtotime('-2 days')),
+            'date_add' => date('Y-m-d H:i:s', strtotime('-1 year')),
+            'date_upd' => date('Y-m-d H:i:s', strtotime('-1 year')),
         ]);
         $seededId = (int) \Db::getInstance()->Insert_ID();
 
