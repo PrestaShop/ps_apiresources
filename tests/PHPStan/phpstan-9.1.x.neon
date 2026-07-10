@@ -5,3 +5,7 @@ parameters:
     tmpDir: %currentWorkingDirectory%/var/phpstan-tmp/9.1.x
     ignoreErrors:
         # Add version-specific ignores here as needed
+        -
+            message: "#Class .*GetCarriersForProduct not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Product/CarrierForProduct.php
