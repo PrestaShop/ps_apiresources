@@ -19,3 +19,7 @@ parameters:
             identifier: class.notFound
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
+        -
+            message: "#Class .*GetAvailableCarriers not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Carrier/*
