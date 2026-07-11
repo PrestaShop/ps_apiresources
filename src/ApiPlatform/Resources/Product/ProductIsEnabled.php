@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/products/{productId}/is-enabled',
+            uriTemplate: '/products/{productId}/enable-status',
             requirements: ['productId' => '\d+'],
             CQRSQuery: GetProductIsEnabled::class,
             CQRSQueryMapping: [

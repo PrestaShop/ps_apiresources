@@ -34,7 +34,7 @@ class ProductIsEnabledEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get product is-enabled endpoint' => ['GET', '/products/1/is-enabled'];
+        yield 'get product is-enabled endpoint' => ['GET', '/products/1/enable-status'];
     }
 
     public function testGetProductIsEnabled(): void
@@ -43,7 +43,7 @@ class ProductIsEnabledEndpointTest extends ApiTestCase
             'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` ORDER BY `id_product` ASC'
         );
 
-        $result = $this->getItem('/products/' . $productId . '/is-enabled', ['product_read']);
+        $result = $this->getItem('/products/' . $productId . '/enable-status', ['product_read']);
 
         $this->assertArrayHasKey('productId', $result);
         $this->assertSame($productId, $result['productId']);
@@ -55,7 +55,7 @@ class ProductIsEnabledEndpointTest extends ApiTestCase
     {
         $this->requestApi(
             'GET',
-            '/products/999999/is-enabled',
+            '/products/999999/enable-status',
             null,
             ['product_read'],
             Response::HTTP_NOT_FOUND
