@@ -43,7 +43,7 @@ use Symfony\Component\HttpFoundation\Response;
         LanguageNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class Language
+class LanguageForEditing
 {
     #[ApiProperty(identifier: true)]
     public int $languageId;
