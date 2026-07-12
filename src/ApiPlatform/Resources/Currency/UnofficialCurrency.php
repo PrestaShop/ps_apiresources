@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Currency;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\AddUnofficialCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyException;
@@ -54,8 +55,7 @@ class UnofficialCurrency
     public string $isoCode;
 
     #[Assert\NotBlank]
-    #[Assert\Type(type: 'numeric')]
-    public float $exchangeRate;
+    public DecimalNumber $exchangeRate;
 
     #[Assert\Type(type: 'bool')]
     public bool $enabled;
