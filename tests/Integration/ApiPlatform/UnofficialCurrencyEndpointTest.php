@@ -49,7 +49,7 @@ class UnofficialCurrencyEndpointTest extends ApiTestCase
     {
         $body = [
             'isoCode' => 'ABC',
-            'exchangeRate' => '1.23',
+            'exchangeRate' => 1.23,
             'enabled' => true,
         ];
 
