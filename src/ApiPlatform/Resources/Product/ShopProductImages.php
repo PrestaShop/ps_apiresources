@@ -43,7 +43,6 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class ShopProductImages
 {
-    #[ApiProperty(identifier: true)]
     public int $shopId;
 
     #[ApiProperty(openapiContext: [
