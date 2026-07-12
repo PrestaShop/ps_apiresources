@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/languages/{languageId}',
+            uriTemplate: '/languages/{languageId}/details',
             requirements: ['languageId' => '\d+'],
             CQRSQuery: GetLanguageForEditing::class,
             scopes: ['language_read'],

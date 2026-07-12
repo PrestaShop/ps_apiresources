@@ -34,12 +34,12 @@ class LanguageEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get language endpoint' => ['GET', '/languages/1'];
+        yield 'get language endpoint' => ['GET', '/languages/1/details'];
     }
 
     public function testGetLanguage(): void
     {
-        $result = $this->getItem('/languages/1', ['language_read']);
+        $result = $this->getItem('/languages/1/details', ['language_read']);
 
         $this->assertArrayHasKey('languageId', $result);
         $this->assertSame(1, $result['languageId']);
@@ -67,7 +67,7 @@ class LanguageEndpointTest extends ApiTestCase
     {
         $this->requestApi(
             'GET',
-            '/languages/999999',
+            '/languages/999999/details',
             null,
             ['language_read'],
             Response::HTTP_NOT_FOUND
