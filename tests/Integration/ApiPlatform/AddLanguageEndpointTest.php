@@ -55,6 +55,8 @@ class AddLanguageEndpointTest extends ApiTestCase
             'tagIETF' => 'ts-TS',
             'shortDateFormat' => 'Y-m-d',
             'fullDateFormat' => 'Y-m-d H:i:s',
+            'flagImagePath' => '',
+            'noPictureImagePath' => '',
             'rtl' => false,
             'enabled' => true,
             'shopIds' => [1],
