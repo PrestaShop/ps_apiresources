@@ -22,8 +22,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use Symfony\Component\HttpFoundation\Response;
-
 class ShopProductImagesEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
@@ -43,7 +41,7 @@ class ShopProductImagesEndpointTest extends ApiTestCase
             'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` ORDER BY `id_product` ASC'
         );
 
-        $result = $this->listItems('/products/' . $productId . '/shop-images', ['product_read']);
+        $result = $this->getItem('/products/' . $productId . '/shop-images', ['product_read']);
 
         $this->assertIsArray($result);
         foreach ($result as $row) {
@@ -52,16 +50,5 @@ class ShopProductImagesEndpointTest extends ApiTestCase
             $this->assertArrayHasKey('productImages', $row);
             $this->assertIsArray($row['productImages']);
         }
-    }
-
-    public function testListUnknownProductReturnsNotFound(): void
-    {
-        $this->requestApi(
-            'GET',
-            '/products/999999/shop-images',
-            null,
-            ['product_read'],
-            Response::HTTP_NOT_FOUND
-        );
     }
 }

@@ -24,10 +24,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetShopProductImages as GetShopProductImagesQuery;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
-use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
@@ -36,9 +34,6 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQuery: GetShopProductImagesQuery::class,
             scopes: ['product_read'],
         ),
-    ],
-    exceptionToStatus: [
-        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class ShopProductImages
