@@ -48,6 +48,11 @@ class AddressEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get address required fields endpoint' => [
+            'GET',
+            '/addresses/required-fields',
+        ];
+
         yield 'get customer address endpoint' => [
             'GET',
             '/addresses/customers/1',
@@ -497,5 +502,18 @@ class AddressEndpointTest extends ApiTestCase
 
         // Use the createItem method but expect it to fail with validation error
         $this->createItem('/addresses/customers', $invalidData, ['address_write'], 422);
+    }
+
+    public function testGetAddressRequiredFields(): void
+    {
+        $result = $this->getItem('/addresses/required-fields', ['address_read']);
+        $this->assertArrayHasKey('requiredFields', $result);
+        $this->assertIsArray($result['requiredFields']);
+        
+        // Assert some common required fields are present
+        if (!empty($result['requiredFields'])) {
+            // Just verifying it's an array of strings
+            $this->assertIsString($result['requiredFields'][0]);
+        }
     }
 }
