@@ -55,7 +55,7 @@ class UnofficialCurrency
 
     #[Assert\NotBlank]
     #[Assert\Type(type: 'numeric')]
-    public string $exchangeRate;
+    public float $exchangeRate;
 
     #[Assert\Type(type: 'bool')]
     public bool $enabled;
