@@ -59,9 +59,19 @@ class WebserviceKeyEndpointTest extends ApiTestCase
             '/webservice-keys/1',
         ];
 
+        yield 'delete endpoint' => [
+            'DELETE',
+            '/webservice-keys/1',
+        ];
+
         yield 'list endpoint' => [
             'GET',
             '/webservice-keys',
+        ];
+
+        yield 'bulk delete endpoint' => [
+            'PUT',
+            '/webservice-keys/bulk-delete',
         ];
     }
 
@@ -100,10 +110,6 @@ class WebserviceKeyEndpointTest extends ApiTestCase
 
     /**
      * @depends testAddWebserviceKey
-     *
-     * @param int $webserviceKeyId
-     *
-     * @return int
      */
     public function testGetWebserviceKey(int $webserviceKeyId): int
     {
@@ -144,10 +150,6 @@ class WebserviceKeyEndpointTest extends ApiTestCase
 
     /**
      * @depends testGetWebserviceKey
-     *
-     * @param int $webserviceKeyId
-     *
-     * @return int
      */
     public function testUpdateWebserviceKey(int $webserviceKeyId): int
     {
@@ -302,10 +304,6 @@ class WebserviceKeyEndpointTest extends ApiTestCase
 
     /**
      * @depends testUpdateWebserviceKey
-     *
-     * @param int $webserviceKeyId
-     *
-     * @return int
      */
     public function testGetUpdatedWebserviceKey(int $webserviceKeyId): int
     {
@@ -346,10 +344,6 @@ class WebserviceKeyEndpointTest extends ApiTestCase
 
     /**
      * @depends testGetUpdatedWebserviceKey
-     *
-     * @param int $webserviceKeyId
-     *
-     * @return int
      */
     public function testListWebserviceKeys(int $webserviceKeyId): int
     {
@@ -376,6 +370,83 @@ class WebserviceKeyEndpointTest extends ApiTestCase
         );
 
         return $webserviceKeyId;
+    }
+
+    /**
+     * @depends testListWebserviceKeys
+     */
+    public function testDelete(int $webserviceKeyId): void
+    {
+        $return = $this->deleteItem('/webservice-keys/' . $webserviceKeyId, ['webservice_key_write']);
+        // This endpoint return empty response and 204 HTTP code
+        $this->assertNull($return);
+
+        // Getting the item should result in a 404 now
+        $this->getItem('/webservice-keys/' . $webserviceKeyId, ['webservice_key_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * @depends testListWebserviceKeys
+     */
+    public function testBulkDelete(): void
+    {
+        $itemsCount = $this->countItems('/webservice-keys', ['webservice_key_read']);
+        $this->assertEquals(0, $itemsCount);
+
+        $webserviceKey1 = $this->createItem('/webservice-keys', [
+            'key' => 'AZERTYUIOPAZERTYUIOPAZERTYUIOPAZ',
+            'description' => 'Webservice Key test',
+            'enabled' => false,
+            'permissions' => [
+                'DELETE' => ['addresses'],
+                'GET' => ['addresses'],
+                'HEAD' => ['addresses', 'carriers'],
+                'PATCH' => ['addresses', 'carriers'],
+                'PUT' => ['addresses', 'carriers', 'carts'],
+                'POST' => ['addresses', 'carriers', 'carts'],
+            ],
+            'shopIds' => [1],
+        ], ['webservice_key_write']);
+        $this->assertArrayHasKey('webserviceKeyId', $webserviceKey1);
+        $webserviceKeyId1 = $webserviceKey1['webserviceKeyId'];
+
+        $webserviceKey2 = $this->createItem('/webservice-keys', [
+            'key' => 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+            'description' => 'Webservice Key test',
+            'enabled' => false,
+            'permissions' => [
+                'DELETE' => ['addresses'],
+                'GET' => ['addresses'],
+                'HEAD' => ['addresses', 'carriers'],
+                'PATCH' => ['addresses', 'carriers'],
+                'PUT' => ['addresses', 'carriers', 'carts'],
+                'POST' => ['addresses', 'carriers', 'carts'],
+            ],
+            'shopIds' => [1],
+        ], ['webservice_key_write']);
+        $this->assertArrayHasKey('webserviceKeyId', $webserviceKey2);
+        $webserviceKeyId2 = $webserviceKey2['webserviceKeyId'];
+
+        $itemsCount = $this->countItems('/webservice-keys', ['webservice_key_read']);
+        $this->assertEquals(2, $itemsCount);
+
+        // We remove the two webservice keys
+        $bulkWebserviceKeyIds = [
+            $webserviceKeyId1,
+            $webserviceKeyId2,
+        ];
+
+        $this->updateItem('/webservice-keys/bulk-delete', [
+            'webserviceKeyIds' => $bulkWebserviceKeyIds,
+        ], ['webservice_key_write'], Response::HTTP_NO_CONTENT);
+
+        // Assert the provided webservice keys have been removed
+        foreach ($bulkWebserviceKeyIds as $webserviceKeyId) {
+            $this->getItem('/webservice-keys/' . $webserviceKeyId, ['webservice_key_read'], Response::HTTP_NOT_FOUND);
+        }
+
+        $itemsCount = $this->countItems('/webservice-keys', ['webservice_key_read']);
+        $this->assertEquals(0, $itemsCount);
     }
 
     public function testCreateInvalidWebserviceKey(): void
