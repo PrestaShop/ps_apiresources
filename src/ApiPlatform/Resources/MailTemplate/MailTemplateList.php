@@ -1,0 +1,63 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\MailTemplate;
+
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Parameters;
+use ApiPlatform\Metadata\QueryParameter;
+use PrestaShop\PrestaShop\Core\Domain\MailTemplate\Query\GetEmailBodyTemplatesForListing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
+
+#[ApiResource(
+    operations: [
+        new CQRSGetCollection(
+            uriTemplate: '/mail-templates',
+            CQRSQuery: GetEmailBodyTemplatesForListing::class,
+            scopes: ['mail_template_read'],
+            parameters: new Parameters([
+                new QueryParameter(
+                    key: 'locale',
+                    required: true,
+                    description: 'Locale identifier (e.g. en-US, fr-FR)'
+                ),
+            ]),
+            openapiContext: [
+                'parameters' => [
+                    ['name' => 'locale', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string']],
+                ],
+            ],
+        ),
+    ],
+)]
+class MailTemplateList
+{
+    public string $templateName;
+
+    public string $source;
+
+    public string $moduleName;
+
+    public bool $hasHtml;
+
+    public bool $hasTxt;
+}
