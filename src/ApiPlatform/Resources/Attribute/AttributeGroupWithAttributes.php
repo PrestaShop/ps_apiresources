@@ -37,6 +37,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             CQRSQueryMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
             ],
+            ApiResourceMapping: [
+                '[localizedNames]' => '[names]',
+                '[localizedPublicNames]' => '[publicNames]',
+            ],
         ),
     ],
 )]
@@ -45,10 +49,10 @@ class AttributeGroupWithAttributes
     public int $attributeGroupId;
 
     #[LocalizedValue]
-    public array $localizedNames;
+    public array $names;
 
     #[LocalizedValue]
-    public array $localizedPublicNames;
+    public array $publicNames;
 
     public string $groupType;
 
@@ -58,6 +62,10 @@ class AttributeGroupWithAttributes
 
     /**
      * Per-group attribute list. Each item: {attributeId, position, color, name, imagePath}.
+     *
+     * The underlying DTO getAttributes() returns null when attributes were not queried;
+     * this endpoint always queries them via GetAttributeGroupList, so the value is guaranteed
+     * to be an array here (possibly empty for a group with no attributes).
      */
     #[ApiProperty(openapiContext: [
         'type' => 'array',

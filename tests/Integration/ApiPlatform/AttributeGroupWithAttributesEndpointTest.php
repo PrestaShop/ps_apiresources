@@ -40,15 +40,59 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
         $result = $this->getItem('/attributes/groups-with-attributes', ['attribute_group_read']);
 
         $this->assertIsArray($result);
+        $this->assertNotEmpty($result);
+
+        // Basic shape assertions on every returned row: guarantees the response
+        // contract (field presence + type) rather than only key presence.
         foreach ($result as $row) {
             $this->assertArrayHasKey('attributeGroupId', $row);
             $this->assertIsInt($row['attributeGroupId']);
-            $this->assertArrayHasKey('localizedNames', $row);
-            $this->assertIsArray($row['localizedNames']);
+            $this->assertArrayHasKey('names', $row);
+            $this->assertIsArray($row['names']);
+            $this->assertNotEmpty($row['names']);
+            $this->assertArrayHasKey('publicNames', $row);
+            $this->assertIsArray($row['publicNames']);
             $this->assertArrayHasKey('groupType', $row);
+            $this->assertIsString($row['groupType']);
             $this->assertArrayHasKey('colorGroup', $row);
+            $this->assertIsBool($row['colorGroup']);
+            $this->assertArrayHasKey('position', $row);
+            $this->assertIsInt($row['position']);
             $this->assertArrayHasKey('attributes', $row);
             $this->assertIsArray($row['attributes']);
+
+            foreach ($row['attributes'] as $attribute) {
+                $this->assertArrayHasKey('attributeId', $attribute);
+                $this->assertIsInt($attribute['attributeId']);
+                $this->assertArrayHasKey('position', $attribute);
+                $this->assertIsInt($attribute['position']);
+                $this->assertArrayHasKey('color', $attribute);
+                $this->assertArrayHasKey('name', $attribute);
+                $this->assertIsString($attribute['name']);
+                $this->assertArrayHasKey('imagePath', $attribute);
+            }
+        }
+
+        // Assert against known default fixture data: the Color group (attributeGroupId = 2)
+        // must be present and expose the expected aggregate shape.
+        $colorGroup = null;
+        foreach ($result as $row) {
+            if ($row['attributeGroupId'] === 2) {
+                $colorGroup = $row;
+                break;
+            }
+        }
+        $this->assertNotNull($colorGroup, 'Default Color attribute group (id=2) should be returned by the endpoint.');
+        // Default English language id in fixtures is 1; also accept any locale that resolves to 'Color'.
+        $this->assertContains('Color', $colorGroup['names']);
+        $this->assertSame('color', $colorGroup['groupType']);
+        $this->assertTrue($colorGroup['colorGroup']);
+        $this->assertCount(14, $colorGroup['attributes'], 'Default fixtures ship 14 Color attributes.');
+
+        // Every Color attribute has a non-null color hex.
+        foreach ($colorGroup['attributes'] as $attribute) {
+            $this->assertNotNull($attribute['color'], 'Attributes of a color group must expose a color hex.');
+            $this->assertNotEmpty($attribute['name']);
         }
     }
 }
