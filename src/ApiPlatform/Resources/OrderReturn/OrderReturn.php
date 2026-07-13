@@ -24,11 +24,13 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\DeleteOrderReturnCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\UpdateOrderReturnStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Query\GetOrderReturnForEditing;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturnState\Exception\OrderReturnStateNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -48,6 +50,12 @@ use Symfony\Component\Validator\Constraints as Assert;
             read: false,
             CQRSCommand: UpdateOrderReturnStateCommand::class,
             CQRSQuery: GetOrderReturnForEditing::class,
+            scopes: ['order_return_write'],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/order-returns/{orderReturnId}',
+            requirements: ['orderReturnId' => '\d+'],
+            CQRSCommand: DeleteOrderReturnCommand::class,
             scopes: ['order_return_write'],
         ),
     ],
