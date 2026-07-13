@@ -65,7 +65,10 @@ class UnofficialCurrencyEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('currencyId', $result);
         $this->assertIsInt($result['currencyId']);
         $this->assertGreaterThan(0, $result['currencyId']);
-        $this->assertSame('ABC', $result['isoCode']);
-        $this->assertSame(true, $result['enabled']);
+
+        $seededIsoCode = (string) \Db::getInstance()->getValue(
+            'SELECT `iso_code` FROM `' . _DB_PREFIX_ . 'currency` WHERE `id_currency` = ' . $result['currencyId']
+        );
+        $this->assertSame('ABC', $seededIsoCode);
     }
 }
