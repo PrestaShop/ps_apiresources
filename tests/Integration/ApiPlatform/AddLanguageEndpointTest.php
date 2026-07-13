@@ -49,14 +49,19 @@ class AddLanguageEndpointTest extends ApiTestCase
 
     public function testCreateLanguage(): void
     {
+        // The handler calls copy() on both image paths — PHP 8.1+ raises
+        // ValueError on empty string, so seed a real image from the shop
+        // image dir.
+        $englishFlag = _PS_IMG_DIR_ . 'l/en.jpg';
+
         $body = [
             'name' => 'Testish',
             'isoCode' => 'ts',
             'tagIETF' => 'ts-TS',
             'shortDateFormat' => 'Y-m-d',
             'fullDateFormat' => 'Y-m-d H:i:s',
-            'flagImagePath' => '',
-            'noPictureImagePath' => '',
+            'flagImagePath' => $englishFlag,
+            'noPictureImagePath' => $englishFlag,
             'rtl' => false,
             'enabled' => true,
             'shopIds' => [1],
