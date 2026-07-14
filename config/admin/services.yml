@@ -51,6 +51,14 @@ services:
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\GetSearchTermAliasesQuerySerializer:
     autoconfigure: true
 
+  # AddProductToOrderCommand has a private constructor and only accepts
+  # orderInvoiceId / hasFreeShipping through named constructors — see the
+  # class docblock on AddProductToOrderProcessor for the details.
+  PrestaShop\Module\APIResources\ApiPlatform\Processor\AddProductToOrderProcessor:
+    autowire: true
+    autoconfigure: true
+    public: true
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'
