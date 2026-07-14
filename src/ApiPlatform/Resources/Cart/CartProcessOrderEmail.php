@@ -22,6 +22,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Cart;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Command\SendProcessOrderEmailCommand;
@@ -47,6 +48,7 @@ use Symfony\Component\HttpFoundation\Response;
     exceptionToStatus: [
         CartNotFoundException::class => Response::HTTP_NOT_FOUND,
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CartConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         OrderEmailSendException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
