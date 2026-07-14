@@ -97,4 +97,46 @@ class OrderCurrencyEndpointTest extends ApiTestCase
         );
         $this->assertSame($newCurrencyId, $currentCurrency);
     }
+
+    public function testChangeOrderCurrencyWithInvalidPayload(): void
+    {
+        $validationErrorsResponse = $this->updateItem(
+            '/orders/' . self::$orderId . '/currencies',
+            ['newCurrencyId' => 0],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'newCurrencyId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
+    }
+
+    public function testChangeOrderCurrencyOnValidOrderReturns422(): void
+    {
+        // Flip the order back to valid=1 so the handler refuses the change.
+        \Db::getInstance()->update('orders', ['valid' => 1], '`id_order` = ' . self::$orderId);
+        try {
+            $newCurrencyId = (int) \Db::getInstance()->getValue(
+                'SELECT `id_currency` FROM `' . _DB_PREFIX_ . 'currency`
+                 WHERE `deleted` = 0 AND `active` = 1 AND `id_currency` <> ' . self::$originalCurrencyId . '
+                 ORDER BY `id_currency` ASC'
+            );
+            if ($newCurrencyId === 0) {
+                $this->markTestSkipped('No alternative active currency available in the fixtures.');
+            }
+
+            $this->updateItem(
+                '/orders/' . self::$orderId . '/currencies',
+                ['newCurrencyId' => $newCurrencyId],
+                ['order_write'],
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
+        } finally {
+            \Db::getInstance()->update('orders', ['valid' => 0], '`id_order` = ' . self::$orderId);
+        }
+    }
 }
