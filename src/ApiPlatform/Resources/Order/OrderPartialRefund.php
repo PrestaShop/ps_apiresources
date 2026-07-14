@@ -28,6 +28,7 @@ use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -56,6 +57,19 @@ class OrderPartialRefund
     /**
      * Refunds keyed by order detail id, each with a "quantity" and "amount".
      */
+    #[Assert\NotBlank]
+    #[ApiProperty(openapiContext: [
+        'type' => 'object',
+        'additionalProperties' => [
+            'type' => 'object',
+            'properties' => [
+                'quantity' => ['type' => 'integer', 'example' => 1],
+                'amount' => ['type' => 'string', 'example' => '10.00'],
+            ],
+            'required' => ['quantity', 'amount'],
+        ],
+        'example' => ['1' => ['quantity' => 1, 'amount' => '10.00']],
+    ])]
     public array $orderDetailRefunds;
 
     public string $shippingCostRefundAmount;

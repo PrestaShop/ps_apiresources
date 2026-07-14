@@ -92,4 +92,32 @@ class OrderPartialRefundEndpointTest extends ApiTestCase
             Response::HTTP_NO_CONTENT
         );
     }
+
+    public function testIssuePartialRefundWithEmptyOrderDetailRefunds(): void
+    {
+        if (self::$orderId === 0) {
+            $this->markTestSkipped('No delivered order available in the fixtures.');
+        }
+
+        $validationErrorsResponse = $this->updateItem(
+            '/orders/' . self::$orderId . '/partial-refunds',
+            [
+                'orderDetailRefunds' => [],
+                'shippingCostRefundAmount' => '0',
+                'restockRefundedProducts' => false,
+                'generateCreditSlip' => false,
+                'generateVoucher' => false,
+                'voucherRefundType' => 0,
+            ],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'orderDetailRefunds',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
+    }
 }
