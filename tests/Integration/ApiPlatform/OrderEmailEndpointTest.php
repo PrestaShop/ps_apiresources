@@ -67,4 +67,32 @@ class OrderEmailEndpointTest extends ApiTestCase
             Response::HTTP_NO_CONTENT
         );
     }
+
+    public function testResendOrderEmailWithInvalidPayload(): void
+    {
+        $history = \Db::getInstance()->getRow(
+            'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'order_history` ORDER BY `id_order_history` ASC'
+        );
+
+        $validationErrorsResponse = $this->updateItem(
+            '/orders/' . (int) $history['id_order'] . '/emails',
+            [
+                'orderStatusId' => 0,
+                'orderHistoryId' => 0,
+            ],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'orderStatusId',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'orderHistoryId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
+    }
 }
