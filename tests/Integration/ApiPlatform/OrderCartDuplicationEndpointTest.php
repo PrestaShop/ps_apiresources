@@ -54,4 +54,15 @@ class OrderCartDuplicationEndpointTest extends ApiTestCase
         $this->assertGreaterThan(0, $response['cartId']);
         $this->assertSame($orderId, $response['orderId']);
     }
+
+    public function testDuplicateNotFoundOrderCart(): void
+    {
+        // A non-existent orderId should surface as 404, not fall through to 422.
+        $this->updateItem(
+            '/orders/99999/cart-duplications',
+            [],
+            ['order_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
 }

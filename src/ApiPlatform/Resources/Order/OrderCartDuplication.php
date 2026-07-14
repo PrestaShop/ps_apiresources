@@ -24,6 +24,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Order\Command\DuplicateOrderCartCommand;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\DuplicateOrderCartException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -41,6 +42,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     exceptionToStatus: [
+        OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
         DuplicateOrderCartException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
