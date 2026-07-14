@@ -25,8 +25,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Order\Command\CancelOrderProductCommand;
-use PrestaShop\PrestaShop\Core\Domain\Order\Exception\CannotCancelOrderProductException;
-use PrestaShop\PrestaShop\Core\Domain\Order\Exception\CartRuleValidityException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\InvalidCancelProductException;
+use PrestaShop\PrestaShop\Core\Domain\Order\Exception\InvalidOrderStateException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -44,8 +44,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
-        CannotCancelOrderProductException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        CartRuleValidityException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        InvalidCancelProductException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        InvalidOrderStateException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
