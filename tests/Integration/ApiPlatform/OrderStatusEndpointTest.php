@@ -82,4 +82,21 @@ class OrderStatusEndpointTest extends ApiTestCase
 
         $this->assertSame($newStateId, (int) (new \Order(self::$orderId))->getCurrentState());
     }
+
+    public function testUpdateOrderStatusWithInvalidPayload(): void
+    {
+        $validationErrorsResponse = $this->updateItem(
+            '/orders/' . self::$orderId . '/status',
+            ['newOrderStatusId' => 0],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'newOrderStatusId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
+    }
 }
