@@ -28,6 +28,7 @@ use PrestaShop\PrestaShop\Core\Domain\Employee\ValueObject\NoEmployeeId;
 use PrestaShop\PrestaShop\Core\Domain\Order\Command\AddOrderFromBackOfficeCommand;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShopBundle\Exception\InvalidModuleException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -41,6 +42,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         CartNotFoundException::class => Response::HTTP_NOT_FOUND,
+        InvalidModuleException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]

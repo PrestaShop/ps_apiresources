@@ -22,6 +22,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Symfony\Component\HttpFoundation\Response;
+
 class BackOfficeOrderEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
@@ -33,5 +35,22 @@ class BackOfficeOrderEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'add order from back office endpoint' => ['POST', '/orders'];
+    }
+
+    public function testAddOrderWithMalformedPaymentModuleNameReturns422(): void
+    {
+        // A malformed paymentModuleName ("bad module!") passes Assert\NotBlank
+        // but AddOrderFromBackOfficeCommand::assertIsModuleName() throws
+        // InvalidModuleException — must surface as 422, not 500.
+        $this->createItem(
+            '/orders',
+            [
+                'cartId' => 1,
+                'paymentModuleName' => 'bad module!',
+                'orderStateId' => 1,
+            ],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
     }
 }
