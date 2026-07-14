@@ -86,4 +86,38 @@ class BulkOrderStatusEndpointTest extends ApiTestCase
             $this->assertSame($newStateId, (int) (new \Order($orderId))->getCurrentState());
         }
     }
+
+    public function testBulkChangeOrderStatusWithEmptyOrderIds(): void
+    {
+        $validationErrorsResponse = $this->updateItem(
+            '/orders/bulk-update-status',
+            ['orderIds' => [], 'newOrderStatusId' => (int) \Configuration::get('PS_OS_PREPARATION')],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'orderIds',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
+    }
+
+    public function testBulkChangeOrderStatusWithInvalidStatusId(): void
+    {
+        $validationErrorsResponse = $this->updateItem(
+            '/orders/bulk-update-status',
+            ['orderIds' => array_keys(self::$originalStates), 'newOrderStatusId' => 0],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'newOrderStatusId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
+    }
 }

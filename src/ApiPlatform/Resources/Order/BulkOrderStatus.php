@@ -27,6 +27,7 @@ use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -48,7 +49,10 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class BulkOrderStatus
 {
+    #[Assert\NotBlank]
+    #[Assert\All([new Assert\Positive()])]
     public array $orderIds;
 
+    #[Assert\Positive]
     public int $newOrderStatusId;
 }
