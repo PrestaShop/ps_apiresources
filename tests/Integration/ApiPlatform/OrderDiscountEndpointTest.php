@@ -43,7 +43,7 @@ class OrderDiscountEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'add discount to order endpoint' => ['PUT', '/orders/1/discounts'];
+        yield 'add discount to order endpoint' => ['POST', '/orders/1/discounts'];
     }
 
     public function testAddCartRuleToOrder(): void
@@ -52,7 +52,7 @@ class OrderDiscountEndpointTest extends ApiTestCase
             'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` DESC'
         );
 
-        $this->updateItem(
+        $this->createItem(
             '/orders/' . $orderId . '/discounts',
             [
                 'cartRuleName' => self::DISCOUNT_NAME,
@@ -61,7 +61,7 @@ class OrderDiscountEndpointTest extends ApiTestCase
                 'orderInvoiceId' => null,
             ],
             ['order_write'],
-            Response::HTTP_NO_CONTENT
+            Response::HTTP_CREATED
         );
 
         $discountCount = (int) \Db::getInstance()->getValue(
@@ -69,5 +69,31 @@ class OrderDiscountEndpointTest extends ApiTestCase
              WHERE `id_order` = ' . $orderId . " AND `name` = '" . self::DISCOUNT_NAME . "'"
         );
         $this->assertSame(1, $discountCount);
+    }
+
+    public function testAddCartRuleWithEmptyName(): void
+    {
+        $orderId = (int) \Db::getInstance()->getValue(
+            'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` DESC'
+        );
+
+        $validationErrorsResponse = $this->createItem(
+            '/orders/' . $orderId . '/discounts',
+            [
+                'cartRuleName' => '',
+                'cartRuleType' => 'amount',
+                'value' => '1',
+                'orderInvoiceId' => null,
+            ],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'cartRuleName',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
     }
 }

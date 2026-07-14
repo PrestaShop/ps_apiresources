@@ -26,15 +26,15 @@ use PrestaShop\PrestaShop\Core\Domain\CartRule\Exception\InvalidCartRuleDiscount
 use PrestaShop\PrestaShop\Core\Domain\Order\Command\AddCartRuleToOrderCommand;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
+        new CQRSCreate(
             uriTemplate: '/orders/{orderId}/discounts',
             requirements: ['orderId' => '\d+'],
-            read: false,
             output: false,
             CQRSCommand: AddCartRuleToOrderCommand::class,
             scopes: [
@@ -53,14 +53,16 @@ class OrderDiscount
     #[ApiProperty(identifier: true)]
     public int $orderId;
 
+    #[Assert\NotBlank]
     public string $cartRuleName;
 
     /**
      * One of: percent, amount, free_shipping.
      */
+    #[Assert\Choice(choices: ['percent', 'amount', 'free_shipping'])]
     public string $cartRuleType;
 
-    public ?string $value;
+    public ?string $value = null;
 
-    public ?int $orderInvoiceId;
+    public ?int $orderInvoiceId = null;
 }
