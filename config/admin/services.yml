@@ -51,6 +51,14 @@ services:
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\GetSearchTermAliasesQuerySerializer:
     autoconfigure: true
 
+  # GetOrderProductsForViewingHandler returns an OrderProductsForViewing wrapper
+  # (rows behind ->getProducts()), not the plain list CQRSGetCollection expects —
+  # see the class docblock on OrderProductListProvider for the details.
+  PrestaShop\Module\APIResources\ApiPlatform\Provider\OrderProductListProvider:
+    autowire: true
+    autoconfigure: true
+    public: true
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'

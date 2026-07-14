@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
+use PrestaShop\Module\APIResources\ApiPlatform\Provider\OrderProductListProvider;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderProductsForViewing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
@@ -36,6 +37,7 @@ use Symfony\Component\HttpFoundation\Response;
             uriTemplate: '/orders/{orderId}/products',
             requirements: ['orderId' => '\d+'],
             CQRSQuery: GetOrderProductsForViewing::class,
+            provider: OrderProductListProvider::class,
             scopes: ['order_read'],
             parameters: new Parameters([
                 new QueryParameter(key: 'offset', required: false, description: 'Pagination offset'),
@@ -49,6 +51,11 @@ use Symfony\Component\HttpFoundation\Response;
                     ['name' => 'productsSorting', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'enum' => ['ASC', 'DESC']]],
                 ],
             ],
+            extraProperties: [
+                'ApiResourceMapping' => [
+                    '[productId]' => '[id]',
+                ],
+            ],
         ),
     ],
     exceptionToStatus: [
@@ -59,7 +66,7 @@ class OrderProductList
 {
     public ?int $orderDetailId = null;
 
-    public int $id;
+    public int $productId;
 
     public array $shipmentIds = [];
 

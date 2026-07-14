@@ -45,7 +45,7 @@ class OrderProductListEndpointTest extends ApiTestCase
 
         $this->assertIsArray($result);
         foreach ($result as $row) {
-            $this->assertArrayHasKey('id', $row);
+            $this->assertArrayHasKey('productId', $row);
             $this->assertArrayHasKey('name', $row);
             $this->assertArrayHasKey('quantity', $row);
         }
