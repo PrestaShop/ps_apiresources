@@ -49,18 +49,21 @@ class OrderStandardRefund
 {
     public int $orderId;
 
-    /** Array of {orderDetailId, productQuantity, refundedAmount?}. */
+    /**
+     * Refunds keyed by order detail id, each with a "quantity". This matches
+     * IssueStandardRefundCommand::setOrderDetailRefunds() which iterates the
+     * array as `{orderDetailId} => ['quantity' => N]`.
+     */
     #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => [
+        'type' => 'object',
+        'additionalProperties' => [
             'type' => 'object',
             'properties' => [
-                'orderDetailId' => ['type' => 'integer'],
-                'productQuantity' => ['type' => 'integer', 'minimum' => 1],
-                'refundedAmount' => ['type' => 'string', 'description' => 'Optional per-line refund amount (partial refund); omit for a full-line refund.'],
+                'quantity' => ['type' => 'integer', 'minimum' => 1],
             ],
-            'required' => ['orderDetailId', 'productQuantity'],
+            'required' => ['quantity'],
         ],
+        'example' => ['12' => ['quantity' => 2]],
     ])]
     #[Assert\NotBlank]
     public array $orderDetailRefunds;
