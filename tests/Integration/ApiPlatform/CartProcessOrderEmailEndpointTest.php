@@ -63,6 +63,19 @@ class CartProcessOrderEmailEndpointTest extends ApiTestCase
         );
     }
 
+    public function testSendProcessOrderEmailWithInvalidCartIdReturns422(): void
+    {
+        // cartId=0 passes the URI \d+ requirement but new CartId(0) throws
+        // CartConstraintException — must surface as 422, not 500.
+        $this->requestApi(
+            'PUT',
+            '/carts/0/process-order-emails',
+            null,
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+    }
+
     private function createCustomerCart(): int
     {
         $customerId = (int) \Db::getInstance()->getValue(
