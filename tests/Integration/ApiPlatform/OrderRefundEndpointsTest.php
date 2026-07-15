@@ -22,6 +22,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Symfony\Component\HttpFoundation\Response;
+
 class OrderRefundEndpointsTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
@@ -34,5 +36,38 @@ class OrderRefundEndpointsTest extends ApiTestCase
     {
         yield 'issue standard refund endpoint' => ['POST', '/orders/1/refunds'];
         yield 'issue return product endpoint' => ['POST', '/orders/1/product-returns'];
+    }
+
+    public function testIssueStandardRefundRejectsMissingOrderDetailRefunds(): void
+    {
+        $this->createItem(
+            '/orders/1/refunds',
+            [
+                'orderDetailRefunds' => [],
+                'refundShippingCost' => false,
+                'generateCreditSlip' => false,
+                'generateVoucher' => false,
+                'voucherRefundType' => 1,
+            ],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+    }
+
+    public function testIssueProductReturnRejectsMissingOrderDetailRefunds(): void
+    {
+        $this->createItem(
+            '/orders/1/product-returns',
+            [
+                'orderDetailRefunds' => [],
+                'restockRefundedProducts' => false,
+                'refundShippingCost' => false,
+                'generateCreditSlip' => false,
+                'generateVoucher' => false,
+                'voucherRefundType' => 1,
+            ],
+            ['order_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
     }
 }
