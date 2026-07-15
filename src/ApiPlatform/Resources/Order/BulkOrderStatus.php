@@ -18,8 +18,11 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Order\Command\BulkChangeOrderStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\ChangeOrderStatusException;
@@ -49,6 +52,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class BulkOrderStatus
 {
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     #[Assert\NotBlank]
     #[Assert\All([new Assert\Positive()])]
     public array $orderIds;
