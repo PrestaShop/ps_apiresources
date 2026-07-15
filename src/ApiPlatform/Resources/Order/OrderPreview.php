@@ -30,7 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/orders/{orderId}/previews',
+            uriTemplate: '/orders/{orderId}/preview',
             requirements: ['orderId' => '\d+'],
             CQRSQuery: GetOrderPreview::class,
             scopes: [

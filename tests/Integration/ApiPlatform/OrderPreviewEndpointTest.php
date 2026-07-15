@@ -28,7 +28,7 @@ class OrderPreviewEndpointTest extends ApiTestCase
 {
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get order preview endpoint' => ['GET', '/orders/1/previews'];
+        yield 'get order preview endpoint' => ['GET', '/orders/1/preview'];
     }
 
     public function testGetOrderPreview(): void
@@ -37,7 +37,7 @@ class OrderPreviewEndpointTest extends ApiTestCase
             'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` ASC'
         );
 
-        $preview = $this->getItem('/orders/' . $orderId . '/previews', ['order_read']);
+        $preview = $this->getItem('/orders/' . $orderId . '/preview', ['order_read']);
 
         $this->assertSame($orderId, $preview['orderId']);
         $this->assertIsBool($preview['taxIncluded']);
@@ -57,6 +57,6 @@ class OrderPreviewEndpointTest extends ApiTestCase
 
     public function testGetNonExistentOrderPreviewReturnsNotFound(): void
     {
-        $this->getItem('/orders/999999/previews', ['order_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/orders/999999/preview', ['order_read'], Response::HTTP_NOT_FOUND);
     }
 }
