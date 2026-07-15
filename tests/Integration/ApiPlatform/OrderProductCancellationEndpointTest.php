@@ -40,8 +40,7 @@ class OrderProductCancellationEndpointTest extends ApiTestCase
         $row = \Db::getInstance()->getRow(
             'SELECT o.`id_order`, od.`id_order_detail`
              FROM `' . _DB_PREFIX_ . 'orders` o
-             INNER JOIN `' . _DB_PREFIX_ . 'order_detail` od ON od.`id_order` = o.`id_order`
-             LIMIT 1'
+             INNER JOIN `' . _DB_PREFIX_ . 'order_detail` od ON od.`id_order` = o.`id_order`'
         );
         self::$paidOrderId = (int) $row['id_order'];
         self::$paidOrderDetailId = (int) $row['id_order_detail'];
