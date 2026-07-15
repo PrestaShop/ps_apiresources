@@ -22,7 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-class OrderProductListEndpointTest extends ApiTestCase
+class OrderProductsEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
@@ -44,7 +44,11 @@ class OrderProductListEndpointTest extends ApiTestCase
         $result = $this->getItem('/orders/' . $orderId . '/products', ['order_read']);
 
         $this->assertIsArray($result);
-        foreach ($result as $row) {
+        $this->assertArrayHasKey('orderId', $result);
+        $this->assertSame($orderId, $result['orderId']);
+        $this->assertArrayHasKey('products', $result);
+        $this->assertIsArray($result['products']);
+        foreach ($result['products'] as $row) {
             $this->assertArrayHasKey('productId', $row);
             $this->assertArrayHasKey('name', $row);
             $this->assertArrayHasKey('quantity', $row);

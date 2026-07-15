@@ -22,22 +22,21 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
-use PrestaShop\Module\APIResources\ApiPlatform\Provider\OrderProductListProvider;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Query\GetOrderProductsForViewing;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSGetCollection(
+        new CQRSGet(
             uriTemplate: '/orders/{orderId}/products',
             requirements: ['orderId' => '\d+'],
             CQRSQuery: GetOrderProductsForViewing::class,
-            provider: OrderProductListProvider::class,
             scopes: ['order_read'],
             parameters: new Parameters([
                 new QueryParameter(key: 'offset', required: false, description: 'Pagination offset'),
@@ -53,7 +52,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             extraProperties: [
                 'ApiResourceMapping' => [
-                    '[productId]' => '[id]',
+                    '[products][@index][id]' => '[products][@index][productId]',
                 ],
             ],
         ),
@@ -62,55 +61,13 @@ use Symfony\Component\HttpFoundation\Response;
         OrderNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class OrderProductList
+class OrderProducts
 {
-    public ?int $orderDetailId = null;
+    #[ApiProperty(identifier: true)]
+    public int $orderId;
 
-    public int $productId;
-
-    public array $shipmentIds = [];
-
-    public int $combinationId;
-
-    public string $name;
-
-    public array $packItems = [];
-
-    public string $reference;
-
-    public string $supplierReference;
-
-    public string $taxRate;
-
-    public string $type;
-
-    public string $location;
-
-    public int $quantity;
-
-    public string $unitPrice;
-
-    public string $totalPrice;
-
-    public int $availableQuantity;
-
-    public ?string $imagePath = null;
-
-    public string $unitPriceTaxExclRaw;
-
-    public string $unitPriceTaxInclRaw;
-
-    public string $amountRefunded;
-
-    public int $quantityRefunded;
-
-    public string $amountRefundable;
-
-    public string $amountRefundableRaw;
-
-    public int $quantityRefundable;
-
-    public bool $refundable;
-
-    public ?int $orderInvoiceId = null;
+    /**
+     * @var array<int, array<string, mixed>>
+     */
+    public array $products = [];
 }
