@@ -40,6 +40,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'order_write',
             ],
+            validationContext: ['groups' => ['Default', 'Create']],
         ),
     ],
     exceptionToStatus: [
@@ -59,6 +60,7 @@ class OrderDiscount
     /**
      * One of: percent, amount, free_shipping.
      */
+    #[Assert\NotBlank]
     #[Assert\Choice(choices: ['percent', 'amount', 'free_shipping'])]
     public string $cartRuleType;
 
