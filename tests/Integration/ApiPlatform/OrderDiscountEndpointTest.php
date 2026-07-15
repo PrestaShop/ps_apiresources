@@ -61,7 +61,7 @@ class OrderDiscountEndpointTest extends ApiTestCase
                 'orderInvoiceId' => null,
             ],
             ['order_write'],
-            Response::HTTP_CREATED
+            Response::HTTP_NO_CONTENT
         );
 
         $discountCount = (int) \Db::getInstance()->getValue(
