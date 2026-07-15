@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\DatabaseDump;
 
 class OrderDiscountRemovalEndpointTest extends ApiTestCase
 {
@@ -31,13 +32,13 @@ class OrderDiscountRemovalEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+        DatabaseDump::restoreTables(['order_cart_rule']);
         self::createApiClient(['order_write']);
     }
 
     public static function tearDownAfterClass(): void
     {
-        \Db::getInstance()->delete('order_cart_rule', "`name` = '" . self::DISCOUNT_NAME . "'");
-
+        DatabaseDump::restoreTables(['order_cart_rule']);
         parent::tearDownAfterClass();
     }
 
@@ -71,12 +72,9 @@ class OrderDiscountRemovalEndpointTest extends ApiTestCase
         ]);
         $orderCartRuleId = (int) \Db::getInstance()->Insert_ID();
 
-        $this->requestApi(
-            'DELETE',
+        $this->deleteItem(
             '/orders/' . $orderId . '/discounts/' . $orderCartRuleId,
-            null,
-            ['order_write'],
-            Response::HTTP_NO_CONTENT
+            ['order_write']
         );
 
         $remaining = (int) \Db::getInstance()->getValue(
@@ -84,5 +82,10 @@ class OrderDiscountRemovalEndpointTest extends ApiTestCase
              WHERE `id_order_cart_rule` = ' . $orderCartRuleId . ' AND `deleted` = 0'
         );
         $this->assertSame(0, $remaining);
+    }
+
+    public function testDeleteFromNonExistentOrderReturns404(): void
+    {
+        $this->deleteItem('/orders/999999/discounts/999999', ['order_write'], Response::HTTP_NOT_FOUND);
     }
 }
