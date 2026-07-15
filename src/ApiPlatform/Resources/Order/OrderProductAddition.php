@@ -22,14 +22,11 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\InvalidAmountException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\InvalidProductQuantityException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderNotFoundException;
-use PrestaShop\Module\APIResources\ApiPlatform\Processor\AddProductToOrderProcessor;
 use PrestaShop\PrestaShop\Core\Domain\Order\Product\Command\AddProductToOrderCommand;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,7 +38,6 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/orders/{orderId}/product-additions',
             requirements: ['orderId' => '\d+'],
             CQRSCommand: AddProductToOrderCommand::class,
-            processor: AddProductToOrderProcessor::class,
             scopes: ['order_write'],
         ),
     ],
@@ -62,10 +58,10 @@ class OrderProductAddition
     public int $combinationId = 0;
 
     #[Assert\NotBlank]
-    public DecimalNumber $productPriceTaxIncluded;
+    public string $productPriceTaxIncluded;
 
     #[Assert\NotBlank]
-    public DecimalNumber $productPriceTaxExcluded;
+    public string $productPriceTaxExcluded;
 
     #[Assert\NotBlank]
     #[Assert\GreaterThan(0)]
