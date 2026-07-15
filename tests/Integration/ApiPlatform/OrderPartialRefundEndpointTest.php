@@ -62,7 +62,7 @@ class OrderPartialRefundEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'issue order partial refund endpoint' => ['PUT', '/orders/1/partial-refunds'];
+        yield 'issue order partial refund endpoint' => ['POST', '/orders/1/partial-refunds'];
     }
 
     public function testIssuePartialRefund(): void
@@ -76,7 +76,7 @@ class OrderPartialRefundEndpointTest extends ApiTestCase
              WHERE `id_order` = ' . self::$orderId . ' ORDER BY `id_order_detail` ASC'
         );
 
-        $this->updateItem(
+        $this->createItem(
             '/orders/' . self::$orderId . '/partial-refunds',
             [
                 'orderDetailRefunds' => [
@@ -99,7 +99,7 @@ class OrderPartialRefundEndpointTest extends ApiTestCase
             $this->markTestSkipped('No delivered order available in the fixtures.');
         }
 
-        $validationErrorsResponse = $this->updateItem(
+        $validationErrorsResponse = $this->createItem(
             '/orders/' . self::$orderId . '/partial-refunds',
             [
                 'orderDetailRefunds' => [],
