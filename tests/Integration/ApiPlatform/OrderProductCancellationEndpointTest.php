@@ -34,13 +34,18 @@ class OrderProductCancellationEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
         self::createApiClient(['order_write']);
 
-        // Pick any fixture order together with one of its order_detail rows.
-        // Fashion demo orders are in paid states, so this is enough to exercise
-        // the InvalidOrderStateException::ALREADY_PAID branch (422).
+        // Pick a fixture order that has at least one order_payment row: that is
+        // what Order::hasPayments() checks, so checkOrderState() short-circuits
+        // to InvalidOrderStateException::ALREADY_PAID (422) before any stock
+        // movement is written. Without this filter the negative test can pick
+        // an order that proceeds into the cancel path and hits the unrelated
+        // StockMvt::setIdEmployee(null) TypeError (core #41803).
         $row = \Db::getInstance()->getRow(
             'SELECT o.`id_order`, od.`id_order_detail`
              FROM `' . _DB_PREFIX_ . 'orders` o
-             INNER JOIN `' . _DB_PREFIX_ . 'order_detail` od ON od.`id_order` = o.`id_order`'
+             INNER JOIN `' . _DB_PREFIX_ . 'order_detail` od ON od.`id_order` = o.`id_order`
+             INNER JOIN `' . _DB_PREFIX_ . 'order_payment` op ON op.`order_reference` = o.`reference`
+             LIMIT 1'
         );
         self::$paidOrderId = (int) $row['id_order'];
         self::$paidOrderDetailId = (int) $row['id_order_detail'];
@@ -78,8 +83,9 @@ class OrderProductCancellationEndpointTest extends ApiTestCase
 
     public function testCancelOnAlreadyPaidOrderReturns422(): void
     {
-        // Fixture orders are paid → checkOrderState() throws
-        // InvalidOrderStateException::ALREADY_PAID, mapped to 422.
+        // The fixture order was selected because it has an order_payment row,
+        // so checkOrderState() throws InvalidOrderStateException::ALREADY_PAID
+        // (via hasPayments()) and returns 422 before any stock movement.
         $this->createItem(
             '/orders/' . self::$paidOrderId . '/product-cancellations',
             ['cancelledProducts' => [(string) self::$paidOrderDetailId => 1]],
