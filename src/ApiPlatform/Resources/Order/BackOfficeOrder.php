@@ -48,27 +48,30 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class BackOfficeOrder
 {
-    #[Assert\NotBlank]
-    #[Assert\GreaterThan(0)]
-    public int $cartId;
+    public function __construct(
+        #[Assert\NotBlank]
+        #[Assert\GreaterThan(0)]
+        public int $cartId = 0,
 
-    /**
-     * Employee that placed the order. Pass NoEmployeeId::NO_EMPLOYEE_ID_VALUE (0)
-     * to skip employee attribution — this also short-circuits the
-     * translator-dependent "Manual order — Employee: …" internal note code path.
-     */
-    public int $employeeId = NoEmployeeId::NO_EMPLOYEE_ID_VALUE;
+        /**
+         * Technical name of the installed payment module driving validateOrder(),
+         * e.g. 'ps_wirepayment', 'ps_checkpayment', 'boorder'.
+         */
+        #[Assert\NotBlank]
+        public string $paymentModuleName = '',
 
-    public string $orderMessage = '';
+        #[Assert\NotBlank]
+        #[Assert\GreaterThan(0)]
+        public int $orderStateId = 0,
 
-    /**
-     * Technical name of the installed payment module driving validateOrder(),
-     * e.g. 'ps_wirepayment', 'ps_checkpayment', 'boorder'.
-     */
-    #[Assert\NotBlank]
-    public string $paymentModuleName;
+        /**
+         * Employee that placed the order. Defaults to NoEmployeeId::NO_EMPLOYEE_ID_VALUE (0)
+         * — this also short-circuits the translator-dependent "Manual order —
+         * Employee: …" internal note code path.
+         */
+        public int $employeeId = NoEmployeeId::NO_EMPLOYEE_ID_VALUE,
 
-    #[Assert\NotBlank]
-    #[Assert\GreaterThan(0)]
-    public int $orderStateId;
+        public string $orderMessage = '',
+    ) {
+    }
 }
