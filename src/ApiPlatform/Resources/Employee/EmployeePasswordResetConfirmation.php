@@ -24,7 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Employee;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\ResetEmployeePasswordCommand;
-use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\InvalidResetPasswordTokenException;
+use PrestaShopBundle\Security\Admin\Exception\InvalidResetPasswordTokenException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
