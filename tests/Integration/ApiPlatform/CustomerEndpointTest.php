@@ -59,6 +59,16 @@ class CustomerEndpointTest extends ApiTestCase
             '/customers/1/details',
         ];
 
+        yield 'get customer orders endpoint' => [
+            'GET',
+            '/customers/1/orders',
+        ];
+
+        yield 'get customer carts endpoint' => [
+            'GET',
+            '/customers/1/carts',
+        ];
+
         yield 'update customer endpoint' => [
             'PATCH',
             '/customers/1',
@@ -516,6 +526,30 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('email', $customer);
         $this->assertArrayHasKey('defaultGroupId', $customer);
         $this->assertArrayHasKey('groupIds', $customer);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testGetCustomerOrders(int $customerId): void
+    {
+        $orders = $this->getItem('/customers/' . $customerId . '/orders', ['customer_read']);
+
+        // The endpoint returns a collection; a freshly created customer has no orders yet
+        $this->assertIsArray($orders);
+        $this->assertEmpty($orders);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testGetCustomerCarts(int $customerId): void
+    {
+        $carts = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
+
+        // The endpoint returns a collection; a freshly created customer has no carts yet
+        $this->assertIsArray($carts);
+        $this->assertEmpty($carts);
     }
 
     /**
