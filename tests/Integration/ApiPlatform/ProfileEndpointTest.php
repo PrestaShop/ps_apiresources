@@ -52,6 +52,11 @@ class ProfileEndpointTest extends ApiTestCase
             '/profiles',
         ];
 
+        yield 'patch endpoint' => [
+            'PATCH',
+            '/profiles/1',
+        ];
+
         yield 'delete endpoint' => [
             'DELETE',
             '/profiles/1',
@@ -99,6 +104,29 @@ class ProfileEndpointTest extends ApiTestCase
 
     /**
      * @depends testGetProfile
+     */
+    public function testEditProfile(int $profileId): int
+    {
+        $response = $this->partialUpdateItem('/profiles/' . $profileId, [
+            'names' => [
+                'en-US' => 'Profile En Updated',
+                'fr-FR' => 'Profile Fr Updated',
+            ],
+        ], ['profile_write']);
+
+        $this->assertEquals([
+            'profileId' => $profileId,
+            'names' => [
+                'en-US' => 'Profile En Updated',
+                'fr-FR' => 'Profile Fr Updated',
+            ],
+        ], $response);
+
+        return $profileId;
+    }
+
+    /**
+     * @depends testEditProfile
      */
     public function testDeleteProfile(int $profileId): void
     {
