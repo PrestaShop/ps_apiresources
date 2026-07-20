@@ -38,17 +38,49 @@ class ShopProductImagesEndpointTest extends ApiTestCase
     public function testListShopProductImages(): void
     {
         $productId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` ORDER BY `id_product` ASC'
+            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'image_shop` ORDER BY `id_product` ASC LIMIT 1'
         );
+        $this->assertGreaterThan(0, $productId, 'Fixture data must contain at least one product with images.');
+
+        $expectedByShop = [];
+        $rows = \Db::getInstance()->executeS(
+            'SELECT `id_shop`, `id_image`, `cover` FROM `' . _DB_PREFIX_ . 'image_shop`'
+            . ' WHERE `id_product` = ' . $productId
+            . ' ORDER BY `id_shop` ASC, `id_image` ASC'
+        );
+        foreach ($rows as $row) {
+            $shopId = (int) $row['id_shop'];
+            $expectedByShop[$shopId][] = [
+                'imageId' => (int) $row['id_image'],
+                'cover' => null !== $row['cover'] && (bool) $row['cover'],
+            ];
+        }
 
         $result = $this->getItem('/products/' . $productId . '/shop-images', ['product_read']);
 
         $this->assertIsArray($result);
-        foreach ($result as $row) {
-            $this->assertArrayHasKey('shopId', $row);
-            $this->assertIsInt($row['shopId']);
-            $this->assertArrayHasKey('productImages', $row);
-            $this->assertIsArray($row['productImages']);
+        $this->assertCount(count($expectedByShop), $result);
+
+        $actualByShop = [];
+        foreach ($result as $entry) {
+            $this->assertArrayHasKey('shopId', $entry);
+            $this->assertIsInt($entry['shopId']);
+            $this->assertArrayHasKey('productImages', $entry);
+            $this->assertIsArray($entry['productImages']);
+
+            $images = [];
+            foreach ($entry['productImages'] as $image) {
+                $this->assertArrayHasKey('imageId', $image);
+                $this->assertIsInt($image['imageId']);
+                $this->assertArrayHasKey('cover', $image);
+                $this->assertIsBool($image['cover']);
+                $images[] = ['imageId' => $image['imageId'], 'cover' => $image['cover']];
+            }
+            usort($images, static fn ($a, $b) => $a['imageId'] <=> $b['imageId']);
+            $actualByShop[$entry['shopId']] = $images;
         }
+        ksort($actualByShop);
+
+        $this->assertSame($expectedByShop, $actualByShop);
     }
 }
