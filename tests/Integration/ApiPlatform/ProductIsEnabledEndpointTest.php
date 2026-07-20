@@ -48,17 +48,11 @@ class ProductIsEnabledEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('productId', $result);
         $this->assertSame($productId, $result['productId']);
         $this->assertArrayHasKey('enabled', $result);
-        $this->assertIsBool($result['enabled']);
+        $this->assertTrue($result['enabled']);
     }
 
     public function testGetUnknownProductReturnsNotFound(): void
     {
-        $this->requestApi(
-            'GET',
-            '/products/999999/status',
-            null,
-            ['product_read'],
-            Response::HTTP_NOT_FOUND
-        );
+        $this->getItem('/products/999999/status', ['product_read'], Response::HTTP_NOT_FOUND);
     }
 }
