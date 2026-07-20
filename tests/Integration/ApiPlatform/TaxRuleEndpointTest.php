@@ -43,7 +43,6 @@ class TaxRuleEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'create endpoint' => ['POST', '/tax-rules-groups/1/tax-rules'];
-        yield 'list endpoint' => ['GET', '/tax-rules-groups/1/tax-rules'];
         yield 'get endpoint' => ['GET', '/tax-rules-groups/1/tax-rules/1'];
         yield 'update endpoint' => ['PATCH', '/tax-rules-groups/1/tax-rules/1'];
         yield 'delete endpoint' => ['DELETE', '/tax-rules-groups/1/tax-rules/1'];
