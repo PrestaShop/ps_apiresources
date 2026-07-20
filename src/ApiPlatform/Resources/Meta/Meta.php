@@ -1,0 +1,110 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Meta;
+
+use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Meta\Command\AddMetaCommand;
+use PrestaShop\PrestaShop\Core\Domain\Meta\Command\EditMetaCommand;
+use PrestaShop\PrestaShop\Core\Domain\Meta\Exception\MetaConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Meta\Exception\MetaNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Meta\Query\GetMetaForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ApiResource(
+    operations: [
+        new CQRSCreate(
+            uriTemplate: '/metas',
+            validationContext: ['groups' => ['Default', 'Create']],
+            CQRSCommand: AddMetaCommand::class,
+            CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
+            scopes: ['meta_write'],
+        ),
+        new CQRSGet(
+            uriTemplate: '/metas/{metaId}',
+            requirements: ['metaId' => '\d+'],
+            CQRSQuery: GetMetaForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['meta_read'],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/metas/{metaId}',
+            requirements: ['metaId' => '\d+'],
+            read: false,
+            CQRSCommand: EditMetaCommand::class,
+            CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
+            CQRSQuery: GetMetaForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['meta_write'],
+        ),
+    ],
+    normalizationContext: ['skip_null_values' => false],
+    exceptionToStatus: [
+        MetaNotFoundException::class => Response::HTTP_NOT_FOUND,
+        MetaConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
+)]
+class Meta
+{
+    #[ApiProperty(identifier: true)]
+    public int $metaId;
+
+    #[Assert\NotBlank(groups: ['Create'])]
+    public string $pageName;
+
+    #[LocalizedValue]
+    public array $pageTitles;
+
+    #[LocalizedValue]
+    public array $metaDescriptions;
+
+    #[LocalizedValue]
+    #[Assert\NotBlank(groups: ['Create'])]
+    public array $urlRewrites;
+
+    // EditableMeta exposes getLocalisedPageTitles / getLocalisedMetaDescriptions / getLocalisedUrlRewrites
+    public const QUERY_MAPPING = [
+        '[localisedPageTitles]' => '[pageTitles]',
+        '[localisedMetaDescriptions]' => '[metaDescriptions]',
+        '[localisedUrlRewrites]' => '[urlRewrites]',
+    ];
+
+    // AddMetaCommand expects localisedPageTitle / localisedMetaDescription / localisedRewriteUrls (singular title/description)
+    public const CREATE_COMMAND_MAPPING = [
+        '[pageTitles]' => '[localisedPageTitle]',
+        '[metaDescriptions]' => '[localisedMetaDescription]',
+        '[urlRewrites]' => '[localisedRewriteUrls]',
+    ];
+
+    // EditMetaCommand expects localisedPageTitles / localisedMetaDescriptions / localisedRewriteUrls
+    public const UPDATE_COMMAND_MAPPING = [
+        '[pageTitles]' => '[localisedPageTitles]',
+        '[metaDescriptions]' => '[localisedMetaDescriptions]',
+        '[urlRewrites]' => '[localisedRewriteUrls]',
+    ];
+}
