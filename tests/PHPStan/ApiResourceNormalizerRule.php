@@ -77,6 +77,10 @@ final class ApiResourceNormalizerRule implements Rule
         // Valid: complex denormalization of product-combination generation input.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GenerateCombinationsSerializer',
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GetSearchTermAliasesQuerySerializer',
+        // Valid: GetProductForEditing returns product tags as a list of LocalizedTags value
+        // objects; this normalizer flattens them into a language-id indexed map so they can
+        // go through the standard LocalizedValue handling like the other localized fields.
+        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\ProductBasicInformationNormalizer',
     ];
 
     public function getNodeType(): string
