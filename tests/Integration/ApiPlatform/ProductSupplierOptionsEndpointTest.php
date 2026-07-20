@@ -22,14 +22,45 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetSuppliersCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\UpdateProductSuppliersCommand;
 use Symfony\Component\HttpFoundation\Response;
 
 class ProductSupplierOptionsEndpointTest extends ApiTestCase
 {
+    private const SEEDED_REFERENCE = 'INT-TEST-SUPPLIER-REF';
+    private const SEEDED_PRICE = '12.345';
+    private const SEEDED_CURRENCY_ID = 1;
+
+    private static int $seededProductId;
+    private static int $seededSupplierId;
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
         self::createApiClient(['product_read']);
+
+        // A standard (non-combinations) product is required, otherwise the query handler
+        // short-circuits productSuppliers to an empty array (see GetProductSupplierOptionsHandler).
+        self::$seededProductId = (int) \Db::getInstance()->getValue(
+            'SELECT `id_product` FROM `' . _DB_PREFIX_ . "product` WHERE `product_type` = 'standard' ORDER BY `id_product` ASC"
+        );
+        self::$seededSupplierId = (int) \Db::getInstance()->getValue(
+            'SELECT `id_supplier` FROM `' . _DB_PREFIX_ . 'supplier` ORDER BY `id_supplier` ASC'
+        );
+
+        if (self::$seededProductId === 0 || self::$seededSupplierId === 0) {
+            self::fail('Demo data must ship at least one product and one supplier for this test.');
+        }
+
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand(self::$seededProductId, [self::$seededSupplierId]));
+        $commandBus->handle(new UpdateProductSuppliersCommand(self::$seededProductId, [[
+            'supplier_id' => self::$seededSupplierId,
+            'currency_id' => self::SEEDED_CURRENCY_ID,
+            'reference' => self::SEEDED_REFERENCE,
+            'price_tax_excluded' => self::SEEDED_PRICE,
+        ]]));
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -39,20 +70,27 @@ class ProductSupplierOptionsEndpointTest extends ApiTestCase
 
     public function testGetProductSupplierOptions(): void
     {
-        $productId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` ORDER BY `id_product` ASC'
-        );
+        $result = $this->getItem('/products/' . self::$seededProductId . '/supplier-options', ['product_read']);
 
-        $result = $this->getItem('/products/' . $productId . '/supplier-options', ['product_read']);
+        $this->assertSame(self::$seededProductId, $result['productId']);
+        $this->assertSame(self::$seededSupplierId, $result['defaultSupplierId']);
+        $this->assertSame([self::$seededSupplierId], $result['supplierIds']);
 
-        $this->assertArrayHasKey('productId', $result);
-        $this->assertSame($productId, $result['productId']);
-        $this->assertArrayHasKey('defaultSupplierId', $result);
-        $this->assertIsInt($result['defaultSupplierId']);
-        $this->assertArrayHasKey('supplierIds', $result);
-        $this->assertIsArray($result['supplierIds']);
-        $this->assertArrayHasKey('productSuppliers', $result);
         $this->assertIsArray($result['productSuppliers']);
+        $this->assertCount(1, $result['productSuppliers']);
+
+        $productSupplier = $result['productSuppliers'][0];
+        $this->assertIsInt($productSupplier['productSupplierId']);
+        $this->assertGreaterThan(0, $productSupplier['productSupplierId']);
+        $this->assertSame(self::$seededProductId, $productSupplier['productId']);
+        $this->assertSame(self::$seededSupplierId, $productSupplier['supplierId']);
+        $this->assertIsString($productSupplier['supplierName']);
+        $this->assertNotSame('', $productSupplier['supplierName']);
+        $this->assertSame(self::SEEDED_REFERENCE, $productSupplier['reference']);
+        $this->assertIsString($productSupplier['priceTaxExcluded']);
+        $this->assertSame((float) self::SEEDED_PRICE, (float) $productSupplier['priceTaxExcluded']);
+        $this->assertSame(self::SEEDED_CURRENCY_ID, $productSupplier['currencyId']);
+        $this->assertSame(0, $productSupplier['combinationId']);
     }
 
     public function testGetUnknownProductReturnsNotFound(): void
