@@ -1,0 +1,79 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PsApiResourcesTest\Integration\ApiPlatform;
+
+use Symfony\Component\HttpFoundation\Response;
+
+class EmployeePasswordResetEndpointTest extends ApiTestCase
+{
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        self::createApiClient(['employee_write']);
+    }
+
+    public static function getProtectedEndpoints(): iterable
+    {
+        yield 'send employee password reset email endpoint' => ['POST', '/employees/password-resets'];
+    }
+
+    public function testSendPasswordResetEmail(): void
+    {
+        // Depends on core PR PrestaShop/PrestaShop#42071: EmployeePasswordResetter
+        // used the admin router to build the reset URL, but that route is not
+        // registered in the admin-api kernel. The core PR decouples the resetter
+        // from the router and changes the handler return type to void (required
+        // by CQRSCommandProcessor).
+        $this->markTestSkipped('Requires PrestaShop/PrestaShop#42071.');
+
+        // PS_MAIL_METHOD = METHOD_DISABLE (3) in test env → Mail::send returns true
+        // without contacting a real MTA (classes/Mail.php:220).
+        $adminEmail = (string) \Db::getInstance()->getValue(
+            'SELECT `email` FROM `' . _DB_PREFIX_ . 'employee` ORDER BY `id_employee` ASC'
+        );
+
+        $this->requestApi(
+            'POST',
+            '/employees/password-resets',
+            ['email' => $adminEmail],
+            ['employee_write'],
+            Response::HTTP_CREATED
+        );
+    }
+
+    public function testUnknownEmployeeReturnsNotFound(): void
+    {
+        // Same core dependency as testSendPasswordResetEmail: the exception is
+        // never reached because URL generation blows up before the resetter
+        // even checks whether the employee exists.
+        $this->markTestSkipped('Requires PrestaShop/PrestaShop#42071.');
+
+        $this->requestApi(
+            'POST',
+            '/employees/password-resets',
+            ['email' => 'never-existed-' . uniqid() . '@example.test'],
+            ['employee_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+}
