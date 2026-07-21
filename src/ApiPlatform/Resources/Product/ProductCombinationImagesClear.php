@@ -24,32 +24,34 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationIds;
-use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\RemoveAllCombinationImagesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSGet(
-            uriTemplate: '/products/{productId}/combination-ids',
-            CQRSQuery: GetCombinationIds::class,
+        new CQRSDelete(
+            uriTemplate: '/products/combinations/{combinationId}/images',
+            requirements: ['combinationId' => '\\d+'],
+            output: false,
+            CQRSCommand: RemoveAllCombinationImagesCommand::class,
             scopes: [
-                'product_read',
+                'product_write',
             ],
-            CQRSQueryMapping: [
-                '[_context][shopConstraint]' => '[shopConstraint]',
-                '[@index][combinationId]' => '[combinationIds][@index]',
+            CQRSCommandMapping: [
+                '[_context][uriVariables][combinationId]' => '[combinationId]',
             ],
         ),
     ],
     exceptionToStatus: [
-        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CombinationNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CombinationConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class CombinationIdList
+class ProductCombinationImagesClear
 {
-    public int $productId;
-    #[ApiProperty(openapiContext: ['type' => 'array', 'description' => 'List of combination IDs', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
-    public array $combinationIds;
+    #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 56])]
+    public int $combinationId;
 }
