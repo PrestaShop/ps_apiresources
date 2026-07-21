@@ -406,6 +406,19 @@ class GenerateApiTrackingTableCommand extends Command
         return $count;
     }
 
+    private function statusEmoji(string $status): string
+    {
+        if (str_contains($status, 'Implemented')) {
+            return '✅';
+        }
+
+        if (str_contains($status, 'In Progress')) {
+            return '🚧';
+        }
+
+        return '❌';
+    }
+
     private function generateMarkdownTable(array $domainGroups, string $outputFile): void
     {
         $totalEndpoints = array_sum(array_map('count', $domainGroups));
@@ -439,7 +452,8 @@ class GenerateApiTrackingTableCommand extends Command
             foreach ($endpoints as $endpoint) {
                 $action = '`' . $endpoint['action'] . '`';
                 $type = $endpoint['type'];
-                $status = $endpoint['status'];
+                // Keep only the emoji in the table; the legend explains it.
+                $status = $this->statusEmoji($endpoint['status']);
                 $api = $endpoint['api'];
 
                 // Build assignee/PR info
@@ -447,7 +461,7 @@ class GenerateApiTrackingTableCommand extends Command
                 if (!empty($endpoint['assignee'])) {
                     $assigneeInfo = $endpoint['assignee'];
                     if ($endpoint['pr_info'] && !empty($endpoint['pr_info']['pr_url'])) {
-                        $assigneeInfo = "[{$endpoint['assignee']}](https://github.com/{$endpoint['assignee']}) / [PR]({$endpoint['pr_info']['pr_url']})";
+                        $assigneeInfo = "{$endpoint['assignee']} / [PR]({$endpoint['pr_info']['pr_url']})";
                     }
                 }
 
