@@ -466,10 +466,10 @@ class GenerateApiTrackingTableCommand extends Command
         file_put_contents($outputFile, $markdown);
     }
 
-    private function fetchGitHubPRs(string $owner, string $repo, string $state, ?string $token, int $limit = 50): array
+    private function fetchGitHubPRs(string $owner, string $repo, string $state, ?string $token, int $limit = 500): array
     {
-        $url = "https://api.github.com/repos/{$owner}/{$repo}/pulls?state={$state}&per_page={$limit}";
-
+        // GitHub caps per_page at 100, so we paginate to collect more than 100 PRs.
+        $perPage = 100;
         $headers = [
             'User-Agent: PrestaShop-API-Tracker',
             'Accept: application/vnd.github.v3+json',
@@ -486,12 +486,29 @@ class GenerateApiTrackingTableCommand extends Command
             ],
         ]);
 
-        $response = file_get_contents($url, false, $context);
-        if (false === $response) {
-            throw new \RuntimeException('Failed to fetch PRs from GitHub API');
+        $prs = [];
+        for ($page = 1; count($prs) < $limit; ++$page) {
+            $url = "https://api.github.com/repos/{$owner}/{$repo}/pulls?state={$state}&per_page={$perPage}&page={$page}";
+
+            $response = file_get_contents($url, false, $context);
+            if (false === $response) {
+                throw new \RuntimeException('Failed to fetch PRs from GitHub API');
+            }
+
+            $batch = json_decode($response, true);
+            if (!is_array($batch) || [] === $batch) {
+                break;
+            }
+
+            $prs = array_merge($prs, $batch);
+
+            // Last page reached when GitHub returns fewer than a full page.
+            if (count($batch) < $perPage) {
+                break;
+            }
         }
 
-        return json_decode($response, true) ?: [];
+        return array_slice($prs, 0, $limit);
     }
 
     private function analyzePRChanges(array $pr, ?string $token): array
