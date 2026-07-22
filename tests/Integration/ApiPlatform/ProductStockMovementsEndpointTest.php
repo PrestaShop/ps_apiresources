@@ -46,6 +46,11 @@ class ProductStockMovementsEndpointTest extends ApiTestCase
             'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` ORDER BY `id_product` ASC'
         );
 
+        // StockManager::saveMovement() forwards Context::getContext()->employee->id to
+        // StockMvt::setIdEmployee(), which is typed int — a null employee context throws a
+        // TypeError. Pin the default admin employee before seeding the movement.
+        \Context::getContext()->employee = new \Employee(1);
+
         // Ensure the product has a known stock movement to assert against.
         $command = new UpdateProductStockAvailableCommand($productId, ShopConstraint::shop(1));
         $command->setDeltaQuantity(7);
