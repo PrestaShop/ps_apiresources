@@ -109,11 +109,6 @@ class CategoryEndpointTest extends ApiTestCase
             'PATCH',
             '/categories/roots/2',
         ];
-
-        yield 'update position endpoint' => [
-            'PUT',
-            '/categories/3/positions',
-        ];
     }
 
     public function testAddCategory(): int
@@ -359,69 +354,52 @@ class CategoryEndpointTest extends ApiTestCase
         );
     }
 
-    public function testUpdateCategoryPosition(): void
+    public function testInvalidAddRootCategory(): void
     {
-        // Create a parent category with two children so we can reorder them
-        $parentId = $this->createItem('/categories', [
-            'names' => ['en-US' => 'Position Parent'],
-            'linkRewrites' => ['en-US' => 'position-parent'],
-            'isActive' => true,
-            'parentCategoryId' => 2,
-            'shopIds' => [1],
-        ], ['category_write'])['categoryId'];
-
-        $childIds = [];
-        foreach (['a', 'b'] as $suffix) {
-            $childIds[] = $this->createItem('/categories', [
-                'names' => ['en-US' => 'Position Child ' . $suffix],
-                'linkRewrites' => ['en-US' => 'position-child-' . $suffix],
-                'isActive' => true,
-                'parentCategoryId' => $parentId,
-                'shopIds' => [1],
-            ], ['category_write'])['categoryId'];
-        }
-
-        [$a, $b] = $childIds;
-
-        // Move the last child up to the first position. "positions" is the ordered list of
-        // the parent's children, each entry formatted as "{rowId}_{parentId}_{categoryId}"
-        // (see the legacy CategoryController::updatePositionAction and the core Behat scenarios
-        // in category_management.feature which cover the reordering behaviour itself).
-        $this->requestApi(
-            Request::METHOD_PUT,
-            '/categories/' . $b . '/positions',
-            [
-                'parentCategoryId' => $parentId,
-                'way' => 0,
-                'positions' => [
-                    'tr_' . $parentId . '_' . $b,
-                    'tr_' . $parentId . '_' . $a,
-                ],
-                'foundFirst' => false,
+        $invalidData = [
+            'names' => [
+                'en-US' => 'Root Category EN',
+                // < character is forbidden
+                'fr-FR' => 'Catégorie racine fr<',
             ],
-            ['category_write'],
-            Response::HTTP_NO_CONTENT
-        );
+            'linkRewrites' => [
+                'en-US' => 'root-category-en',
+                'fr-FR' => 'categorie-racine-fr',
+            ],
+            'enabled' => true,
+            'shopIds' => [1],
+        ];
+
+        // Creating with invalid data returns constraint messages and an http code 422
+        $validationErrors = $this->createItem('/categories/roots', $invalidData, ['category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'names[fr-FR]',
+                'message' => '"Catégorie racine fr<" is invalid',
+            ],
+        ], $validationErrors);
     }
 
-    public function testInvalidUpdateCategoryPosition(): void
+    /**
+     * @depends testAddRootCategory
+     */
+    public function testInvalidPatchRootCategory(int $categoryId): void
     {
-        // The moved category is not present in the "positions" list, so the handler cannot
-        // resolve its new position and throws a CategoryException, mapped to 422.
-        $this->requestApi(
-            Request::METHOD_PUT,
-            '/categories/3/positions',
-            [
-                'parentCategoryId' => 2,
-                'way' => 0,
-                'positions' => [
-                    'tr_2_999999',
-                ],
-                'foundFirst' => false,
-            ],
+        // Patching with an invalid (forbidden character) localized name returns a 422
+        $validationErrors = $this->partialUpdateItem(
+            '/categories/roots/' . $categoryId,
+            ['names' => ['en-US' => 'Root name<']],
             ['category_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'names[en-US]',
+                'message' => '"Root name<" is invalid',
+            ],
+        ], $validationErrors);
     }
 
     /**
