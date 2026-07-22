@@ -38,7 +38,7 @@ class ShopProductImagesEndpointTest extends ApiTestCase
     public function testListShopProductImages(): void
     {
         $productId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'image_shop` ORDER BY `id_product` ASC LIMIT 1'
+            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'image_shop` ORDER BY `id_product` ASC'
         );
         $this->assertGreaterThan(0, $productId, 'Fixture data must contain at least one product with images.');
 
