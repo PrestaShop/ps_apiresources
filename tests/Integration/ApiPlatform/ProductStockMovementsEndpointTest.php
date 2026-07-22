@@ -79,6 +79,36 @@ class ProductStockMovementsEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('add', $movement['dates']);
     }
 
+    public function testListProductStockMovementsRespectsOffsetAndLimit(): void
+    {
+        $productId = (int) \Db::getInstance()->getValue(
+            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` ORDER BY `id_product` ASC'
+        );
+
+        \Context::getContext()->employee = new \Employee(1);
+
+        // Seed three additional movements so we have enough rows to page through.
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        foreach ([1, 2, 3] as $delta) {
+            $command = new UpdateProductStockAvailableCommand($productId, ShopConstraint::shop(1));
+            $command->setDeltaQuantity($delta);
+            $commandBus->handle($command);
+        }
+
+        $capped = $this->getItem('/products/' . $productId . '/stock-movements?limit=2', ['product_read']);
+        $this->assertIsArray($capped);
+        $this->assertCount(2, $capped, 'limit=2 should return at most 2 movements');
+
+        $offset = $this->getItem('/products/' . $productId . '/stock-movements?offset=1&limit=2', ['product_read']);
+        $this->assertIsArray($offset);
+        $this->assertCount(2, $offset);
+        $this->assertNotEquals(
+            $capped[0]['stockMovementIds'],
+            $offset[0]['stockMovementIds'],
+            'offset=1 should skip the first movement returned by offset=0'
+        );
+    }
+
     public function testListProductStockMovementsReturns404ForUnknownProduct(): void
     {
         $unknownProductId = 1 + (int) \Db::getInstance()->getValue(
