@@ -44,13 +44,13 @@ use Symfony\Component\HttpFoundation\Response;
             parameters: new Parameters([
                 new QueryParameter(
                     key: 'offset',
-                    schema: ['type' => 'integer', 'minimum' => 0, 'default' => 0],
+                    schema: ['type' => 'integer'],
                     required: false,
                     description: 'Number of movements to skip (for pagination).'
                 ),
                 new QueryParameter(
                     key: 'limit',
-                    schema: ['type' => 'integer', 'minimum' => 0, 'default' => GetProductStockMovements::DEFAULT_LIMIT],
+                    schema: ['type' => 'integer'],
                     required: false,
                     description: 'Maximum number of movements to return.'
                 ),
