@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\TaxRule\Command\AddTaxRuleCommand;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class TaxRuleEndpointTest extends ApiTestCase
@@ -30,7 +32,7 @@ class TaxRuleEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['tax_rule_read']);
+        self::createApiClient(['tax_rule_read', 'tax_rule_write', 'tax_write', 'tax_rules_group_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -45,6 +47,16 @@ class TaxRuleEndpointTest extends ApiTestCase
         yield 'list endpoint' => [
             'GET',
             '/tax-rules',
+        ];
+
+        yield 'create endpoint' => [
+            'POST',
+            '/tax-rules',
+        ];
+
+        yield 'delete endpoint' => [
+            'DELETE',
+            '/tax-rules/1',
         ];
     }
 
@@ -168,26 +180,19 @@ class TaxRuleEndpointTest extends ApiTestCase
     public function testListTaxRuleWithoutTax(): void
     {
         // A tax rule with id_tax = 0 has no associated tax: rate and taxName must be null, not a 500 error
-        $taxRulesGroup = new \TaxRulesGroup();
-        $taxRulesGroup->name = 'API Test No Tax Group';
-        $taxRulesGroup->active = true;
-        $this->assertNotFalse($taxRulesGroup->add());
+        $taxRulesGroup = $this->createItem('/tax-rules-groups', [
+            'name' => 'API Test No Tax Group',
+            'enabled' => true,
+            'shopIds' => [1],
+        ], ['tax_rules_group_write']);
+        $taxRulesGroupId = $taxRulesGroup['taxRulesGroupId'];
 
         $countryId = (int) \Country::getByIso('FR');
-        $taxRule = new \TaxRule();
-        $taxRule->id_tax_rules_group = (int) $taxRulesGroup->id;
-        $taxRule->id_country = $countryId;
-        $taxRule->id_state = 0;
-        $taxRule->zipcode_from = '0';
-        $taxRule->zipcode_to = '0';
-        $taxRule->id_tax = 0;
-        $taxRule->behavior = 0;
-        $taxRule->description = 'API test rule no tax';
-        $this->assertNotFalse($taxRule->add());
-        $noTaxRuleId = (int) $taxRule->id;
+        $this->assertGreaterThan(0, $countryId);
+        $noTaxRuleId = $this->createTaxRuleFixture($taxRulesGroupId, $countryId, 0, 0, 'API test rule no tax');
 
         $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
-            'taxRulesGroupId' => (int) $taxRulesGroup->id,
+            'taxRulesGroupId' => $taxRulesGroupId,
         ]);
 
         $this->assertEquals(1, $taxRules['totalItems']);
@@ -221,6 +226,119 @@ class TaxRuleEndpointTest extends ApiTestCase
     }
 
     /**
+     * @return array{taxRuleId: int, taxRulesGroupId: int}
+     */
+    public function testAddTaxRule(): array
+    {
+        if (!class_exists(AddTaxRuleCommand::class)) {
+            $this->markTestSkipped('AddTaxRuleCommand class does not exist, this PrestaShop version does not support tax rule creation via the API yet');
+        }
+
+        $taxRulesGroup = $this->createItem('/tax-rules-groups', [
+            'name' => 'API Test Add/Delete Tax Rule Group',
+            'enabled' => true,
+            'shopIds' => [1],
+        ], ['tax_rules_group_write']);
+        $taxRulesGroupId = $taxRulesGroup['taxRulesGroupId'];
+
+        $tax = $this->createItem('/taxes', [
+            'names' => ['en-US' => 'API Test Add Tax', 'fr-FR' => 'API Test Add Tax'],
+            'enabled' => true,
+            'rate' => 15.0,
+        ], ['tax_write']);
+        $taxId = $tax['taxId'];
+
+        $countryId = (int) \Country::getByIso('ES');
+        $this->assertGreaterThan(0, $countryId);
+
+        $taxRule = $this->createItem('/tax-rules', [
+            'taxRulesGroupId' => $taxRulesGroupId,
+            'countryId' => $countryId,
+            'taxId' => $taxId,
+            'behavior' => 1,
+            'description' => 'API test add tax rule',
+        ], ['tax_rule_write']);
+        $this->assertArrayHasKey('taxRuleId', $taxRule);
+        $taxRuleId = $taxRule['taxRuleId'];
+        $this->assertNotNull($taxRuleId);
+
+        $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
+            'taxRulesGroupId' => $taxRulesGroupId,
+        ]);
+        $this->assertEquals(1, $taxRules['totalItems']);
+        $this->assertEquals(
+            [
+                'taxRuleId' => $taxRuleId,
+                'taxRulesGroupId' => $taxRulesGroupId,
+                'countryId' => $countryId,
+                'countryName' => 'Spain',
+                'stateId' => 0,
+                'stateName' => '--',
+                'zipcode' => '--',
+                'behavior' => 1,
+                'rate' => 15.0,
+                'taxName' => 'API Test Add Tax',
+                'description' => 'API test add tax rule',
+            ],
+            $taxRules['items'][0]
+        );
+
+        return ['taxRuleId' => $taxRuleId, 'taxRulesGroupId' => $taxRulesGroupId];
+    }
+
+    /**
+     * @depends testAddTaxRule
+     *
+     * @param array{taxRuleId: int, taxRulesGroupId: int} $fixtures
+     */
+    public function testDeleteTaxRule(array $fixtures): void
+    {
+        $this->deleteItem('/tax-rules/' . $fixtures['taxRuleId'], ['tax_rule_write']);
+
+        $taxRules = $this->listItems('/tax-rules', ['tax_rule_read'], [
+            'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+        ]);
+        $this->assertEquals(0, $taxRules['totalItems']);
+    }
+
+    public function testInvalidTaxRule(): void
+    {
+        if (!class_exists(AddTaxRuleCommand::class)) {
+            $this->markTestSkipped('AddTaxRuleCommand class does not exist, this PrestaShop version does not support tax rule creation via the API yet');
+        }
+
+        // countryId = 0 is Core's "all active countries" fan-out sentinel: rejected here since this
+        // endpoint always creates exactly one tax rule per call
+        $validationErrorsResponse = $this->createItem('/tax-rules', [
+            'taxRulesGroupId' => 1,
+            'countryId' => 0,
+            'taxId' => 1,
+        ], ['tax_rule_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'countryId',
+                'message' => 'This value should be greater than 0.',
+            ],
+        ], $validationErrorsResponse);
+
+        // behavior must be 0 (this tax only), 1 (combine) or 2 (one after another)
+        $validationErrorsResponse = $this->createItem('/tax-rules', [
+            'taxRulesGroupId' => 1,
+            'countryId' => 1,
+            'taxId' => 1,
+            'behavior' => 5,
+        ], ['tax_rule_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'behavior',
+                'message' => 'This value should be between 0 and 2.',
+            ],
+        ], $validationErrorsResponse);
+    }
+
+    /**
      * Creates a dedicated tax rules group containing three tax rules (France, Italy, Germany)
      * sharing the same tax, so the listing assertions rely on deterministic data.
      *
@@ -228,18 +346,19 @@ class TaxRuleEndpointTest extends ApiTestCase
      */
     private function createTaxRuleFixtures(): array
     {
-        $tax = new \Tax();
-        $tax->rate = 10.0;
-        $tax->active = true;
-        foreach (\Language::getIDs(false) as $langId) {
-            $tax->name[(int) $langId] = 'API Test Tax';
-        }
-        $this->assertNotFalse($tax->add());
+        $tax = $this->createItem('/taxes', [
+            'names' => ['en-US' => 'API Test Tax', 'fr-FR' => 'API Test Tax'],
+            'enabled' => true,
+            'rate' => 10.0,
+        ], ['tax_write']);
+        $taxId = $tax['taxId'];
 
-        $taxRulesGroup = new \TaxRulesGroup();
-        $taxRulesGroup->name = 'API Test Tax Rules Group';
-        $taxRulesGroup->active = true;
-        $this->assertNotFalse($taxRulesGroup->add());
+        $taxRulesGroup = $this->createItem('/tax-rules-groups', [
+            'name' => 'API Test Tax Rules Group',
+            'enabled' => true,
+            'shopIds' => [1],
+        ], ['tax_rules_group_write']);
+        $taxRulesGroupId = $taxRulesGroup['taxRulesGroupId'];
 
         $taxRuleIds = [];
         $countryIds = [];
@@ -252,25 +371,47 @@ class TaxRuleEndpointTest extends ApiTestCase
             $countryId = (int) \Country::getByIso($isoCode);
             $this->assertGreaterThan(0, $countryId);
             $countryIds[$isoCode] = $countryId;
-
-            $taxRule = new \TaxRule();
-            $taxRule->id_tax_rules_group = (int) $taxRulesGroup->id;
-            $taxRule->id_country = $countryId;
-            $taxRule->id_state = 0;
-            $taxRule->zipcode_from = '0';
-            $taxRule->zipcode_to = '0';
-            $taxRule->id_tax = (int) $tax->id;
-            $taxRule->behavior = $countryData['behavior'];
-            $taxRule->description = $countryData['description'];
-            $this->assertNotFalse($taxRule->add());
-            $taxRuleIds[$isoCode] = (int) $taxRule->id;
+            $taxRuleIds[$isoCode] = $this->createTaxRuleFixture($taxRulesGroupId, $countryId, $taxId, $countryData['behavior'], $countryData['description']);
         }
 
         return [
-            'taxRulesGroupId' => (int) $taxRulesGroup->id,
-            'taxId' => (int) $tax->id,
+            'taxRulesGroupId' => $taxRulesGroupId,
+            'taxId' => $taxId,
             'taxRuleIds' => $taxRuleIds,
             'countryIds' => $countryIds,
         ];
+    }
+
+    /**
+     * Creates a single tax rule via the API when it's available (PrestaShop 9.2+), otherwise falls back to the
+     * legacy ObjectModel so the list/filter/sort tests still have real data to exercise on older Core versions,
+     * where the /tax-rules create endpoint doesn't exist yet.
+     */
+    private function createTaxRuleFixture(int $taxRulesGroupId, int $countryId, int $taxId, int $behavior, string $description): int
+    {
+        if (class_exists(AddTaxRuleCommand::class)) {
+            $taxRule = $this->createItem('/tax-rules', [
+                'taxRulesGroupId' => $taxRulesGroupId,
+                'countryId' => $countryId,
+                'taxId' => $taxId,
+                'behavior' => $behavior,
+                'description' => $description,
+            ], ['tax_rule_write']);
+
+            return $taxRule['taxRuleId'];
+        }
+
+        $taxRule = new \TaxRule();
+        $taxRule->id_tax_rules_group = $taxRulesGroupId;
+        $taxRule->id_country = $countryId;
+        $taxRule->id_state = 0;
+        $taxRule->zipcode_from = '0';
+        $taxRule->zipcode_to = '0';
+        $taxRule->id_tax = $taxId;
+        $taxRule->behavior = $behavior;
+        $taxRule->description = $description;
+        $this->assertNotFalse($taxRule->add());
+
+        return (int) $taxRule->id;
     }
 }
