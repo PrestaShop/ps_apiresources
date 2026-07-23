@@ -1,0 +1,77 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\ExtraProperty;
+
+use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Search\Filters\ExtraPropertyDefinitionFilters;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
+
+#[ApiResource(
+    operations: [
+        new PaginatedList(
+            uriTemplate: '/extra-properties',
+            scopes: [
+                'extra_property_read',
+            ],
+            ApiResourceMapping: self::MAPPING,
+            gridDataFactory: 'prestashop.core.grid.data_factory.extra_property_definition',
+            filtersClass: ExtraPropertyDefinitionFilters::class,
+            filtersMapping: [
+                '[extraPropertyId]' => '[id_extra_property_definition]',
+                '[fieldType]' => '[type]',
+                '[fieldScope]' => '[scope]',
+            ],
+        ),
+    ]
+)]
+class ExtraPropertyList
+{
+    #[ApiProperty(identifier: true)]
+    public int $extraPropertyId;
+
+    public string $entityName;
+
+    public ?string $moduleName = null;
+
+    public string $propertyName;
+
+    public string $fieldType;
+
+    public string $fieldScope;
+
+    public string $sqlIndex;
+
+    public bool $displayFront;
+
+    public const MAPPING = [
+        '[id_extra_property_definition]' => '[extraPropertyId]',
+        '[entity_name]' => '[entityName]',
+        '[module_name]' => '[moduleName]',
+        '[property_name]' => '[propertyName]',
+        '[type]' => '[fieldType]',
+        '[scope]' => '[fieldScope]',
+        '[sql_index]' => '[sqlIndex]',
+        '[display_front]' => '[displayFront]',
+    ];
+}
