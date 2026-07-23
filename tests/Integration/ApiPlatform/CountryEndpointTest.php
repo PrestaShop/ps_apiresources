@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Country\Command\BulkDeleteCountriesCommand;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -59,6 +60,7 @@ class CountryEndpointTest extends ApiTestCase
         yield 'update endpoint' => ['PATCH', '/countries/1'];
         yield 'delete endpoint' => ['DELETE', '/countries/1'];
         yield 'list endpoint' => ['GET', '/countries'];
+        yield 'bulk delete endpoint' => ['DELETE', '/countries/bulk-delete'];
     }
 
     public function testAddCountry(): int
@@ -390,6 +392,37 @@ class CountryEndpointTest extends ApiTestCase
     private function expectedAddressFormat(string $sentFormat): string
     {
         return interface_exists(self::CORE_ADDRESS_FORMAT_CHECKER) ? $sentFormat : '';
+    }
+
+    /**
+     * BulkDeleteCountriesCommand landed in PS develop (post-9.1). Gate the test so
+     * older cores that don't ship the command simply skip it.
+     */
+    public function testBulkDeleteCountries(): void
+    {
+        if (!class_exists(BulkDeleteCountriesCommand::class)) {
+            $this->markTestSkipped('BulkDeleteCountriesCommand is not available on this PrestaShop version.');
+        }
+
+        $ids = [];
+        foreach (['YA', 'YB'] as $isoCode) {
+            $payload = $this->getCreatePayload();
+            $payload['isoCode'] = $isoCode;
+            $payload['names'] = [
+                'en-US' => 'Bulk Country ' . $isoCode,
+                'fr-FR' => 'Pays Bulk ' . $isoCode,
+            ];
+            $created = $this->createItem('/countries', $payload, ['country_write']);
+            $ids[] = $created['countryId'];
+        }
+
+        $this->bulkDeleteItems('/countries/bulk-delete', [
+            'countryIds' => $ids,
+        ], ['country_write']);
+
+        foreach ($ids as $countryId) {
+            $this->getItem('/countries/' . $countryId, ['country_read'], Response::HTTP_NOT_FOUND);
+        }
     }
 
     /**
