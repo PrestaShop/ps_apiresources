@@ -23,13 +23,48 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\DatabaseDump;
 
 class OrderRefundEndpointsTest extends ApiTestCase
 {
+    private static int $orderId;
+    private static int $orderDetailId;
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
         self::createApiClient(['order_write']);
+
+        // Pick the first seeded order that has at least one order_detail row,
+        // then bring it into a paid state so a standard refund is allowed
+        // (paying the order also triggers invoice generation, which the
+        // IssueStandardRefundCommand handler needs).
+        $row = \Db::getInstance()->getRow(
+            'SELECT o.id_order, od.id_order_detail
+               FROM `' . _DB_PREFIX_ . 'orders` o
+               INNER JOIN `' . _DB_PREFIX_ . 'order_detail` od
+                       ON od.id_order = o.id_order
+              LIMIT 1'
+        );
+        self::$orderId = (int) $row['id_order'];
+        self::$orderDetailId = (int) $row['id_order_detail'];
+
+        $order = new \Order(self::$orderId);
+        $order->setCurrentState((int) \Configuration::get('PS_OS_PAYMENT'));
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        parent::tearDownAfterClass();
+        DatabaseDump::restoreTables([
+            'orders',
+            'order_detail',
+            'order_history',
+            'order_invoice',
+            'order_payment',
+            'order_slip',
+            'order_slip_detail',
+        ]);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -68,6 +103,39 @@ class OrderRefundEndpointsTest extends ApiTestCase
             ],
             ['order_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+    }
+
+    public function testIssueStandardRefundGeneratesCreditSlip(): void
+    {
+        $slipsBefore = (int) \Db::getInstance()->getValue(
+            'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'order_slip`
+              WHERE id_order = ' . self::$orderId
+        );
+
+        $this->createItem(
+            '/orders/' . self::$orderId . '/refunds',
+            [
+                'orderDetailRefunds' => [
+                    (string) self::$orderDetailId => ['quantity' => 1],
+                ],
+                'refundShippingCost' => false,
+                'generateCreditSlip' => true,
+                'generateVoucher' => false,
+                'voucherRefundType' => 1,
+            ],
+            ['order_write'],
+            Response::HTTP_CREATED
+        );
+
+        $slipsAfter = (int) \Db::getInstance()->getValue(
+            'SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'order_slip`
+              WHERE id_order = ' . self::$orderId
+        );
+        $this->assertSame(
+            $slipsBefore + 1,
+            $slipsAfter,
+            'a credit slip row should be created for the refunded order'
         );
     }
 }
