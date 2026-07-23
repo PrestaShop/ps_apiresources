@@ -33,13 +33,36 @@ class DatabaseTablesEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'get database tables endpoint' => ['GET', '/sql-requests/database-tables'];
+        yield 'get database table fields endpoint' => ['GET', '/sql-requests/database-tables/' . _DB_PREFIX_ . 'product/fields'];
     }
 
-    public function testGetDatabaseTables(): void
+    public function testGetDatabaseTables(): string
     {
         $result = $this->getItem('/sql-requests/database-tables', ['sql_management_read']);
 
         $this->assertArrayHasKey('tables', $result);
         $this->assertNotEmpty($result['tables']);
+
+        return $result['tables'][0];
+    }
+
+    /**
+     * @depends testGetDatabaseTables
+     */
+    public function testGetDatabaseTableFields(string $tableName): void
+    {
+        $result = $this->getItem('/sql-requests/database-tables/' . $tableName . '/fields', ['sql_management_read']);
+
+        $this->assertArrayHasKey('tableName', $result);
+        $this->assertSame($tableName, $result['tableName']);
+        $this->assertArrayHasKey('fields', $result);
+        $this->assertNotEmpty($result['fields']);
+
+        foreach ($result['fields'] as $field) {
+            $this->assertArrayHasKey('name', $field);
+            $this->assertArrayHasKey('type', $field);
+            $this->assertIsString($field['name']);
+            $this->assertIsString($field['type']);
+        }
     }
 }
