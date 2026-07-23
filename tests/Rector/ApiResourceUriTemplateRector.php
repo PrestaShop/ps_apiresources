@@ -120,6 +120,8 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         'logo',
         'duplicate',
         'close',
+        'available',
+        'tax-rule-group',
     ];
 
     public function __construct()

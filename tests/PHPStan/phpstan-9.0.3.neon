@@ -11,3 +11,11 @@ parameters:
             identifier: class.notFound
             count: 20
             path: ../../src/ApiPlatform/Resources/Discount/*
+        -
+            message: "#Class .*GetAvailableCarriers not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Carrier/*
+        -
+            message: "#Class .*GetCarriersForProduct not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Product/CarrierForProduct.php
