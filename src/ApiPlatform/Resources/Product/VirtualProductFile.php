@@ -38,13 +38,13 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/products/{productId}/virtual-file',
+            uriTemplate: '/products/{productId}/virtual-files',
             requirements: ['productId' => '\d+'],
             CQRSCommand: AddVirtualProductFileCommand::class,
             scopes: ['product_write'],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/virtual-product-files/{virtualProductFileId}',
+            uriTemplate: '/products/virtual-files/{virtualProductFileId}',
             requirements: ['virtualProductFileId' => '\d+'],
             read: false,
             CQRSCommand: UpdateVirtualProductFileCommand::class,

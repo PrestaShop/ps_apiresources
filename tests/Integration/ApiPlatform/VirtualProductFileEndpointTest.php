@@ -32,7 +32,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'add virtual product file endpoint' => ['POST', '/products/1/virtual-file'];
-        yield 'update virtual product file endpoint' => ['PATCH', '/virtual-product-files/1'];
+        yield 'add virtual product file endpoint' => ['POST', '/products/1/virtual-files'];
+        yield 'update virtual product file endpoint' => ['PATCH', '/products/virtual-files/1'];
     }
 }
