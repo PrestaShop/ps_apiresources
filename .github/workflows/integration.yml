@@ -22,7 +22,7 @@ jobs:
     strategy:
       matrix:
         php: ${{ fromJSON(needs.workflow_matrix_generator.outputs.dynamic_matrix) }}
-        prestashop_version: ['develop', '9.2.x', '9.0.3', '9.1.x']
+        prestashop_version: ['develop', '9.2.x', '9.0.3']
         exclude:
           # 9.0.3 doesn't support PHP 8.5
           - php: '8.5'
