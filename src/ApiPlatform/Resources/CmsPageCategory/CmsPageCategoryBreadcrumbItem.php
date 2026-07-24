@@ -29,7 +29,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 #[ApiResource(
     operations: [
         new CQRSGetCollection(
-            uriTemplate: '/cms-page-categories/{currentCategoryId}/breadcrumb',
+            uriTemplate: '/cms-page-categories/{currentCategoryId}/breadcrumbs',
             requirements: ['currentCategoryId' => '\d+'],
             CQRSQuery: GetCmsPageCategoriesForBreadcrumb::class,
             scopes: ['cms_page_category_read'],

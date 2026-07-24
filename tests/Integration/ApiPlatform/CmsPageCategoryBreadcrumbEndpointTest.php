@@ -32,13 +32,13 @@ class CmsPageCategoryBreadcrumbEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'breadcrumb endpoint' => ['GET', '/cms-page-categories/1/breadcrumb'];
+        yield 'breadcrumb endpoint' => ['GET', '/cms-page-categories/1/breadcrumbs'];
     }
 
     public function testBreadcrumbForRoot(): void
     {
         // ROOT (1) breadcrumb is a single-entry array pointing to itself.
-        $result = $this->getItem('/cms-page-categories/1/breadcrumb', ['cms_page_category_read']);
+        $result = $this->getItem('/cms-page-categories/1/breadcrumbs', ['cms_page_category_read']);
 
         $this->assertIsArray($result);
         $this->assertNotEmpty($result);
