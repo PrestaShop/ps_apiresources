@@ -160,6 +160,44 @@ the current usage pattern.
 - Nested fields use bracket notation:
   `'[basicInformation][localizedNames]' => '[names]'`.
 
+## Version gating
+
+When an operation (or a whole resource) is only available in a specific
+PrestaShop Core version and above, mark it with the
+`#[SinceVersion]` attribute from
+`PrestaShop\Module\APIResources\ApiPlatform\Metadata`:
+
+```php
+use PrestaShop\Module\APIResources\ApiPlatform\Metadata\SinceVersion;
+
+#[SinceVersion('9.2.0')]
+#[ApiResource(
+    operations: [
+        new CQRSGet(
+            uriTemplate: '/warehouses/{warehouseId}',
+            // ...
+        ),
+    ],
+)]
+class Warehouse
+{
+}
+```
+
+The attribute is purely declarative: the module does not enforce it at
+runtime (the Core simply won't register operations whose CQRS classes
+don't exist yet on an older version). Its purpose is discoverability
+for **clients** — SDKs, admin apps, integration tests — which can:
+
+- Read the attribute via reflection to grey out unavailable UI, or
+- Consume it through an OpenAPI decorator that exposes it as
+  `x-since-version` in the generated schema.
+
+Place it on the class when the whole resource is version-gated, or on a
+single operation when only one method of an existing resource is new.
+The attribute is repeatable, so a resource can declare both a class-level
+floor and a stricter version on a specific operation.
+
 ## Multi-shop
 
 > **Experimental — feature flag required.** Admin API support for
