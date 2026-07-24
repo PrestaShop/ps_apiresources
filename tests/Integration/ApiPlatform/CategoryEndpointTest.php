@@ -99,6 +99,11 @@ class CategoryEndpointTest extends ApiTestCase
             'DELETE',
             '/categories/bulk-delete/associate_and_disable',
         ];
+
+        yield 'update position endpoint' => [
+            'PUT',
+            '/categories/update-positions',
+        ];
     }
 
     public function testAddCategory(): int
@@ -281,6 +286,39 @@ class CategoryEndpointTest extends ApiTestCase
         foreach ($bulkCategories as $categoryId) {
             $this->getItem('/categories/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
         }
+    }
+
+    public function testUpdateCategoryPosition(): void
+    {
+        // Two fresh siblings under Home (parent 2). Their initial positions are the
+        // next two slots; we then send the position tokens in reversed order so the
+        // second created category ends up in the first sibling's slot.
+        [$catA, $catB] = $this->createTemporaryCategories();
+
+        $initialA = $this->getItem('/categories/' . $catA, ['category_read']);
+        $initialB = $this->getItem('/categories/' . $catB, ['category_read']);
+        $this->assertLessThan($initialB['position'], $initialA['position']);
+
+        $positions = [
+            $initialA['position'] => 'tr_2_' . $catB,
+            $initialB['position'] => 'tr_2_' . $catA,
+        ];
+
+        $this->updateItem('/categories/update-positions', [
+            'categoryId' => $catA,
+            'parentCategoryId' => 2,
+            'way' => 1,
+            'positions' => $positions,
+            'foundFirst' => true,
+        ], ['category_write'], Response::HTTP_NO_CONTENT);
+
+        $updatedA = $this->getItem('/categories/' . $catA, ['category_read']);
+        $updatedB = $this->getItem('/categories/' . $catB, ['category_read']);
+        $this->assertGreaterThan($updatedB['position'], $updatedA['position']);
+
+        // Clean up so the sibling count doesn't drift for later tests.
+        $this->deleteItem('/categories/' . $catA . '/associate_and_disable', ['category_write']);
+        $this->deleteItem('/categories/' . $catB . '/associate_and_disable', ['category_write']);
     }
 
     /**
