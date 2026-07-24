@@ -34,7 +34,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/categories/update-position',
+            uriTemplate: '/categories/update-positions',
             output: false,
             CQRSCommand: UpdateCategoryPositionCommand::class,
             openapiContext: [

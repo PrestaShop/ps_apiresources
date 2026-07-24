@@ -102,7 +102,7 @@ class CategoryEndpointTest extends ApiTestCase
 
         yield 'update position endpoint' => [
             'PUT',
-            '/categories/update-position',
+            '/categories/update-positions',
         ];
     }
 
@@ -304,7 +304,7 @@ class CategoryEndpointTest extends ApiTestCase
             $initialB['position'] => 'tr_2_' . $catA,
         ];
 
-        $this->updateItem('/categories/update-position', [
+        $this->updateItem('/categories/update-positions', [
             'categoryId' => $catA,
             'parentCategoryId' => 2,
             'way' => 1,
