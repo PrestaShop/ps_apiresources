@@ -32,6 +32,6 @@ class CustomerThreadForwardEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'forward customer thread endpoint' => ['POST', '/customer-threads/1/forwards'];
+        yield 'forward customer thread endpoint' => ['POST', '/customer-services/1/forwards'];
     }
 }
