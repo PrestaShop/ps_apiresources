@@ -33,7 +33,7 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/sql-requests/{sqlRequestId}/execution-result',
+            uriTemplate: '/sql-management/{sqlRequestId}/execution-results',
             requirements: ['sqlRequestId' => '\d+'],
             CQRSQuery: GetSqlRequestExecutionResultQuery::class,
             scopes: ['sql_request_read'],

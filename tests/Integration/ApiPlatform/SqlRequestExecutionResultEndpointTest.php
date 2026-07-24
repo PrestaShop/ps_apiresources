@@ -51,13 +51,13 @@ class SqlRequestExecutionResultEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get execution result endpoint' => ['GET', '/sql-requests/1/execution-result'];
+        yield 'get execution result endpoint' => ['GET', '/sql-management/1/execution-results'];
     }
 
     public function testGetSqlRequestExecutionResult(): void
     {
         $response = $this->getItem(
-            '/sql-requests/' . self::$sqlRequestId . '/execution-result',
+            '/sql-management/' . self::$sqlRequestId . '/execution-results',
             ['sql_request_read']
         );
 
@@ -76,7 +76,7 @@ class SqlRequestExecutionResultEndpointTest extends ApiTestCase
     public function testGetNonExistentSqlRequestExecutionResult(): void
     {
         $this->getItem(
-            '/sql-requests/999999/execution-result',
+            '/sql-management/999999/execution-results',
             ['sql_request_read'],
             Response::HTTP_NOT_FOUND
         );
