@@ -33,7 +33,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/customer-threads/{customerThreadId}/forwards',
+            uriTemplate: '/customer-services/{customerThreadId}/forwards',
             requirements: ['customerThreadId' => '\d+'],
             CQRSCommand: ForwardCustomerThreadCommand::class,
             scopes: ['customer_thread_write'],
