@@ -32,12 +32,12 @@ class CmsPageCategoryLocalizedNameEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get cms page category localized name' => ['GET', '/cms-page-categories/1/localized-name'];
+        yield 'get cms page category localized name' => ['GET', '/cms-page-categories/1/localized-names'];
     }
 
     public function testGetLocalizedName(): void
     {
-        $result = $this->getItem('/cms-page-categories/1/localized-name', ['cms_page_category_read']);
+        $result = $this->getItem('/cms-page-categories/1/localized-names', ['cms_page_category_read']);
 
         $this->assertArrayHasKey('cmsPageCategoryId', $result);
         $this->assertSame(1, $result['cmsPageCategoryId']);

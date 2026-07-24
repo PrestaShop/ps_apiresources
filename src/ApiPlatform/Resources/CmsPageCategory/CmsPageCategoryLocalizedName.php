@@ -30,7 +30,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/cms-page-categories/{cmsPageCategoryId}/localized-name',
+            uriTemplate: '/cms-page-categories/{cmsPageCategoryId}/localized-names',
             requirements: ['cmsPageCategoryId' => '\d+'],
             CQRSQuery: GetCmsPageCategoryNameForListing::class,
             scopes: ['cms_page_category_read'],
