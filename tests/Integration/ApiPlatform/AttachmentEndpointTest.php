@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Attachment\Query\GetAttachmentForEditing;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -74,8 +75,30 @@ class AttachmentEndpointTest extends ApiTestCase
         ];
     }
 
+    /**
+     * The CQRS API normalizer builds GetAttachmentForEditing from the command result using the
+     * `attachmentId` key. Cores whose constructor still takes `$attachmentIdValue` cannot be
+     * instantiated from that data, so POST /attachments answers 500 there. 9.0.3 will never carry
+     * the fix (the 9.0.x branch was deleted), hence a capability probe rather than a version check.
+     */
+    private function skipIfAttachmentIdNotExposed(): void
+    {
+        $constructor = (new \ReflectionClass(GetAttachmentForEditing::class))->getConstructor();
+        $parameters = null !== $constructor ? $constructor->getParameters() : [];
+
+        if ([] === $parameters || 'attachmentId' !== $parameters[0]->getName()) {
+            $this->markTestSkipped(
+                'Requires the core attachment for-editing CQRS alignment'
+                . ' (PrestaShop/PrestaShop#41889 on develop, #42124 on 9.1.x):'
+                . ' GetAttachmentForEditing must accept an "attachmentId" parameter.'
+            );
+        }
+    }
+
     public function testAddAttachment(): int
     {
+        $this->skipIfAttachmentIdNotExposed();
+
         $uploadedFile = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
 
         $attachment = $this->requestApi('POST', '/attachments', null, ['attachment_write'], Response::HTTP_CREATED, [
@@ -204,6 +227,8 @@ class AttachmentEndpointTest extends ApiTestCase
 
     private function createAttachment(string $name): int
     {
+        $this->skipIfAttachmentIdNotExposed();
+
         $uploadedFile = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
 
         $attachment = $this->requestApi('POST', '/attachments', null, ['attachment_write'], Response::HTTP_CREATED, [
