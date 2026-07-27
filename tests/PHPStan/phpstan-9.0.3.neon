@@ -11,3 +11,11 @@ parameters:
             identifier: class.notFound
             count: 20
             path: ../../src/ApiPlatform/Resources/Discount/*
+        # The TaxRule create/delete CQRS domain layer only exists since PrestaShop 9.2 (develop).
+        # These operations are gated behind experimentalOperation + a runtime class_exists() guard,
+        # so they're expected to be absent on 9.0.3.
+        -
+            message: "#Class .*TaxRulesGroup\\\\TaxRule\\\\(Command|Exception).* not found.#"
+            identifier: class.notFound
+            count: 6
+            path: ../../src/ApiPlatform/Resources/TaxRule/*
