@@ -63,9 +63,9 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
                 $this->assertArrayHasKey('position', $attribute);
                 $this->assertIsInt($attribute['position']);
                 $this->assertArrayHasKey('color', $attribute);
-                $this->assertArrayHasKey('name', $attribute);
-                $this->assertIsString($attribute['name']);
-                $this->assertArrayHasKey('imagePath', $attribute);
+                $this->assertArrayHasKey('localizedNames', $attribute);
+                $this->assertIsArray($attribute['localizedNames']);
+                $this->assertArrayHasKey('textureFilePath', $attribute);
             }
         }
 
@@ -90,10 +90,10 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
         $this->assertTrue($colorGroup['colorGroup']);
         $this->assertCount(14, $colorGroup['attributes'], 'Default fixtures ship 14 Color attributes.');
 
-        // Every Color attribute has a non-null color hex.
+        // Every Color attribute has a non-empty color hex and at least one localized name.
         foreach ($colorGroup['attributes'] as $attribute) {
-            $this->assertNotNull($attribute['color'], 'Attributes of a color group must expose a color hex.');
-            $this->assertNotEmpty($attribute['name']);
+            $this->assertNotEmpty($attribute['color'], 'Attributes of a color group must expose a color hex.');
+            $this->assertNotEmpty($attribute['localizedNames']);
         }
     }
 }

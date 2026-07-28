@@ -78,7 +78,9 @@ class AttributeGroupWithAttributes
      */
 
     /**
-     * Per-group attribute list. Each item: {attributeId, position, color, name, imagePath}.
+     * Per-group attribute list. Each item mirrors the Core DTO
+     * PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\QueryResult\Attribute:
+     * {attributeId, position, color, localizedNames{}, textureFilePath}.
      *
      * The underlying DTO getAttributes() returns null when attributes were not queried;
      * this endpoint always queries them via GetAttributeGroupList, so the value is guaranteed
@@ -91,9 +93,9 @@ class AttributeGroupWithAttributes
             'properties' => [
                 'attributeId' => ['type' => 'integer'],
                 'position' => ['type' => 'integer'],
-                'color' => ['type' => 'string', 'nullable' => true],
-                'name' => ['type' => 'string'],
-                'imagePath' => ['type' => 'string', 'nullable' => true],
+                'color' => ['type' => 'string'],
+                'localizedNames' => ['type' => 'object', 'additionalProperties' => ['type' => 'string']],
+                'textureFilePath' => ['type' => 'string', 'nullable' => true],
             ],
         ],
     ])]
