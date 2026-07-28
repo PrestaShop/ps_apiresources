@@ -32,7 +32,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/employees/password-resets',
+            uriTemplate: '/employees/send-password-reset-email',
             CQRSCommand: SendEmployeePasswordResetEmailCommand::class,
             scopes: ['employee_write'],
         ),

@@ -34,7 +34,7 @@ class EmployeePasswordResetEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'send employee password reset email endpoint' => ['POST', '/employees/password-resets'];
+        yield 'send employee password reset email endpoint' => ['POST', '/employees/send-password-reset-email'];
     }
 
     public function testSendPasswordResetEmail(): void
@@ -54,7 +54,7 @@ class EmployeePasswordResetEndpointTest extends ApiTestCase
 
         $this->requestApi(
             'POST',
-            '/employees/password-resets',
+            '/employees/send-password-reset-email',
             ['email' => $adminEmail],
             ['employee_write'],
             Response::HTTP_CREATED
@@ -70,7 +70,7 @@ class EmployeePasswordResetEndpointTest extends ApiTestCase
 
         $this->requestApi(
             'POST',
-            '/employees/password-resets',
+            '/employees/send-password-reset-email',
             ['email' => 'never-existed-' . uniqid() . '@example.test'],
             ['employee_write'],
             Response::HTTP_NOT_FOUND
