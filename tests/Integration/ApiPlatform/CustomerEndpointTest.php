@@ -903,8 +903,8 @@ class CustomerEndpointTest extends ApiTestCase
         }
 
         $this->assertNotNull($foundCustomer, 'Created customer should be found in search results');
-        $this->assertEquals('Search', $foundCustomer['firstname']);
-        $this->assertEquals('Test', $foundCustomer['lastname']);
+        $this->assertEquals('Search', $foundCustomer['firstName']);
+        $this->assertEquals('Test', $foundCustomer['lastName']);
         $this->assertEquals('search.test@example.com', $foundCustomer['email']);
         $this->assertArrayHasKey('fullnameAndEmail', $foundCustomer);
         $this->assertArrayHasKey('groups', $foundCustomer);

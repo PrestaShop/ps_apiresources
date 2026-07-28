@@ -77,9 +77,9 @@ class FoundCustomer
     #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $idCustomer;
 
-    public string $firstname;
+    public string $firstName;
 
-    public string $lastname;
+    public string $lastName;
 
     public string $email;
 
@@ -105,5 +105,9 @@ class FoundCustomer
         '[id_customer]' => '[idCustomer]',
         '[fullname_and_email]' => '[fullnameAndEmail]',
         '[id_default_group]' => '[idDefaultGroup]',
+        // The CQRS result uses the legacy column names, which reached the response untouched and
+        // made this endpoint return firstname/lastname while POST /customers uses firstName/lastName.
+        '[firstname]' => '[firstName]',
+        '[lastname]' => '[lastName]',
     ];
 }
