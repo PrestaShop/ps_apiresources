@@ -24,12 +24,6 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
 {
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-        self::createApiClient(['attribute_group_read']);
-    }
-
     public static function getProtectedEndpoints(): iterable
     {
         yield 'list attribute groups with attributes' => ['GET', '/attributes/groups-with-attributes'];
@@ -37,6 +31,8 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
 
     public function testListAttributeGroupsWithAttributes(): void
     {
+        // For CQRSGetCollection, getItem() returns the raw decoded JSON — which is a
+        // list of rows for a collection endpoint, not a single-item object.
         $result = $this->getItem('/attributes/groups-with-attributes', ['attribute_group_read']);
 
         $this->assertIsArray($result);
@@ -52,8 +48,8 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
             $this->assertNotEmpty($row['names']);
             $this->assertArrayHasKey('publicNames', $row);
             $this->assertIsArray($row['publicNames']);
-            $this->assertArrayHasKey('groupType', $row);
-            $this->assertIsString($row['groupType']);
+            $this->assertArrayHasKey('type', $row);
+            $this->assertIsString($row['type']);
             $this->assertArrayHasKey('colorGroup', $row);
             $this->assertIsBool($row['colorGroup']);
             $this->assertArrayHasKey('position', $row);
@@ -83,9 +79,14 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
             }
         }
         $this->assertNotNull($colorGroup, 'Default Color attribute group (id=2) should be returned by the endpoint.');
-        // Default English language id in fixtures is 1; also accept any locale that resolves to 'Color'.
-        $this->assertContains('Color', $colorGroup['names']);
-        $this->assertSame('color', $colorGroup['groupType']);
+        // setUpBeforeClass installs fr-FR alongside the default en-US, so both locale
+        // keys must be present in the localized maps.
+        $this->assertArrayHasKey('en-US', $colorGroup['names']);
+        $this->assertArrayHasKey('fr-FR', $colorGroup['names']);
+        $this->assertSame('Color', $colorGroup['names']['en-US']);
+        $this->assertArrayHasKey('en-US', $colorGroup['publicNames']);
+        $this->assertArrayHasKey('fr-FR', $colorGroup['publicNames']);
+        $this->assertSame('color', $colorGroup['type']);
         $this->assertTrue($colorGroup['colorGroup']);
         $this->assertCount(14, $colorGroup['attributes'], 'Default fixtures ship 14 Color attributes.');
 

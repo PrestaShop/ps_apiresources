@@ -38,14 +38,20 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
                 '[_context][shopConstraint]' => '[shopConstraint]',
             ],
             ApiResourceMapping: [
+                '[attributeGroupId]' => '[attributeGroupId]',
                 '[localizedNames]' => '[names]',
                 '[localizedPublicNames]' => '[publicNames]',
+                '[groupType]' => '[type]',
+                '[colorGroup]' => '[colorGroup]',
+                '[position]' => '[position]',
+                '[attributes]' => '[attributes]',
             ],
         ),
     ],
 )]
 class AttributeGroupWithAttributes
 {
+    #[ApiProperty(identifier: true)]
     public int $attributeGroupId;
 
     #[LocalizedValue]
@@ -54,11 +60,22 @@ class AttributeGroupWithAttributes
     #[LocalizedValue]
     public array $publicNames;
 
-    public string $groupType;
+    /**
+     * Matches the `$type` field name used by AttributeGroup.php (single-entity resource)
+     * for the same semantic. The CQRS DTO exposes it as `groupType`; see ApiResourceMapping.
+     */
+    public string $type;
 
     public bool $colorGroup;
 
     public int $position;
+
+    /**
+     * Shop association is intentionally omitted: GetAttributeGroupList (see
+     * AttributeGroup QueryResult DTO in Core) does not return the associated shop ids.
+     * The single-entity resource AttributeGroup.php exposes `$shopIds` because it is
+     * backed by GetAttributeGroupForEditing, which does load them.
+     */
 
     /**
      * Per-group attribute list. Each item: {attributeId, position, color, name, imagePath}.
