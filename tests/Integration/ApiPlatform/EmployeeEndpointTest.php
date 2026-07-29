@@ -88,7 +88,7 @@ class EmployeeEndpointTest extends ApiTestCase
             'password' => 'TestPassword123!',
             'defaultPageId' => 1,
             'languageId' => 1,
-            'active' => true,
+            'enabled' => true,
             'profileId' => 1,
             'shopAssociation' => [1],
             'hasEnabledGravatar' => false,
@@ -102,7 +102,7 @@ class EmployeeEndpointTest extends ApiTestCase
         $this->assertSame('Doe', $employee['lastName']);
         $this->assertSame('john.doe@example.com', $employee['email']);
         $this->assertSame(1, $employee['profileId']);
-        $this->assertTrue($employee['active']);
+        $this->assertTrue($employee['enabled']);
 
         $newItemsCount = $this->countItems('/employees', ['employee_read']);
         $this->assertEquals($itemsCount + 1, $newItemsCount);
@@ -122,7 +122,7 @@ class EmployeeEndpointTest extends ApiTestCase
         $this->assertSame('john.doe@example.com', $employee['email']);
         $this->assertSame(1, $employee['defaultPageId']);
         $this->assertSame(1, $employee['languageId']);
-        $this->assertTrue($employee['active']);
+        $this->assertTrue($employee['enabled']);
         $this->assertSame(1, $employee['profileId']);
 
         return $employeeId;
@@ -187,5 +187,4 @@ class EmployeeEndpointTest extends ApiTestCase
         // Getting the item should result in a 404 now
         $this->getItem('/employees/' . $employeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
     }
-
 }

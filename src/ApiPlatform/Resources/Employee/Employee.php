@@ -87,10 +87,12 @@ class Employee
 {
     public const COMMAND_MAPPING = [
         '[employee_id]' => '[employeeId]',
+        '[enabled]' => '[active]',
     ];
 
     public const QUERY_MAPPING = [
         '[employee_id][value]' => '[employeeId]',
+        '[active]' => '[enabled]',
     ];
 
     #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
@@ -118,7 +120,7 @@ class Employee
     public int $languageId;
 
     #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => true])]
-    public bool $active;
+    public bool $enabled;
 
     #[Assert\NotBlank(groups: ['Create'])]
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
