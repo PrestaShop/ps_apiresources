@@ -28,6 +28,7 @@ use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\AddApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\Configuration\ShopConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Domain\Language\Command\AddLanguageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
+use PrestaShop\PrestaShop\Core\Version;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -138,6 +139,18 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         }
 
         return parent::createClient($kernelOptions, $defaultOptions);
+    }
+
+    /**
+     * Skips the test when the PrestaShop core version is lower than the required minimum version. Useful
+     * for endpoints relying on the minVersion extra property: on older cores they are filtered out (404),
+     * so their tests can only run on core versions that actually expose them.
+     */
+    protected function markTestSkippedByMinVersion(string $minVersion): void
+    {
+        if (version_compare(Version::VERSION, $minVersion, '<')) {
+            static::markTestSkipped(sprintf('This test requires PrestaShop >= %s (current core version: %s)', $minVersion, Version::VERSION));
+        }
     }
 
     /**
