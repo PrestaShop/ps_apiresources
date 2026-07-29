@@ -35,65 +35,85 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
         // list of rows for a collection endpoint, not a single-item object.
         $result = $this->getItem('/attributes/groups-with-attributes', ['attribute_group_read']);
 
-        $this->assertIsArray($result);
-        $this->assertNotEmpty($result);
+        // Assert the full result set (all default fixture groups, all fields) in one
+        // shot: any new field on the group or attribute aggregate will surface here.
+        $this->assertEquals($this->getExpectedDefaultFixtureGroups(), $result);
+    }
 
-        // Basic shape assertions on every returned row: guarantees the response
-        // contract (field presence + type) rather than only key presence.
-        foreach ($result as $row) {
-            $this->assertArrayHasKey('attributeGroupId', $row);
-            $this->assertIsInt($row['attributeGroupId']);
-            $this->assertArrayHasKey('names', $row);
-            $this->assertIsArray($row['names']);
-            $this->assertNotEmpty($row['names']);
-            $this->assertArrayHasKey('publicNames', $row);
-            $this->assertIsArray($row['publicNames']);
-            $this->assertArrayHasKey('type', $row);
-            $this->assertIsString($row['type']);
-            $this->assertArrayHasKey('colorGroup', $row);
-            $this->assertIsBool($row['colorGroup']);
-            $this->assertArrayHasKey('position', $row);
-            $this->assertIsInt($row['position']);
-            $this->assertArrayHasKey('attributes', $row);
-            $this->assertIsArray($row['attributes']);
-
-            foreach ($row['attributes'] as $attribute) {
-                $this->assertArrayHasKey('attributeId', $attribute);
-                $this->assertIsInt($attribute['attributeId']);
-                $this->assertArrayHasKey('position', $attribute);
-                $this->assertIsInt($attribute['position']);
-                $this->assertArrayHasKey('color', $attribute);
-                $this->assertArrayHasKey('localizedNames', $attribute);
-                $this->assertIsArray($attribute['localizedNames']);
-                $this->assertArrayHasKey('textureFilePath', $attribute);
-            }
-        }
-
-        // Assert against known default fixture data: the Color group (attributeGroupId = 2)
-        // must be present and expose the expected aggregate shape.
-        $colorGroup = null;
-        foreach ($result as $row) {
-            if ($row['attributeGroupId'] === 2) {
-                $colorGroup = $row;
-                break;
-            }
-        }
-        $this->assertNotNull($colorGroup, 'Default Color attribute group (id=2) should be returned by the endpoint.');
-        // setUpBeforeClass installs fr-FR alongside the default en-US, so both locale
-        // keys must be present in the localized maps.
-        $this->assertArrayHasKey('en-US', $colorGroup['names']);
-        $this->assertArrayHasKey('fr-FR', $colorGroup['names']);
-        $this->assertSame('Color', $colorGroup['names']['en-US']);
-        $this->assertArrayHasKey('en-US', $colorGroup['publicNames']);
-        $this->assertArrayHasKey('fr-FR', $colorGroup['publicNames']);
-        $this->assertSame('color', $colorGroup['type']);
-        $this->assertTrue($colorGroup['colorGroup']);
-        $this->assertCount(14, $colorGroup['attributes'], 'Default fixtures ship 14 Color attributes.');
-
-        // Every Color attribute has a non-empty color hex and at least one localized name.
-        foreach ($colorGroup['attributes'] as $attribute) {
-            $this->assertNotEmpty($attribute['color'], 'Attributes of a color group must expose a color hex.');
-            $this->assertNotEmpty($attribute['localizedNames']);
-        }
+    /**
+     * Default demo fixture attribute groups, as returned by GetAttributeGroupList,
+     * with fr-FR installed alongside en-US (see setUpBeforeClass).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function getExpectedDefaultFixtureGroups(): array
+    {
+        return [
+            [
+                'attributeGroupId' => 1,
+                'names' => ['en-US' => 'Size', 'fr-FR' => 'Taille'],
+                'publicNames' => ['en-US' => 'Size', 'fr-FR' => 'Taille'],
+                'type' => 'select',
+                'colorGroup' => false,
+                'position' => 0,
+                'attributes' => [
+                    ['attributeId' => 1, 'position' => 0, 'color' => '', 'localizedNames' => ['en-US' => 'S', 'fr-FR' => 'S'], 'textureFilePath' => ''],
+                    ['attributeId' => 2, 'position' => 1, 'color' => '', 'localizedNames' => ['en-US' => 'M', 'fr-FR' => 'M'], 'textureFilePath' => ''],
+                    ['attributeId' => 3, 'position' => 2, 'color' => '', 'localizedNames' => ['en-US' => 'L', 'fr-FR' => 'L'], 'textureFilePath' => ''],
+                    ['attributeId' => 4, 'position' => 3, 'color' => '', 'localizedNames' => ['en-US' => 'XL', 'fr-FR' => 'XL'], 'textureFilePath' => ''],
+                ],
+            ],
+            [
+                'attributeGroupId' => 2,
+                'names' => ['en-US' => 'Color', 'fr-FR' => 'Couleur'],
+                'publicNames' => ['en-US' => 'Color', 'fr-FR' => 'Couleur'],
+                'type' => 'color',
+                'colorGroup' => true,
+                'position' => 1,
+                'attributes' => [
+                    ['attributeId' => 5, 'position' => 0, 'color' => '#F5F5DC', 'localizedNames' => ['en-US' => 'Beige', 'fr-FR' => 'Beige'], 'textureFilePath' => ''],
+                    ['attributeId' => 6, 'position' => 1, 'color' => '#FFFFFF', 'localizedNames' => ['en-US' => 'White', 'fr-FR' => 'Blanc'], 'textureFilePath' => ''],
+                    ['attributeId' => 7, 'position' => 2, 'color' => '#FAEBD7', 'localizedNames' => ['en-US' => 'Off White', 'fr-FR' => 'Blanc cassé'], 'textureFilePath' => ''],
+                    ['attributeId' => 8, 'position' => 3, 'color' => '#A2A2A2', 'localizedNames' => ['en-US' => 'Gray', 'fr-FR' => 'Gris'], 'textureFilePath' => ''],
+                    ['attributeId' => 9, 'position' => 4, 'color' => '#5F5F5F', 'localizedNames' => ['en-US' => 'Taupe', 'fr-FR' => 'Taupe'], 'textureFilePath' => ''],
+                    ['attributeId' => 10, 'position' => 5, 'color' => '#434A54', 'localizedNames' => ['en-US' => 'Black', 'fr-FR' => 'Noir'], 'textureFilePath' => ''],
+                    ['attributeId' => 11, 'position' => 6, 'color' => '#F39C11', 'localizedNames' => ['en-US' => 'Orange', 'fr-FR' => 'Orange'], 'textureFilePath' => ''],
+                    ['attributeId' => 12, 'position' => 7, 'color' => '#E84C3D', 'localizedNames' => ['en-US' => 'Red', 'fr-FR' => 'Rouge'], 'textureFilePath' => ''],
+                    ['attributeId' => 13, 'position' => 8, 'color' => '#9B59B6', 'localizedNames' => ['en-US' => 'Fuchsia', 'fr-FR' => 'Fuchsia'], 'textureFilePath' => ''],
+                    ['attributeId' => 14, 'position' => 9, 'color' => '#F3CFDE', 'localizedNames' => ['en-US' => 'Pink', 'fr-FR' => 'Rose'], 'textureFilePath' => ''],
+                    ['attributeId' => 15, 'position' => 10, 'color' => '#59AB5C', 'localizedNames' => ['en-US' => 'Green', 'fr-FR' => 'Vert'], 'textureFilePath' => ''],
+                    ['attributeId' => 16, 'position' => 11, 'color' => '#F1C40F', 'localizedNames' => ['en-US' => 'Yellow', 'fr-FR' => 'Jaune'], 'textureFilePath' => ''],
+                    ['attributeId' => 17, 'position' => 12, 'color' => '#935116', 'localizedNames' => ['en-US' => 'Brown', 'fr-FR' => 'Marron'], 'textureFilePath' => ''],
+                    ['attributeId' => 18, 'position' => 13, 'color' => '#C68E17', 'localizedNames' => ['en-US' => 'Camel', 'fr-FR' => 'Camel'], 'textureFilePath' => ''],
+                ],
+            ],
+            [
+                'attributeGroupId' => 3,
+                'names' => ['en-US' => 'Dimension', 'fr-FR' => 'Dimension'],
+                'publicNames' => ['en-US' => 'Dimension', 'fr-FR' => 'Dimension'],
+                'type' => 'select',
+                'colorGroup' => false,
+                'position' => 2,
+                'attributes' => [
+                    ['attributeId' => 22, 'position' => 0, 'color' => '', 'localizedNames' => ['en-US' => '40x60cm', 'fr-FR' => '40x60cm'], 'textureFilePath' => ''],
+                    ['attributeId' => 23, 'position' => 1, 'color' => '', 'localizedNames' => ['en-US' => '60x90cm', 'fr-FR' => '60x90cm'], 'textureFilePath' => ''],
+                    ['attributeId' => 24, 'position' => 2, 'color' => '', 'localizedNames' => ['en-US' => '80x120cm', 'fr-FR' => '80x120cm'], 'textureFilePath' => ''],
+                ],
+            ],
+            [
+                'attributeGroupId' => 4,
+                'names' => ['en-US' => 'Paper Type', 'fr-FR' => 'Type de papier'],
+                'publicNames' => ['en-US' => 'Paper Type', 'fr-FR' => 'Type de papier'],
+                'type' => 'radio',
+                'colorGroup' => false,
+                'position' => 3,
+                'attributes' => [
+                    ['attributeId' => 25, 'position' => 0, 'color' => '', 'localizedNames' => ['en-US' => 'Standard', 'fr-FR' => 'Standard'], 'textureFilePath' => ''],
+                    ['attributeId' => 26, 'position' => 1, 'color' => '', 'localizedNames' => ['en-US' => 'Recycled', 'fr-FR' => 'Recyclé'], 'textureFilePath' => ''],
+                    ['attributeId' => 27, 'position' => 2, 'color' => '', 'localizedNames' => ['en-US' => 'Glossy', 'fr-FR' => 'Brillant'], 'textureFilePath' => ''],
+                    ['attributeId' => 28, 'position' => 3, 'color' => '', 'localizedNames' => ['en-US' => 'Matte', 'fr-FR' => 'Mat'], 'textureFilePath' => ''],
+                ],
+            ],
+        ];
     }
 }

@@ -3,6 +3,7 @@
 /var
 
 ## Files
+.DS_Store
 .php-cs-fixer.cache
 .phpunit.result.cache
 tests/Integration/clover.xml
