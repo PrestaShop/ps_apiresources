@@ -25,18 +25,21 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\AddEmployeeCommand;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\DeleteEmployeeCommand;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\EditEmployeeCommand;
+use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeException;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Query\GetEmployeeForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSGet(
             uriTemplate: '/employees/{employeeId}',
+            requirements: ['employeeId' => '\d+'],
             CQRSQuery: GetEmployeeForEditing::class,
             scopes: [
                 'employee_read',
@@ -52,9 +55,12 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            validationContext: ['groups' => ['Default', 'Create']],
         ),
-        new CQRSUpdate(
+        new CQRSPartialUpdate(
             uriTemplate: '/employees/{employeeId}',
+            requirements: ['employeeId' => '\d+'],
+            read: false,
             CQRSCommand: EditEmployeeCommand::class,
             CQRSQuery: GetEmployeeForEditing::class,
             scopes: [
@@ -65,7 +71,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSDelete(
             uriTemplate: '/employees/{employeeId}',
-            requirements: ['featureId' => '\d+'],
+            requirements: ['employeeId' => '\d+'],
             CQRSCommand: DeleteEmployeeCommand::class,
             scopes: [
                 'employee_write',
@@ -73,6 +79,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     exceptionToStatus: [
+        EmployeeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         EmployeeNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
@@ -86,16 +93,42 @@ class Employee
         '[employee_id][value]' => '[employeeId]',
     ];
 
-    #[ApiProperty(identifier: true)]
+    #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $employeeId;
+
+    #[Assert\NotBlank(groups: ['Create'])]
     public string $firstName;
+
+    #[Assert\NotBlank(groups: ['Create'])]
     public string $lastName;
+
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Email(mode: Assert\Email::VALIDATION_MODE_STRICT)]
     public string $email;
-    public string $avatarUrl;
+
+    #[Assert\NotBlank(groups: ['Create'])]
+    public string $password;
+
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $defaultPageId;
+
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $languageId;
-    public bool $enabled;
+
+    #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => true])]
+    public bool $active;
+
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $profileId;
+
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1]])]
     public array $shopAssociation;
+
+    #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => false])]
     public bool $hasEnabledGravatar;
+
+    public ?string $avatarUrl = null;
 }

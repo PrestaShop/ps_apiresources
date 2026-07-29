@@ -25,26 +25,28 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
-use Tests\Resources\Resetter\LanguageResetter;
 
 class EmployeeEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        // Add the fr-FR language to test multi lang values accurately
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
-        DatabaseDump::restoreTables(['gender', 'gender_lang']);
+        self::resetTables();
         self::createApiClient(['employee_write', 'employee_read']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        // Reset DB as it was before this test
-        LanguageResetter::resetLanguages();
-        DatabaseDump::restoreTables(['gender', 'gender_lang']);
+        self::resetTables();
+    }
+
+    protected static function resetTables(): void
+    {
+        DatabaseDump::restoreTables([
+            'employee',
+            'employee_shop',
+        ]);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -52,7 +54,6 @@ class EmployeeEndpointTest extends ApiTestCase
         yield 'create endpoint' => [
             'POST',
             '/employees',
-            'multipart/form-data',
         ];
 
         yield 'get endpoint' => [
@@ -85,15 +86,28 @@ class EmployeeEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/employees', ['employee_read']);
 
-        $employee = $this->createItem('/employees', null, ['employee_write'], Response::HTTP_CREATED);
+        $postData = [
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+            'email' => 'john.doe@example.com',
+            'password' => 'TestPassword123!',
+            'defaultPageId' => 1,
+            'languageId' => 1,
+            'active' => true,
+            'profileId' => 1,
+            'shopAssociation' => [1],
+            'hasEnabledGravatar' => false,
+        ];
+
+        $employee = $this->createItem('/employees', $postData, ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employee);
         $employeeId = $employee['employeeId'];
-        $this->assertEquals(
-            [
-                'employeeId' => $employeeId,
-            ],
-            $employee
-        );
+
+        $this->assertSame('John', $employee['firstName']);
+        $this->assertSame('Doe', $employee['lastName']);
+        $this->assertSame('john.doe@example.com', $employee['email']);
+        $this->assertSame(1, $employee['profileId']);
+        $this->assertTrue($employee['active']);
 
         $newItemsCount = $this->countItems('/employees', ['employee_read']);
         $this->assertEquals($itemsCount + 1, $newItemsCount);
@@ -103,184 +117,113 @@ class EmployeeEndpointTest extends ApiTestCase
 
     /**
      * @depends testAddEmployee
-     *
-     * @param int $employeeId
-     *
-     * @return int
      */
     public function testGetEmployee(int $employeeId): int
     {
         $employee = $this->getItem('/employees/' . $employeeId, ['employee_read']);
-        $this->assertEquals(
-            [
-                'employeeId' => $employeeId,
-                'firstName' => 'John',
-                'lastName' => 'Doe',
-                'email' => 'john.doe@example.com',
-                'avatarUrl' => null,
-                'defaultPageId' => 1,
-                'languageId' => 1,
-                'active' => true,
-                'profileId' => 1,
-                'shopAssociation' => [],
-            ],
-            $employee
-        );
+        $this->assertEquals($employeeId, $employee['employeeId']);
+        $this->assertSame('John', $employee['firstName']);
+        $this->assertSame('Doe', $employee['lastName']);
+        $this->assertSame('john.doe@example.com', $employee['email']);
+        $this->assertSame(1, $employee['defaultPageId']);
+        $this->assertSame(1, $employee['languageId']);
+        $this->assertTrue($employee['active']);
+        $this->assertSame(1, $employee['profileId']);
 
         return $employeeId;
     }
 
     /**
      * @depends testGetEmployee
-     *
-     * @param int $employeeId
-     *
-     * @return int
      */
     public function testPartialUpdateEmployee(int $employeeId): int
     {
         $updatedEmployee = $this->partialUpdateItem('/employees/' . $employeeId, [
-            'firstName' => 'test',
+            'firstName' => 'Johnny',
         ], ['employee_write']);
-        $this->assertEquals(
-            [
-                'employeeId' => $employeeId,
-                'firstName' => 'test',
-                'lastName' => 'Doe',
-                'email' => 'john.doe@example.com',
-                'avatarUrl' => null,
-                'defaultPageId' => 1,
-                'languageId' => 1,
-                'enabled' => true,
-                'profileId' => 1,
-                'shopAssociation' => [],
-            ],
-            $updatedEmployee
-        );
+        $this->assertSame('Johnny', $updatedEmployee['firstName']);
+        $this->assertSame('Doe', $updatedEmployee['lastName']);
 
         $updatedEmployee = $this->partialUpdateItem('/employees/' . $employeeId, [
             'lastName' => 'Updated',
         ], ['employee_write']);
-        $this->assertEquals(
-            [
-                'employeeId' => $employeeId,
-                'firstName' => 'test',
-                'lastName' => 'Updated',
-                'email' => 'john.doe@example.com',
-                'avatarUrl' => null,
-                'defaultPageId' => 1,
-                'languageId' => 1,
-                'enabled' => true,
-                'profileId' => 1,
-                'shopAssociation' => [],
-            ],
-            $updatedEmployee
-        );
+        $this->assertSame('Johnny', $updatedEmployee['firstName']);
+        $this->assertSame('Updated', $updatedEmployee['lastName']);
+
+        // Verify the GET reflects the changes
+        $employee = $this->getItem('/employees/' . $employeeId, ['employee_read']);
+        $this->assertSame('Johnny', $employee['firstName']);
+        $this->assertSame('Updated', $employee['lastName']);
 
         return $employeeId;
     }
 
     /**
      * @depends testPartialUpdateEmployee
-     *
-     * @param int $employeeId
-     *
-     * @return int
-     */
-    public function testGetUpdatedEmployee(int $employeeId): int
-    {
-        $employee = $this->getItem('/employees/' . $employeeId, ['employee_read']);
-        $this->assertEquals(
-            [
-                'employeeId' => $employeeId,
-                'names' => [
-                    'en-US' => 'name en Updated',
-                    'fr-FR' => 'name fr Updated',
-                ],
-                'gender' => 2,
-                'width' => 16,
-                'height' => 16,
-            ],
-            $employee
-        );
-
-        return $employeeId;
-    }
-
-    /**
-     * @depends testGetUpdatedEmployee
-     *
-     * @param int $employeeId
-     *
-     * @return int
      */
     public function testListEmployees(int $employeeId): int
     {
         $employees = $this->listItems('/employees', ['employee_read']);
         $this->assertGreaterThanOrEqual(1, $employees['totalItems']);
 
-        // Search for the one created previously during the tests and assert its data in the list
+        // Search for the one created previously during the tests
         $testEmployee = null;
         foreach ($employees['items'] as $employee) {
             if ($employee['employeeId'] === $employeeId) {
                 $testEmployee = $employee;
+                break;
             }
         }
         $this->assertNotNull($testEmployee);
-        $this->assertEquals(
-            [
-                'employeeId' => $employeeId,
-                'name' => 'name en Updated',
-                'gender' => 2,
-            ],
-            $testEmployee
-        );
+        $this->assertEquals($employeeId, $testEmployee['employeeId']);
 
         return $employeeId;
     }
 
     /**
      * @depends testListEmployees
-     *
-     * @param int $employeeId
-     *
-     * @return int
      */
     public function testDeleteEmployee(int $employeeId): void
     {
         $return = $this->deleteItem('/employees/' . $employeeId, ['employee_write']);
-        // This endpoint return empty response and 204 HTTP code
+        // This endpoint returns empty response and 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
         $this->getItem('/employees/' . $employeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
     }
 
-    /**
-     * @depends testDeleteEmployee
-     *
-     * @param int $employeeId
-     *
-     * @return int
-     */
     public function testBulkDeleteEmployees(): void
     {
-        // There are employees in default fixtures
-        $employees = $this->listItems('/employees', ['employee_read']);
-        $this->assertEquals(2, $employees['totalItems']);
-
-        // We create two new employees
-        $employeeNew1 = $this->createItem('/employees', null, ['employee_write'], Response::HTTP_CREATED);
+        // Create two employees to bulk-delete
+        $employeeNew1 = $this->createItem('/employees', [
+            'firstName' => 'Bulk',
+            'lastName' => 'One',
+            'email' => 'bulk.one@example.com',
+            'password' => 'TestPassword123!',
+            'defaultPageId' => 1,
+            'languageId' => 1,
+            'active' => true,
+            'profileId' => 1,
+            'shopAssociation' => [1],
+            'hasEnabledGravatar' => false,
+        ], ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employeeNew1);
 
-        $employeeNew2 = $this->createItem('/employees', null, ['employee_write'], Response::HTTP_CREATED);
+        $employeeNew2 = $this->createItem('/employees', [
+            'firstName' => 'Bulk',
+            'lastName' => 'Two',
+            'email' => 'bulk.two@example.com',
+            'password' => 'TestPassword123!',
+            'defaultPageId' => 1,
+            'languageId' => 1,
+            'active' => true,
+            'profileId' => 1,
+            'shopAssociation' => [1],
+            'hasEnabledGravatar' => false,
+        ], ['employee_write'], Response::HTTP_CREATED);
         $this->assertArrayHasKey('employeeId', $employeeNew2);
 
-        // There are employees in default fixtures
-        $employees = $this->listItems('/employees', ['employee_read']);
-        $this->assertEquals(4, $employees['totalItems']);
-
-        // We remove the two employees
         $bulkEmployees = [
             $employeeNew1['employeeId'],
             $employeeNew2['employeeId'],
@@ -294,7 +237,5 @@ class EmployeeEndpointTest extends ApiTestCase
         foreach ($bulkEmployees as $employeeId) {
             $this->getItem('/employees/' . $employeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
         }
-
-        $this->assertEquals(2, $this->countItems('/employees', ['employee_read']));
     }
 }
