@@ -75,7 +75,7 @@ use Symfony\Component\HttpFoundation\Response;
 class FoundCustomer
 {
     #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
-    public int $idCustomer;
+    public int $customerId;
 
     public string $firstName;
 
@@ -85,13 +85,18 @@ class FoundCustomer
 
     public string $fullnameAndEmail;
 
+    // POST /customers calls this "enabled" and returns a real boolean. Renaming it here needs the
+    // tiny-int to bool cast, which CQRSApiSerializer only applies when CAST_BOOL is in the context -
+    // and that is set by QueryListProvider only, not by the QueryProvider serving this collection.
+    // Typing this bool without that raises "The type of the enabled attribute must be bool, integer
+    // given". Left as active until the cast is reachable from a CQRSGetCollection.
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $active;
 
     public ?string $company;
 
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 3])]
-    public int $idDefaultGroup;
+    public int $defaultGroupId;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $groups;
@@ -101,12 +106,13 @@ class FoundCustomer
         '[_context][shopConstraint]' => '[shopConstraint]',
     ];
 
+    // The CQRS result carries the legacy column names. Everything that was not mapped reached the
+    // response untouched, which is why this endpoint answered with firstname/lastname/active/id_*
+    // while POST /customers uses firstName/lastName/enabled/customerId.
     public const API_RESOURCE_MAPPING = [
-        '[id_customer]' => '[idCustomer]',
+        '[id_customer]' => '[customerId]',
         '[fullname_and_email]' => '[fullnameAndEmail]',
-        '[id_default_group]' => '[idDefaultGroup]',
-        // The CQRS result uses the legacy column names, which reached the response untouched and
-        // made this endpoint return firstname/lastname while POST /customers uses firstName/lastName.
+        '[id_default_group]' => '[defaultGroupId]',
         '[firstname]' => '[firstName]',
         '[lastname]' => '[lastName]',
     ];
