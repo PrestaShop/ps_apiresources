@@ -36,6 +36,12 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             gridDataFactory: 'prestashop.core.grid.data.factory.employee',
             filtersClass: EmployeeFilters::class,
+            filtersMapping: [
+                '[employeeId]' => '[id_employee]',
+                '[firstName]' => '[firstname]',
+                '[lastName]' => '[lastname]',
+                '[profileId]' => '[profile]',
+            ],
             scopes: [
                 'employee_read',
             ],
