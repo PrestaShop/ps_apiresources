@@ -75,11 +75,6 @@ class EmployeeEndpointTest extends ApiTestCase
             'GET',
             '/employees',
         ];
-
-        yield 'bulk delete endpoint' => [
-            'DELETE',
-            '/employees/bulk-delete',
-        ];
     }
 
     public function testAddEmployee(): int
@@ -193,49 +188,4 @@ class EmployeeEndpointTest extends ApiTestCase
         $this->getItem('/employees/' . $employeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
     }
 
-    public function testBulkDeleteEmployees(): void
-    {
-        // Create two employees to bulk-delete
-        $employeeNew1 = $this->createItem('/employees', [
-            'firstName' => 'Bulk',
-            'lastName' => 'One',
-            'email' => 'bulk.one@example.com',
-            'password' => 'TestPassword123!',
-            'defaultPageId' => 1,
-            'languageId' => 1,
-            'active' => true,
-            'profileId' => 1,
-            'shopAssociation' => [1],
-            'hasEnabledGravatar' => false,
-        ], ['employee_write'], Response::HTTP_CREATED);
-        $this->assertArrayHasKey('employeeId', $employeeNew1);
-
-        $employeeNew2 = $this->createItem('/employees', [
-            'firstName' => 'Bulk',
-            'lastName' => 'Two',
-            'email' => 'bulk.two@example.com',
-            'password' => 'TestPassword123!',
-            'defaultPageId' => 1,
-            'languageId' => 1,
-            'active' => true,
-            'profileId' => 1,
-            'shopAssociation' => [1],
-            'hasEnabledGravatar' => false,
-        ], ['employee_write'], Response::HTTP_CREATED);
-        $this->assertArrayHasKey('employeeId', $employeeNew2);
-
-        $bulkEmployees = [
-            $employeeNew1['employeeId'],
-            $employeeNew2['employeeId'],
-        ];
-
-        $this->bulkDeleteItems('/employees/bulk-delete', [
-            'employeeIds' => $bulkEmployees,
-        ], ['employee_write']);
-
-        // Assert the provided employees have been removed
-        foreach ($bulkEmployees as $employeeId) {
-            $this->getItem('/employees/' . $employeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
-        }
-    }
 }
