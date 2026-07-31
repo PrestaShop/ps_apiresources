@@ -99,7 +99,7 @@ class AttributeGroupWithAttributesNormalizer implements NormalizerInterface, Nor
 
     /**
      * @param array<int|string, string> $localizedValue
-     * @param array<int, string>        $localesByID
+     * @param array<int, string> $localesByID
      *
      * @return array<int|string, string>
      */

@@ -33,7 +33,7 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
         self::resetTables();
-        self::createApiClient(['attribute_group_read']);
+        self::createApiClient(['attribute_group_read', 'attribute_group_write', 'attribute_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -60,93 +60,121 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
         yield 'list attribute groups with attributes' => ['GET', '/attributes/groups-with-attributes'];
     }
 
+    /**
+     * Creates a controlled attribute group with two attributes (both localized
+     * in en-US and fr-FR), then asserts the full structure of that group as
+     * returned by /attributes/groups-with-attributes.
+     *
+     * The endpoint is validated on data we create in-test, not on the demo
+     * fixtures: attribute IDs, colors and even group types drift between core
+     * versions (9.0.3 / 9.1.x / 9.2.x / develop), so a snapshot of the demo
+     * dataset cannot match every CI matrix cell.
+     *
+     * The whole aggregate row is compared with assertEquals so that any new
+     * field on the group row or on a nested attribute row surfaces here,
+     * per @jolelievre's review on PR #390. In particular every localized
+     * value — including the nested `attributes[].localizedNames` — must be
+     * indexed by locale, never by id_lang.
+     */
     public function testListAttributeGroupsWithAttributes(): void
     {
-        // CQRSGetCollection: getItem() returns the raw decoded JSON, which is a
-        // list of rows for a collection endpoint.
+        $groupsBefore = $this->getItem('/attributes/groups-with-attributes', ['attribute_group_read']);
+        $expectedPosition = count($groupsBefore);
+
+        $createdGroup = $this->createItem(
+            '/attributes/groups',
+            [
+                'names' => [
+                    'en-US' => 'Test WA group en',
+                    'fr-FR' => 'Test WA group fr',
+                ],
+                'publicNames' => [
+                    'en-US' => 'Test WA public en',
+                    'fr-FR' => 'Test WA public fr',
+                ],
+                'type' => 'color',
+                'shopIds' => [1],
+            ],
+            ['attribute_group_write']
+        );
+        $groupId = $createdGroup['attributeGroupId'];
+
+        $firstAttribute = $this->createItem(
+            '/attributes/attributes',
+            [
+                'names' => [
+                    'en-US' => 'WA attr 1 en',
+                    'fr-FR' => 'WA attr 1 fr',
+                ],
+                'attributeGroupId' => $groupId,
+                'color' => '#123456',
+                'shopIds' => [1],
+            ],
+            ['attribute_write']
+        );
+        $secondAttribute = $this->createItem(
+            '/attributes/attributes',
+            [
+                'names' => [
+                    'en-US' => 'WA attr 2 en',
+                    'fr-FR' => 'WA attr 2 fr',
+                ],
+                'attributeGroupId' => $groupId,
+                'color' => '#654321',
+                'shopIds' => [1],
+            ],
+            ['attribute_write']
+        );
+
         $result = $this->getItem('/attributes/groups-with-attributes', ['attribute_group_read']);
 
-        // Full-structure assertion: any new field on the group or attribute row
-        // must surface here so the API contract stays covered end-to-end.
-        // Localized values (including the nested attributes[].localizedNames)
-        // MUST be indexed by locale, never by language ID.
-        $this->assertEquals($this->getExpectedDefaultFixtureGroups(), $result);
-    }
+        $ourGroup = null;
+        foreach ($result as $row) {
+            if (isset($row['attributeGroupId']) && $row['attributeGroupId'] === $groupId) {
+                $ourGroup = $row;
+                break;
+            }
+        }
+        $this->assertNotNull($ourGroup, sprintf('Expected group %d in the response.', $groupId));
 
-    /**
-     * Default demo fixture attribute groups, as returned by GetAttributeGroupList,
-     * with fr-FR installed alongside en-US (see setUpBeforeClass).
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function getExpectedDefaultFixtureGroups(): array
-    {
-        return [
+        $this->assertEquals(
             [
-                'attributeGroupId' => 1,
-                'names' => ['en-US' => 'Size', 'fr-FR' => 'Taille'],
-                'publicNames' => ['en-US' => 'Size', 'fr-FR' => 'Taille'],
-                'type' => 'select',
-                'colorGroup' => false,
-                'position' => 0,
-                'attributes' => [
-                    ['attributeId' => 1, 'position' => 0, 'color' => '', 'localizedNames' => ['en-US' => 'S', 'fr-FR' => 'S'], 'textureFilePath' => ''],
-                    ['attributeId' => 2, 'position' => 1, 'color' => '', 'localizedNames' => ['en-US' => 'M', 'fr-FR' => 'M'], 'textureFilePath' => ''],
-                    ['attributeId' => 3, 'position' => 2, 'color' => '', 'localizedNames' => ['en-US' => 'L', 'fr-FR' => 'L'], 'textureFilePath' => ''],
-                    ['attributeId' => 4, 'position' => 3, 'color' => '', 'localizedNames' => ['en-US' => 'XL', 'fr-FR' => 'XL'], 'textureFilePath' => ''],
+                'attributeGroupId' => $groupId,
+                'names' => [
+                    'en-US' => 'Test WA group en',
+                    'fr-FR' => 'Test WA group fr',
                 ],
-            ],
-            [
-                'attributeGroupId' => 2,
-                'names' => ['en-US' => 'Color', 'fr-FR' => 'Couleur'],
-                'publicNames' => ['en-US' => 'Color', 'fr-FR' => 'Couleur'],
+                'publicNames' => [
+                    'en-US' => 'Test WA public en',
+                    'fr-FR' => 'Test WA public fr',
+                ],
                 'type' => 'color',
                 'colorGroup' => true,
-                'position' => 1,
+                'position' => $expectedPosition,
                 'attributes' => [
-                    ['attributeId' => 5, 'position' => 0, 'color' => '#F5F5DC', 'localizedNames' => ['en-US' => 'Beige', 'fr-FR' => 'Beige'], 'textureFilePath' => ''],
-                    ['attributeId' => 6, 'position' => 1, 'color' => '#FFFFFF', 'localizedNames' => ['en-US' => 'White', 'fr-FR' => 'Blanc'], 'textureFilePath' => ''],
-                    ['attributeId' => 7, 'position' => 2, 'color' => '#FAEBD7', 'localizedNames' => ['en-US' => 'Off White', 'fr-FR' => 'Blanc cassé'], 'textureFilePath' => ''],
-                    ['attributeId' => 8, 'position' => 3, 'color' => '#A2A2A2', 'localizedNames' => ['en-US' => 'Gray', 'fr-FR' => 'Gris'], 'textureFilePath' => ''],
-                    ['attributeId' => 9, 'position' => 4, 'color' => '#5F5F5F', 'localizedNames' => ['en-US' => 'Taupe', 'fr-FR' => 'Taupe'], 'textureFilePath' => ''],
-                    ['attributeId' => 10, 'position' => 5, 'color' => '#434A54', 'localizedNames' => ['en-US' => 'Black', 'fr-FR' => 'Noir'], 'textureFilePath' => ''],
-                    ['attributeId' => 11, 'position' => 6, 'color' => '#F39C11', 'localizedNames' => ['en-US' => 'Orange', 'fr-FR' => 'Orange'], 'textureFilePath' => ''],
-                    ['attributeId' => 12, 'position' => 7, 'color' => '#E84C3D', 'localizedNames' => ['en-US' => 'Red', 'fr-FR' => 'Rouge'], 'textureFilePath' => ''],
-                    ['attributeId' => 13, 'position' => 8, 'color' => '#9B59B6', 'localizedNames' => ['en-US' => 'Fuchsia', 'fr-FR' => 'Fuchsia'], 'textureFilePath' => ''],
-                    ['attributeId' => 14, 'position' => 9, 'color' => '#F3CFDE', 'localizedNames' => ['en-US' => 'Pink', 'fr-FR' => 'Rose'], 'textureFilePath' => ''],
-                    ['attributeId' => 15, 'position' => 10, 'color' => '#59AB5C', 'localizedNames' => ['en-US' => 'Green', 'fr-FR' => 'Vert'], 'textureFilePath' => ''],
-                    ['attributeId' => 16, 'position' => 11, 'color' => '#F1C40F', 'localizedNames' => ['en-US' => 'Yellow', 'fr-FR' => 'Jaune'], 'textureFilePath' => ''],
-                    ['attributeId' => 17, 'position' => 12, 'color' => '#935116', 'localizedNames' => ['en-US' => 'Brown', 'fr-FR' => 'Marron'], 'textureFilePath' => ''],
-                    ['attributeId' => 18, 'position' => 13, 'color' => '#C68E17', 'localizedNames' => ['en-US' => 'Camel', 'fr-FR' => 'Camel'], 'textureFilePath' => ''],
+                    [
+                        'attributeId' => $firstAttribute['attributeId'],
+                        'position' => 0,
+                        'color' => '#123456',
+                        'localizedNames' => [
+                            'en-US' => 'WA attr 1 en',
+                            'fr-FR' => 'WA attr 1 fr',
+                        ],
+                        'textureFilePath' => null,
+                    ],
+                    [
+                        'attributeId' => $secondAttribute['attributeId'],
+                        'position' => 1,
+                        'color' => '#654321',
+                        'localizedNames' => [
+                            'en-US' => 'WA attr 2 en',
+                            'fr-FR' => 'WA attr 2 fr',
+                        ],
+                        'textureFilePath' => null,
+                    ],
                 ],
             ],
-            [
-                'attributeGroupId' => 3,
-                'names' => ['en-US' => 'Dimension', 'fr-FR' => 'Dimension'],
-                'publicNames' => ['en-US' => 'Dimension', 'fr-FR' => 'Dimension'],
-                'type' => 'select',
-                'colorGroup' => false,
-                'position' => 2,
-                'attributes' => [
-                    ['attributeId' => 22, 'position' => 0, 'color' => '', 'localizedNames' => ['en-US' => '40x60cm', 'fr-FR' => '40x60cm'], 'textureFilePath' => ''],
-                    ['attributeId' => 23, 'position' => 1, 'color' => '', 'localizedNames' => ['en-US' => '60x90cm', 'fr-FR' => '60x90cm'], 'textureFilePath' => ''],
-                    ['attributeId' => 24, 'position' => 2, 'color' => '', 'localizedNames' => ['en-US' => '80x120cm', 'fr-FR' => '80x120cm'], 'textureFilePath' => ''],
-                ],
-            ],
-            [
-                'attributeGroupId' => 4,
-                'names' => ['en-US' => 'Paper Type', 'fr-FR' => 'Type de papier'],
-                'publicNames' => ['en-US' => 'Paper Type', 'fr-FR' => 'Type de papier'],
-                'type' => 'radio',
-                'colorGroup' => false,
-                'position' => 3,
-                'attributes' => [
-                    ['attributeId' => 25, 'position' => 0, 'color' => '', 'localizedNames' => ['en-US' => 'Standard', 'fr-FR' => 'Standard'], 'textureFilePath' => ''],
-                    ['attributeId' => 26, 'position' => 1, 'color' => '', 'localizedNames' => ['en-US' => 'Recycled', 'fr-FR' => 'Recyclé'], 'textureFilePath' => ''],
-                    ['attributeId' => 27, 'position' => 2, 'color' => '', 'localizedNames' => ['en-US' => 'Glossy', 'fr-FR' => 'Brillant'], 'textureFilePath' => ''],
-                    ['attributeId' => 28, 'position' => 3, 'color' => '', 'localizedNames' => ['en-US' => 'Matte', 'fr-FR' => 'Mat'], 'textureFilePath' => ''],
-                ],
-            ],
-        ];
+            $ourGroup
+        );
     }
 }
