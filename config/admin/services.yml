@@ -51,6 +51,13 @@ services:
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\GetSearchTermAliasesQuerySerializer:
     autoconfigure: true
 
+  # See class docblock: post-processes attributes[].localizedNames on the
+  # /attributes/groups-with-attributes endpoint (nested locale keys).
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\AttributeGroupWithAttributesNormalizer:
+    autowire: true
+    autoconfigure: true
+    public: false
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'
