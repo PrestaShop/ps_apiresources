@@ -59,8 +59,9 @@ services:
       $decorated: '@.inner'
 
   # Filters Admin API operations whose minVersion/maxVersion extra properties don't match the running core
-  # version. On PrestaShop >= 9.2 the equivalent core decorator exists and is injected as an optional
-  # reference: when present this module decorator is a pure pass-through.
+  # version. On PrestaShop >= 9.2 the equivalent core decorator class exists (checked via class_exists, NOT
+  # injected as a service which would create a circular reference in the decoration chain): when detected
+  # this module decorator is a pure pass-through.
   # Note: module resources must declare the gating via extraProperties (['minVersion' => 'x.y.z']), NOT via
   # the named constructor arguments which only exist in the core operation classes since PrestaShop 9.2.
   # @deprecated remove together with the class once the module requires PrestaShop >= 9.2.
@@ -68,4 +69,3 @@ services:
     decorates: api_platform.metadata.resource.metadata_collection_factory
     arguments:
       $decorated: '@.inner'
-      $coreVersionDecorator: '@?PrestaShopBundle\ApiPlatform\Metadata\Resource\Factory\CoreVersionCompatibilityMetadataCollectionFactoryDecorator'

@@ -56,9 +56,6 @@ class CoreVersionCompatibilityMetadataCollectionFactoryDecorator implements Reso
     public function __construct(
         private readonly ResourceMetadataCollectionFactoryInterface $decorated,
         private readonly FeatureFlagStateCheckerInterface $featureFlagStateChecker,
-        // The core twin decorator is injected as an optional reference: it is non-null on PrestaShop >= 9.2
-        // where the core already filters, in which case this decorator is a pure pass-through
-        private readonly ?ResourceMetadataCollectionFactoryInterface $coreVersionDecorator = null,
     ) {
     }
 
@@ -67,8 +64,10 @@ class CoreVersionCompatibilityMetadataCollectionFactoryDecorator implements Reso
         // We call the original method since we only want to alter the result of this method.
         $resourceMetadataCollection = $this->decorated->create($resourceClass);
 
-        // The core decorator already handles the filtering on PrestaShop >= 9.2
-        if (null !== $this->coreVersionDecorator) {
+        // The core twin decorator exists on PrestaShop >= 9.2 and already handles the filtering, so this
+        // decorator is a pure pass-through. The check relies on class_exists instead of injecting the core
+        // service, which would create a circular reference in the decoration chain.
+        if (class_exists(\PrestaShopBundle\ApiPlatform\Metadata\Resource\Factory\CoreVersionCompatibilityMetadataCollectionFactoryDecorator::class)) {
             return $resourceMetadataCollection;
         }
 
