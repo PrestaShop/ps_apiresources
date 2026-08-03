@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Version;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -32,7 +33,7 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
     {
         parent::setUpBeforeClass();
         DatabaseDump::restoreTables(['required_field']);
-        self::createApiClient(['customer_write']);
+        self::createApiClient(['customer_read', 'customer_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -43,10 +44,26 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        // GET endpoint only works for 9.2+
+        if (version_compare(Version::VERSION, '9.2.0', '>=')) {
+            yield 'get required fields endpoint' => [
+                'GET',
+                '/customers/required-fields',
+            ];
+        }
+
         yield 'set required fields endpoint' => [
             'PUT',
             '/customers/required-fields',
         ];
+    }
+
+    public function testGetCustomerRequiredFields(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+        $requiredFields = $this->getItem('/customers/required-fields', ['customer_read']);
+        // By default, there is no required filed
+        $this->assertEquals([], $requiredFields['requiredFields']);
     }
 
     public function testSetCustomerRequiredFields(): void
@@ -58,12 +75,19 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
             Response::HTTP_NO_CONTENT
         );
 
-        $storedFields = \Db::getInstance()->executeS(
-            'SELECT `field_name` FROM `' . _DB_PREFIX_ . "required_field` WHERE `object_name` = 'Customer'"
-        );
-        $fieldNames = array_column($storedFields ?: [], 'field_name');
+        // GET endpoint only works for 9.2+
+        if (version_compare(Version::VERSION, '9.2.0', '>=')) {
+            $requiredFields = $this->getItem('/customers/required-fields', ['customer_read']);
+            $this->assertEquals(['newsletter'], $requiredFields['requiredFields']);
+        } else {
+            // Test manually from the DB
+            $storedFields = \Db::getInstance()->executeS(
+                'SELECT `field_name` FROM `' . _DB_PREFIX_ . "required_field` WHERE `object_name` = 'Customer'"
+            );
+            $fieldNames = array_column($storedFields ?: [], 'field_name');
 
-        $this->assertContains('newsletter', $fieldNames);
+            $this->assertContains('newsletter', $fieldNames);
+        }
     }
 
     public function testSetInvalidCustomerRequiredFieldIsRejected(): void

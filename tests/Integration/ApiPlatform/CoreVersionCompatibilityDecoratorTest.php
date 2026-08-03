@@ -64,6 +64,10 @@ class CoreVersionCompatibilityDecoratorTest extends TestCase
 
     public function testIncompatibleOperationsAreFiltered(): void
     {
+        if ($this->coreDecoratorClassExists()) {
+            $this->markTestSkipped('On PrestaShop >= 9.2 the module decorator is a pure pass-through, filtering is covered by testPassThroughWhenCoreDecoratorClassExists');
+        }
+
         $decorator = new CoreVersionCompatibilityMetadataCollectionFactoryDecorator(
             $this->buildDecoratedFactory(),
             new DisabledFeatureFlagStateChecker(),
@@ -72,15 +76,18 @@ class CoreVersionCompatibilityDecoratorTest extends TestCase
         $this->assertEquals(self::EXPECTED_KEPT_OPERATIONS, $this->getOperationNames($decorator->create('resourceClass')));
     }
 
-    public function testPassThroughWhenCoreDecoratorIsPresent(): void
+    public function testPassThroughWhenCoreDecoratorClassExists(): void
     {
-        // When the core twin decorator is detected (PrestaShop >= 9.2) the module decorator filters nothing,
-        // the core is responsible for the filtering
-        $coreDecorator = $this->createMock(ResourceMetadataCollectionFactoryInterface::class);
+        // When the core twin decorator class exists (PrestaShop >= 9.2) the module decorator filters nothing,
+        // the core is responsible for the filtering. The detection relies on class_exists, so this case can
+        // only be exercised when the CI matrix runs against a core version that ships the class.
+        if (!$this->coreDecoratorClassExists()) {
+            $this->markTestSkipped('The core twin decorator class only exists on PrestaShop >= 9.2, filtering is covered by testIncompatibleOperationsAreFiltered');
+        }
+
         $decorator = new CoreVersionCompatibilityMetadataCollectionFactoryDecorator(
             $this->buildDecoratedFactory(),
             new DisabledFeatureFlagStateChecker(),
-            $coreDecorator,
         );
 
         $this->assertEquals(self::ALL_OPERATIONS, $this->getOperationNames($decorator->create('resourceClass')));
@@ -97,6 +104,11 @@ class CoreVersionCompatibilityDecoratorTest extends TestCase
         );
 
         $this->assertEquals(self::ALL_OPERATIONS, $this->getOperationNames($decorator->create('resourceClass')));
+    }
+
+    private function coreDecoratorClassExists(): bool
+    {
+        return class_exists(\PrestaShopBundle\ApiPlatform\Metadata\Resource\Factory\CoreVersionCompatibilityMetadataCollectionFactoryDecorator::class);
     }
 
     private function buildDecoratedFactory(): ResourceMetadataCollectionFactoryInterface
