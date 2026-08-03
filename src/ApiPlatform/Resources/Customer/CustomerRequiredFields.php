@@ -36,6 +36,9 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGet(
             uriTemplate: '/customers/required-fields',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSQuery: GetRequiredFieldsForCustomer::class,
             scopes: ['customer_read'],
             CQRSQueryMapping: ['[_queryResult]' => '[requiredFields]'],
