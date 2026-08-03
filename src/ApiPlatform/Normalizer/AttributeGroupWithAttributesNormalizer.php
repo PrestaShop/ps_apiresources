@@ -23,7 +23,8 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Normalizer;
 
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Attribute\AttributeGroupWithAttributes;
-use PrestaShopBundle\Entity\Repository\LangRepository;
+use PrestaShopBundle\ApiPlatform\LocalizedValueUpdater;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareTrait;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
@@ -53,13 +54,8 @@ class AttributeGroupWithAttributesNormalizer implements NormalizerInterface, Nor
 
     private const ALREADY_CALLED = 'ATTRIBUTE_GROUP_WITH_ATTRIBUTES_NORMALIZER_ALREADY_CALLED';
 
-    /**
-     * @var array<int, string>|null
-     */
-    private ?array $localesByID = null;
-
     public function __construct(
-        private readonly LangRepository $langRepository,
+        private readonly LocalizedValueUpdater $localizedValueUpdater,
     ) {
     }
 
@@ -73,12 +69,20 @@ class AttributeGroupWithAttributesNormalizer implements NormalizerInterface, Nor
             return $data;
         }
 
-        $localesByID = $this->getLocalesByID();
         foreach ($data['attributes'] as &$attribute) {
             if (!is_array($attribute) || empty($attribute['localizedNames']) || !is_array($attribute['localizedNames'])) {
                 continue;
             }
-            $attribute['localizedNames'] = $this->rekeyByLocale($attribute['localizedNames'], $localesByID);
+
+            // We replace the ID index with locale index using the core service
+            $attribute['names'] = $this->localizedValueUpdater->denormalizeLocalizedValue(
+                $attribute['localizedNames'],
+                'localizedNames',
+                [LocalizedValue::LOCALIZED_VALUE_PARAMETERS => ['localizedNames' => true]]
+            );
+
+            // We also change the field name to match the convention (no localized prefix), localizedName becomes names
+            unset($attribute['localizedNames']);
         }
         unset($attribute);
 
@@ -95,46 +99,5 @@ class AttributeGroupWithAttributesNormalizer implements NormalizerInterface, Nor
         return [
             AttributeGroupWithAttributes::class => false,
         ];
-    }
-
-    /**
-     * @param array<int|string, string> $localizedValue
-     * @param array<int, string> $localesByID
-     *
-     * @return array<int|string, string>
-     */
-    private function rekeyByLocale(array $localizedValue, array $localesByID): array
-    {
-        $result = [];
-        foreach ($localizedValue as $key => $value) {
-            if (is_int($key) || ctype_digit((string) $key)) {
-                $id = (int) $key;
-                // Fall back to the original key if the ID is unknown (defensive: the
-                // upstream mapping is complete in practice, but we never want to drop
-                // a translation silently).
-                $result[$localesByID[$id] ?? $key] = $value;
-                continue;
-            }
-            $result[$key] = $value;
-        }
-
-        return $result;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function getLocalesByID(): array
-    {
-        if ($this->localesByID !== null) {
-            return $this->localesByID;
-        }
-
-        $localesByID = [];
-        foreach ($this->langRepository->getMapping() as $langId => $language) {
-            $localesByID[(int) $langId] = $language['locale'];
-        }
-
-        return $this->localesByID = $localesByID;
     }
 }

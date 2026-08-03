@@ -94,7 +94,14 @@ class AttributeGroupWithAttributes
                 'attributeId' => ['type' => 'integer'],
                 'position' => ['type' => 'integer'],
                 'color' => ['type' => 'string'],
-                'localizedNames' => ['type' => 'object', 'additionalProperties' => ['type' => 'string']],
+                'names' => [
+                    'type' => 'object',
+                    'additionalProperties' => ['type' => 'string'],
+                    'example' => [
+                        'en-US' => 'value',
+                        'fr-FR' => 'valeur',
+                    ],
+                ],
                 'textureFilePath' => ['type' => 'string', 'nullable' => true],
             ],
         ],

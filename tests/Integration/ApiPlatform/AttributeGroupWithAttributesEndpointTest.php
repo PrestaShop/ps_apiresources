@@ -74,7 +74,8 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
      * field on the group row or on a nested attribute row surfaces here,
      * per @jolelievre's review on PR #390. In particular every localized
      * value — including the nested `attributes[].localizedNames` — must be
-     * indexed by locale, never by id_lang.
+     * indexed by locale, never by id_lang, and renamed into names (localized
+     * prefix is dropped).
      */
     public function testListAttributeGroupsWithAttributes(): void
     {
@@ -156,7 +157,7 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
                         'attributeId' => $firstAttribute['attributeId'],
                         'position' => 0,
                         'color' => '#123456',
-                        'localizedNames' => [
+                        'names' => [
                             'en-US' => 'WA attr 1 en',
                             'fr-FR' => 'WA attr 1 fr',
                         ],
@@ -166,7 +167,7 @@ class AttributeGroupWithAttributesEndpointTest extends ApiTestCase
                         'attributeId' => $secondAttribute['attributeId'],
                         'position' => 1,
                         'color' => '#654321',
-                        'localizedNames' => [
+                        'names' => [
                             'en-US' => 'WA attr 2 en',
                             'fr-FR' => 'WA attr 2 fr',
                         ],
