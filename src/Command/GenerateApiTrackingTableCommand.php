@@ -35,22 +35,19 @@ use Symfony\Component\Finder\Finder;
 class GenerateApiTrackingTableCommand extends Command
 {
     private const REASON_BACK_OFFICE_UI = 'Back office UI feature, out of API scope';
-    private const REASON_BACK_OFFICE_FORM = 'Back office form helper, not an API resource';
-    private const REASON_AUTHENTICATION_FLOW = 'Back office authentication flow, out of API scope';
+    private const USELESS_DUPLICATE = 'Duplicate of another endpoint, not relevant for the Admin API';
 
     /**
      * CQRS commands and queries that are intentionally NOT meant to be exposed as Admin API
      * endpoints: admin-UI-only features, internal helpers used by back office forms, or flows
      * handled outside of the API. They are filtered out of the tracking table and of every
      * metric (totals, percentages, per-domain progress).
-     *
      */
     private const EXCLUDED_CQRS_CLASSES = [
-        // Pre-fills the back office address creation form, not a REST resource.
-        'GetCustomerForAddressCreation' => self::REASON_BACK_OFFICE_FORM,
-        // Employee password reset is part of the back office authentication flow.
-        'ResetEmployeePasswordCommand' => self::REASON_AUTHENTICATION_FLOW,
-        'GetEmployeeEmailById' => self::REASON_AUTHENTICATION_FLOW,
+        // Already covered by other endpoints, not relevant for the Admin API
+        'GetCustomerForAddressCreation' => self::USELESS_DUPLICATE,
+        'ResetEmployeePasswordCommand' => self::USELESS_DUPLICATE,
+        'GetEmployeeEmailById' => self::USELESS_DUPLICATE,
         // Quick access links are a back office UI customization feature.
         'AddQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
         'EditQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
@@ -117,7 +114,7 @@ class GenerateApiTrackingTableCommand extends Command
             $io->section('🔍 Comparing CQRS endpoints with API implementations...');
             $matchedEndpoints = $this->compareCqrsWithApi($cqrsEndpoints, $apiEndpoints, $prStatusMap);
 
-            $apiCount = count(array_filter($matchedEndpoints, fn($e) => $e['has_api']));
+            $apiCount = count(array_filter($matchedEndpoints, fn ($e) => $e['has_api']));
             $io->info(sprintf('Matched %d CQRS endpoints with API implementations', $apiCount));
 
             // Step 4: Generate markdown table
@@ -535,7 +532,7 @@ class GenerateApiTrackingTableCommand extends Command
         $markdown .= "\n---\n\n";
 
         foreach ($domainGroups as $domain => $endpoints) {
-            $domainImplemented = count(array_filter($endpoints, fn($e) => $e['hasApi']));
+            $domainImplemented = count(array_filter($endpoints, fn ($e) => $e['hasApi']));
             $domainTotal = count($endpoints);
             $domainPercentage = $domainTotal > 0 ? round(($domainImplemented / $domainTotal) * 100, 1) : 0;
 
