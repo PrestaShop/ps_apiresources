@@ -536,8 +536,8 @@ class GenerateApiTrackingTableCommand extends Command
             $domainTotal = count($endpoints);
             $domainPercentage = $domainTotal > 0 ? round(($domainImplemented / $domainTotal) * 100, 1) : 0;
 
-            $markdown .= "## 🏷️ Domain: $domain\n\n";
-            $markdown .= "**Progress**: $domainImplemented/$domainTotal ($domainPercentage%)\n\n";
+            $markdown .= "## 🏷️ $domain\n\n";
+            $markdown .= "$domainImplemented/$domainTotal ($domainPercentage%)\n\n";
             $markdown .= "| Action | Type | Status | API Endpoint | Assignee / PR |\n";
             $markdown .= "|--------|------|--------|--------------|---------------|\n";
 
@@ -595,7 +595,6 @@ class GenerateApiTrackingTableCommand extends Command
 
         $markdown = "## 🚫 Excluded from tracking\n\n";
         $markdown .= "These CQRS commands and queries are intentionally **not** exposed through the Admin API.\n";
-        $markdown .= "They are listed here for transparency and are **excluded from every metric above**\n";
         $markdown .= "(totals, percentages and per-domain progress).\n\n";
         $markdown .= "| Action | Type | Domain | Reason |\n";
         $markdown .= "|--------|------|--------|--------|\n";
