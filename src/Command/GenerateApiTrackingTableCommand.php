@@ -403,7 +403,7 @@ class GenerateApiTrackingTableCommand extends Command
                         'status' => '🚧 In Progress',
                         'pr_url' => $pr['html_url'],
                         'pr_title' => $pr['title'],
-                        'assignee' => $pr['assignee']['login'] ?? $pr['user']['login'] ?? 'Unknown',
+                        'author' => $pr['user']['login'] ?? 'Unknown',
                     ];
                 }
             }
@@ -430,13 +430,13 @@ class GenerateApiTrackingTableCommand extends Command
 
             // Determine final status based on API implementation and PR status
             $finalStatus = '❌ Missing';
-            $assigneeInfo = '';
+            $authorInfo = '';
 
             if ($hasApi) {
                 $finalStatus = '✅ Implemented';
             } elseif ($prStatus) {
                 $finalStatus = $prStatus['status'];
-                $assigneeInfo = $prStatus['assignee'];
+                $authorInfo = $prStatus['author'];
             }
 
             $domainGroups[$domain][] = [
@@ -445,7 +445,7 @@ class GenerateApiTrackingTableCommand extends Command
                 'hasApi' => $hasApi,
                 'api' => $endpoint['api'],
                 'status' => $finalStatus,
-                'assignee' => $assigneeInfo,
+                'author' => $authorInfo,
                 'pr_info' => $prStatus,
             ];
         }
@@ -538,8 +538,8 @@ class GenerateApiTrackingTableCommand extends Command
 
             $markdown .= "## 🏷️ $domain\n\n";
             $markdown .= "$domainImplemented/$domainTotal ($domainPercentage%)\n\n";
-            $markdown .= "| Action | Type | Status | API Endpoint | Assignee / PR |\n";
-            $markdown .= "|--------|------|--------|--------------|---------------|\n";
+            $markdown .= "| Action | Type | Status | API Endpoint | Author / PR |\n";
+            $markdown .= "|--------|------|--------|--------------|-------------|\n";
 
             foreach ($endpoints as $endpoint) {
                 $action = '`' . $endpoint['action'] . '`';
@@ -548,16 +548,16 @@ class GenerateApiTrackingTableCommand extends Command
                 $status = $this->statusEmoji($endpoint['status']);
                 $api = $endpoint['api'];
 
-                // Build assignee/PR info
-                $assigneeInfo = '';
-                if (!empty($endpoint['assignee'])) {
-                    $assigneeInfo = $endpoint['assignee'];
+                // Build author/PR info
+                $authorInfo = '';
+                if (!empty($endpoint['author'])) {
+                    $authorInfo = $endpoint['author'];
                     if ($endpoint['pr_info'] && !empty($endpoint['pr_info']['pr_url'])) {
-                        $assigneeInfo = "{$endpoint['assignee']} / [PR]({$endpoint['pr_info']['pr_url']})";
+                        $authorInfo = "{$endpoint['author']} / [PR]({$endpoint['pr_info']['pr_url']})";
                     }
                 }
 
-                $markdown .= "| $action | $type | $status | $api | $assigneeInfo |\n";
+                $markdown .= "| $action | $type | $status | $api | $authorInfo |\n";
             }
 
             $markdown .= "\n";
