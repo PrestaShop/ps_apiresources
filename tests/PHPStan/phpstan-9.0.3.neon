@@ -4,6 +4,12 @@ includes:
 parameters:
     # Dedicated cache for each version
     tmpDir: %currentWorkingDirectory%/var/phpstan-tmp/9.0.x
+    # Shipment domain is only available since PrestaShop 9.1.0, so its resources
+    # reference classes that do not exist on 9.0.3: skip them from analysis.
+    excludePaths:
+        analyse:
+            - ../../src/ApiPlatform/Resources/Shipment/
+            - ../../src/ApiPlatform/Resources/Order/OrderShipmentList.php
     ignoreErrors:
         # Add version-specific ignores here as needed
         -
