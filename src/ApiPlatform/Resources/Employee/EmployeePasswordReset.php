@@ -33,6 +33,9 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSCreate(
             uriTemplate: '/employees/send-password-reset-email',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSCommand: SendEmployeePasswordResetEmailCommand::class,
             scopes: ['employee_write'],
         ),
