@@ -18,39 +18,50 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Address;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Carrier;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\NotExposed;
-use PrestaShop\PrestaShop\Core\Domain\Address\Command\DeleteAddressCommand;
-use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException;
+use PrestaShop\PrestaShop\Core\Search\Filters\CarrierFilters;
+use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
+use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSDelete(
-            uriTemplate: '/addresses/{addressId}',
-            requirements: ['addressId' => '\d+'],
-            CQRSCommand: DeleteAddressCommand::class,
-            scopes: [
-                'address_write',
+        new PaginatedList(
+            uriTemplate: '/carriers',
+            provider: QueryListProvider::class,
+            scopes: ['carrier_read'],
+            ApiResourceMapping: [
+                '[id_carrier]' => '[carrierId]',
+                '[is_free]' => '[isFree]',
             ],
-        ),
-        new NotExposed(
-            uriTemplate: '/addresses/{addressId}',
-            requirements: ['addressId' => '\d+'],
+            gridDataFactory: 'prestashop.core.grid.data.factory.carrier',
+            filtersClass: CarrierFilters::class,
         ),
     ],
     exceptionToStatus: [
-        AddressConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        AddressNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CarrierNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class Address
+class CarrierList
 {
     #[ApiProperty(identifier: true)]
-    public int $addressId;
+    public int $carrierId;
+
+    public string $name;
+
+    public ?string $delay;
+
+    public bool $active;
+
+    public bool $isFree;
+
+    public int $position;
+
+    public ?string $logo;
 }
