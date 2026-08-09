@@ -18,39 +18,37 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Address;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\NotExposed;
-use PrestaShop\PrestaShop\Core\Domain\Address\Command\DeleteAddressCommand;
-use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
-use Symfony\Component\HttpFoundation\Response;
+use PrestaShop\PrestaShop\Core\Domain\Address\Query\GetRequiredFieldsForAddress;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 
 #[ApiResource(
     operations: [
-        new CQRSDelete(
-            uriTemplate: '/addresses/{addressId}',
-            requirements: ['addressId' => '\d+'],
-            CQRSCommand: DeleteAddressCommand::class,
-            scopes: [
-                'address_write',
-            ],
-        ),
-        new NotExposed(
-            uriTemplate: '/addresses/{addressId}',
-            requirements: ['addressId' => '\d+'],
+        new CQRSGet(
+            uriTemplate: '/addresses/required-fields',
+            CQRSQuery: GetRequiredFieldsForAddress::class,
+            scopes: ['address_read'],
+            CQRSQueryMapping: ['[@index]' => '[requiredFields][@index]'],
         ),
     ],
-    exceptionToStatus: [
-        AddressConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        AddressNotFoundException::class => Response::HTTP_NOT_FOUND,
-    ],
+    normalizationContext: ['skip_null_values' => false],
 )]
-class Address
+class AddressRequiredFields
 {
-    #[ApiProperty(identifier: true)]
-    public int $addressId;
+    /**
+     * @var string[]
+     */
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'array',
+            'items' => ['type' => 'string'],
+            'example' => ['phone', 'company'],
+        ]
+    )]
+    public array $requiredFields = [];
 }
