@@ -31,6 +31,12 @@ class TaxRuleEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
+        if (self::isVersionUnder('9.2.0')) {
+            static::markTestSkipped('No tax rule endpoint exist before 9.2.0');
+
+            return;
+        }
+
         parent::setUpBeforeClass();
         // tax_rule_write is only registered as a valid scope when AddTaxRuleCommand exists (9.2+);
         // requesting it unconditionally would make createApiClient() fail on older Core

@@ -29,7 +29,16 @@ class EmployeePasswordResetEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['employee_write']);
+        if (self::isVersionUnder('9.2.0')) {
+            static::markTestSkipped('No exmployee password exist before 9.2.0');
+
+            return;
+        }
+
+        // Prevent creating a client with a scope that doesn't exist yet
+        if (self::isVersionAtLeast('9.2.0')) {
+            self::createApiClient(['employee_write']);
+        }
     }
 
     public static function getProtectedEndpoints(): iterable
