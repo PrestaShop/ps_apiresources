@@ -33,8 +33,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/tax-rules-groups/{taxRulesGroupId}/tax-rules/bulk-delete',
-            requirements: ['taxRulesGroupId' => '\d+'],
+            uriTemplate: '/tax-rules/bulk-delete',
             CQRSCommand: BulkDeleteTaxRuleCommand::class,
             scopes: ['tax_rule_write'],
             allowEmptyBody: false,
@@ -47,6 +46,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class BulkDeleteTaxRule
 {
+    #[Assert\GreaterThan(0)]
     public int $taxRulesGroupId;
 
     /**
