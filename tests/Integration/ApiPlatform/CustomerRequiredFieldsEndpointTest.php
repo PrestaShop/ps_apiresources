@@ -23,7 +23,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Version;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -45,7 +44,7 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         // GET endpoint only works for 9.2+
-        if (version_compare(Version::VERSION, '9.2.0', '>=')) {
+        if (self::isVersionAtLeast('9.2.0')) {
             yield 'get required fields endpoint' => [
                 'GET',
                 '/customers/required-fields',
@@ -76,7 +75,7 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
         );
 
         // GET endpoint only works for 9.2+
-        if (version_compare(Version::VERSION, '9.2.0', '>=')) {
+        if (self::isVersionAtLeast('9.2.0')) {
             $requiredFields = $this->getItem('/customers/required-fields', ['customer_read']);
             $this->assertEquals(['newsletter'], $requiredFields['requiredFields']);
         } else {

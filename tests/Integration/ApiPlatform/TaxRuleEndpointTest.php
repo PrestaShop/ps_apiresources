@@ -50,10 +50,12 @@ class TaxRuleEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'list endpoint' => [
-            'GET',
-            '/tax-rules',
-        ];
+        if (self::isVersionAtLeast('9.2.0')) {
+            yield 'list endpoint' => [
+                'GET',
+                '/tax-rules',
+            ];
+        }
 
         // These routes don't exist at all before PrestaShop 9.2 (experimentalOperation + missing CQRS
         // command class both remove them from the router), so testProtectedEndpoints would get a 404/405
@@ -73,6 +75,8 @@ class TaxRuleEndpointTest extends ApiTestCase
 
     public function testListTaxRules(): array
     {
+        // Fixed by https://github.com/PrestaShop/PrestaShop/pull/41703
+        $this->markTestSkippedByMinVersion('9.2.0');
         $fixtures = $this->createTaxRuleFixtures();
 
         // Filtered by group: works the same on every version, so also reveals whether the

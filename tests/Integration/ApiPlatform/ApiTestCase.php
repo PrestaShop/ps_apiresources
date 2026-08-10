@@ -153,6 +153,11 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         }
     }
 
+    protected static function isVersionAtLeast(string $minVersion): bool
+    {
+        return version_compare(Version::VERSION, $minVersion, '>=');
+    }
+
     /**
      * Get bearer token with the requested scopes, if not ApiClient exists that can use these scopes
      * it is automatically created.

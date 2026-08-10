@@ -34,6 +34,9 @@ use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
         new PaginatedList(
             uriTemplate: '/tax-rules',
             provider: QueryListProvider::class,
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             scopes: ['tax_rule_read'],
             ApiResourceMapping: [
                 '[id_tax_rule]' => '[taxRuleId]',
