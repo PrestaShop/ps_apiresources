@@ -68,6 +68,11 @@ class TaxRuleEndpointTest extends ApiTestCase
                 'DELETE',
                 '/tax-rules/1',
             ];
+
+            yield 'bulk delete endpoint' => [
+                'DELETE',
+                '/tax-rules/bulk-delete',
+            ];
         }
     }
 
@@ -311,6 +316,33 @@ class TaxRuleEndpointTest extends ApiTestCase
             'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
         ]);
         $this->assertEquals(0, $taxRules['totalItems']);
+    }
+
+    public function testBulkDeleteTaxRules(): void
+    {
+        if (!class_exists(AddTaxRuleCommand::class)) {
+            $this->markTestSkipped('AddTaxRuleCommand class does not exist, this PrestaShop version does not support tax rule creation via the API yet');
+        }
+
+        // Seed a dedicated group with two rules so the assertion is independent of any leftover data
+        $fixtures = $this->createTaxRuleFixtures();
+        $taxRuleIds = array_values($fixtures['taxRuleIds']);
+        $toDelete = array_slice($taxRuleIds, 0, 2);
+
+        $this->bulkDeleteItems(
+            '/tax-rules/bulk-delete',
+            ['taxRulesGroupId' => $fixtures['taxRulesGroupId'], 'taxRuleIds' => $toDelete],
+            ['tax_rule_write']
+        );
+
+        $remaining = $this->listItems('/tax-rules', ['tax_rule_read'], [
+            'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+        ]);
+        $this->assertEquals(count($taxRuleIds) - count($toDelete), $remaining['totalItems']);
+        $remainingIds = array_column($remaining['items'], 'taxRuleId');
+        foreach ($toDelete as $deletedId) {
+            $this->assertNotContains($deletedId, $remainingIds);
+        }
     }
 
     public function testInvalidTaxRule(): void
