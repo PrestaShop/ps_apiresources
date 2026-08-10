@@ -11,5 +11,5 @@ parameters:
         -
             message: "#Class .*TaxRulesGroup\\\\TaxRule\\\\(Command|Exception).* not found.#"
             identifier: class.notFound
-            count: 6
+            count: 8
             path: ../../src/ApiPlatform/Resources/TaxRule/*

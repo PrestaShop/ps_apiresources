@@ -71,7 +71,7 @@ class TaxRuleEndpointTest extends ApiTestCase
 
             yield 'bulk delete endpoint' => [
                 'DELETE',
-                '/tax-rules-groups/1/tax-rules/bulk-delete',
+                '/tax-rules/bulk-delete',
             ];
         }
     }
@@ -330,8 +330,8 @@ class TaxRuleEndpointTest extends ApiTestCase
         $toDelete = array_slice($taxRuleIds, 0, 2);
 
         $this->bulkDeleteItems(
-            '/tax-rules-groups/' . $fixtures['taxRulesGroupId'] . '/tax-rules/bulk-delete',
-            ['taxRuleIds' => $toDelete],
+            '/tax-rules/bulk-delete',
+            ['taxRulesGroupId' => $fixtures['taxRulesGroupId'], 'taxRuleIds' => $toDelete],
             ['tax_rule_write']
         );
 
