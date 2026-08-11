@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Command\UpdateProductStockAvailableCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Exception\ProductStockConstraintException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
@@ -33,12 +34,20 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/products/{productId}/stocks',
+            uriTemplate: '/products/{productId}/stock',
             requirements: ['productId' => '\d+'],
-            output: false,
+            read: false,
             CQRSCommand: UpdateProductStockAvailableCommand::class,
             CQRSCommandMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
+            ],
+            CQRSQuery: GetProductForEditing::class,
+            CQRSQueryMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+                '[_context][langId]' => '[displayLanguageId]',
+                '[stockInformation][quantity]' => '[quantity]',
+                '[stockInformation][outOfStockType]' => '[outOfStockType]',
+                '[stockInformation][location]' => '[location]',
             ],
             scopes: ['product_write'],
         ),
@@ -55,8 +64,14 @@ class ProductStock
 
     /**
      * Quantity to add (positive) or remove (negative) from the available stock.
+     * Write-only: responses expose the resulting quantity instead.
      */
     public ?int $deltaQuantity;
+
+    /**
+     * Available quantity after the update (read-only).
+     */
+    public ?int $quantity;
 
     public ?int $outOfStockType;
 

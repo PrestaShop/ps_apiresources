@@ -58,6 +58,12 @@ services:
     autoconfigure: true
     public: false
 
+  # See class docblock: builds SetProductImagesForAllShopCommand through its addProductSetting() adder
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\SetProductImagesForAllShopSerializer:
+    autowire: true
+    autoconfigure: true
+    public: false
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'

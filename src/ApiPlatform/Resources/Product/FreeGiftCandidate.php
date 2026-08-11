@@ -33,6 +33,9 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/products/free-gift-candidates',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSQuery: SearchProductsForFreeGift::class,
             scopes: ['product_read'],
             CQRSQueryMapping: [
@@ -69,11 +72,14 @@ class FreeGiftCandidate
 
     public string $reference;
 
-    public string $imagePath;
+    public string $imageUrl;
 
     public string $productType;
 
     public bool $disabled;
 
-    public string $disabledReason;
+    /**
+     * Filled only when the product is disabled as a free gift candidate.
+     */
+    public ?string $disabledReason = null;
 }
