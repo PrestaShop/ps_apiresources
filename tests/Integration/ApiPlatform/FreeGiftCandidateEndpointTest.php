@@ -22,31 +22,93 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use PrestaShop\PrestaShop\Core\Version;
+use Tests\Resources\Resetter\ConfigurationResetter;
+use Tests\Resources\Resetter\ProductResetter;
+
 class FreeGiftCandidateEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['product_read']);
+        ProductResetter::resetProducts();
+        self::createApiClient(['product_write', 'product_read']);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        parent::tearDownAfterClass();
+        ProductResetter::resetProducts();
+        ConfigurationResetter::resetConfiguration();
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'search free gift candidates' => ['GET', '/products/free-gift-candidates?phrase=hum'];
+        // The endpoint is only exposed on cores that ship SearchProductsForFreeGift (9.2+)
+        if (version_compare(Version::VERSION, '9.2.0', '>=')) {
+            yield 'get free gift candidates endpoint' => [
+                'GET',
+                '/products/free-gift-candidates',
+            ];
+        }
     }
 
     public function testSearchFreeGiftCandidates(): void
     {
-        // PS demo catalog has several 'Hummingbird' products (min 3 chars satisfies SearchProductsForFreeGift constraint).
-        $result = $this->getItem('/products/free-gift-candidates?phrase=hum', ['product_read']);
+        $this->markTestSkippedByMinVersion('9.2.0');
 
-        $this->assertIsArray($result);
-        foreach ($result as $row) {
-            $this->assertArrayHasKey('productId', $row);
-            $this->assertIsInt($row['productId']);
-            $this->assertArrayHasKey('name', $row);
-            $this->assertArrayHasKey('productType', $row);
-            $this->assertArrayHasKey('disabled', $row);
-        }
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'free gift candidate',
+                'fr-FR' => 'cadeau candidat',
+            ],
+        ], ['product_write']);
+        $this->assertArrayHasKey('productId', $product);
+        $productId = $product['productId'];
+
+        // The new product has no stock and the default shop configuration denies ordering
+        // out-of-stock products, so the candidate is disabled
+        $this->assertEquals(
+            [
+                [
+                    'productId' => $productId,
+                    'name' => 'free gift candidate',
+                    'reference' => '',
+                    'imageUrl' => 'http://myshop.com/img/p/en-default-home_default.jpg',
+                    'productType' => ProductType::TYPE_STANDARD,
+                    'disabled' => true,
+                    'disabledReason' => 'This product is out of stock.',
+                ],
+            ],
+            $this->getItem('/products/free-gift-candidates?phrase=free gift candidate', ['product_read'])
+        );
+
+        // Once out-of-stock ordering is allowed the same product becomes an eligible candidate
+        self::updateConfiguration('PS_ORDER_OUT_OF_STOCK', 1);
+        $this->assertEquals(
+            [
+                [
+                    'productId' => $productId,
+                    'name' => 'free gift candidate',
+                    'reference' => '',
+                    'imageUrl' => 'http://myshop.com/img/p/en-default-home_default.jpg',
+                    'productType' => ProductType::TYPE_STANDARD,
+                    'disabled' => false,
+                ],
+            ],
+            $this->getItem('/products/free-gift-candidates?phrase=free gift candidate', ['product_read'])
+        );
+    }
+
+    public function testSearchWithoutMatch(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $this->assertEquals(
+            [],
+            $this->getItem('/products/free-gift-candidates?phrase=no product matches this', ['product_read'])
+        );
     }
 }

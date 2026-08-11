@@ -22,17 +22,186 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\Resetter\ProductResetter;
+
 class VirtualProductFileEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['product_write']);
+        ProductResetter::resetProducts();
+        self::createApiClient(['product_write', 'product_read']);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        parent::tearDownAfterClass();
+        ProductResetter::resetProducts();
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'add virtual product file endpoint' => ['POST', '/products/1/virtual-files'];
-        yield 'update virtual product file endpoint' => ['PATCH', '/products/virtual-files/1'];
+        yield 'add virtual product file endpoint' => [
+            'POST',
+            '/products/1/virtual-file',
+        ];
+
+        yield 'update virtual product file endpoint' => [
+            'PATCH',
+            '/products/virtual-file/1',
+        ];
+
+        yield 'delete virtual product file endpoint' => [
+            'DELETE',
+            '/products/virtual-file/1',
+        ];
+    }
+
+    public function testAddVirtualProductFile(): array
+    {
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_VIRTUAL,
+            'names' => [
+                'en-US' => 'virtual product',
+                'fr-FR' => 'produit virtuel',
+            ],
+        ], ['product_write']);
+        $this->assertArrayHasKey('productId', $product);
+        $productId = $product['productId'];
+
+        $createdFile = $this->createItem(
+            sprintf('/products/%d/virtual-file', $productId),
+            [
+                'filePath' => $this->prepareVirtualFile(),
+                'displayName' => 'user manual',
+                'accessDays' => 5,
+                'downloadTimesLimit' => 10,
+                'expirationDate' => '2035-01-15 00:00:00',
+            ],
+            ['product_write']
+        );
+
+        $this->assertArrayHasKey('virtualProductFileId', $createdFile);
+        $virtualProductFileId = $createdFile['virtualProductFileId'];
+        $this->assertArrayHasKey('fileName', $createdFile);
+        // The stored file name is a generated unique hash
+        $fileName = $createdFile['fileName'];
+
+        $this->assertEquals(
+            [
+                'productId' => $productId,
+                'virtualProductFileId' => $virtualProductFileId,
+                'fileName' => $fileName,
+                'displayName' => 'user manual',
+                'accessDays' => 5,
+                'downloadTimesLimit' => 10,
+                'expirationDate' => '2035-01-15 00:00:00',
+            ],
+            $createdFile
+        );
+
+        // The product GET endpoint exposes the file as its virtualProductFile
+        $product = $this->getItem(sprintf('/products/%d', $productId), ['product_read']);
+        $this->assertEquals(
+            [
+                'id' => $virtualProductFileId,
+                'fileName' => $fileName,
+                'displayName' => 'user manual',
+                'accessDays' => 5,
+                'downloadTimesLimit' => 10,
+                'expirationDate' => '2035-01-15 00:00:00',
+            ],
+            $product['virtualProductFile']
+        );
+
+        return [
+            'productId' => $productId,
+            'virtualProductFileId' => $virtualProductFileId,
+            'fileName' => $fileName,
+        ];
+    }
+
+    /**
+     * @depends testAddVirtualProductFile
+     */
+    public function testUpdateVirtualProductFile(array $fixtures): array
+    {
+        $this->partialUpdateItem(
+            sprintf('/products/virtual-file/%d', $fixtures['virtualProductFileId']),
+            [
+                'displayName' => 'updated manual',
+                'accessDays' => 30,
+            ],
+            ['product_write']
+        );
+
+        $product = $this->getItem(sprintf('/products/%d', $fixtures['productId']), ['product_read']);
+        $this->assertEquals(
+            [
+                'id' => $fixtures['virtualProductFileId'],
+                'fileName' => $fixtures['fileName'],
+                'displayName' => 'updated manual',
+                'accessDays' => 30,
+                'downloadTimesLimit' => 10,
+                'expirationDate' => '2035-01-15 00:00:00',
+            ],
+            $product['virtualProductFile']
+        );
+
+        return $fixtures;
+    }
+
+    /**
+     * @depends testUpdateVirtualProductFile
+     */
+    public function testDeleteVirtualProductFile(array $fixtures): void
+    {
+        $this->deleteItem(sprintf('/products/virtual-file/%d', $fixtures['virtualProductFileId']), ['product_write']);
+
+        // The product has no virtual file anymore
+        $product = $this->getItem(sprintf('/products/%d', $fixtures['productId']), ['product_read']);
+        $this->assertArrayNotHasKey('virtualProductFile', $product);
+
+        // The file cannot be deleted twice
+        $this->deleteItem(
+            sprintf('/products/virtual-file/%d', $fixtures['virtualProductFileId']),
+            ['product_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
+    public function testAddVirtualFileOnStandardProductIsRejected(): void
+    {
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'standard product',
+                'fr-FR' => 'produit standard',
+            ],
+        ], ['product_write']);
+
+        $this->createItem(
+            sprintf('/products/%d/virtual-file', $product['productId']),
+            [
+                'filePath' => $this->prepareVirtualFile(),
+                'displayName' => 'user manual',
+            ],
+            ['product_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+    }
+
+    /**
+     * Creates a throwaway file to attach: the API moves (and removes) the source file,
+     * so each request needs a fresh copy.
+     */
+    private function prepareVirtualFile(): string
+    {
+        $filePath = rtrim(sys_get_temp_dir(), '/') . '/virtual-product-file-test.txt';
+        file_put_contents($filePath, 'virtual product file test content');
+
+        return $filePath;
     }
 }

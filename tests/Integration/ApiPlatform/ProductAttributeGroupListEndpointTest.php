@@ -22,49 +22,162 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use Symfony\Component\HttpFoundation\Response;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use Tests\Resources\DatabaseDump;
+use Tests\Resources\Resetter\ProductResetter;
 
 class ProductAttributeGroupListEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['product_read']);
+        ProductResetter::resetProducts();
+        self::createApiClient(['product_write', 'product_read', 'attribute_group_write', 'attribute_write']);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        parent::tearDownAfterClass();
+        ProductResetter::resetProducts();
+        DatabaseDump::restoreTables([
+            'attribute_group',
+            'attribute_group_lang',
+            'attribute_group_shop',
+            'attribute',
+            'attribute_lang',
+            'attribute_shop',
+        ]);
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'list product attribute groups endpoint' => ['GET', '/products/1/attribute-groups'];
+        yield 'get product attribute groups endpoint' => [
+            'GET',
+            '/products/1/attribute-groups',
+        ];
     }
 
-    public function testListProductAttributeGroups(): void
+    public function testGetProductAttributeGroups(): void
     {
-        // Pick a demo product that actually has combinations (and therefore attribute groups).
-        $productId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product_attribute` ORDER BY `id_product` ASC'
+        // Create a dedicated attribute group with two attributes, purely via the API
+        $attributeGroup = $this->createItem('/attributes/groups', [
+            'names' => [
+                'en-US' => 'Fabric',
+                'fr-FR' => 'Tissu',
+            ],
+            'publicNames' => [
+                'en-US' => 'Fabric public',
+                'fr-FR' => 'Tissu public',
+            ],
+            'type' => 'select',
+            'shopIds' => [1],
+        ], ['attribute_group_write']);
+        $this->assertArrayHasKey('attributeGroupId', $attributeGroup);
+        $attributeGroupId = $attributeGroup['attributeGroupId'];
+
+        $attributeIds = [];
+        foreach (['Cotton', 'Silk'] as $attributeName) {
+            $attribute = $this->createItem('/attributes/attributes', [
+                'names' => [
+                    'en-US' => $attributeName,
+                    'fr-FR' => $attributeName . ' FR',
+                ],
+                'attributeGroupId' => $attributeGroupId,
+                'color' => '',
+                'shopIds' => [1],
+            ], ['attribute_write']);
+            $this->assertArrayHasKey('attributeId', $attribute);
+            $attributeIds[$attributeName] = $attribute['attributeId'];
+        }
+
+        // Create a product and generate its combinations from the new attributes
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_COMBINATIONS,
+            'names' => [
+                'en-US' => 'product with attributes',
+                'fr-FR' => 'produit avec attributs',
+            ],
+        ], ['product_write']);
+        $this->assertArrayHasKey('productId', $product);
+        $productId = $product['productId'];
+
+        $this->createItem(sprintf('/products/%d/generate-combinations', $productId), [
+            'groupedAttributes' => [
+                [
+                    'attributeGroupId' => $attributeGroupId,
+                    'attributeIds' => array_values($attributeIds),
+                ],
+            ],
+        ], ['product_write']);
+
+        $this->assertEquals(
+            [
+                [
+                    'attributeGroupId' => $attributeGroupId,
+                    'names' => [
+                        'en-US' => 'Fabric',
+                        'fr-FR' => 'Tissu',
+                    ],
+                    'publicNames' => [
+                        'en-US' => 'Fabric public',
+                        'fr-FR' => 'Tissu public',
+                    ],
+                    'type' => 'select',
+                    'colorGroup' => false,
+                    // The default catalog ships 4 attribute groups, the new one is appended after them
+                    'position' => 4,
+                    'attributes' => [
+                        [
+                            'attributeId' => $attributeIds['Cotton'],
+                            'position' => 0,
+                            'color' => '',
+                            'names' => [
+                                'en-US' => 'Cotton',
+                                'fr-FR' => 'Cotton FR',
+                            ],
+                            'textureFilePath' => null,
+                        ],
+                        [
+                            'attributeId' => $attributeIds['Silk'],
+                            'position' => 1,
+                            'color' => '',
+                            'names' => [
+                                'en-US' => 'Silk',
+                                'fr-FR' => 'Silk FR',
+                            ],
+                            'textureFilePath' => null,
+                        ],
+                    ],
+                ],
+            ],
+            $this->getItem(sprintf('/products/%d/attribute-groups', $productId), ['product_read'])
         );
-
-        $result = $this->getItem('/products/' . $productId . '/attribute-groups', ['product_read']);
-
-        $this->assertNotEmpty($result);
-        $first = $result[0];
-        $this->assertArrayHasKey('attributeGroupId', $first);
-        $this->assertIsInt($first['attributeGroupId']);
-        $this->assertArrayHasKey('names', $first);
-        $this->assertIsArray($first['names']);
-        $this->assertArrayHasKey('publicNames', $first);
-        $this->assertIsArray($first['publicNames']);
-        $this->assertArrayHasKey('type', $first);
-        $this->assertIsString($first['type']);
-        $this->assertArrayHasKey('colorGroup', $first);
-        $this->assertIsBool($first['colorGroup']);
-        $this->assertArrayHasKey('position', $first);
-        $this->assertIsInt($first['position']);
-        $this->assertArrayHasKey('attributes', $first);
     }
 
-    public function testGetAttributeGroupsForNonExistentProduct(): void
+    public function testGetAttributeGroupsForProductWithoutCombinations(): void
     {
-        $this->getItem('/products/99999999/attribute-groups', ['product_read'], Response::HTTP_NOT_FOUND);
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'standard product',
+                'fr-FR' => 'produit standard',
+            ],
+        ], ['product_write']);
+
+        // A product without combinations has no attribute groups, the endpoint returns an empty list
+        $this->assertEquals(
+            [],
+            $this->getItem(sprintf('/products/%d/attribute-groups', $product['productId']), ['product_read'])
+        );
+    }
+
+    public function testGetAttributeGroupsForUnknownProduct(): void
+    {
+        // The core query does not check the product existence: an unknown product simply has no
+        // combinations, so the endpoint returns an empty list (same contract as above)
+        $this->assertEquals(
+            [],
+            $this->getItem('/products/99999999/attribute-groups', ['product_read'])
+        );
     }
 }
