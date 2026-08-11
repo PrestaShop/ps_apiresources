@@ -84,10 +84,13 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
             '/tax-rules-groups/1/set-status',
         ];
 
-        yield 'list tax rules endpoint' => [
-            'GET',
-            '/tax-rules-groups/1/tax-rules',
-        ];
+        // Only registered on PS versions where the CQRS query exists (>= develop).
+        if (class_exists(GetTaxRuleList::class)) {
+            yield 'list tax rules endpoint' => [
+                'GET',
+                '/tax-rules-groups/1/tax-rules',
+            ];
+        }
     }
 
     public function testAddTaxRulesGroup(): int
