@@ -38,7 +38,7 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         // Reset DB as it was before this test
-        DatabaseDump::restoreTables(['tax_rules_group', 'tax_rules_group_shop']);
+        DatabaseDump::restoreTables(['tax_rules_group', 'tax_rules_group_shop', 'tax_rule']);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -81,6 +81,11 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
         yield 'toggle status endpoint' => [
             'PATCH',
             '/tax-rules-groups/1/set-status',
+        ];
+
+        yield 'list tax rules endpoint' => [
+            'GET',
+            '/tax-rules-groups/1/tax-rules',
         ];
     }
 
@@ -363,6 +368,43 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
         }
 
         $this->assertEquals(50, $this->countItems('/tax-rules-groups', ['tax_rules_group_read']));
+    }
+
+    public function testListTaxRulesOfExistingGroup(): void
+    {
+        // Group 1 comes from the default install fixtures. We only assert the
+        // response shape — the exact number of rules can vary by installed
+        // country pack, so we check every returned item matches the DTO.
+        $response = $this->listItems('/tax-rules-groups/1/tax-rules', ['tax_rules_group_read']);
+        $this->assertArrayHasKey('items', $response);
+        $this->assertArrayHasKey('totalItems', $response);
+        $this->assertIsInt($response['totalItems']);
+        $this->assertCount($response['totalItems'] > 50 ? 50 : $response['totalItems'], $response['items']);
+
+        foreach ($response['items'] as $rule) {
+            $this->assertEquals(
+                ['taxRulesGroupId', 'taxRuleId', 'countryName', 'stateName', 'zipcode', 'behavior', 'taxName', 'taxRate', 'description'],
+                array_keys($rule)
+            );
+            $this->assertEquals(1, $rule['taxRulesGroupId']);
+            $this->assertIsInt($rule['taxRuleId']);
+            $this->assertIsInt($rule['behavior']);
+        }
+    }
+
+    public function testListTaxRulesPagination(): void
+    {
+        $response = $this->listItems('/tax-rules-groups/1/tax-rules?limit=1&offset=0', ['tax_rules_group_read']);
+        $this->assertLessThanOrEqual(1, count($response['items']));
+    }
+
+    public function testListTaxRulesForMissingGroup(): void
+    {
+        // GetTaxRuleList does not check parent existence — a missing group
+        // just yields an empty rule set, mirroring the BO controller behavior.
+        $response = $this->listItems('/tax-rules-groups/999999/tax-rules', ['tax_rules_group_read']);
+        $this->assertSame(0, $response['totalItems']);
+        $this->assertSame([], $response['items']);
     }
 
     public function testCreateInvalidTaxRulesGroup(): void
