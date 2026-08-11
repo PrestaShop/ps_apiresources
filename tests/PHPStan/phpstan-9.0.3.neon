@@ -19,3 +19,10 @@ parameters:
             identifier: class.notFound
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
+        # SearchProductsForFreeGift only exists since PrestaShop 9.2, the operation is gated
+        # with the minVersion extra property so it is expected to be absent on 9.0.3.
+        -
+            message: "#Class .*Product\\\\Query\\\\SearchProductsForFreeGift not found.#"
+            identifier: class.notFound
+            count: 1
+            path: ../../src/ApiPlatform/Resources/Product/*

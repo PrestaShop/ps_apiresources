@@ -82,6 +82,10 @@ final class ApiResourceNormalizerRule implements Rule
         // nested inside AttributeGroupWithAttributes::$attributes stays keyed by id_lang.
         // This narrow normalizer post-processes only that sub-array.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\AttributeGroupWithAttributesNormalizer',
+        // Valid: SetProductImagesForAllShopCommand collects its ProductImageSetting value
+        // objects through an addProductSetting() adder that the generic serializer cannot
+        // drive from a JSON body, the command must be built manually.
+        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\SetProductImagesForAllShopSerializer',
     ];
 
     public function getNodeType(): string
