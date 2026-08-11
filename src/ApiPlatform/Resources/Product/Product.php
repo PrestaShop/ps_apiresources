@@ -208,6 +208,24 @@ class Product
 
     public ?DateImmutable $availableDate = null;
 
+    /**
+     * Virtual product file attached to the product (null for products without one).
+     * Managed via the /products/{productId}/virtual-files endpoints.
+     */
+    #[ApiProperty(openapiContext: [
+        'type' => 'object',
+        'nullable' => true,
+        'properties' => [
+            'id' => ['type' => 'integer'],
+            'fileName' => ['type' => 'string'],
+            'displayName' => ['type' => 'string'],
+            'accessDays' => ['type' => 'integer'],
+            'downloadTimesLimit' => ['type' => 'integer'],
+            'expirationDate' => ['type' => 'string', 'format' => 'date-time', 'nullable' => true],
+        ],
+    ])]
+    public ?array $virtualProductFile = null;
+
     public string $coverThumbnailUrl;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]

@@ -28,18 +28,42 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\RemoveAllAssociatedProductSuppliersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetProductDefaultSupplierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetSuppliersCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\UpdateProductSuppliersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Exception\ProductSupplierException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Query\GetProductSupplierOptions;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
+        new CQRSGet(
+            uriTemplate: '/products/{productId}/suppliers',
+            requirements: ['productId' => '\d+'],
+            CQRSQuery: GetProductSupplierOptions::class,
+            scopes: ['product_read'],
+        ),
         new CQRSUpdate(
             uriTemplate: '/products/{productId}/suppliers',
             requirements: ['productId' => '\d+'],
-            output: false,
             CQRSCommand: SetSuppliersCommand::class,
+            CQRSQuery: GetProductSupplierOptions::class,
+            scopes: ['product_write'],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/products/{productId}/suppliers',
+            requirements: ['productId' => '\d+'],
+            read: false,
+            CQRSCommand: UpdateProductSuppliersCommand::class,
+            CQRSCommandMapping: [
+                '[productSuppliers][@index][productSupplierId]' => '[productSuppliers][@index][product_supplier_id]',
+                '[productSuppliers][@index][supplierId]' => '[productSuppliers][@index][supplier_id]',
+                '[productSuppliers][@index][currencyId]' => '[productSuppliers][@index][currency_id]',
+                '[productSuppliers][@index][priceTaxExcluded]' => '[productSuppliers][@index][price_tax_excluded]',
+            ],
+            CQRSQuery: GetProductSupplierOptions::class,
             scopes: ['product_write'],
         ),
         new CQRSDelete(
@@ -50,10 +74,11 @@ use Symfony\Component\HttpFoundation\Response;
             scopes: ['product_write'],
         ),
         new CQRSUpdate(
-            uriTemplate: '/products/{productId}/default-suppliers',
+            uriTemplate: '/products/{productId}/default-supplier',
             requirements: ['productId' => '\d+'],
-            output: false,
+            read: false,
             CQRSCommand: SetProductDefaultSupplierCommand::class,
+            CQRSQuery: GetProductSupplierOptions::class,
             scopes: ['product_write'],
         ),
     ],
@@ -68,7 +93,12 @@ class ProductSuppliers
     public int $productId;
 
     /**
-     * Supplier ids to associate with the product (used by the suppliers endpoint).
+     * Supplier id used as the product default.
+     */
+    public int $defaultSupplierId;
+
+    /**
+     * Supplier ids associated with the product.
      *
      * @var int[]
      */
@@ -76,7 +106,24 @@ class ProductSuppliers
     public array $supplierIds;
 
     /**
-     * Supplier id to set as the product default (used by the default-suppliers endpoint).
+     * Product supplier associations. Returned by every operation; the PATCH operation
+     * accepts the writable subset of these fields per association.
      */
-    public int $defaultSupplierId;
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'productSupplierId' => ['type' => 'integer'],
+                'productId' => ['type' => 'integer'],
+                'supplierId' => ['type' => 'integer'],
+                'supplierName' => ['type' => 'string'],
+                'reference' => ['type' => 'string'],
+                'priceTaxExcluded' => ['type' => 'string'],
+                'currencyId' => ['type' => 'integer'],
+                'combinationId' => ['type' => 'integer'],
+            ],
+        ],
+    ])]
+    public array $productSuppliers;
 }

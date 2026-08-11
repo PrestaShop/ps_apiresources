@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Normalizer;
 
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Attribute\AttributeGroupWithAttributes;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Product\ProductAttributeGroupList;
 use PrestaShopBundle\ApiPlatform\LocalizedValueUpdater;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
@@ -31,7 +32,8 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 /**
  * Rewrites the nested `attributes[*].localizedNames` keys from language IDs to
- * language locales for the AttributeGroupWithAttributes API resource.
+ * language locales for the AttributeGroupWithAttributes and ProductAttributeGroupList
+ * API resources (both expose the same core AttributeGroup query result).
  *
  * Background:
  *   CQRSApiSerializer::normalizeLocalizedValues() converts id_lang → locale for
@@ -43,10 +45,10 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
  *   PR https://github.com/PrestaShop/ps_apiresources/pull/390 review discussion.
  *
  * Scope:
- *   This normalizer is intentionally narrow: it triggers only for
- *   AttributeGroupWithAttributes and only rewrites the `attributes[].localizedNames`
- *   sub-arrays. The `names` / `publicNames` top-level fields keep going through
- *   the standard #[LocalizedValue] path.
+ *   This normalizer is intentionally narrow: it triggers only for the two resources
+ *   above and only rewrites the `attributes[].localizedNames` sub-arrays. The
+ *   `names` / `publicNames` top-level fields keep going through the standard
+ *   #[LocalizedValue] path.
  */
 class AttributeGroupWithAttributesNormalizer implements NormalizerInterface, NormalizerAwareInterface
 {
@@ -91,13 +93,15 @@ class AttributeGroupWithAttributesNormalizer implements NormalizerInterface, Nor
 
     public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
     {
-        return $data instanceof AttributeGroupWithAttributes && empty($context[self::ALREADY_CALLED]);
+        return ($data instanceof AttributeGroupWithAttributes || $data instanceof ProductAttributeGroupList)
+            && empty($context[self::ALREADY_CALLED]);
     }
 
     public function getSupportedTypes(?string $format): array
     {
         return [
             AttributeGroupWithAttributes::class => false,
+            ProductAttributeGroupList::class => false,
         ];
     }
 }

@@ -24,31 +24,78 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\SetProductImagesForAllShopCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetShopProductImages as GetShopProductImagesQuery;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSGetCollection(
+        new CQRSGet(
             uriTemplate: '/products/{productId}/shop-images',
+            requirements: ['productId' => '\d+'],
             CQRSQuery: GetShopProductImagesQuery::class,
+            CQRSQueryMapping: ShopProductImages::QUERY_MAPPING,
             scopes: ['product_read'],
         ),
+        new CQRSUpdate(
+            uriTemplate: '/products/{productId}/shop-images',
+            requirements: ['productId' => '\d+'],
+            read: false,
+            CQRSCommand: SetProductImagesForAllShopCommand::class,
+            CQRSQuery: GetShopProductImagesQuery::class,
+            CQRSQueryMapping: ShopProductImages::QUERY_MAPPING,
+            scopes: ['product_write'],
+        ),
+    ],
+    exceptionToStatus: [
+        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class ShopProductImages
 {
-    public int $shopId;
+    #[ApiProperty(identifier: true)]
+    public int $productId;
 
+    /**
+     * Image/shop associations of the product. Responses group them by shop:
+     * [{shopId, images: [{imageId, cover}]}]. The PUT payload defines them per image:
+     * [{imageId, shopIds}].
+     */
     #[ApiProperty(openapiContext: [
         'type' => 'array',
         'items' => [
             'type' => 'object',
             'properties' => [
-                'imageId' => ['type' => 'integer'],
-                'cover' => ['type' => 'boolean'],
+                'shopId' => ['type' => 'integer'],
+                'images' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'imageId' => ['type' => 'integer'],
+                            'cover' => ['type' => 'boolean'],
+                        ],
+                    ],
+                ],
             ],
         ],
+        'example' => [
+            ['shopId' => 1, 'images' => [['imageId' => 1, 'cover' => true]]],
+        ],
     ])]
-    public array $productImages;
+    #[Assert\NotBlank]
+    public array $shopImages = [];
+
+    /**
+     * The core query returns a collection of per-shop associations, hoisted as a whole
+     * into the shopImages property so both operations return the same single resource.
+     */
+    public const QUERY_MAPPING = [
+        '[@index][shopId]' => '[shopImages][@index][shopId]',
+        '[@index][productImages]' => '[shopImages][@index][images]',
+    ];
 }

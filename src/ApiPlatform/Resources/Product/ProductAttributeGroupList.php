@@ -25,10 +25,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\AttributeGroup\Query\GetProductAttributeGroups;
-use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
-use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
@@ -48,9 +46,6 @@ use Symfony\Component\HttpFoundation\Response;
                 '[groupType]' => '[type]',
             ],
         ),
-    ],
-    exceptionToStatus: [
-        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class ProductAttributeGroupList
@@ -72,14 +67,14 @@ class ProductAttributeGroupList
     #[ApiProperty(
         openapiContext: [
             'type' => 'array',
-            'description' => 'Attributes belonging to the group. Nested `localizedNames` are keyed by language id.',
+            'description' => 'Attributes belonging to the group. Nested `names` are keyed by language locale.',
             'items' => [
                 'type' => 'object',
                 'properties' => [
                     'attributeId' => ['type' => 'integer'],
                     'position' => ['type' => 'integer'],
                     'color' => ['type' => 'string'],
-                    'localizedNames' => [
+                    'names' => [
                         'type' => 'object',
                         'additionalProperties' => ['type' => 'string'],
                     ],
