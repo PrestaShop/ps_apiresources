@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\TaxRule\Query\GetTaxRuleList;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -372,6 +373,9 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
 
     public function testListTaxRulesOfExistingGroup(): void
     {
+        if (!class_exists(GetTaxRuleList::class)) {
+            $this->markTestSkipped('GetTaxRuleList query is only available on PrestaShop develop.');
+        }
         // Group 1 comes from the default install fixtures. We only assert the
         // response shape — the exact number of rules can vary by installed
         // country pack, so we check every returned item matches the DTO.
@@ -394,12 +398,18 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
 
     public function testListTaxRulesPagination(): void
     {
+        if (!class_exists(GetTaxRuleList::class)) {
+            $this->markTestSkipped('GetTaxRuleList query is only available on PrestaShop develop.');
+        }
         $response = $this->listItems('/tax-rules-groups/1/tax-rules?limit=1&offset=0', ['tax_rules_group_read']);
         $this->assertLessThanOrEqual(1, count($response['items']));
     }
 
     public function testListTaxRulesForMissingGroup(): void
     {
+        if (!class_exists(GetTaxRuleList::class)) {
+            $this->markTestSkipped('GetTaxRuleList query is only available on PrestaShop develop.');
+        }
         // GetTaxRuleList does not check parent existence — a missing group
         // just yields an empty rule set, mirroring the BO controller behavior.
         $response = $this->listItems('/tax-rules-groups/999999/tax-rules', ['tax_rules_group_read']);

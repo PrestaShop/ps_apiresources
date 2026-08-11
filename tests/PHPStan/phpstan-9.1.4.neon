@@ -13,3 +13,9 @@ parameters:
             identifier: class.notFound
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
+        # GetTaxRuleList only exists on develop; gated via experimentalOperation.
+        -
+            message: "#Class .*TaxRulesGroup\\\\TaxRule\\\\Query\\\\GetTaxRuleList not found.#"
+            identifier: class.notFound
+            count: 1
+            path: ../../src/ApiPlatform/Resources/TaxRulesGroup/TaxRuleList.php
