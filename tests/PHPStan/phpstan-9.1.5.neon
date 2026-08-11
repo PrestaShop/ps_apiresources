@@ -45,3 +45,9 @@ parameters:
             message: "#Class .*Country\\\\(Command\\\\(Bulk.*|ToggleCountryStatusCommand)|Exception\\\\DuplicateCountryIsoCodeException) not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Country/*
+        # GetTaxRuleList only exists on develop; gated via experimentalOperation.
+        -
+            message: "#Class .*TaxRulesGroup\\\\TaxRule\\\\Query\\\\GetTaxRuleList not found.#"
+            identifier: class.notFound
+            count: 1
+            path: ../../src/ApiPlatform/Resources/TaxRulesGroup/TaxRuleList.php

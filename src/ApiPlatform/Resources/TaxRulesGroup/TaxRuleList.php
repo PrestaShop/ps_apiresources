@@ -42,6 +42,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             itemsField: 'taxRules',
             countField: 'totalCount',
+            experimentalOperation: true,
         ),
     ],
     exceptionToStatus: [
