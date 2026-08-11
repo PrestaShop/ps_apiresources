@@ -48,6 +48,15 @@ class GenerateApiTrackingTableCommand extends Command
         'GetCustomerForAddressCreation' => self::USELESS_DUPLICATE,
         'ResetEmployeePasswordCommand' => self::USELESS_DUPLICATE,
         'GetEmployeeEmailById' => self::USELESS_DUPLICATE,
+        // GET /products/{productId} already returns the enabled status (and much more)
+        'GetProductIsEnabled' => self::USELESS_DUPLICATE,
+        // GET /products/{productId}/suppliers returns the associated supplier ids along with the full options
+        'GetAssociatedSuppliers' => self::USELESS_DUPLICATE,
+        // Back office association pickers; GET /products/search covers product/combination lookup
+        'SearchProductsForAssociation' => self::USELESS_DUPLICATE,
+        'SearchCombinationsForAssociation' => self::USELESS_DUPLICATE,
+        // GET /products/{productId}/combinations already lists a product combinations with filters
+        'SearchProductCombinations' => self::USELESS_DUPLICATE,
         // Quick access links are a back office UI customization feature.
         'AddQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
         'EditQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
