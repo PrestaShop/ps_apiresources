@@ -22,60 +22,89 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\ValueObject\OutOfStockType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use Symfony\Component\HttpFoundation\Response;
-use Tests\Resources\DatabaseDump;
+use Tests\Resources\Resetter\ProductResetter;
 
 class ProductStockEndpointTest extends ApiTestCase
 {
-    private static int $productId;
-
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['product_write']);
-
-        // A simple product (no combinations) so the product-level stock is unambiguous
-        self::$productId = (int) \Db::getInstance()->getValue(
-            'SELECT p.`id_product` FROM `' . _DB_PREFIX_ . 'product` p
-             WHERE NOT EXISTS (
-                 SELECT 1 FROM `' . _DB_PREFIX_ . 'product_attribute` pa WHERE pa.`id_product` = p.`id_product`
-             )
-             ORDER BY p.`id_product` ASC'
-        );
+        ProductResetter::resetProducts();
+        self::createApiClient(['product_write', 'product_read']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        DatabaseDump::restoreTables(['stock_available']);
+        ProductResetter::resetProducts();
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'update stock endpoint' => ['PUT', '/products/1/stocks'];
+        yield 'update product stock endpoint' => [
+            'PUT',
+            '/products/1/stock',
+        ];
     }
 
-    public function testUpdateProductStock(): void
+    public function testUpdateProductStock(): int
     {
-        $initial = (int) \StockAvailable::getQuantityAvailableByProduct(self::$productId);
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'product with stock',
+                'fr-FR' => 'produit avec stock',
+            ],
+        ], ['product_write']);
+        $this->assertArrayHasKey('productId', $product);
+        $productId = $product['productId'];
 
-        $this->updateItem(
-            '/products/' . self::$productId . '/stocks',
-            ['deltaQuantity' => 5],
-            ['product_write'],
-            Response::HTTP_NO_CONTENT
+        $updatedStock = $this->updateItem(sprintf('/products/%d/stock', $productId), [
+            'deltaQuantity' => 10,
+            'location' => 'shelf A',
+        ], ['product_write']);
+
+        $this->assertEquals(
+            [
+                'productId' => $productId,
+                'quantity' => 10,
+                'outOfStockType' => OutOfStockType::OUT_OF_STOCK_DEFAULT,
+                'location' => 'shelf A',
+            ],
+            $updatedStock
         );
 
-        $this->assertSame($initial + 5, (int) \StockAvailable::getQuantityAvailableByProduct(self::$productId));
+        return $productId;
     }
 
-    public function testUpdateStockOnMissingProductReturnsNotFound(): void
+    /**
+     * @depends testUpdateProductStock
+     */
+    public function testDecreaseProductStock(int $productId): void
     {
-        $this->updateItem(
-            '/products/999999/stocks',
-            ['deltaQuantity' => 5],
-            ['product_write'],
-            Response::HTTP_NOT_FOUND
+        $updatedStock = $this->updateItem(sprintf('/products/%d/stock', $productId), [
+            'deltaQuantity' => -4,
+            'outOfStockType' => OutOfStockType::OUT_OF_STOCK_AVAILABLE,
+        ], ['product_write']);
+
+        $this->assertEquals(
+            [
+                'productId' => $productId,
+                'quantity' => 6,
+                'outOfStockType' => OutOfStockType::OUT_OF_STOCK_AVAILABLE,
+                'location' => 'shelf A',
+            ],
+            $updatedStock
         );
+    }
+
+    public function testUpdateStockForUnknownProduct(): void
+    {
+        $this->updateItem('/products/99999999/stock', [
+            'deltaQuantity' => 10,
+        ], ['product_write'], Response::HTTP_NOT_FOUND);
     }
 }

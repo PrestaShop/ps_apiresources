@@ -22,99 +22,105 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Command\UpdateProductStockAvailableCommand;
-use PrestaShop\PrestaShop\Core\Domain\Product\Stock\QueryResult\StockMovement;
-use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\Resetter\ProductResetter;
 
 class ProductStockMovementsEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['product_read']);
+        ProductResetter::resetProducts();
+        self::createApiClient(['product_write', 'product_read']);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        parent::tearDownAfterClass();
+        ProductResetter::resetProducts();
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'list product stock movements endpoint' => ['GET', '/products/1/stock-movements'];
+        yield 'get product stock movements endpoint' => [
+            'GET',
+            '/products/1/stock-movements',
+        ];
     }
 
-    public function testListProductStockMovements(): void
+    public function testGetProductStockMovements(): array
     {
-        $productId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` ORDER BY `id_product` ASC'
-        );
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'product with movements',
+                'fr-FR' => 'produit avec mouvements',
+            ],
+        ], ['product_write']);
+        $this->assertArrayHasKey('productId', $product);
+        $productId = $product['productId'];
 
-        // StockManager::saveMovement() forwards Context::getContext()->employee->id to
-        // StockMvt::setIdEmployee(), which is typed int — a null employee context throws a
-        // TypeError. Pin the default admin employee before seeding the movement.
-        \Context::getContext()->employee = new \Employee(1);
-
-        // Ensure the product has a known stock movement to assert against.
-        $command = new UpdateProductStockAvailableCommand($productId, ShopConstraint::shop(1));
-        $command->setDeltaQuantity(7);
-        static::createClient()->getContainer()->get('prestashop.core.command_bus')->handle($command);
-
-        $result = $this->getItem('/products/' . $productId . '/stock-movements', ['product_read']);
-
-        $this->assertIsArray($result);
-        $this->assertNotEmpty($result, 'Expected at least one stock movement after applying a delta');
-
-        // Movements are returned most recent first, so the delta we just applied is at [0].
-        $movement = $result[0];
-        $this->assertSame(StockMovement::EDITION_TYPE, $movement['type']);
-        $this->assertTrue($movement['edition']);
-        $this->assertFalse($movement['fromOrders']);
-        $this->assertSame(7, $movement['deltaQuantity']);
-        $this->assertIsArray($movement['stockMovementIds']);
-        $this->assertNotEmpty($movement['stockMovementIds']);
-        $this->assertIsInt($movement['stockMovementIds'][0]);
-        $this->assertIsArray($movement['stockIds']);
-        $this->assertNotEmpty($movement['stockIds']);
-        $this->assertIsInt($movement['stockIds'][0]);
-        $this->assertIsArray($movement['orderIds']);
-        $this->assertIsArray($movement['employeeIds']);
-        $this->assertIsArray($movement['dates']);
-        $this->assertArrayHasKey('add', $movement['dates']);
-    }
-
-    public function testListProductStockMovementsRespectsOffsetAndLimit(): void
-    {
-        $productId = (int) \Db::getInstance()->getValue(
-            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` ORDER BY `id_product` ASC'
-        );
-
-        \Context::getContext()->employee = new \Employee(1);
-
-        // Seed three additional movements so we have enough rows to page through.
-        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
-        foreach ([1, 2, 3] as $delta) {
-            $command = new UpdateProductStockAvailableCommand($productId, ShopConstraint::shop(1));
-            $command->setDeltaQuantity($delta);
-            $commandBus->handle($command);
+        // Each stock update creates one "edition" stock movement
+        foreach ([10, -4, 7] as $deltaQuantity) {
+            $this->updateItem(sprintf('/products/%d/stock', $productId), [
+                'deltaQuantity' => $deltaQuantity,
+            ], ['product_write']);
         }
 
-        $capped = $this->getItem('/products/' . $productId . '/stock-movements?limit=2', ['product_read']);
-        $this->assertIsArray($capped);
-        $this->assertCount(2, $capped, 'limit=2 should return at most 2 movements');
+        $movements = $this->getItem(sprintf('/products/%d/stock-movements', $productId), ['product_read']);
+        $this->assertCount(3, $movements);
 
-        $offset = $this->getItem('/products/' . $productId . '/stock-movements?offset=1&limit=2', ['product_read']);
-        $this->assertIsArray($offset);
-        $this->assertCount(2, $offset);
-        $this->assertNotEquals(
-            $capped[0]['stockMovementIds'],
-            $offset[0]['stockMovementIds'],
-            'offset=1 should skip the first movement returned by offset=0'
+        // The movements are returned latest first; their ids and dates are generated
+        // so they are extracted from the response and injected into the expected data
+        $expectedMovements = [];
+        foreach ([7, -4, 10] as $index => $deltaQuantity) {
+            $expectedMovements[] = [
+                'type' => 'edition',
+                'edition' => true,
+                'fromOrders' => false,
+                'stockMovementIds' => $movements[$index]['stockMovementIds'] ?? null,
+                'stockIds' => $movements[$index]['stockIds'] ?? null,
+                'orderIds' => [],
+                // The Admin API client is not an employee, so the movements are not linked to one;
+                // the core handler still concatenates the empty first and last names, hence the ' '
+                'employeeIds' => [],
+                'employeeName' => ' ',
+                'deltaQuantity' => $deltaQuantity,
+                'dates' => [
+                    'add' => $movements[$index]['dates']['add'] ?? null,
+                ],
+            ];
+        }
+        $this->assertEquals($expectedMovements, $movements);
+
+        return [
+            'productId' => $productId,
+            'movements' => $movements,
+        ];
+    }
+
+    /**
+     * @depends testGetProductStockMovements
+     */
+    public function testGetProductStockMovementsPagination(array $fixtures): void
+    {
+        $productId = $fixtures['productId'];
+        $movements = $fixtures['movements'];
+
+        $this->assertEquals(
+            array_slice($movements, 0, 2),
+            $this->getItem(sprintf('/products/%d/stock-movements?limit=2', $productId), ['product_read'])
+        );
+
+        $this->assertEquals(
+            array_slice($movements, 1, 2),
+            $this->getItem(sprintf('/products/%d/stock-movements?offset=1&limit=2', $productId), ['product_read'])
         );
     }
 
-    public function testListProductStockMovementsReturns404ForUnknownProduct(): void
+    public function testGetStockMovementsForUnknownProduct(): void
     {
-        $unknownProductId = 1 + (int) \Db::getInstance()->getValue(
-            'SELECT MAX(`id_product`) FROM `' . _DB_PREFIX_ . 'product`'
-        );
-
-        $this->getItem('/products/' . $unknownProductId . '/stock-movements', ['product_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/products/99999999/stock-movements', ['product_read'], Response::HTTP_NOT_FOUND);
     }
 }
