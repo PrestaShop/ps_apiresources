@@ -122,6 +122,11 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         'close',
         'send-password-reset-email',
         'set-tax-rule-group',
+        // A product has at most one default supplier, one virtual file and one stock: the
+        // singular form is intentional, the plural would wrongly suggest a collection
+        'default-supplier',
+        'stock',
+        'virtual-file',
     ];
 
     public function __construct()
