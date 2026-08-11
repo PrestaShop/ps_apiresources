@@ -22,7 +22,6 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\TaxRulesGroup;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\TaxRule\Query\GetTaxRuleList;
@@ -33,6 +32,7 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSPaginate(
             uriTemplate: '/tax-rules-groups/{taxRulesGroupId}/tax-rules',
+            requirements: ['taxRulesGroupId' => '\d+'],
             CQRSQuery: GetTaxRuleList::class,
             scopes: [
                 'tax_rules_group_read',
@@ -53,7 +53,6 @@ class TaxRuleList
 {
     public int $taxRulesGroupId;
 
-    #[ApiProperty(identifier: true)]
     public int $taxRuleId;
 
     public string $countryName;
