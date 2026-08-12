@@ -25,8 +25,10 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 use PrestaShop\PrestaShop\Adapter\Attribute\Repository\AttributeRepository;
 use PrestaShop\PrestaShop\Adapter\AttributeGroup\Repository\AttributeGroupRepository;
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\ValueObject\AttributeGroupId;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\FeatureValue\Query\GetCombinationFeatureValues;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\Resetter\ProductResetter;
 
 class ProductCombinationEndpointTest extends ApiTestCase
@@ -91,6 +93,22 @@ class ProductCombinationEndpointTest extends ApiTestCase
             'GET',
             '/products/combinations/1',
         ];
+
+        // Only registered when the CQRS query/commands exist (>= PS develop).
+        if (class_exists(GetCombinationFeatureValues::class)) {
+            yield 'get feature values endpoint' => [
+                'GET',
+                '/products/combinations/1/feature-values',
+            ];
+            yield 'set feature values endpoint' => [
+                'POST',
+                '/products/combinations/1/feature-values',
+            ];
+            yield 'delete feature values endpoint' => [
+                'DELETE',
+                '/products/combinations/1/feature-values',
+            ];
+        }
     }
 
     public function testAddProductWithCombinations(): int
@@ -341,6 +359,46 @@ class ProductCombinationEndpointTest extends ApiTestCase
             'productEcotaxTaxExcluded' => 0.0,
             'quantity' => 0,
         ], $combination);
+
+        return $combinationId;
+    }
+
+    /**
+     * @depends testCreateProductCombinations
+     */
+    public function testGetCombinationFeatureValuesEmpty(int $productId, array $newCombinationIds): int
+    {
+        if (!class_exists(GetCombinationFeatureValues::class)) {
+            $this->markTestSkipped('Combination feature-value CQRS classes only exist on PrestaShop develop.');
+        }
+        $combinationId = $newCombinationIds[0];
+
+        $featureValues = $this->getItem('/products/combinations/' . $combinationId . '/feature-values', ['product_read']);
+        // Newly generated combination — no feature values attached yet.
+        $this->assertIsArray($featureValues);
+        $this->assertSame([], $featureValues);
+
+        return $combinationId;
+    }
+
+    /**
+     * @depends testGetCombinationFeatureValuesEmpty
+     */
+    public function testDeleteCombinationFeatureValuesIdempotent(int $combinationId): int
+    {
+        if (!class_exists(GetCombinationFeatureValues::class)) {
+            $this->markTestSkipped('Combination feature-value CQRS classes only exist on PrestaShop develop.');
+        }
+        // DELETE on an empty association must be idempotent (RemoveAll on empty is a no-op in core).
+        $this->deleteItem(
+            '/products/combinations/' . $combinationId . '/feature-values',
+            ['product_write'],
+            Response::HTTP_NO_CONTENT
+        );
+
+        // Read again to confirm still empty.
+        $featureValues = $this->getItem('/products/combinations/' . $combinationId . '/feature-values', ['product_read']);
+        $this->assertSame([], $featureValues);
 
         return $combinationId;
     }

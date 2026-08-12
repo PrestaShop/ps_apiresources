@@ -13,3 +13,9 @@ parameters:
             identifier: class.notFound
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
+        # Combination × FeatureValues CQRS layer only exists on develop; gated via experimentalOperation.
+        -
+            message: "#Class .*Combination\\\\FeatureValue\\\\(Command|Query|Exception).*|.*FeatureValue\\\\Exception\\\\InvalidProductFeatureValuesFormatException.* not found.#"
+            identifier: class.notFound
+            count: 4
+            path: ../../src/ApiPlatform/Resources/Product/CombinationFeatureValues.php
