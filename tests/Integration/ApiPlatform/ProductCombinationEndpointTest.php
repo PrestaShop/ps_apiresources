@@ -366,7 +366,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
     /**
      * @depends testCreateProductCombinations
      */
-    public function testGetCombinationFeatureValuesEmpty(int $productId, array $newCombinationIds): int
+    public function testGetCombinationFeatureValuesEmpty(array $newCombinationIds): int
     {
         if (!class_exists(GetCombinationFeatureValues::class)) {
             $this->markTestSkipped('Combination feature-value CQRS classes only exist on PrestaShop develop.');

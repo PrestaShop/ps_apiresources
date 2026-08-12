@@ -20,8 +20,14 @@ parameters:
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
         # Combination × FeatureValues CQRS layer only exists on develop; gated via experimentalOperation.
+        # InvalidProductFeatureValuesFormatException is only introduced in 9.1, so 4 classes are missing on 9.0.
         -
-            message: "#Class .*Combination\\\\FeatureValue\\\\(Command|Query|Exception).*|.*FeatureValue\\\\Exception\\\\InvalidProductFeatureValuesFormatException.* not found.#"
+            message: "#Class .*Combination\\\\FeatureValue\\\\(Command|Query).* not found.#"
             identifier: class.notFound
-            count: 4
+            count: 3
+            path: ../../src/ApiPlatform/Resources/Product/CombinationFeatureValues.php
+        -
+            message: "#Class .*FeatureValue\\\\Exception\\\\InvalidProductFeatureValuesFormatException not found.#"
+            identifier: class.notFound
+            count: 1
             path: ../../src/ApiPlatform/Resources/Product/CombinationFeatureValues.php
