@@ -26,40 +26,44 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EmployeePasswordResetEndpointTest extends ApiTestCase
 {
+    private static ?int $originalMailMethod = null;
+
     public static function setUpBeforeClass(): void
     {
-        parent::setUpBeforeClass();
         if (self::isVersionUnder('9.2.0')) {
-            static::markTestSkipped('No exmployee password exist before 9.2.0');
+            static::markTestSkipped('The employee password reset endpoint only exists since PrestaShop 9.2.0');
 
             return;
         }
 
-        // Prevent creating a client with a scope that doesn't exist yet
-        if (self::isVersionAtLeast('9.2.0')) {
-            self::createApiClient(['employee_write']);
+        parent::setUpBeforeClass();
+        self::createApiClient(['employee_write']);
+
+        // Disable real email sending so Mail::send() succeeds without an SMTP server.
+        self::$originalMailMethod = (int) \Configuration::get('PS_MAIL_METHOD');
+        \Configuration::updateValue('PS_MAIL_METHOD', \Mail::METHOD_DISABLE);
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        if (self::$originalMailMethod !== null) {
+            \Configuration::updateValue('PS_MAIL_METHOD', self::$originalMailMethod);
         }
+
+        parent::tearDownAfterClass();
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        // POST endpoint only works for 9.2+
-        if (self::isVersionAtLeast('9.2.0')) {
-            yield 'send employee password reset email endpoint' => ['POST', '/employees/send-password-reset-email'];
-        }
+        // Data providers are resolved when PHPUnit builds the test suite, before setUpBeforeClass
+        // gets a chance to skip the class, and an empty provider is reported as an error. So the
+        // endpoint is yielded unconditionally; on cores < 9.2.0 the whole class is skipped anyway
+        // and this data set is never executed.
+        yield 'send employee password reset email endpoint' => ['POST', '/employees/send-password-reset-email'];
     }
 
     public function testSendPasswordResetEmail(): void
     {
-        // Depends on core PR PrestaShop/PrestaShop#42071: EmployeePasswordResetter
-        // used the admin router to build the reset URL, but that route is not
-        // registered in the admin-api kernel. The core PR decouples the resetter
-        // from the router and changes the handler return type to void (required
-        // by CQRSCommandProcessor).
-        $this->markTestSkippedByMinVersion('9.2.0');
-
-        // PS_MAIL_METHOD = METHOD_DISABLE (3) in test env → Mail::send returns true
-        // without contacting a real MTA (classes/Mail.php:220).
         $adminEmail = (string) \Db::getInstance()->getValue(
             'SELECT `email` FROM `' . _DB_PREFIX_ . 'employee` ORDER BY `id_employee` ASC'
         );
@@ -75,11 +79,6 @@ class EmployeePasswordResetEndpointTest extends ApiTestCase
 
     public function testUnknownEmployeeReturnsNotFound(): void
     {
-        // Same core dependency as testSendPasswordResetEmail: the exception is
-        // never reached because URL generation blows up before the resetter
-        // even checks whether the employee exists.
-        $this->markTestSkippedByMinVersion('9.2.0');
-
         $this->requestApi(
             'POST',
             '/employees/send-password-reset-email',

@@ -24,10 +24,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Employee;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\SendEmployeePasswordResetEmailCommand;
+use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeByEmailNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -43,7 +43,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         EmployeeNotFoundException::class => Response::HTTP_NOT_FOUND,
-        UserNotFoundException::class => Response::HTTP_NOT_FOUND,
+        EmployeeByEmailNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class EmployeePasswordReset
