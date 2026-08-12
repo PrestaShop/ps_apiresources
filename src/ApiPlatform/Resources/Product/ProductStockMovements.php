@@ -110,6 +110,21 @@ class ProductStockMovements
 
     public ?string $employeeName = null;
 
+    /**
+     * API clients that created the movements (empty when they were made by an employee,
+     * or on PrestaShop versions that don't track the relation yet).
+     *
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
+    public array $apiClientIds = [];
+
+    /**
+     * @var string[]
+     */
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string']])]
+    public array $apiClientNames = [];
+
     public int $deltaQuantity;
 
     #[ApiProperty(openapiContext: ['type' => 'object', 'additionalProperties' => ['type' => 'string', 'format' => 'date-time']])]
