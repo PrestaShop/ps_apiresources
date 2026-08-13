@@ -183,6 +183,10 @@ class OrderMessageEndpointTest extends ApiTestCase
 
     public function testEditOrderMessageMessagesOnly(): void
     {
+        // Know issue with partial body only works fine after 9.2.0
+        // Fixed by https://github.com/PrestaShop/PrestaShop/pull/41790
+        // The endpoint is still left usable for other versions because it works with full body
+        $this->markTestSkippedByMinVersion('9.2.0');
         $orderMessageId = $this->createItem('/order-messages', [
             'names' => ['en-US' => 'Messages only EN', 'fr-FR' => 'Messages only FR'],
             'messages' => ['en-US' => 'Body EN', 'fr-FR' => 'Body FR'],

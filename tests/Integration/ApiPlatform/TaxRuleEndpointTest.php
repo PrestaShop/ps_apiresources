@@ -23,7 +23,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\TaxRule\Command\AddTaxRuleCommand;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -31,14 +30,14 @@ class TaxRuleEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
-        parent::setUpBeforeClass();
-        // tax_rule_write is only registered as a valid scope when AddTaxRuleCommand exists (9.2+);
-        // requesting it unconditionally would make createApiClient() fail on older Core
-        $scopes = ['tax_rule_read', 'tax_write', 'tax_rules_group_write'];
-        if (class_exists(AddTaxRuleCommand::class)) {
-            $scopes[] = 'tax_rule_write';
+        if (self::isVersionUnder('9.2.0')) {
+            static::markTestSkipped('No tax rule endpoint exist before 9.2.0');
+
+            return;
         }
-        self::createApiClient($scopes);
+
+        parent::setUpBeforeClass();
+        self::createApiClient(['tax_rule_read', 'tax_rule_write', 'tax_write', 'tax_rules_group_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -50,25 +49,24 @@ class TaxRuleEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        // Data providers are resolved when PHPUnit builds the test suite, before setUpBeforeClass
+        // gets a chance to skip the class, and an empty provider is reported as an error. So the
+        // endpoints are yielded unconditionally; on cores < 9.2.0 the whole class is skipped anyway
+        // and these data sets are never executed.
         yield 'list endpoint' => [
             'GET',
             '/tax-rules',
         ];
 
-        // These routes don't exist at all before PrestaShop 9.2 (experimentalOperation + missing CQRS
-        // command class both remove them from the router), so testProtectedEndpoints would get a 404/405
-        // instead of the expected 401 if they were declared unconditionally
-        if (class_exists(AddTaxRuleCommand::class)) {
-            yield 'create endpoint' => [
-                'POST',
-                '/tax-rules',
-            ];
+        yield 'create endpoint' => [
+            'POST',
+            '/tax-rules',
+        ];
 
-            yield 'delete endpoint' => [
-                'DELETE',
-                '/tax-rules/1',
-            ];
-        }
+        yield 'delete endpoint' => [
+            'DELETE',
+            '/tax-rules/1',
+        ];
     }
 
     public function testListTaxRules(): array
@@ -242,10 +240,6 @@ class TaxRuleEndpointTest extends ApiTestCase
      */
     public function testAddTaxRule(): array
     {
-        if (!class_exists(AddTaxRuleCommand::class)) {
-            $this->markTestSkipped('AddTaxRuleCommand class does not exist, this PrestaShop version does not support tax rule creation via the API yet');
-        }
-
         $taxRulesGroup = $this->createItem('/tax-rules-groups', [
             'name' => 'API Test Add/Delete Tax Rule Group',
             'enabled' => true,
@@ -315,10 +309,6 @@ class TaxRuleEndpointTest extends ApiTestCase
 
     public function testInvalidTaxRule(): void
     {
-        if (!class_exists(AddTaxRuleCommand::class)) {
-            $this->markTestSkipped('AddTaxRuleCommand class does not exist, this PrestaShop version does not support tax rule creation via the API yet');
-        }
-
         // countryId = 0 is Core's "all active countries" fan-out sentinel: rejected here since this
         // endpoint always creates exactly one tax rule per call
         $validationErrorsResponse = $this->createItem('/tax-rules', [
@@ -394,36 +384,16 @@ class TaxRuleEndpointTest extends ApiTestCase
         ];
     }
 
-    /**
-     * Creates a single tax rule via the API when it's available (PrestaShop 9.2+), otherwise falls back to the
-     * legacy ObjectModel so the list/filter/sort tests still have real data to exercise on older Core versions,
-     * where the /tax-rules create endpoint doesn't exist yet.
-     */
     private function createTaxRuleFixture(int $taxRulesGroupId, int $countryId, int $taxId, int $behavior, string $description): int
     {
-        if (class_exists(AddTaxRuleCommand::class)) {
-            $taxRule = $this->createItem('/tax-rules', [
-                'taxRulesGroupId' => $taxRulesGroupId,
-                'countryId' => $countryId,
-                'taxId' => $taxId,
-                'behavior' => $behavior,
-                'description' => $description,
-            ], ['tax_rule_write']);
+        $taxRule = $this->createItem('/tax-rules', [
+            'taxRulesGroupId' => $taxRulesGroupId,
+            'countryId' => $countryId,
+            'taxId' => $taxId,
+            'behavior' => $behavior,
+            'description' => $description,
+        ], ['tax_rule_write']);
 
-            return $taxRule['taxRuleId'];
-        }
-
-        $taxRule = new \TaxRule();
-        $taxRule->id_tax_rules_group = $taxRulesGroupId;
-        $taxRule->id_country = $countryId;
-        $taxRule->id_state = 0;
-        $taxRule->zipcode_from = '0';
-        $taxRule->zipcode_to = '0';
-        $taxRule->id_tax = $taxId;
-        $taxRule->behavior = $behavior;
-        $taxRule->description = $description;
-        $this->assertNotFalse($taxRule->add());
-
-        return (int) $taxRule->id;
+        return $taxRule['taxRuleId'];
     }
 }
