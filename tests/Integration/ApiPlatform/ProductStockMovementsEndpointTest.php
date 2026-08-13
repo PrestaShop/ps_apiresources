@@ -23,7 +23,6 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
-use PrestaShop\PrestaShop\Core\Version;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\Resetter\ProductResetter;
 
@@ -52,6 +51,10 @@ class ProductStockMovementsEndpointTest extends ApiTestCase
 
     public function testGetProductStockMovements(): array
     {
+        // The movements are created through the product stock update endpoint, which requires
+        // PrestaShop 9.2.0 (older cores cannot create stock movements for API clients)
+        $this->markTestSkippedByMinVersion('9.2.0');
+
         $product = $this->createItem('/products', [
             'type' => ProductType::TYPE_STANDARD,
             'names' => [
@@ -85,22 +88,15 @@ class ProductStockMovementsEndpointTest extends ApiTestCase
                 'orderIds' => [],
                 // The Admin API client is not an employee, so the movements are not linked to one
                 'employeeIds' => [],
-                'apiClientIds' => [],
-                'apiClientNames' => [],
+                // The movements were created through the API, so they are related to the client
+                // that made the requests (the one behind the test bearer token)
+                'apiClientIds' => [$this->getRequestApiClientId()],
+                'apiClientNames' => [$this->getRequestApiClientName()],
                 'deltaQuantity' => $deltaQuantity,
                 'dates' => [
                     'add' => $movements[$index]['dates']['add'] ?? null,
                 ],
             ];
-            if ($this->coreTracksApiClientOnStockMovements()) {
-                // The movements were created through the API, so they are related to the client
-                // that made the requests (the one behind the test bearer token)
-                $expectedMovement['apiClientIds'] = [$this->getRequestApiClientId()];
-                $expectedMovement['apiClientNames'] = [$this->getRequestApiClientName()];
-            } else {
-                // Older cores concatenate the empty employee first and last names, hence the ' '
-                $expectedMovement['employeeName'] = ' ';
-            }
             $expectedMovements[] = $expectedMovement;
         }
         $this->assertEquals($expectedMovements, $movements);
@@ -109,16 +105,6 @@ class ProductStockMovementsEndpointTest extends ApiTestCase
             'productId' => $productId,
             'movements' => $movements,
         ];
-    }
-
-    /**
-     * The API client relation on stock movements is tracked since PrestaShop 9.2
-     * (PrestaShop/PrestaShop#41803): the fields are asserted based on the core version
-     * so the CI keeps failing until that core PR is merged.
-     */
-    private function coreTracksApiClientOnStockMovements(): bool
-    {
-        return version_compare(Version::VERSION, '9.2.0', '>=');
     }
 
     private function getRequestApiClientName(): string
