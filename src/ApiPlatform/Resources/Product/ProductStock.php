@@ -37,6 +37,9 @@ use Symfony\Component\HttpFoundation\Response;
             uriTemplate: '/products/{productId}/stock',
             requirements: ['productId' => '\d+'],
             read: false,
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSCommand: UpdateProductStockAvailableCommand::class,
             CQRSCommandMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',

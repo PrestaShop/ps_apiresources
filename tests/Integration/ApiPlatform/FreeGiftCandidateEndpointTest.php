@@ -23,7 +23,6 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
-use PrestaShop\PrestaShop\Core\Version;
 use Tests\Resources\Resetter\ConfigurationResetter;
 use Tests\Resources\Resetter\ProductResetter;
 
@@ -31,6 +30,12 @@ class FreeGiftCandidateEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
+        if (self::isVersionUnder('9.2.0')) {
+            static::markTestSkipped('The free gift candidates endpoint only exists since PrestaShop 9.2.0');
+
+            return;
+        }
+
         parent::setUpBeforeClass();
         ProductResetter::resetProducts();
         self::createApiClient(['product_write', 'product_read']);
@@ -45,19 +50,18 @@ class FreeGiftCandidateEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        // The endpoint is only exposed on cores that ship SearchProductsForFreeGift (9.2+)
-        if (version_compare(Version::VERSION, '9.2.0', '>=')) {
-            yield 'get free gift candidates endpoint' => [
-                'GET',
-                '/products/free-gift-candidates',
-            ];
-        }
+        // Data providers are resolved when PHPUnit builds the test suite, before setUpBeforeClass
+        // gets a chance to skip the class, and an empty provider is reported as an error. So the
+        // endpoint is yielded unconditionally; on cores < 9.2.0 the whole class is skipped anyway
+        // and this data set is never executed.
+        yield 'get free gift candidates endpoint' => [
+            'GET',
+            '/products/free-gift-candidates',
+        ];
     }
 
     public function testSearchFreeGiftCandidates(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.0');
-
         $product = $this->createItem('/products', [
             'type' => ProductType::TYPE_STANDARD,
             'names' => [
@@ -104,8 +108,6 @@ class FreeGiftCandidateEndpointTest extends ApiTestCase
 
     public function testSearchWithoutMatch(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.0');
-
         $this->assertEquals(
             [],
             $this->getItem('/products/free-gift-candidates?phrase=no product matches this', ['product_read'])

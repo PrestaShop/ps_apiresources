@@ -31,6 +31,12 @@ class ProductStockEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
+        if (self::isVersionUnder('9.2.0')) {
+            static::markTestSkipped('The product stock endpoint requires PrestaShop 9.2.0 (older cores cannot create stock movements for API clients)');
+
+            return;
+        }
+
         parent::setUpBeforeClass();
         ProductResetter::resetProducts();
         self::createApiClient(['product_write', 'product_read']);
@@ -44,6 +50,10 @@ class ProductStockEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        // Data providers are resolved when PHPUnit builds the test suite, before setUpBeforeClass
+        // gets a chance to skip the class, and an empty provider is reported as an error. So the
+        // endpoint is yielded unconditionally; on cores < 9.2.0 the whole class is skipped anyway
+        // and this data set is never executed.
         yield 'update product stock endpoint' => [
             'PUT',
             '/products/1/stock',
