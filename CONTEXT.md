@@ -83,6 +83,42 @@ OAuth2 scope naming: `{entity_snake_case}_{action}`.
 - Every operation must declare at least one scope. There are no
   unscoped endpoints.
 
+## Core version constraints
+
+Some endpoints rely on CQRS classes or core behaviour that only exist
+(or only work) from a given PrestaShop version. Declare that constraint
+on the operation with the `minVersion` / `maxVersion` extra properties:
+
+```php
+new CQRSUpdate(
+    uriTemplate: '/products/{productId}/stock',
+    // ...
+    extraProperties: [
+        'minVersion' => '9.2.0',
+    ],
+),
+```
+
+On a core outside the declared range the operation is filtered out of
+the API entirely: requests return 404 and the operation disappears from
+the OpenAPI documentation. The filtering is handled by the module's
+`CoreVersionCompatibilityMetadataCollectionFactoryDecorator` on
+PrestaShop < 9.2 and by its core twin on >= 9.2; both compare against
+`PrestaShop\PrestaShop\Core\Version::VERSION` with inclusive
+`version_compare` semantics.
+
+Use it when the backing CQRS command/query does not exist on older
+supported cores, or exists but misbehaves there (e.g. the stock update
+endpoints require 9.2.0 because older cores cannot create stock
+movements for API clients). Real examples:
+`src/ApiPlatform/Resources/Product/ProductStock.php`,
+`src/ApiPlatform/Resources/TaxRule/TaxRuleList.php`. The filtering
+itself is covered end-to-end by
+`tests/Integration/ApiPlatform/VersionedEndpointsTest.php`.
+
+A version-constrained endpoint needs matching test handling — see
+"Version-dependent endpoints" under Testing expectations.
+
 ## Property naming
 
 | Rule                                          | Correct                  | Wrong                          |
@@ -342,6 +378,55 @@ Static helpers available for additional setup (call from
 - Restore relevant DB tables via `DatabaseDump::restoreTables([...])`
   in `setUpBeforeClass` / `tearDownAfterClass` (include `_lang` table
   if localized, `_shop` table if shop-associated).
+
+### Version-dependent endpoints
+
+`ApiTestCase` provides helpers for endpoints that declare a
+`minVersion` (see Core version constraints) — always use them, never
+recode `version_compare` checks in test classes:
+
+- `markTestSkippedByMinVersion('9.2.0')` — call at the start of a test
+  method to skip it on older cores
+- `isVersionAtLeast('9.2.0')` / `isVersionUnder('9.2.0')` — boolean
+  checks for conditional logic (data providers, assertions)
+
+Two patterns, depending on the scope of the constraint:
+
+- **Every operation of the class is version-constrained** → skip the
+  whole class from `setUpBeforeClass()`, *before* calling
+  `parent::setUpBeforeClass()` (so no fixture setup runs either):
+
+  ```php
+  public static function setUpBeforeClass(): void
+  {
+      if (self::isVersionUnder('9.2.0')) {
+          static::markTestSkipped('This endpoint requires PrestaShop 9.2.0');
+
+          return;
+      }
+
+      parent::setUpBeforeClass();
+      // ...
+  }
+  ```
+
+  `getProtectedEndpoints()` must still yield its data sets
+  **unconditionally**: data providers are resolved when PHPUnit builds
+  the test suite, before `setUpBeforeClass()` gets a chance to skip the
+  class, and an empty provider is reported as an error. The yielded
+  data sets are never executed on old cores since the class is skipped.
+  Examples: `TaxRuleEndpointTest`, `EmployeePasswordResetEndpointTest`,
+  `ProductStockEndpointTest`.
+
+- **Only part of the class is version-dependent** (the endpoint exists
+  on all supported cores but some behaviour doesn't) → call
+  `$this->markTestSkippedByMinVersion('9.2.0')` at the start of the
+  affected tests (tests that `@depends` on them are skipped
+  automatically), and guard conditional yields or assertions with
+  `isVersionAtLeast()`. A conditional yield in `getProtectedEndpoints()`
+  is fine here as long as at least one data set is always yielded.
+  Examples: `CustomerRequiredFieldsEndpointTest`,
+  `ProductStockMovementsEndpointTest`.
 
 Run the suite with:
 
