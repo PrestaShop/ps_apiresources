@@ -73,7 +73,7 @@ class EmployeePasswordResetEndpointTest extends ApiTestCase
             '/employees/send-password-reset-email',
             ['email' => $adminEmail],
             ['employee_write'],
-            Response::HTTP_CREATED
+            Response::HTTP_NO_CONTENT
         );
     }
 

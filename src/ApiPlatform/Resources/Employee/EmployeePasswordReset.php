@@ -36,6 +36,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             extraProperties: [
                 'minVersion' => '9.2.0',
             ],
+            output: false,
             CQRSCommand: SendEmployeePasswordResetEmailCommand::class,
             scopes: ['employee_write'],
         ),
