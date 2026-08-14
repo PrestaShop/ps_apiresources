@@ -68,6 +68,15 @@ src/ApiPlatform/Resources/Attribute/
 - **Bulk operations** use the `bulk-` prefix: `/contacts/bulk-delete`,
   `/attributes/groups/bulk-delete`. The bulk parameter name must be
   plural domain + `Ids` (e.g. `attributeGroupIds`).
+- **Command-style operations** that are not plain CRUD on the resource name
+  the action explicitly, verb first: `/carriers/{carrierId}/set-tax-rule-group`,
+  `/tax-rules-groups/{taxRulesGroupId}/set-status`,
+  `/carriers/search-compatible-carriers`,
+  `/employees/send-password-reset-email`. Prefer a name that says what the
+  operation does for its caller over a bare noun (`search-compatible-carriers`
+  over `available`). Any such segment must be listed in
+  `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS`, otherwise the Rector CI
+  job pluralizes it (`set-tax-rule-group` → `set-tax-rule-groups`).
 - **URI parameters** use the domain identifier name, not `id`:
   `{contactId}`, `{attributeGroupId}`, `{taxRuleId}`.
 - The DTO property exposed as the identifier must match the URI
@@ -160,6 +169,62 @@ the current usage pattern.
 - Nested fields use bracket notation:
   `'[basicInformation][localizedNames]' => '[names]'`.
 
+## Read and write formats must match
+
+When a resource exposes the same data for reading and for writing, both
+directions must use **one single format**: the payload returned by the read
+operation is the payload the write operation accepts, so a response can be
+copied as-is to build the next request body. Concretely that means one DTO
+property per concept, not a write-shaped property next to a read-shaped one.
+
+The CQRS side rarely lines up on its own — a command and the query that reads
+the same data often disagree on field names and structure. Reconciling them is
+the job of `CQRSCommandMapping` and `CQRSQueryMapping`; the API format is the
+one the resource decides, not the one the Core happens to return.
+
+Legitimate exception: when the write is not the same concept as the read, for
+example a *delta* to apply versus the resulting absolute value. See
+`ProductStock` (`deltaQuantity` in, `quantity` out). Type such one-way
+properties as nullable so `skip_null_values` drops them from the payloads
+where they are meaningless.
+
+### The `@index` mapping limit
+
+`NormalizationMapper` (Core, `PrestaShopBundle/ApiPlatform`) expands one
+`@index` placeholder at a time: it walks the path against the data, counts that
+array level and substitutes the placeholder with each concrete index. Each
+placeholder is substituted **independently**, which has two consequences:
+
+- Two nested levels cannot be expanded. Resolving a second placeholder walks a
+  path whose first placeholder is still the literal `@index`, so nothing
+  matches and the mapping silently does nothing. Reusing the same placeholder
+  name twice throws `You cannot use the same index twice`.
+- Depths cannot be changed. A flat list cannot be mapped to a grouped
+  structure, nor the reverse, because there is no way to compute one target
+  index out of a pair of source indexes.
+
+So mapping can rename and move fields, but it cannot flatten or nest.
+
+### When mapping cannot express the format
+
+A narrow normalizer on the **CQRS query result** is the accepted escape hatch,
+because `QueryResultSerializerTrait::denormalizeQueryResult()` normalizes that
+result before the mapping is applied — reshaping it there keeps the resource
+and the write path untouched. It is the only reason to add a normalizer to a
+format problem, and it comes with obligations:
+
+1. Register the class in `config/admin/services.yml` with
+   `autoconfigure: true` (it joins the `CQRSApiSerializer` chain).
+2. Add it to `ApiResourceNormalizerRule::ALLOWED_CLASSES` in
+   `tests/PHPStan/`, with a comment explaining why mapping was not enough —
+   CI fails otherwise.
+3. Keep it narrow: support one query result class, and reshape nothing else.
+
+Real example: `CarrierRangesCollectionNormalizer` flattens the zone-grouped
+`GetCarrierRanges` result into the flat range list that
+`SetCarrierRangesCommand` accepts, so `/carriers/{carrierId}/ranges` reads and
+writes the same `ranges` array.
+
 ## Multi-shop
 
 > **Experimental — feature flag required.** Admin API support for
@@ -238,6 +303,12 @@ See `Product.php`, `Combination.php`, `CombinationList.php`, and
   violations — always 422.
 - Use a `CQRSQuery` on `CQRSCreate` and `CQRSPartialUpdate` when the
   endpoint should return the full updated state, not just an identifier.
+  This includes command-style operations: prefer returning the updated
+  resource over answering `204` with `output: false`, so the caller does not
+  need a follow-up GET. When the operation only touches one association of a
+  bigger entity, host it in that entity's resource class and return the whole
+  entity — `Carrier::set-tax-rule-group` returns the carrier, not the
+  association alone.
 - Use `#[LocalizedValue]` for any field stored as `array<locale, value>`.
 - Split single / list / bulk operations into separate classes inside the
   same domain folder.
@@ -255,7 +326,10 @@ See `Product.php`, `Combination.php`, `CombinationList.php`, and
   command or query — always.
 - Don't write custom normalizers or custom processors. Use
   `#[LocalizedValue]`, `ApiResourceMapping`, `CQRSQueryMapping`, and
-  `CQRSCommandMapping` instead. CI enforces this.
+  `CQRSCommandMapping` instead. CI enforces this. Custom processors and
+  providers have no exception at all; a normalizer is only tolerated for a
+  reshaping the mapping provably cannot express, under the conditions listed
+  in "When mapping cannot express the format" above.
 - Don't expose Value Objects as DTO properties. Public properties must
   be scalar (`int`, `string`, `bool`) or `array`. Two exceptions are
   allowed:
@@ -374,6 +448,13 @@ for the patterns above:
 - **Bulk operation** —
   `src/ApiPlatform/Resources/Attribute/BulkAttributeGroups.php`
   (URI `/attributes/groups/bulk-delete`, `attributeGroupIds` input).
+- **Command-style operation returning the full entity** —
+  `src/ApiPlatform/Resources/Carrier/Carrier.php`
+  (URI `/carriers/{carrierId}/set-tax-rule-group`, dedicated validation
+  group, `CQRSQuery` reused from the CRUD operations).
+- **Shared read / write format, with a normalizer as last resort** —
+  `src/ApiPlatform/Resources/Carrier/CarrierRanges.php` and
+  `src/ApiPlatform/Normalizer/CarrierRangesCollectionNormalizer.php`.
 - **Matching test** —
   `tests/Integration/ApiPlatform/ContactEndpointTest.php`.
 

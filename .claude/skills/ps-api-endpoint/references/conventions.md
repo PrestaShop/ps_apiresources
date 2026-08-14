@@ -77,6 +77,18 @@ Use bracket notation for nested paths:
 '[basicInformation][localizedNames]' => '[names]'
 ```
 
+### Indexed collections
+Use the `@index` placeholder to map each element of a list:
+```php
+'[categoriesInformation][categoriesInformation][@index][id]' => '[categories][@index][categoryId]'
+```
+One level only. The mapper resolves a single placeholder at a time, so nesting
+two `@index` levels silently maps nothing, reusing the same name twice throws,
+and a list cannot be flattened or grouped — mapping renames and moves fields,
+it never changes depth. This is what forces the read and write formats of a
+resource to be reconcilable by mapping alone; see `CONTEXT.md` → "Read and
+write formats must match".
+
 ## Bulk operations
 
 - URI prefix: `bulk-`, e.g. `/contacts/bulk-delete`
@@ -84,9 +96,9 @@ Use bracket notation for nested paths:
 
 ## Forbidden practices (CI enforced)
 
-1. **No custom normalizers** — use `#[LocalizedValue]`, `ApiResourceMapping`, `CQRSQueryMapping` instead
-2. **No custom processors** — core processors handle standard CRUD flows
-3. **No Value Objects as properties** — only scalar types (`int`, `string`, `bool`, `float`) and `array`
+1. **No custom normalizers** — use `#[LocalizedValue]`, `ApiResourceMapping`, `CQRSQueryMapping` instead. Single exception, allowlisted case by case in `ApiResourceNormalizerRule::ALLOWED_CLASSES`: a reshaping the mapping provably cannot express (see `CONTEXT.md` → "When mapping cannot express the format")
+2. **No custom processors** — core processors handle standard CRUD flows, and this one has no exception
+3. **No Value Objects as properties** — only scalar types (`int`, `string`, `bool`) and `array`; decimals use `PrestaShop\Decimal\DecimalNumber`, never `float`
 
 ## Exception mapping
 

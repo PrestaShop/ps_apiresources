@@ -160,6 +160,8 @@ See `references/conventions.md` for the full ruleset. The most important ones:
 - **Boolean properties**: no `is` prefix. Use `$enabled`, not `$isEnabled`.
 - **Localized properties**: no "localized" prefix. Use `$names`, not `$localizedNames`. Mark with `#[LocalizedValue]`.
 - **Mapping**: `QUERY_MAPPING` maps `[queryResultFieldName] => [apiFieldName]`. `CREATE_COMMAND_MAPPING` maps `[apiFieldName] => [commandParamName]`. When Create and Update commands share the same param names, use a single `COMMAND_MAPPING` constant.
+- **One format for read and write**: whatever a read operation returns for a piece of data, the write operation must accept in that exact shape — a response body must be copy-pasteable into the next request. Reconcile the command and query shapes with the mappings, never by exposing two properties for one concept. Beware the `@index` limit: mapping renames and moves fields but cannot flatten or nest. Full rule, the exception for delta-style writes, and the normalizer escape hatch: `CONTEXT.md` → "Read and write formats must match".
+- **Command-style operations**: name the action in the URI, verb first (`/carriers/{carrierId}/set-tax-rule-group`), add the segment to `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` or Rector CI will pluralize it, host it in the resource it modifies, and return the updated entity via a `CQRSQuery` rather than a `204`.
 - **Forbidden**: no custom normalizers, no custom processors, no Value Objects as properties (only scalar types and arrays).
 - **Strict typing**: every property needs an explicit type.
 
