@@ -178,8 +178,16 @@ class Carrier
         '[free]' => '[isFree]',
     ];
 
+    /**
+     * SetCarrierTaxRuleGroupCommand rejects every shop constraint but the all shops one, while the
+     * API context builds a single shop constraint whenever multistore is disabled. Only the
+     * strictness of that constraint is mapped: with no shopId, shopGroupId nor shopIds in the mapped
+     * data, the core ShopConstraintNormalizer falls back to ShopConstraint::allShops(), the only
+     * constraint the command accepts. The association is then written for every shop of the carrier,
+     * which is what the Core does with that constraint.
+     */
     public const SET_TAX_RULE_GROUP_COMMAND_MAPPING = [
-        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[_context][shopConstraint][isStrict]' => '[shopConstraint][isStrict]',
         '[taxRuleGroupId]' => '[carrierTaxRuleGroupId]',
     ];
 }

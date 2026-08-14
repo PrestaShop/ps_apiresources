@@ -57,6 +57,13 @@ use Symfony\Component\Validator\Constraints as Assert;
         CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
+/**
+ * Delivery ranges of a carrier, read and written in one shared format.
+ *
+ * These operations always apply to every shop: the ranges are stored globally by the Core, which
+ * does not support a per-shop constraint on them yet, so the shop context parameters of the request
+ * have no effect here. See QUERY_MAPPING for the details.
+ */
 class CarrierRanges
 {
     #[ApiProperty(identifier: true)]
@@ -107,15 +114,26 @@ class CarrierRanges
     public ?array $ranges = null;
 
     /**
-     * The GetCarrierRanges result is flattened into the ranges property by
-     * CarrierRangesCollectionNormalizer, hence no field mapping here.
+     * The ranges are not shop-scoped in the Core yet: CarrierRangeRepository rejects every shop
+     * constraint but the all shops one (see its assertShopConstraint method and its "make shop
+     * constraint magic here" todo), and it forces id_shop IS NULL on its queries. The API context
+     * always builds a single shop constraint when multistore is disabled, so only the strictness of
+     * that constraint is mapped: with no shopId, shopGroupId nor shopIds in the mapped data, the
+     * core ShopConstraintNormalizer falls back to ShopConstraint::allShops(), which is the only
+     * constraint these operations can run with.
+     *
+     * The GetCarrierRanges result needs no field mapping: CarrierRangesCollectionNormalizer already
+     * flattens it into the ranges property.
      */
     public const QUERY_MAPPING = [
-        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[_context][shopConstraint][isStrict]' => '[shopConstraint][isStrict]',
     ];
 
+    /**
+     * See QUERY_MAPPING about the shop constraint.
+     */
     public const COMMAND_MAPPING = [
-        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[_context][shopConstraint][isStrict]' => '[shopConstraint][isStrict]',
         '[ranges][@index][zoneId]' => '[ranges][@index][id_zone]',
         '[ranges][@index][rangeFrom]' => '[ranges][@index][range_from]',
         '[ranges][@index][rangeTo]' => '[ranges][@index][range_to]',
