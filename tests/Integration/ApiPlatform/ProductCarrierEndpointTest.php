@@ -23,18 +23,22 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetCarriersForProduct;
-use PrestaShop\PrestaShop\Core\Domain\Product\Command\SetCarriersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
-use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 use Tests\Resources\Resetter\ProductResetter;
 
-class CarrierForProductEndpointTest extends ApiTestCase
+class ProductCarrierEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
+        if (self::isVersionUnder('9.2.0')) {
+            static::markTestSkipped('The product carriers endpoints rely on GetCarriersForProduct, which only exists since PrestaShop 9.2.0');
+
+            return;
+        }
+
         parent::setUpBeforeClass();
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
@@ -57,18 +61,14 @@ class CarrierForProductEndpointTest extends ApiTestCase
         ]);
     }
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        // If GetCarriersForProduct does not exist we can skip all the tests here
-        if (!class_exists(GetCarriersForProduct::class)) {
-            $this->markTestSkipped('GetCarriersForProduct class does not exist');
-        }
-    }
-
     public static function getProtectedEndpoints(): iterable
     {
+        // Data providers are resolved when PHPUnit builds the test suite, before setUpBeforeClass
+        // gets a chance to skip the class, and an empty provider is reported as an error. So the
+        // endpoints are yielded unconditionally; on cores < 9.2.0 the whole class is skipped anyway
+        // and these data sets are never executed.
         yield 'get carriers for product endpoint' => ['GET', '/products/1/carriers'];
+        yield 'set carriers for product endpoint' => ['PUT', '/products/1/carriers'];
     }
 
     /**
@@ -98,10 +98,16 @@ class CarrierForProductEndpointTest extends ApiTestCase
         ], ['product_write']);
         $productId = $product['productId'];
 
-        $container = static::createClient()->getContainer();
-        $commandBus = $container->get('prestashop.core.command_bus');
         // Carrier reference id equals carrier id right after creation (they only diverge on later edits).
-        $commandBus->handle(new SetCarriersCommand($productId, [$carrierId], ShopConstraint::allShops()));
+        $updatedCarriers = $this->updateItem('/products/' . $productId . '/carriers', [
+            'carrierReferenceIds' => [$carrierId],
+        ], ['product_write']);
+
+        // The association returns the resulting carriers, like the GET operation
+        $this->assertEquals(
+            ['productId' => $productId, 'carriers' => [['carrierId' => $carrierId, 'name' => 'Carrier for product']]],
+            $updatedCarriers
+        );
 
         return ['carrierId' => $carrierId, 'productId' => $productId];
     }
@@ -111,9 +117,22 @@ class CarrierForProductEndpointTest extends ApiTestCase
      */
     public function testGetCarriersForProduct(array $fixtures): void
     {
-        $carriers = $this->getItem('/products/' . $fixtures['productId'] . '/carriers', ['carrier_read']);
-        $this->assertIsArray($carriers);
-        $carrierIds = array_column($carriers, 'carrierId');
-        $this->assertContains($fixtures['carrierId'], $carrierIds);
+        $this->assertEquals(
+            [
+                'productId' => $fixtures['productId'],
+                'carriers' => [['carrierId' => $fixtures['carrierId'], 'name' => 'Carrier for product']],
+            ],
+            $this->getItem('/products/' . $fixtures['productId'] . '/carriers', ['carrier_read'])
+        );
+    }
+
+    /**
+     * @depends testAssociateCarrierWithProduct
+     */
+    public function testSetCarriersForUnknownProduct(array $fixtures): void
+    {
+        $this->updateItem('/products/99999999/carriers', [
+            'carrierReferenceIds' => [$fixtures['carrierId']],
+        ], ['product_write'], Response::HTTP_NOT_FOUND);
     }
 }

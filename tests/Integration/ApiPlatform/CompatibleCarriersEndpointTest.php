@@ -23,25 +23,26 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Address\Command\AddCustomerAddressCommand;
-use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetAvailableCarriers;
-use PrestaShop\PrestaShop\Core\Domain\Customer\Command\AddCustomerCommand;
-use PrestaShop\PrestaShop\Core\Domain\Product\Command\SetCarriersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
-use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 use Tests\Resources\Resetter\ProductResetter;
 
-class AvailableCarriersEndpointTest extends ApiTestCase
+class CompatibleCarriersEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
+        if (self::isVersionUnder('9.2.0')) {
+            static::markTestSkipped('The compatible carriers endpoint relies on the scalar constructor of GetAvailableCarriers, which only exists since PrestaShop 9.2.0');
+
+            return;
+        }
+
         parent::setUpBeforeClass();
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
-        self::createApiClient(['carrier_read', 'carrier_write', 'product_write', 'country_write']);
+        self::createApiClient(['carrier_read', 'carrier_write', 'product_write', 'country_write', 'customer_write', 'address_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -67,43 +68,22 @@ class AvailableCarriersEndpointTest extends ApiTestCase
         ]);
     }
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        // If GetAvailableCarriers does not exist we can skip all the tests here
-        if (!class_exists(GetAvailableCarriers::class)) {
-            $this->markTestSkipped('GetAvailableCarriers class does not exist');
-        }
-
-        // Before PrestaShop 9.2 the constructor took AddressId directly instead of a scalar int, which
-        // the API serializer can never satisfy (CQRS constructor params are always denormalized as scalars)
-        $addressIdType = null;
-        foreach ((new \ReflectionMethod(GetAvailableCarriers::class, '__construct'))->getParameters() as $parameter) {
-            if ($parameter->getName() === 'addressId') {
-                $addressIdType = $parameter->getType();
-                break;
-            }
-        }
-        if (!$addressIdType instanceof \ReflectionNamedType || $addressIdType->getName() !== 'int') {
-            $this->markTestSkipped('GetAvailableCarriers does not accept a scalar addressId on this PrestaShop version');
-        }
-    }
-
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get available carriers endpoint' => ['GET', '/carriers/available'];
+        // Data providers are resolved when PHPUnit builds the test suite, before setUpBeforeClass
+        // gets a chance to skip the class, and an empty provider is reported as an error. So the
+        // endpoint is yielded unconditionally; on cores < 9.2.0 the whole class is skipped anyway
+        // and this data set is never executed.
+        yield 'search compatible carriers endpoint' => ['GET', '/carriers/search-compatible-carriers'];
     }
 
     /**
      * @return array{carrierId: int, productId: int, addressId: int}
      */
-    public function testAvailableCarriersFixtures(): array
+    public function testCompatibleCarriersFixtures(): array
     {
-        $container = static::createClient()->getContainer();
-        $commandBus = $container->get('prestashop.core.command_bus');
-
         $carrier = $this->createItem('/carriers', [
-            'name' => 'Available carrier',
+            'name' => 'Compatible carrier',
             'delays' => ['en-US' => '3-5 days', 'fr-FR' => '3-5 jours'],
             'grade' => 5,
             'trackingUrl' => 'http://example.com/@',
@@ -121,15 +101,17 @@ class AvailableCarriersEndpointTest extends ApiTestCase
 
         $product = $this->createItem('/products', [
             'type' => ProductType::TYPE_STANDARD,
-            'names' => ['en-US' => 'Available carrier product', 'fr-FR' => 'Produit disponible'],
+            'names' => ['en-US' => 'Compatible carrier product', 'fr-FR' => 'Produit disponible'],
         ], ['product_write']);
         $productId = $product['productId'];
 
         // Carrier reference id equals carrier id right after creation (they only diverge on later edits).
-        $commandBus->handle(new SetCarriersCommand($productId, [$carrierId], ShopConstraint::allShops()));
+        $this->updateItem('/products/' . $productId . '/carriers', [
+            'carrierReferenceIds' => [$carrierId],
+        ], ['product_write']);
 
         $country = $this->createItem('/countries', [
-            'names' => ['en-US' => 'Available Carrier Country', 'fr-FR' => 'Pays du transporteur'],
+            'names' => ['en-US' => 'Compatible Carrier Country', 'fr-FR' => 'Pays du transporteur'],
             'isoCode' => 'ZY',
             'callPrefix' => 998,
             'defaultCurrencyId' => 0,
@@ -146,26 +128,28 @@ class AvailableCarriersEndpointTest extends ApiTestCase
         ], ['country_write']);
         $countryId = $country['countryId'];
 
-        $customerId = $commandBus->handle(new AddCustomerCommand(
-            'John',
-            'Doe',
-            'available-carriers-test@example.com',
-            'Password123!',
-            3,
-            [1, 2, 3],
-            1
-        ))->getValue();
+        $customer = $this->createItem('/customers', [
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+            'email' => 'compatible-carriers-test@example.com',
+            'password' => 'Password123!',
+            'defaultGroupId' => 3,
+            'groupIds' => [1, 2, 3],
+            'genderId' => 1,
+            'enabled' => true,
+        ], ['customer_write']);
 
-        $addressId = $commandBus->handle(new AddCustomerAddressCommand(
-            $customerId,
-            'Home',
-            'John',
-            'Doe',
-            '1 Infinite Loop',
-            'Paris',
-            $countryId,
-            '75001'
-        ))->getValue();
+        $address = $this->createItem('/addresses/customers', [
+            'customerId' => $customer['customerId'],
+            'addressAlias' => 'Home',
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+            'address' => '1 Infinite Loop',
+            'city' => 'Paris',
+            'countryId' => $countryId,
+            'postCode' => '75001',
+        ], ['address_write']);
+        $addressId = $address['addressId'];
 
         return [
             'carrierId' => $carrierId,
@@ -175,9 +159,9 @@ class AvailableCarriersEndpointTest extends ApiTestCase
     }
 
     /**
-     * @depends testAvailableCarriersFixtures
+     * @depends testCompatibleCarriersFixtures
      */
-    public function testGetAvailableCarriers(array $fixtures): void
+    public function testGetCompatibleCarriers(array $fixtures): void
     {
         $query = http_build_query([
             'addressId' => $fixtures['addressId'],
@@ -186,16 +170,18 @@ class AvailableCarriersEndpointTest extends ApiTestCase
             ],
         ]);
 
-        $availableCarriers = $this->getItem('/carriers/available?' . $query, ['carrier_read']);
-        $this->assertArrayHasKey('availableCarriers', $availableCarriers);
-        $carrierIds = array_column($availableCarriers['availableCarriers'], 'carrierId');
-        $this->assertContains($fixtures['carrierId'], $carrierIds);
+        $compatibleCarriers = $this->getItem('/carriers/search-compatible-carriers?' . $query, ['carrier_read']);
+        $this->assertArrayHasKey('compatibleCarriers', $compatibleCarriers);
+        $this->assertContains(
+            ['carrierId' => $fixtures['carrierId'], 'name' => 'Compatible carrier'],
+            $compatibleCarriers['compatibleCarriers']
+        );
     }
 
     /**
-     * @depends testAvailableCarriersFixtures
+     * @depends testCompatibleCarriersFixtures
      */
-    public function testGetAvailableCarriersForUnknownAddressIsRejected(array $fixtures): void
+    public function testGetCompatibleCarriersForUnknownAddressIsRejected(array $fixtures): void
     {
         $query = http_build_query([
             'addressId' => 999999,
@@ -204,13 +190,13 @@ class AvailableCarriersEndpointTest extends ApiTestCase
             ],
         ]);
 
-        $this->getItem('/carriers/available?' . $query, ['carrier_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/carriers/search-compatible-carriers?' . $query, ['carrier_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
-     * @depends testAvailableCarriersFixtures
+     * @depends testCompatibleCarriersFixtures
      */
-    public function testGetAvailableCarriersMissingAddressId(array $fixtures): void
+    public function testGetCompatibleCarriersMissingAddressId(array $fixtures): void
     {
         $query = http_build_query([
             'productQuantities' => [
@@ -218,16 +204,16 @@ class AvailableCarriersEndpointTest extends ApiTestCase
             ],
         ]);
 
-        $this->getItem('/carriers/available?' . $query, ['carrier_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->getItem('/carriers/search-compatible-carriers?' . $query, ['carrier_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     /**
-     * @depends testAvailableCarriersFixtures
+     * @depends testCompatibleCarriersFixtures
      */
-    public function testGetAvailableCarriersMissingProductQuantities(array $fixtures): void
+    public function testGetCompatibleCarriersMissingProductQuantities(array $fixtures): void
     {
         $query = http_build_query(['addressId' => $fixtures['addressId']]);
 
-        $this->getItem('/carriers/available?' . $query, ['carrier_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->getItem('/carriers/search-compatible-carriers?' . $query, ['carrier_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }

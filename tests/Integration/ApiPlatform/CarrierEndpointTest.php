@@ -64,8 +64,9 @@ class CarrierEndpointTest extends ApiTestCase
         yield 'create endpoint' => ['POST', '/carriers'];
         yield 'get endpoint' => ['GET', '/carriers/1'];
         yield 'patch endpoint' => ['PATCH', '/carriers/1'];
+        yield 'get ranges endpoint' => ['GET', '/carriers/1/ranges'];
         yield 'set ranges endpoint' => ['PATCH', '/carriers/1/ranges'];
-        yield 'set tax rule group endpoint' => ['PATCH', '/carriers/1/tax-rule-group'];
+        yield 'set tax rule group endpoint' => ['PATCH', '/carriers/1/set-tax-rule-group'];
     }
 
     private function getCreatePayload(): array
@@ -150,6 +151,92 @@ class CarrierEndpointTest extends ApiTestCase
         $this->assertEquals($updatedCarrier, $fetchedCarrier);
 
         return $carrierId;
+    }
+
+    /**
+     * @depends testPartialUpdateCarrier
+     */
+    public function testSetAndGetCarrierRanges(int $carrierId): int
+    {
+        $expectedRanges = [
+            'carrierId' => $carrierId,
+            'ranges' => [
+                ['zoneId' => 1, 'rangeFrom' => 0.0, 'rangeTo' => 10.0, 'rangePrice' => 5.0],
+                ['zoneId' => 1, 'rangeFrom' => 10.0, 'rangeTo' => 20.0, 'rangePrice' => 8.0],
+            ],
+        ];
+
+        // The ranges are sent in the exact format the operations return, which is the point of
+        // the shared format: a response can be copied as-is to build the next request
+        $updatedRanges = $this->partialUpdateItem(
+            '/carriers/' . $carrierId . '/ranges',
+            ['ranges' => $expectedRanges['ranges']],
+            ['carrier_write']
+        );
+
+        $this->assertEquals($expectedRanges, $updatedRanges);
+        $this->assertEquals($expectedRanges, $this->getItem('/carriers/' . $carrierId . '/ranges', ['carrier_read']));
+
+        return $carrierId;
+    }
+
+    /**
+     * @depends testSetAndGetCarrierRanges
+     */
+    public function testSetCarrierRangesWithOverlappingRangesIsRejected(int $carrierId): void
+    {
+        $this->partialUpdateItem('/carriers/' . $carrierId . '/ranges', [
+            'ranges' => [
+                ['zoneId' => 1, 'rangeFrom' => 0.0, 'rangeTo' => 10.0, 'rangePrice' => 5.0],
+                ['zoneId' => 1, 'rangeFrom' => 5.0, 'rangeTo' => 15.0, 'rangePrice' => 8.0],
+            ],
+        ], ['carrier_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * @depends testSetAndGetCarrierRanges
+     */
+    public function testSetCarrierTaxRuleGroup(int $carrierId): void
+    {
+        $taxRulesGroup = $this->createItem('/tax-rules-groups', [
+            'name' => 'Carrier Tax Rules Group',
+            'enabled' => true,
+            'shopIds' => [1],
+        ], ['tax_rules_group_write']);
+
+        $updatedCarrier = $this->partialUpdateItem(
+            '/carriers/' . $carrierId . '/set-tax-rule-group',
+            ['taxRuleGroupId' => $taxRulesGroup['taxRulesGroupId']],
+            ['carrier_write']
+        );
+
+        // The operation returns the full carrier, not only the modified association. The expected
+        // payload is the created one plus the fields changed by testPartialUpdateCarrier.
+        $expectedCarrier = array_merge($this->getCreatePayload(), [
+            'carrierId' => $carrierId,
+            'name' => 'My Carrier updated',
+            'enabled' => false,
+            'free' => true,
+            'taxRuleGroupId' => $taxRulesGroup['taxRulesGroupId'],
+            'position' => $updatedCarrier['position'],
+            'ordersCount' => 0,
+        ]);
+
+        $this->assertEquals($expectedCarrier, $updatedCarrier);
+        $this->assertEquals($expectedCarrier, $this->getItem('/carriers/' . $carrierId, ['carrier_read']));
+    }
+
+    /**
+     * @depends testSetAndGetCarrierRanges
+     */
+    public function testSetUnknownCarrierTaxRuleGroupIsRejected(int $carrierId): void
+    {
+        $this->partialUpdateItem(
+            '/carriers/' . $carrierId . '/set-tax-rule-group',
+            ['taxRuleGroupId' => 999999],
+            ['carrier_write'],
+            Response::HTTP_NOT_FOUND
+        );
     }
 
     public function testCreateInvalidCarrier(): void

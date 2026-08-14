@@ -82,8 +82,9 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get ranges endpoint' => ['GET', '/carriers/1/ranges'];
         yield 'set ranges endpoint' => ['PATCH', '/carriers/1/ranges'];
-        yield 'set tax rule group endpoint' => ['PATCH', '/carriers/1/tax-rule-group'];
+        yield 'set tax rule group endpoint' => ['PATCH', '/carriers/1/set-tax-rule-group'];
     }
 
     public function testAddCarrierForFirstShop(): int
@@ -117,25 +118,37 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
      */
     public function testSetCarrierRanges(int $carrierId): int
     {
-        $response = $this->partialUpdateItem(
-            '/carriers/' . $carrierId . '/ranges',
-            [
-                'ranges' => [
-                    ['zoneId' => 1, 'rangeFrom' => 0, 'rangeTo' => 10, 'rangePrice' => '5.00'],
-                    ['zoneId' => 1, 'rangeFrom' => 10, 'rangeTo' => 20, 'rangePrice' => '8.00'],
+        $allShopsOptions = [
+            'extra' => [
+                'parameters' => [
+                    'allShops' => true,
                 ],
             ],
+        ];
+
+        $expectedRanges = [
+            'carrierId' => $carrierId,
+            'ranges' => [
+                ['zoneId' => 1, 'rangeFrom' => 0.0, 'rangeTo' => 10.0, 'rangePrice' => 5.0],
+                ['zoneId' => 1, 'rangeFrom' => 10.0, 'rangeTo' => 20.0, 'rangePrice' => 8.0],
+            ],
+        ];
+
+        $updatedRanges = $this->partialUpdateItem(
+            '/carriers/' . $carrierId . '/ranges',
+            ['ranges' => $expectedRanges['ranges']],
             ['carrier_write'],
-            Response::HTTP_NO_CONTENT,
-            [
-                'extra' => [
-                    'parameters' => [
-                        'allShops' => true,
-                    ],
-                ],
-            ]
+            Response::HTTP_OK,
+            $allShopsOptions
         );
-        $this->assertNull($response);
+
+        // The update returns the resulting ranges for the requested shop context, in the same
+        // format it accepts them, like the GET operation
+        $this->assertEquals($expectedRanges, $updatedRanges);
+        $this->assertEquals(
+            $expectedRanges,
+            $this->getItem('/carriers/' . $carrierId . '/ranges', ['carrier_read'], Response::HTTP_OK, $allShopsOptions)
+        );
 
         return $carrierId;
     }
@@ -149,8 +162,8 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
             '/carriers/' . $carrierId . '/ranges',
             [
                 'ranges' => [
-                    ['zoneId' => 1, 'rangeFrom' => 0, 'rangeTo' => 10, 'rangePrice' => '5.00'],
-                    ['zoneId' => 1, 'rangeFrom' => 5, 'rangeTo' => 15, 'rangePrice' => '8.00'],
+                    ['zoneId' => 1, 'rangeFrom' => 0.0, 'rangeTo' => 10.0, 'rangePrice' => 5.0],
+                    ['zoneId' => 1, 'rangeFrom' => 5.0, 'rangeTo' => 15.0, 'rangePrice' => 8.0],
                 ],
             ],
             ['carrier_write'],
@@ -185,11 +198,11 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
         ]);
         $taxRulesGroupId = $taxRulesGroup['taxRulesGroupId'];
 
-        $response = $this->partialUpdateItem(
-            '/carriers/' . $carrierId . '/tax-rule-group',
+        $updatedCarrier = $this->partialUpdateItem(
+            '/carriers/' . $carrierId . '/set-tax-rule-group',
             ['taxRuleGroupId' => $taxRulesGroupId],
             ['carrier_write'],
-            Response::HTTP_NO_CONTENT,
+            Response::HTTP_OK,
             [
                 'extra' => [
                     'parameters' => [
@@ -198,7 +211,9 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
                 ],
             ]
         );
-        $this->assertNull($response);
+
+        // The operation returns the full carrier, not only the modified association
+        $this->assertEquals($taxRulesGroupId, $updatedCarrier['taxRuleGroupId']);
 
         $carrier = $this->getItem('/carriers/' . $carrierId, ['carrier_read'], Response::HTTP_OK, [
             'extra' => [
@@ -218,7 +233,7 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
     public function testSetCarrierTaxRuleGroupInvalid(int $carrierId): void
     {
         $this->partialUpdateItem(
-            '/carriers/' . $carrierId . '/tax-rule-group',
+            '/carriers/' . $carrierId . '/set-tax-rule-group',
             ['taxRuleGroupId' => 999999],
             ['carrier_write'],
             Response::HTTP_NOT_FOUND,

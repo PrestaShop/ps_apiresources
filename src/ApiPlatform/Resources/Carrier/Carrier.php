@@ -27,6 +27,7 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\AddCarrierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\EditCarrierCommand;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\SetCarrierTaxRuleGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CannotAddCarrierException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CannotUpdateCarrierException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
@@ -34,6 +35,7 @@ use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetCarrierForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\ValueObject\OutOfRangeBehavior;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\ValueObject\ShippingMethod;
+use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
@@ -69,12 +71,23 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
         ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/carriers/{carrierId}/set-tax-rule-group',
+            requirements: ['carrierId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'SetTaxRuleGroup']],
+            CQRSCommand: SetCarrierTaxRuleGroupCommand::class,
+            CQRSQuery: GetCarrierForEditing::class,
+            scopes: ['carrier_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::SET_TAX_RULE_GROUP_COMMAND_MAPPING,
+        ),
     ],
     exceptionToStatus: [
         CarrierNotFoundException::class => Response::HTTP_NOT_FOUND,
         CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CannotAddCarrierException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CannotUpdateCarrierException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        TaxRulesGroupNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class Carrier
@@ -124,8 +137,10 @@ class Carrier
     public int $rangeBehavior;
 
     /**
-     * Read-only: set exclusively through PATCH /carriers/{carrierId}/tax-rule-group.
+     * Not writable by the create and update operations: it is set exclusively through
+     * PATCH /carriers/{carrierId}/set-tax-rule-group, which returns the updated carrier.
      */
+    #[Assert\NotNull(groups: ['SetTaxRuleGroup'])]
     public int $taxRuleGroupId;
 
     #[Assert\NotBlank(groups: ['Create'])]
@@ -161,5 +176,10 @@ class Carrier
         '[delays]' => '[localizedDelay]',
         '[enabled]' => '[active]',
         '[free]' => '[isFree]',
+    ];
+
+    public const SET_TAX_RULE_GROUP_COMMAND_MAPPING = [
+        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[taxRuleGroupId]' => '[carrierTaxRuleGroupId]',
     ];
 }

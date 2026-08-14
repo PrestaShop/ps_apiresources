@@ -27,19 +27,28 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\SetCarrierRangesCommand;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetCarrierRanges;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
+        new CQRSGet(
+            uriTemplate: '/carriers/{carrierId}/ranges',
+            requirements: ['carrierId' => '\d+'],
+            CQRSQuery: GetCarrierRanges::class,
+            scopes: ['carrier_read'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+        ),
         new CQRSPartialUpdate(
             uriTemplate: '/carriers/{carrierId}/ranges',
             requirements: ['carrierId' => '\d+'],
-            output: false,
-            status: Response::HTTP_NO_CONTENT,
             CQRSCommand: SetCarrierRangesCommand::class,
+            CQRSQuery: GetCarrierRanges::class,
             scopes: ['carrier_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
     ],
@@ -50,8 +59,16 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class CarrierRanges
 {
+    #[ApiProperty(identifier: true)]
     public int $carrierId;
 
+    /**
+     * Delivery ranges of the carrier, each one holding the zone it applies to. Same format for
+     * reading and writing: the payload sent to the update operation is the payload returned by
+     * both operations, so one can be copied to build the other.
+     *
+     * The decimal fields are exposed as numbers, like every other decimal of the API.
+     */
     #[Assert\NotBlank]
     #[Assert\Count(min: 1)]
     #[Assert\All(
@@ -82,12 +99,20 @@ class CarrierRanges
                     'zoneId' => ['type' => 'integer'],
                     'rangeFrom' => ['type' => 'number'],
                     'rangeTo' => ['type' => 'number'],
-                    'rangePrice' => ['type' => 'string'],
+                    'rangePrice' => ['type' => 'number'],
                 ],
             ],
         ]
     )]
-    public array $ranges = [];
+    public ?array $ranges = null;
+
+    /**
+     * The GetCarrierRanges result is flattened into the ranges property by
+     * CarrierRangesCollectionNormalizer, hence no field mapping here.
+     */
+    public const QUERY_MAPPING = [
+        '[_context][shopConstraint]' => '[shopConstraint]',
+    ];
 
     public const COMMAND_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
