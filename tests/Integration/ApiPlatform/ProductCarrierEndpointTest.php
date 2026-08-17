@@ -42,7 +42,7 @@ class ProductCarrierEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
         LanguageResetter::resetLanguages();
         self::addLanguageByLocale('fr-FR');
-        self::createApiClient(['carrier_read', 'carrier_write', 'product_write']);
+        self::createApiClient(['carrier_read', 'carrier_write', 'product_read', 'product_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -115,15 +115,42 @@ class ProductCarrierEndpointTest extends ApiTestCase
     /**
      * @depends testAssociateCarrierWithProduct
      */
-    public function testGetCarriersForProduct(array $fixtures): void
+    public function testGetCarriersForProduct(array $fixtures): array
     {
         $this->assertEquals(
             [
                 'productId' => $fixtures['productId'],
                 'carriers' => [['carrierId' => $fixtures['carrierId'], 'name' => 'Carrier for product']],
             ],
-            $this->getItem('/products/' . $fixtures['productId'] . '/carriers', ['carrier_read'])
+            $this->getItem('/products/' . $fixtures['productId'] . '/carriers', ['product_read'])
         );
+
+        return $fixtures;
+    }
+
+    /**
+     * @depends testGetCarriersForProduct
+     */
+    public function testRemovingTheRestrictionsMakesEveryEnabledCarrierAvailable(array $fixtures): void
+    {
+        // An empty list removes the restrictions of the product, every enabled carrier can then deliver it
+        $updatedCarriers = $this->updateItem('/products/' . $fixtures['productId'] . '/carriers', [
+            'carrierReferenceIds' => [],
+        ], ['product_write']);
+
+        $expectedCarrierIds = array_column(
+            $this->listItems('/carriers', ['carrier_read'], ['enabled' => true])['items'],
+            'carrierId'
+        );
+        $this->assertGreaterThan(
+            1,
+            count($expectedCarrierIds),
+            'The shop must have more enabled carriers than the one associated with the product'
+        );
+
+        $carrierIds = array_column($updatedCarriers['carriers'], 'carrierId');
+        $this->assertEqualsCanonicalizing($expectedCarrierIds, $carrierIds);
+        $this->assertEquals($updatedCarriers, $this->getItem('/products/' . $fixtures['productId'] . '/carriers', ['product_read']));
     }
 
     /**

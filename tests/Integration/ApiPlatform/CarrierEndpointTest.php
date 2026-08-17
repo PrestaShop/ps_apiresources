@@ -31,6 +31,11 @@ use Tests\Resources\Resetter\LanguageResetter;
 
 class CarrierEndpointTest extends ApiTestCase
 {
+    /**
+     * @var int[] the carriers this class uploaded a logo for, their logo files are cleaned up at the end
+     */
+    private static array $carrierIdsWithLogo = [];
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -43,6 +48,12 @@ class CarrierEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         LanguageResetter::resetLanguages();
+        // The database is restored below, so the ids are reused by the next runs: the logo files must go as well, else
+        // a carrier created later would be listed with a logo uploaded here
+        foreach (self::$carrierIdsWithLogo as $carrierIdWithLogo) {
+            self::removeCarrierLogoFiles($carrierIdWithLogo);
+        }
+        self::$carrierIdsWithLogo = [];
         DatabaseDump::restoreTables([
             'carrier',
             'carrier_group',
@@ -63,7 +74,8 @@ class CarrierEndpointTest extends ApiTestCase
     {
         yield 'create endpoint' => ['POST', '/carriers'];
         yield 'get endpoint' => ['GET', '/carriers/1'];
-        yield 'patch endpoint' => ['PATCH', '/carriers/1'];
+        // The update is a POST so that a logo can be uploaded with it
+        yield 'update endpoint' => ['POST', '/carriers/1'];
         yield 'get ranges endpoint' => ['GET', '/carriers/1/ranges'];
         yield 'set ranges endpoint' => ['PATCH', '/carriers/1/ranges'];
         yield 'set tax rule group endpoint' => ['PATCH', '/carriers/1/set-tax-rule-group'];
@@ -137,11 +149,12 @@ class CarrierEndpointTest extends ApiTestCase
      */
     public function testPartialUpdateCarrier(int $carrierId): int
     {
-        $updatedCarrier = $this->partialUpdateItem('/carriers/' . $carrierId, [
+        // The update endpoint is a POST, and it only updates the fields of the payload
+        $updatedCarrier = $this->createItem('/carriers/' . $carrierId, [
             'name' => 'My Carrier updated',
             'enabled' => false,
             'free' => true,
-        ], ['carrier_write']);
+        ], ['carrier_write'], Response::HTTP_OK);
 
         $this->assertEquals('My Carrier updated', $updatedCarrier['name']);
         $this->assertFalse($updatedCarrier['enabled']);
@@ -237,6 +250,111 @@ class CarrierEndpointTest extends ApiTestCase
             ['carrier_write'],
             Response::HTTP_NOT_FOUND
         );
+    }
+
+    /**
+     * The create and update endpoints accept a multipart request, which is the only way to upload a logo since PHP
+     * only fills the uploaded files of a POST request. The other tests of this class cover the JSON payloads.
+     */
+    public function testCreateCarrierWithLogo(): int
+    {
+        $createdCarrier = $this->requestApi('POST', '/carriers', null, ['carrier_write'], Response::HTTP_CREATED, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                // Form data values are all strings, and the nested ones use the bracket syntax
+                'parameters' => [
+                    'name' => 'Carrier created with a logo',
+                    'delays' => [
+                        'en-US' => '3-5 days',
+                        'fr-FR' => '3-5 jours',
+                    ],
+                    'grade' => '1',
+                    'trackingUrl' => 'http://example.com/track.php?num=@',
+                    'enabled' => '1',
+                    'associatedGroupIds' => ['1', '2', '3'],
+                    'additionalHandlingFee' => '0',
+                    'free' => '0',
+                    'shippingMethod' => (string) ShippingMethod::BY_PRICE,
+                    'rangeBehavior' => (string) OutOfRangeBehavior::USE_HIGHEST_RANGE,
+                    'zones' => ['1'],
+                    'associatedShopIds' => ['1'],
+                ],
+                'files' => [
+                    'logo' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Brown_bear_cushion.jpg'),
+                ],
+            ],
+        ]);
+
+        $carrierId = $createdCarrier['carrierId'];
+        self::$carrierIdsWithLogo[] = $carrierId;
+
+        $this->assertEquals('Carrier created with a logo', $createdCarrier['name']);
+        $this->assertEquals('3-5 days', $createdCarrier['delays']['en-US']);
+        // The logo is not part of the carrier payload, it is stored as the image of the carrier
+        $this->assertFileExists(_PS_SHIP_IMG_DIR_ . $carrierId . '.jpg');
+        $this->assertNotEmpty($this->getListedCarrierLogoUrl($carrierId));
+
+        return $carrierId;
+    }
+
+    /**
+     * @depends testCreateCarrierWithLogo
+     */
+    public function testUpdateCarrierLogo(int $carrierId): void
+    {
+        $previousLogoUrl = $this->getListedCarrierLogoUrl($carrierId);
+        $this->assertNotEmpty($previousLogoUrl);
+
+        // A logo can be replaced by a multipart update, which updates the other fields of the payload at the same time
+        $updatedCarrier = $this->requestApi('POST', '/carriers/' . $carrierId, null, ['carrier_write'], Response::HTTP_OK, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => [
+                    'name' => 'Carrier with an updated logo',
+                ],
+                'files' => [
+                    'logo' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg'),
+                ],
+            ],
+        ]);
+
+        self::$carrierIdsWithLogo[] = $updatedCarrier['carrierId'];
+
+        $this->assertEquals('Carrier with an updated logo', $updatedCarrier['name']);
+        $this->assertFileExists(_PS_SHIP_IMG_DIR_ . $updatedCarrier['carrierId'] . '.jpg');
+        $this->assertNotEmpty($this->getListedCarrierLogoUrl($updatedCarrier['carrierId']));
+    }
+
+    /**
+     * The logo is not exposed by the carrier itself, only the list exposes the url of the stored image.
+     */
+    private function getListedCarrierLogoUrl(int $carrierId): ?string
+    {
+        $carriers = $this->listItems('/carriers', ['carrier_read'], ['carrierId' => $carrierId]);
+        $this->assertEquals(1, $carriers['totalItems']);
+
+        return $carriers['items'][0]['logoUrl'];
+    }
+
+    /**
+     * Removes the logo of a carrier, and the thumbnail the list generates out of it.
+     */
+    private static function removeCarrierLogoFiles(int $carrierId): void
+    {
+        $logoFiles = [
+            _PS_SHIP_IMG_DIR_ . $carrierId . '.jpg',
+            _PS_TMP_IMG_DIR_ . '/carrier_mini_' . $carrierId . '.jpg',
+        ];
+
+        foreach ($logoFiles as $logoFile) {
+            if (file_exists($logoFile)) {
+                unlink($logoFile);
+            }
+        }
     }
 
     public function testCreateInvalidCarrier(): void

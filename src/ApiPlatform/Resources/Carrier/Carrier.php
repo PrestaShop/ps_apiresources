@@ -40,7 +40,9 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -54,6 +56,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSCreate(
             uriTemplate: '/carriers',
+            // Both formats are accepted: JSON when the payload has no logo, multipart when it uploads one. Form data
+            // values are all strings, hence the disabled type enforcement.
+            inputFormats: self::INPUT_FORMATS,
+            denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddCarrierCommand::class,
             CQRSQuery: GetCarrierForEditing::class,
@@ -61,9 +67,15 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
         ),
-        new CQRSPartialUpdate(
+        // The update is a POST and not a PATCH because a file can only be uploaded through a POST request: PHP fills
+        // the uploaded files of the request for that method only. It still updates the provided fields only.
+        new CQRSCreate(
             uriTemplate: '/carriers/{carrierId}',
             requirements: ['carrierId' => '\d+'],
+            inputFormats: self::INPUT_FORMATS,
+            denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
+            status: Response::HTTP_OK,
+            read: false,
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditCarrierCommand::class,
             CQRSQuery: GetCarrierForEditing::class,
@@ -128,8 +140,11 @@ class Carrier
 
     public bool $free;
 
+    /**
+     * ShippingMethod::DEFAULT falls back to the shipping method of the shop configuration.
+     */
     #[Assert\NotNull(groups: ['Create'])]
-    #[Assert\Choice(choices: [ShippingMethod::BY_WEIGHT, ShippingMethod::BY_PRICE])]
+    #[Assert\Choice(choices: [ShippingMethod::DEFAULT, ShippingMethod::BY_WEIGHT, ShippingMethod::BY_PRICE])]
     public int $shippingMethod;
 
     #[Assert\NotNull(groups: ['Create'])]
@@ -152,6 +167,12 @@ class Carrier
 
     public int $ordersCount;
 
+    /**
+     * Write-only: JPEG image sent with a multipart create or update request. The resulting logo is exposed by the
+     * carriers list, as the logoUrl of the carrier.
+     */
+    public ?File $logo = null;
+
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
         '[active]' => '[enabled]',
@@ -161,6 +182,9 @@ class Carrier
         '[idTaxRuleGroup]' => '[taxRuleGroupId]',
     ];
 
+    /**
+     * The logo is uploaded as a file, and the commands expect its path, which the File exposes as pathName.
+     */
     public const CREATE_COMMAND_MAPPING = [
         '[delays]' => '[localizedDelay]',
         '[enabled]' => '[active]',
@@ -170,12 +194,14 @@ class Carrier
         '[maxHeight]' => '[max_height]',
         '[maxDepth]' => '[max_depth]',
         '[maxWeight]' => '[max_weight]',
+        '[logo].pathName' => '[logoPathName]',
     ];
 
     public const UPDATE_COMMAND_MAPPING = [
         '[delays]' => '[localizedDelay]',
         '[enabled]' => '[active]',
         '[free]' => '[isFree]',
+        '[logo].pathName' => '[logoPathName]',
     ];
 
     /**
@@ -189,5 +215,13 @@ class Carrier
     public const SET_TAX_RULE_GROUP_COMMAND_MAPPING = [
         '[_context][shopConstraint][isStrict]' => '[shopConstraint][isStrict]',
         '[taxRuleGroupId]' => '[carrierTaxRuleGroupId]',
+    ];
+
+    /**
+     * The create and update operations accept a JSON payload, and a multipart one when a logo is uploaded with it.
+     */
+    public const INPUT_FORMATS = [
+        'json' => ['application/json'],
+        'multipart' => ['multipart/form-data'],
     ];
 }

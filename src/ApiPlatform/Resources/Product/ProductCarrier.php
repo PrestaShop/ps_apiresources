@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetCarriersForProduct;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\SetCarriersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
@@ -39,12 +40,18 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/products/{productId}/carriers',
             requirements: ['productId' => '\d+'],
             CQRSQuery: GetCarriersForProduct::class,
-            scopes: ['carrier_read'],
+            scopes: ['product_read'],
             // The GetCarriersForProduct query only exists since PrestaShop 9.2.0
             extraProperties: [
                 'minVersion' => '9.2.0',
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
+            openapi: new OpenApiOperation(
+                summary: 'List the carriers that can deliver the product.',
+                description: 'Only the enabled carriers are returned. A product restricted to specific carriers '
+                    . 'returns those of them that are enabled, while a product without any restriction returns every '
+                    . 'enabled carrier of the shop, since all of them can deliver it.',
+            ),
         ),
         new CQRSUpdate(
             uriTemplate: '/products/{productId}/carriers',
@@ -79,7 +86,8 @@ class ProductCarrier
     public ?array $carrierReferenceIds = null;
 
     /**
-     * Read-only: carriers currently associated with the product.
+     * Read-only: the enabled carriers that can deliver the product, so the enabled ones among the associated
+     * carriers, or every enabled carrier of the shop when the product is not restricted to any.
      */
     #[ApiProperty(
         openapiContext: [
