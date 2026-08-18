@@ -81,15 +81,21 @@ class CarrierListEndpointTest extends ApiTestCase
         $this->assertEquals(1, $filtered['totalItems']);
 
         $listedCarrier = $filtered['items'][0];
-        $this->assertEquals($carrierId, $listedCarrier['carrierId']);
-        $this->assertEquals('Carrier for list', $listedCarrier['name']);
-        $this->assertEquals('3-5 days', $listedCarrier['delay']);
-        $this->assertTrue($listedCarrier['enabled']);
-        $this->assertFalse($listedCarrier['free']);
         $this->assertIsInt($listedCarrier['position']);
-        // The carrier belongs to the shop itself and has no logo, the null values are listed as such
-        $this->assertSame('', $listedCarrier['moduleName']);
-        $this->assertNull($listedCarrier['logoUrl']);
+        $this->assertEquals(
+            [
+                'carrierId' => $carrierId,
+                'name' => 'Carrier for list',
+                'delay' => '3-5 days',
+                'enabled' => true,
+                'free' => false,
+                'position' => $listedCarrier['position'],
+                // The carrier belongs to the shop itself and has no logo, the null values are listed as such
+                'moduleName' => '',
+                'logoUrl' => null,
+            ],
+            $listedCarrier
+        );
 
         return $carrierId;
     }

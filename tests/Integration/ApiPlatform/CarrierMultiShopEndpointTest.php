@@ -87,9 +87,9 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
         yield 'set tax rule group endpoint' => ['PATCH', '/carriers/1/set-tax-rule-group'];
     }
 
-    public function testAddCarrierForFirstShop(): int
+    private function getCreatePayload(): array
     {
-        $carrier = $this->createItem('/carriers', [
+        return [
             'name' => 'Multi-shop carrier',
             'delays' => ['en-US' => '3-5 days', 'fr-FR' => '3-5 jours'],
             'grade' => 5,
@@ -102,7 +102,12 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
             'rangeBehavior' => OutOfRangeBehavior::USE_HIGHEST_RANGE,
             'zones' => [1],
             'associatedShopIds' => [self::DEFAULT_SHOP_ID, self::$secondShopId],
-        ], ['carrier_write'], Response::HTTP_CREATED, [
+        ];
+    }
+
+    public function testAddCarrierForFirstShop(): int
+    {
+        $carrier = $this->createItem('/carriers', $this->getCreatePayload(), ['carrier_write'], Response::HTTP_CREATED, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::DEFAULT_SHOP_ID,
@@ -213,16 +218,25 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
         );
 
         // The operation returns the full carrier, not only the modified association
-        $this->assertEquals($taxRulesGroupId, $updatedCarrier['taxRuleGroupId']);
+        $expectedCarrier = array_merge($this->getCreatePayload(), [
+            'carrierId' => $carrierId,
+            'taxRuleGroupId' => $taxRulesGroupId,
+            'position' => $updatedCarrier['position'],
+            'ordersCount' => 0,
+            'maxWidth' => 0,
+            'maxHeight' => 0,
+            'maxDepth' => 0,
+            'maxWeight' => 0,
+        ]);
+        $this->assertEquals($expectedCarrier, $updatedCarrier);
 
-        $carrier = $this->getItem('/carriers/' . $carrierId, ['carrier_read'], Response::HTTP_OK, [
+        $this->assertEquals($expectedCarrier, $this->getItem('/carriers/' . $carrierId, ['carrier_read'], Response::HTTP_OK, [
             'extra' => [
                 'parameters' => [
                     'shopId' => self::DEFAULT_SHOP_ID,
                 ],
             ],
-        ]);
-        $this->assertEquals($taxRulesGroupId, $carrier['taxRuleGroupId']);
+        ]));
 
         return $carrierId;
     }

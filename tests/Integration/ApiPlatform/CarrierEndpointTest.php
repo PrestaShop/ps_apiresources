@@ -157,12 +157,18 @@ class CarrierEndpointTest extends ApiTestCase
             'free' => true,
         ], ['carrier_write'], Response::HTTP_OK);
 
-        $this->assertEquals('My Carrier updated', $updatedCarrier['name']);
-        $this->assertFalse($updatedCarrier['enabled']);
-        $this->assertTrue($updatedCarrier['free']);
-
-        $fetchedCarrier = $this->getItem('/carriers/' . $carrierId, ['carrier_read']);
-        $this->assertEquals($updatedCarrier, $fetchedCarrier);
+        // The whole carrier is expected back: the created payload plus the three updated fields
+        $expectedCarrier = array_merge($this->getCreatePayload(), [
+            'carrierId' => $carrierId,
+            'name' => 'My Carrier updated',
+            'enabled' => false,
+            'free' => true,
+            'taxRuleGroupId' => 0,
+            'position' => $updatedCarrier['position'],
+            'ordersCount' => 0,
+        ]);
+        $this->assertEquals($expectedCarrier, $updatedCarrier);
+        $this->assertEquals($expectedCarrier, $this->getItem('/carriers/' . $carrierId, ['carrier_read']));
 
         return $carrierId;
     }
@@ -257,7 +263,7 @@ class CarrierEndpointTest extends ApiTestCase
      * The create and update endpoints accept a multipart request, which is the only way to upload a logo since PHP
      * only fills the uploaded files of a POST request. The other tests of this class cover the JSON payloads.
      */
-    public function testCreateCarrierWithLogo(): int
+    public function testCreateCarrierWithLogo(): array
     {
         $createdCarrier = $this->requestApi('POST', '/carriers', null, ['carrier_write'], Response::HTTP_CREATED, [
             'headers' => [
@@ -291,20 +297,48 @@ class CarrierEndpointTest extends ApiTestCase
         $carrierId = $createdCarrier['carrierId'];
         self::$carrierIdsWithLogo[] = $carrierId;
 
-        $this->assertEquals('Carrier created with a logo', $createdCarrier['name']);
-        $this->assertEquals('3-5 days', $createdCarrier['delays']['en-US']);
+        // The form values are all strings, but the returned carrier uses the real field types
+        $this->assertEquals(
+            [
+                'carrierId' => $carrierId,
+                'name' => 'Carrier created with a logo',
+                'delays' => [
+                    'en-US' => '3-5 days',
+                    'fr-FR' => '3-5 jours',
+                ],
+                'grade' => 1,
+                'trackingUrl' => 'http://example.com/track.php?num=@',
+                'enabled' => true,
+                'associatedGroupIds' => [1, 2, 3],
+                'additionalHandlingFee' => false,
+                'free' => false,
+                'shippingMethod' => ShippingMethod::BY_PRICE,
+                'rangeBehavior' => OutOfRangeBehavior::USE_HIGHEST_RANGE,
+                'zones' => [1],
+                'associatedShopIds' => [1],
+                'maxWidth' => 0,
+                'maxHeight' => 0,
+                'maxDepth' => 0,
+                'maxWeight' => 0,
+                'taxRuleGroupId' => 0,
+                'position' => $createdCarrier['position'],
+                'ordersCount' => 0,
+            ],
+            $createdCarrier
+        );
         // The logo is not part of the carrier payload, it is stored as the image of the carrier
         $this->assertFileExists(_PS_SHIP_IMG_DIR_ . $carrierId . '.jpg');
         $this->assertNotEmpty($this->getListedCarrierLogoUrl($carrierId));
 
-        return $carrierId;
+        return $createdCarrier;
     }
 
     /**
      * @depends testCreateCarrierWithLogo
      */
-    public function testUpdateCarrierLogo(int $carrierId): void
+    public function testUpdateCarrierLogo(array $createdCarrier): void
     {
+        $carrierId = $createdCarrier['carrierId'];
         $previousLogoUrl = $this->getListedCarrierLogoUrl($carrierId);
         $this->assertNotEmpty($previousLogoUrl);
 
@@ -325,7 +359,16 @@ class CarrierEndpointTest extends ApiTestCase
 
         self::$carrierIdsWithLogo[] = $updatedCarrier['carrierId'];
 
-        $this->assertEquals('Carrier with an updated logo', $updatedCarrier['name']);
+        // Only the name changes, the rest of the created carrier is untouched. The id and position are
+        // pinned from the response because an edit can produce a new version of a used carrier.
+        $this->assertEquals(
+            array_merge($createdCarrier, [
+                'carrierId' => $updatedCarrier['carrierId'],
+                'position' => $updatedCarrier['position'],
+                'name' => 'Carrier with an updated logo',
+            ]),
+            $updatedCarrier
+        );
         $this->assertFileExists(_PS_SHIP_IMG_DIR_ . $updatedCarrier['carrierId'] . '.jpg');
         $this->assertNotEmpty($this->getListedCarrierLogoUrl($updatedCarrier['carrierId']));
     }
