@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Shipment;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\SwitchShipmentCarrierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Exception\CannotSaveShipmentException;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Exception\ShipmentException;
@@ -47,6 +48,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ShipmentNotFoundException::class => Response::HTTP_NOT_FOUND,
         CannotSaveShipmentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CarrierNotFoundException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ShipmentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
