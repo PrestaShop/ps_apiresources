@@ -117,6 +117,11 @@ class CarrierListEndpointTest extends ApiTestCase
 
     public function testPositionsAreSyncedWhenACarrierIsMoved(): void
     {
+        // Moving a carrier only shifts the other ones since PrestaShop 9.2.0, where the add/edit handlers
+        // use the same position updater as the carriers list (PrestaShop/PrestaShop#42022): older cores
+        // write the requested position without re-syncing the rest of the list
+        $this->markTestSkippedByMinVersion('9.2.0');
+
         $firstCarrierId = $this->createCarrier('Positioned carrier 1');
         $secondCarrierId = $this->createCarrier('Positioned carrier 2');
         $thirdCarrierId = $this->createCarrier('Positioned carrier 3');

@@ -265,6 +265,11 @@ class CarrierEndpointTest extends ApiTestCase
      */
     public function testCreateCarrierWithLogo(): array
     {
+        // Storing the logo relies on CarrierLogoFileUploader copying the file, fixed in PrestaShop 9.2.0
+        // (PrestaShop/PrestaShop#42022): older cores use move_uploaded_file, which silently stores nothing
+        // for a file that was not uploaded by a real form submission
+        $this->markTestSkippedByMinVersion('9.2.0');
+
         $createdCarrier = $this->requestApi('POST', '/carriers', null, ['carrier_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
