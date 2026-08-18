@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Carrier\Carrier;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\ValueObject\OutOfRangeBehavior;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\ValueObject\ShippingMethod;
 use Symfony\Component\HttpFoundation\Response;
@@ -357,6 +358,79 @@ class CarrierEndpointTest extends ApiTestCase
         }
     }
 
+    /**
+     * Payload limited to the fields the API cannot guess, so the ones documented as required: the fields defaulted by
+     * the operation and the ones defaulted by the CQRS command (the sizes and the weight) are all omitted.
+     */
+    private function getMinimalistCreatePayload(): array
+    {
+        return [
+            'name' => 'My Minimalist Carrier',
+            'delays' => [
+                'en-US' => '3-5 days',
+                'fr-FR' => '3-5 jours',
+            ],
+            'grade' => 5,
+            'trackingUrl' => 'http://example.com/@',
+            'enabled' => true,
+            'associatedGroupIds' => [1, 2, 3],
+            'zones' => [1],
+            'associatedShopIds' => [1],
+        ];
+    }
+
+    private function assertCarrierMatchesMinimalistPayload(array $carrier, array $payload, array $expectedDefaultValues): void
+    {
+        // The payload comes first: a provided value always wins over a default one
+        $this->assertEquals(
+            $payload + [
+                'carrierId' => $carrier['carrierId'],
+                'position' => $carrier['position'],
+                'taxRuleGroupId' => 0,
+                'ordersCount' => 0,
+                // Defaulted by the CQRS command itself, which has always been able to do it for its optional parameters
+                'maxWidth' => 0,
+                'maxHeight' => 0,
+                'maxDepth' => 0,
+                'maxWeight' => 0,
+            ] + $expectedDefaultValues,
+            $carrier
+        );
+    }
+
+    /**
+     * The fields with a default value can be omitted, exactly like the BO form fields that are left untouched.
+     */
+    public function testCreateCarrierWithTheDefaultValues(): void
+    {
+        // The default values are applied by the operation, a feature that only exists since PrestaShop 9.2.0
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $payload = $this->getMinimalistCreatePayload();
+        $carrier = $this->createItem('/carriers', $payload, ['carrier_write']);
+
+        $this->assertCarrierMatchesMinimalistPayload($carrier, $payload, Carrier::CREATE_DEFAULT_VALUES);
+        $this->assertFalse($carrier['free']);
+    }
+
+    /**
+     * A value present in the payload is used as is, the default value of the operation only fills the absent ones.
+     */
+    public function testCreateFreeCarrierWithTheDefaultValues(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $payload = array_merge($this->getMinimalistCreatePayload(), [
+            'name' => 'My Free Minimalist Carrier',
+            'free' => true,
+        ]);
+        $carrier = $this->createItem('/carriers', $payload, ['carrier_write']);
+
+        // Every other field keeps its default value, only the free one is the provided value
+        $this->assertCarrierMatchesMinimalistPayload($carrier, $payload, Carrier::CREATE_DEFAULT_VALUES);
+        $this->assertTrue($carrier['free']);
+    }
+
     public function testCreateInvalidCarrier(): void
     {
         $invalidPayload = array_merge($this->getCreatePayload(), [
@@ -374,6 +448,91 @@ class CarrierEndpointTest extends ApiTestCase
             ['propertyPath' => 'name', 'message' => 'This value should not be blank.'],
             ['propertyPath' => 'name', 'message' => 'This value is too short. It should have 1 character or more.'],
             ['propertyPath' => 'zones', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'zones', 'message' => 'This collection should contain 1 element or more.'],
+        ], $validationErrorsResponse);
+    }
+
+    /**
+     * The endpoint enforces the rules of the BO form, so a payload that the form would reject is rejected here as
+     * well, even when the CQRS command itself accepts it.
+     */
+    public function testCreateCarrierBreakingTheBackOfficeRules(): void
+    {
+        $invalidPayload = array_merge($this->getCreatePayload(), [
+            'delays' => ['fr-FR' => '3-5 jours'],
+            'grade' => 42,
+            'trackingUrl' => 'not-an-url',
+            'associatedGroupIds' => [],
+            'associatedShopIds' => [],
+            'maxWidth' => -1,
+        ]);
+        $validationErrorsResponse = $this->createItem(
+            '/carriers',
+            $invalidPayload,
+            ['carrier_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'delays', 'message' => 'The field delays is required at least in your default language.'],
+            ['propertyPath' => 'grade', 'message' => 'This value should be between 0 and 9.'],
+            ['propertyPath' => 'trackingUrl', 'message' => 'This value is not a valid URL.'],
+            ['propertyPath' => 'maxWidth', 'message' => 'This value should be either positive or zero.'],
+            ['propertyPath' => 'associatedGroupIds', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'associatedGroupIds', 'message' => 'This collection should contain 1 element or more.'],
+            ['propertyPath' => 'associatedShopIds', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'associatedShopIds', 'message' => 'This collection should contain 1 element or more.'],
+        ], $validationErrorsResponse);
+    }
+
+    /**
+     * @depends testPartialUpdateCarrier
+     */
+    public function testUpdateCarrierWithoutGroupIsRejected(int $carrierId): void
+    {
+        // The BO form cannot save a carrier without group, so an update cannot empty the list either
+        $validationErrorsResponse = $this->createItem(
+            '/carriers/' . $carrierId,
+            ['associatedGroupIds' => []],
+            ['carrier_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'associatedGroupIds', 'message' => 'This collection should contain 1 element or more.'],
+        ], $validationErrorsResponse);
+    }
+
+    public function testCreateCarrierWithAnInvalidLogoIsRejected(): void
+    {
+        // The BO form only accepts a jpeg image as the logo, and so does this endpoint
+        $validationErrorsResponse = $this->requestApi('POST', '/carriers', null, ['carrier_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => [
+                    'name' => 'Carrier with an invalid logo',
+                    'delays' => ['en-US' => '3-5 days'],
+                    'grade' => '1',
+                    'trackingUrl' => 'http://example.com/@',
+                    'enabled' => '1',
+                    'associatedGroupIds' => ['1', '2', '3'],
+                    'additionalHandlingFee' => '0',
+                    'free' => '0',
+                    'shippingMethod' => (string) ShippingMethod::BY_PRICE,
+                    'rangeBehavior' => (string) OutOfRangeBehavior::USE_HIGHEST_RANGE,
+                    'zones' => ['1'],
+                    'associatedShopIds' => ['1'],
+                ],
+                'files' => [
+                    'logo' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/archive/test_install_cqrs_command.zip'),
+                ],
+            ],
+        ]);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'logo', 'message' => 'Please upload a valid jpeg file'],
         ], $validationErrorsResponse);
     }
 }

@@ -24,7 +24,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Carrier;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\CleanHtml;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\AddCarrierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\EditCarrierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\SetCarrierTaxRuleGroupCommand;
@@ -64,8 +67,20 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: AddCarrierCommand::class,
             CQRSQuery: GetCarrierForEditing::class,
             scopes: ['carrier_write'],
+            // The default values are the ones the BO form applies when the fields are left untouched. They are
+            // declared as an extra property, and not with the dedicated operation argument, so that the resource is
+            // still parsed by the PrestaShop versions that don't know this argument yet (they simply ignore it, and
+            // the fields remain required there).
+            extraProperties: [
+                'defaultValues' => self::CREATE_DEFAULT_VALUES,
+            ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
+            openapi: new OpenApiOperation(
+                summary: 'Create a carrier.',
+                description: 'Creates a carrier and returns it. The payload can be sent as JSON, or as a multipart '
+                    . 'request when a logo is uploaded along with the other fields.',
+            ),
         ),
         // The update is a POST and not a PATCH because a file can only be uploaded through a POST request: PHP fills
         // the uploaded files of the request for that method only. It still updates the provided fields only.
@@ -82,6 +97,14 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['carrier_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
+            // The generated summary of a POST operation is a creation one, which is wrong here, so both POST
+            // operations describe explicitly what they do to avoid two identical "create a carrier" summaries
+            openapi: new OpenApiOperation(
+                summary: 'Update a carrier.',
+                description: 'Updates an existing carrier and returns it. Only the fields present in the payload are '
+                    . 'modified, the other ones are left unchanged. This operation relies on POST and not on PATCH '
+                    . 'because a logo can only be uploaded through a POST request, but it never creates a carrier.',
+            ),
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/carriers/{carrierId}/set-tax-rule-group',
@@ -109,15 +132,21 @@ class Carrier
 
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\Length(min: 1, max: 64)]
+    #[CleanHtml]
     public string $name;
 
     #[LocalizedValue]
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'delays')]
+    #[DefaultLanguage(groups: ['Update'], fieldName: 'delays', allowNull: true)]
+    #[Assert\All(constraints: [new CleanHtml()])]
     public array $delays;
 
     #[Assert\NotNull(groups: ['Create'])]
+    #[Assert\Range(min: 0, max: 9)]
     public int $grade;
 
     #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Url]
     public string $trackingUrl;
 
     public int $position;
@@ -125,14 +154,23 @@ class Carrier
     #[Assert\NotNull(groups: ['Create'])]
     public bool $enabled;
 
+    #[Assert\PositiveOrZero]
     public int $maxWidth = 0;
 
+    #[Assert\PositiveOrZero]
     public int $maxHeight = 0;
 
+    #[Assert\PositiveOrZero]
     public int $maxDepth = 0;
 
     public DecimalNumber $maxWeight;
 
+    /**
+     * A carrier without group cannot be selected by any customer, so the BO form rejects an empty list and this
+     * endpoint does the same: the list is required on creation, and it cannot be emptied by an update.
+     */
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Count(min: 1)]
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $associatedGroupIds;
 
@@ -141,14 +179,16 @@ class Carrier
     public bool $free;
 
     /**
-     * ShippingMethod::DEFAULT falls back to the shipping method of the shop configuration.
+     * The accepted values are the ones of the value object, so the shipping methods available on the running core
+     * version: the 0 value, which falls back to the shipping method of the shop configuration, only exists since
+     * PrestaShop 9.2.0 (PrestaShop/PrestaShop#42022).
      */
     #[Assert\NotNull(groups: ['Create'])]
-    #[Assert\Choice(choices: [ShippingMethod::DEFAULT, ShippingMethod::BY_WEIGHT, ShippingMethod::BY_PRICE])]
+    #[Assert\Choice(choices: ShippingMethod::AVAILABLE_VALUES)]
     public int $shippingMethod;
 
     #[Assert\NotNull(groups: ['Create'])]
-    #[Assert\Choice(choices: [OutOfRangeBehavior::USE_HIGHEST_RANGE, OutOfRangeBehavior::DISABLED])]
+    #[Assert\Choice(choices: OutOfRangeBehavior::AVAILABLE_VALUES)]
     public int $rangeBehavior;
 
     /**
@@ -159,9 +199,12 @@ class Carrier
     public int $taxRuleGroupId;
 
     #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Count(min: 1)]
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $zones;
 
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Count(min: 1)]
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $associatedShopIds;
 
@@ -169,9 +212,22 @@ class Carrier
 
     /**
      * Write-only: JPEG image sent with a multipart create or update request. The resulting logo is exposed by the
-     * carriers list, as the logoUrl of the carrier.
+     * carriers list, as the logoUrl of the carrier. The accepted format and size are the ones of the BO form.
      */
+    #[Assert\File(maxSize: '8M', mimeTypes: ['image/jpeg'], mimeTypesMessage: 'Please upload a valid jpeg file')]
     public ?File $logo = null;
+
+    /**
+     * Values used by the create operation when the payload doesn't provide them, so the same fields can be omitted
+     * here and left untouched in the BO form. The API resource properties cannot carry those defaults: the payload is
+     * denormalized into the CQRS command, not into this class.
+     */
+    public const CREATE_DEFAULT_VALUES = [
+        'additionalHandlingFee' => false,
+        'free' => false,
+        'shippingMethod' => ShippingMethod::BY_PRICE,
+        'rangeBehavior' => OutOfRangeBehavior::USE_HIGHEST_RANGE,
+    ];
 
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
