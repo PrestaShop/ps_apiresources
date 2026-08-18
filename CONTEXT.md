@@ -316,9 +316,35 @@ See `Product.php`, `Combination.php`, `CombinationList.php`, and
 - Use `validationContext: ['groups' => ['Default', 'Create']]` on
   `CQRSCreate` and `validationContext: ['groups' => ['Default', 'Update']]`
   on `CQRSPartialUpdate`. `#[Assert\NotBlank]` must be present on
-  required fields for the Create group. Constraints should match the
-  associated Symfony form type (check the entity's FormType for
-  reference).
+  required fields for the Create group. Constraints must match the rules
+  of the associated BO form type (check the entity's FormType for
+  reference), **including the rules the CQRS command does not enforce
+  itself**: a payload the BO form would reject must be rejected by the
+  API too (e.g. `associatedGroupIds` must not be empty for a carrier,
+  ranges, URL formats, `CleanHtml` on free-text fields). Reuse the PS
+  constraint classes (`CleanHtml`, `DefaultLanguage`, `TypedRegex`, …)
+  when the form uses them.
+- Declare the default values a creation endpoint applies (matching the
+  BO form's `default_empty_data` / untouched fields) with the
+  `defaultValues` extra property (PrestaShop ≥ 9.2.0 only — the API
+  injects them into the payload before validation and command
+  denormalization, drops them from the documented `required` list and
+  exposes them as `default` in the schema; older cores ignore the extra
+  property, so the fields simply stay required there):
+
+  ```php
+  extraProperties: [
+      'defaultValues' => self::CREATE_DEFAULT_VALUES,
+  ],
+  ```
+
+  Defaults **cannot** be declared as API resource property defaults
+  (`public bool $free = false;`): the payload is denormalized into the
+  CQRS command, never into the resource class, so such a default is
+  decorative. Use the extra property (not the `defaultValues` named
+  argument, which older cores would reject as an unknown parameter).
+  Never declare `defaultValues` on an update operation — a partial
+  update must only touch the provided fields.
 
 ### Don't
 
