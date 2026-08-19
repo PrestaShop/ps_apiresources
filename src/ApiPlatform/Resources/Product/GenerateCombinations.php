@@ -26,6 +26,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\GenerateProduc
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -82,5 +83,14 @@ class GenerateCombinations
             ],
         ],
     )]
+    #[Assert\NotBlank]
+    #[Assert\All([
+        new Assert\Collection(
+            fields: [
+                'attributeGroupId' => [new Assert\NotBlank(), new Assert\Positive()],
+                'attributeIds' => [new Assert\NotBlank(), new Assert\All([new Assert\Positive()])],
+            ],
+        ),
+    ])]
     public array $groupedAttributes;
 }

@@ -237,6 +237,34 @@ class VirtualProductFileEndpointTest extends ApiTestCase
                 'message' => 'This value should not be blank.',
             ],
         ], $validationErrorsResponse);
+
+        // The display name refuses forbidden characters and the limits are capped
+        $validationErrorsResponse = $this->createItem(
+            sprintf('/products/%d/virtual-file', $product['productId']),
+            [
+                'filePath' => $this->prepareVirtualFile(),
+                'displayName' => 'invalid<name',
+                'accessDays' => 10000000000,
+                'downloadTimesLimit' => 10000000000,
+            ],
+            ['product_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'displayName',
+                'message' => '"invalid<name" is invalid',
+            ],
+            [
+                'propertyPath' => 'accessDays',
+                'message' => 'This value should be less than or equal to 9999999999.',
+            ],
+            [
+                'propertyPath' => 'downloadTimesLimit',
+                'message' => 'This value should be less than or equal to 9999999999.',
+            ],
+        ], $validationErrorsResponse);
     }
 
     /**

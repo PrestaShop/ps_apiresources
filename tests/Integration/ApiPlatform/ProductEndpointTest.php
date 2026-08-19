@@ -198,13 +198,13 @@ class ProductEndpointTest extends ApiTestCase
             '/products/1/images',
         ];
 
-        yield 'create product_category endpoint' => [
-            'POST',
+        yield 'assign product_category endpoint' => [
+            'PATCH',
             '/products/1/assign-to-categories',
         ];
 
-        yield 'create product_categories endpoint' => [
-            'POST',
+        yield 'set product_categories endpoint' => [
+            'PUT',
             '/products/1/categories',
         ];
 
@@ -757,7 +757,7 @@ class ProductEndpointTest extends ApiTestCase
             'categoryId' => $categoryId,
         ];
 
-        $this->createItem(
+        $this->partialUpdateItem(
             '/products/' . $productId . '/assign-to-categories',
             $payload,
             ['product_write'],
@@ -780,7 +780,7 @@ class ProductEndpointTest extends ApiTestCase
             'defaultCategoryId' => $defaultCategoryId,
         ];
 
-        $this->createItem(
+        $this->updateItem(
             '/products/' . $productId . '/categories',
             $payload,
             ['product_write'],
@@ -865,6 +865,175 @@ class ProductEndpointTest extends ApiTestCase
             ];
             $this->assertEquals($expectedProduct, $paginatedProducts['items'][0]);
         }
+    }
+
+    /**
+     * @depends testListProducts
+     */
+    public function testInvalidProduct(): int
+    {
+        // The type must be one of the known product types and the name is required
+        // in the default language, without forbidden characters
+        $validationErrorsResponse = $this->createItem('/products', [
+            'type' => 'invalid_type',
+            'names' => [
+                'fr-FR' => 'nom<invalide',
+            ],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'type',
+                'message' => 'The value you selected is not a valid choice.',
+            ],
+            [
+                'propertyPath' => 'names',
+                'message' => 'The field names is required at least in your default language.',
+            ],
+            [
+                'propertyPath' => 'names[fr-FR]',
+                'message' => '"nom<invalide" is invalid',
+            ],
+        ], $validationErrorsResponse);
+
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'product for invalid updates',
+                'fr-FR' => 'produit pour maj invalides',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        $validationErrorsResponse = $this->partialUpdateItem('/products/' . $productId, [
+            'visibility' => 'everywhere',
+            'condition' => 'broken',
+            'redirectType' => 'invalid-redirect',
+            'minimalQuantity' => -3,
+            'reference' => 'invalid > reference',
+            'mpn' => str_repeat('m', 41),
+            'gtin' => 'not-a-gtin',
+            'metaTitles' => [
+                'en-US' => str_repeat('a', 129),
+            ],
+            'linkRewrites' => [
+                'en-US' => 'Invalid Link!',
+            ],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'visibility',
+                'message' => 'The value you selected is not a valid choice.',
+            ],
+            [
+                'propertyPath' => 'condition',
+                'message' => 'The value you selected is not a valid choice.',
+            ],
+            [
+                'propertyPath' => 'redirectType',
+                'message' => 'The value you selected is not a valid choice.',
+            ],
+            [
+                'propertyPath' => 'minimalQuantity',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'reference',
+                'message' => '"invalid > reference" is invalid',
+            ],
+            [
+                'propertyPath' => 'mpn',
+                'message' => 'This value is too long. It should have 40 characters or less.',
+            ],
+            [
+                'propertyPath' => 'gtin',
+                'message' => '"not-a-gtin" is invalid',
+            ],
+            [
+                'propertyPath' => 'metaTitles[en-US]',
+                'message' => 'This value is too long. It should have 128 characters or less.',
+            ],
+            [
+                'propertyPath' => 'linkRewrites[en-US]',
+                'message' => '"Invalid Link!" is invalid',
+            ],
+        ], $validationErrorsResponse);
+
+        return $productId;
+    }
+
+    /**
+     * @depends testInvalidProduct
+     */
+    public function testInvalidProductCategories(int $productId): void
+    {
+        // A zero category cannot be assigned
+        $validationErrorsResponse = $this->partialUpdateItem(
+            '/products/' . $productId . '/assign-to-categories',
+            ['categoryId' => 0],
+            ['product_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'categoryId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
+
+        // The associated categories cannot be emptied and the default category is mandatory
+        $validationErrorsResponse = $this->updateItem(
+            '/products/' . $productId . '/categories',
+            [
+                'categoryIds' => [],
+                'defaultCategoryId' => 0,
+            ],
+            ['product_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'categoryIds',
+                'message' => 'This value should not be blank.',
+            ],
+            [
+                'propertyPath' => 'defaultCategoryId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
+    }
+
+    /**
+     * @depends testInvalidProduct
+     */
+    public function testInvalidImage(int $productId): void
+    {
+        // The image file is mandatory on creation
+        $validationErrorsResponse = $this->requestApi(
+            'POST',
+            sprintf('/products/%d/images', $productId),
+            null,
+            ['product_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+            [
+                'headers' => [
+                    'content-type' => 'multipart/form-data',
+                ],
+                'extra' => [
+                    'parameters' => [],
+                ],
+            ]
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'image',
+                'message' => 'This value should not be null.',
+            ],
+        ], $validationErrorsResponse);
     }
 
     protected function getImagePath(int $imageId, bool $isThumbnail): string

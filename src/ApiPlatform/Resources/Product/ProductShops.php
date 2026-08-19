@@ -22,12 +22,14 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\InvalidProductShopAssociationException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Product\Shop\Command\SetProductShopsCommand;
 use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopAssociationNotFound;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -47,12 +49,18 @@ use Symfony\Component\HttpFoundation\Response;
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
         ShopAssociationNotFound::class => Response::HTTP_NOT_FOUND,
+        // Thrown when the source shop is not part of the associated shops
+        InvalidProductShopAssociationException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ProductShops extends Product
 {
+    #[Assert\NotBlank]
+    #[Assert\Positive]
     public int $sourceShopId;
 
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
+    #[Assert\NotBlank]
+    #[Assert\All([new Assert\Positive()])]
     public array $associatedShopIds;
 }

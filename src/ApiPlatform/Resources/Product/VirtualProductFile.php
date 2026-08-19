@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Link;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\InvalidProductTypeException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
@@ -36,6 +37,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\Canno
 use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\CannotUpdateVirtualProductFileException;
 use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\VirtualProductFileConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\VirtualProductFileNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\VirtualProductFileSettings;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
@@ -118,10 +120,14 @@ class VirtualProductFile
     public ?string $fileName = null;
 
     #[Assert\NotBlank(groups: ['Create'])]
+    #[TypedRegex(['type' => TypedRegex::TYPE_GENERIC_NAME])]
+    #[Assert\Length(max: VirtualProductFileSettings::MAX_DISPLAY_FILENAME_LENGTH)]
     public string $displayName;
 
+    #[Assert\LessThanOrEqual(VirtualProductFileSettings::MAX_ACCESSIBLE_DAYS_LIMIT)]
     public ?int $accessDays = null;
 
+    #[Assert\LessThanOrEqual(VirtualProductFileSettings::MAX_DOWNLOAD_TIMES_LIMIT)]
     public ?int $downloadTimesLimit = null;
 
     public ?\DateTimeImmutable $expirationDate = null;

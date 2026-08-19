@@ -160,5 +160,17 @@ class CombinationStockEndpointTest extends ApiTestCase
         $this->updateItem('/products/combinations/0/stock', [
             'deltaQuantity' => 5,
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // The delta quantity is limited to the range coverable by an int32 stock
+        $validationErrorsResponse = $this->updateItem('/products/combinations/1/stock', [
+            'deltaQuantity' => -5000000000,
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'deltaQuantity',
+                'message' => 'This value should be between -4294967295 and 4294967294.',
+            ],
+        ], $validationErrorsResponse);
     }
 }
