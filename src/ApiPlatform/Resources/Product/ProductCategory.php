@@ -23,19 +23,26 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AssignProductToCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\RemoveAllAssociatedProductCategoriesCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\SetAssociatedProductCategoriesCommand;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSCreate(
+        new CQRSPartialUpdate(
+            // Partially modifies the category associations (adds one), hence the PATCH method
             uriTemplate: '/products/{productId}/assign-to-categories',
             requirements: ['productId' => '\d+'],
-            validationContext: ['groups' => ['Default', 'Create']],
+            read: false,
+            validationContext: ['groups' => ['Default', 'AssignCategory']],
             CQRSCommand: AssignProductToCategoryCommand::class,
             status: Response::HTTP_NO_CONTENT,
             output: false,
@@ -43,10 +50,12 @@ use Symfony\Component\HttpFoundation\Response;
                 'product_write',
             ],
         ),
-        new CQRSCreate(
+        new CQRSUpdate(
+            // Completely replaces the category associations, hence the PUT method
             uriTemplate: '/products/{productId}/categories',
             requirements: ['productId' => '\d+'],
-            validationContext: ['groups' => ['Default', 'Update']],
+            read: false,
+            validationContext: ['groups' => ['Default', 'SetCategories']],
             CQRSCommand: SetAssociatedProductCategoriesCommand::class,
             CQRSCommandMapping: ProductCategory::COMMAND_MAPPING,
             status: Response::HTTP_NO_CONTENT,
@@ -67,15 +76,26 @@ use Symfony\Component\HttpFoundation\Response;
             ],
         ),
     ],
+    exceptionToStatus: [
+        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CategoryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
 )]
 class ProductCategory
 {
+    #[Assert\NotBlank(groups: ['AssignCategory'])]
+    #[Assert\Positive(groups: ['AssignCategory'])]
     public int $categoryId;
 
     public int $productId;
 
+    #[Assert\NotBlank(groups: ['SetCategories'])]
+    #[Assert\Positive(groups: ['SetCategories'])]
     public ?int $defaultCategoryId;
 
+    #[Assert\NotBlank(groups: ['SetCategories'])]
+    #[Assert\All([new Assert\Positive()], groups: ['SetCategories'])]
     public ?array $categoryIds = null;
 
     public const COMMAND_MAPPING = [
