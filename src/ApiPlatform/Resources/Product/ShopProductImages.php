@@ -26,7 +26,9 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\SetProductImagesForAllShopCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Image\Exception\ProductImageConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetShopProductImages as GetShopProductImagesQuery;
+use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -53,6 +55,9 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ProductImageConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // Thrown when an image/shop association targets an invalid shop id
+        ShopException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ShopProductImages

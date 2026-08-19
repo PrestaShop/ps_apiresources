@@ -199,6 +199,44 @@ class ShopProductImagesEndpointTest extends ApiTestCase
         );
     }
 
+    public function testInvalidShopProductImages(): void
+    {
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'product with invalid shop images',
+                'fr-FR' => 'produit avec images invalides',
+            ],
+        ], ['product_write'], Response::HTTP_CREATED, self::shopContext());
+        $productId = $product['productId'];
+
+        // The image/shop associations cannot be empty
+        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
+            'shopImages' => [],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, self::shopContext());
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'shopImages',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
+
+        // A zero image id fails the domain constraint
+        $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
+            'shopImages' => [
+                ['imageId' => 0, 'shopIds' => [1]],
+            ],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, self::shopContext());
+
+        // A zero shop id fails the domain constraint
+        $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
+            'shopImages' => [
+                ['imageId' => 1, 'shopIds' => [0]],
+            ],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, self::shopContext());
+    }
+
     /**
      * In multishop mode every request must carry an explicit shop context.
      */
