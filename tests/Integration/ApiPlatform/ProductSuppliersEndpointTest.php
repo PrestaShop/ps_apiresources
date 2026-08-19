@@ -279,4 +279,64 @@ class ProductSuppliersEndpointTest extends ApiTestCase
     {
         $this->getItem('/products/99999999/suppliers', ['product_read'], Response::HTTP_NOT_FOUND);
     }
+
+    public function testInvalidProductSuppliers(): void
+    {
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_STANDARD,
+            'names' => [
+                'en-US' => 'product with invalid suppliers',
+                'fr-FR' => 'produit avec fournisseurs invalides',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+
+        // Associating an empty list of suppliers is not allowed
+        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/suppliers', $productId), [
+            'supplierIds' => [],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'supplierIds',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
+
+        // Supplier ids must be positive integers
+        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/suppliers', $productId), [
+            'supplierIds' => [0],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'supplierIds[0]',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
+
+        // Updating supplier details requires at least one association
+        $validationErrorsResponse = $this->partialUpdateItem(sprintf('/products/%d/suppliers', $productId), [
+            'productSuppliers' => [],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'productSuppliers',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
+
+        // The default supplier id must be a positive integer
+        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/default-supplier', $productId), [
+            'defaultSupplierId' => 0,
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'defaultSupplierId',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
+    }
 }

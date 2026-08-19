@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\UpdateCombinationStockAvailableCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Exception\ProductStockConstraintException;
@@ -55,6 +56,7 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         CombinationNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CombinationConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ProductStockConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]

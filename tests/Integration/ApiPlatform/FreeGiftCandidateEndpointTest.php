@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\Resetter\ConfigurationResetter;
 use Tests\Resources\Resetter\ProductResetter;
 
@@ -112,5 +113,14 @@ class FreeGiftCandidateEndpointTest extends ApiTestCase
             [],
             $this->getItem('/products/free-gift-candidates?phrase=no product matches this', ['product_read'])
         );
+    }
+
+    public function testInvalidFreeGiftCandidateSearch(): void
+    {
+        // The search phrase requires at least three characters
+        $this->getItem('/products/free-gift-candidates?phrase=ab', ['product_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // The limit must be a positive integer
+        $this->getItem('/products/free-gift-candidates?phrase=free gift&limit=0', ['product_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }

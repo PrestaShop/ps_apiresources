@@ -117,4 +117,20 @@ class ProductStockEndpointTest extends ApiTestCase
             'deltaQuantity' => 10,
         ], ['product_write'], Response::HTTP_NOT_FOUND);
     }
+
+    /**
+     * @depends testUpdateProductStock
+     */
+    public function testInvalidProductStock(int $productId): void
+    {
+        // The out of stock type only accepts the values 0, 1 and 2
+        $this->updateItem(sprintf('/products/%d/stock', $productId), [
+            'outOfStockType' => 99,
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // A zero product id is invalid (it passes the URI requirements but fails the domain constraint)
+        $this->updateItem('/products/0/stock', [
+            'deltaQuantity' => 10,
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
 }

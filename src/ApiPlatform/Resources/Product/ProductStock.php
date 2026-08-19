@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Command\UpdateProductStockAvailableCommand;
@@ -57,6 +58,7 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ProductStockConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]

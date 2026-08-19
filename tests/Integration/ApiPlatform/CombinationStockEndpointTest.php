@@ -153,4 +153,12 @@ class CombinationStockEndpointTest extends ApiTestCase
             'deltaQuantity' => 5,
         ], ['product_write'], Response::HTTP_NOT_FOUND);
     }
+
+    public function testInvalidCombinationStock(): void
+    {
+        // A zero combination id is invalid (it passes the URI requirements but fails the domain constraint)
+        $this->updateItem('/products/combinations/0/stock', [
+            'deltaQuantity' => 5,
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
 }

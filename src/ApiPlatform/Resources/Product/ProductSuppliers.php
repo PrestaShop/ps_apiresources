@@ -24,6 +24,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\RemoveAllAssociatedProductSuppliersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetProductDefaultSupplierCommand;
@@ -31,11 +33,13 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetSuppliersComma
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\UpdateProductSuppliersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Exception\ProductSupplierException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Query\GetProductSupplierOptions;
+use PrestaShop\PrestaShop\Core\Domain\Supplier\Exception\SupplierException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -50,6 +54,7 @@ use Symfony\Component\HttpFoundation\Response;
             requirements: ['productId' => '\d+'],
             CQRSCommand: SetSuppliersCommand::class,
             CQRSQuery: GetProductSupplierOptions::class,
+            validationContext: ['groups' => ['Default', 'SetSuppliers']],
             scopes: ['product_write'],
         ),
         new CQRSPartialUpdate(
@@ -64,6 +69,7 @@ use Symfony\Component\HttpFoundation\Response;
                 '[productSuppliers][@index][priceTaxExcluded]' => '[productSuppliers][@index][price_tax_excluded]',
             ],
             CQRSQuery: GetProductSupplierOptions::class,
+            validationContext: ['groups' => ['Default', 'UpdateSuppliers']],
             scopes: ['product_write'],
         ),
         new CQRSDelete(
@@ -79,12 +85,17 @@ use Symfony\Component\HttpFoundation\Response;
             read: false,
             CQRSCommand: SetProductDefaultSupplierCommand::class,
             CQRSQuery: GetProductSupplierOptions::class,
+            validationContext: ['groups' => ['Default', 'SetDefaultSupplier']],
             scopes: ['product_write'],
         ),
     ],
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ProductSupplierException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The supplier ids are validated by the Supplier domain (distinct from Product\Supplier)
+        SupplierException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CurrencyConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ProductSuppliers
@@ -95,6 +106,8 @@ class ProductSuppliers
     /**
      * Supplier id used as the product default.
      */
+    #[Assert\NotBlank(groups: ['SetDefaultSupplier'])]
+    #[Assert\Positive(groups: ['SetDefaultSupplier'])]
     public int $defaultSupplierId;
 
     /**
@@ -103,6 +116,8 @@ class ProductSuppliers
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1]])]
+    #[Assert\NotBlank(groups: ['SetSuppliers'])]
+    #[Assert\All([new Assert\Positive()], groups: ['SetSuppliers'])]
     public array $supplierIds;
 
     /**
@@ -125,5 +140,6 @@ class ProductSuppliers
             ],
         ],
     ])]
+    #[Assert\NotBlank(groups: ['UpdateSuppliers'])]
     public array $productSuppliers;
 }

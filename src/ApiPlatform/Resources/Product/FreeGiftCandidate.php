@@ -26,8 +26,10 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\SearchProductsForFreeGift;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
@@ -61,6 +63,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                 ],
             ],
         ),
+    ],
+    exceptionToStatus: [
+        // Thrown for a too short search phrase or a non positive limit
+        ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class FreeGiftCandidate
