@@ -57,23 +57,28 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSCommand: AddVirtualProductFileCommand::class,
             CQRSQuery: GetProductForEditing::class,
-            CQRSQueryMapping: [
-                '[_context][shopConstraint]' => '[shopConstraint]',
-                '[_context][langId]' => '[displayLanguageId]',
-                '[virtualProductFile][id]' => '[virtualProductFileId]',
-                '[virtualProductFile][fileName]' => '[fileName]',
-                '[virtualProductFile][displayName]' => '[displayName]',
-                '[virtualProductFile][accessDays]' => '[accessDays]',
-                '[virtualProductFile][downloadTimesLimit]' => '[downloadTimesLimit]',
-                '[virtualProductFile][expirationDate]' => '[expirationDate]',
-            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            validationContext: ['groups' => ['Default', 'Create']],
             scopes: ['product_write'],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/products/virtual-file/{virtualProductFileId}',
-            requirements: ['virtualProductFileId' => '\d+'],
+            // The productId is required in the URI because the update command result is
+            // empty, so only URI variables can feed the GetProductForEditing query that
+            // builds the full-state response
+            uriTemplate: '/products/{productId}/virtual-file/{virtualProductFileId}',
+            requirements: ['productId' => '\d+', 'virtualProductFileId' => '\d+'],
             read: false,
+            uriVariables: [
+                'productId' => new Link(
+                    identifiers: ['productId'],
+                ),
+                'virtualProductFileId' => new Link(
+                    identifiers: ['virtualProductFileId'],
+                ),
+            ],
             CQRSCommand: UpdateVirtualProductFileCommand::class,
+            CQRSQuery: GetProductForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['product_write'],
         ),
         new CQRSDelete(
@@ -120,4 +125,19 @@ class VirtualProductFile
     public ?int $downloadTimesLimit = null;
 
     public ?\DateTimeImmutable $expirationDate = null;
+
+    /**
+     * Shared by the create and partial update operations so both return the same
+     * full-state representation based on GetProductForEditing.
+     */
+    public const QUERY_MAPPING = [
+        '[_context][shopConstraint]' => '[shopConstraint]',
+        '[_context][langId]' => '[displayLanguageId]',
+        '[virtualProductFile][id]' => '[virtualProductFileId]',
+        '[virtualProductFile][fileName]' => '[fileName]',
+        '[virtualProductFile][displayName]' => '[displayName]',
+        '[virtualProductFile][accessDays]' => '[accessDays]',
+        '[virtualProductFile][downloadTimesLimit]' => '[downloadTimesLimit]',
+        '[virtualProductFile][expirationDate]' => '[expirationDate]',
+    ];
 }

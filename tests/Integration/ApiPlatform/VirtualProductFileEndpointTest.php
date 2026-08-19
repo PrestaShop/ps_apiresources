@@ -50,7 +50,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
 
         yield 'update virtual product file endpoint' => [
             'PATCH',
-            '/products/virtual-file/1',
+            '/products/1/virtual-file/1',
         ];
 
         yield 'delete virtual product file endpoint' => [
@@ -128,13 +128,27 @@ class VirtualProductFileEndpointTest extends ApiTestCase
      */
     public function testUpdateVirtualProductFile(array $fixtures): array
     {
-        $this->partialUpdateItem(
-            sprintf('/products/virtual-file/%d', $fixtures['virtualProductFileId']),
+        $updatedFile = $this->partialUpdateItem(
+            sprintf('/products/%d/virtual-file/%d', $fixtures['productId'], $fixtures['virtualProductFileId']),
             [
                 'displayName' => 'updated manual',
                 'accessDays' => 30,
             ],
             ['product_write']
+        );
+
+        // The PATCH endpoint returns the same full representation as the POST one
+        $this->assertEquals(
+            [
+                'productId' => $fixtures['productId'],
+                'virtualProductFileId' => $fixtures['virtualProductFileId'],
+                'fileName' => $fixtures['fileName'],
+                'displayName' => 'updated manual',
+                'accessDays' => 30,
+                'downloadTimesLimit' => 10,
+                'expirationDate' => '2035-01-15 00:00:00',
+            ],
+            $updatedFile
         );
 
         $product = $this->getItem(sprintf('/products/%d', $fixtures['productId']), ['product_read']);
@@ -191,6 +205,38 @@ class VirtualProductFileEndpointTest extends ApiTestCase
             ['product_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
+    }
+
+    public function testInvalidVirtualProductFile(): void
+    {
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_VIRTUAL,
+            'names' => [
+                'en-US' => 'virtual product without file',
+                'fr-FR' => 'produit virtuel sans fichier',
+            ],
+        ], ['product_write']);
+
+        // The mandatory creation fields are missing
+        $validationErrorsResponse = $this->createItem(
+            sprintf('/products/%d/virtual-file', $product['productId']),
+            [
+                'accessDays' => 5,
+            ],
+            ['product_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'filePath',
+                'message' => 'This value should not be blank.',
+            ],
+            [
+                'propertyPath' => 'displayName',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
     }
 
     /**
