@@ -29,8 +29,10 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationC
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Exception\ProductStockConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\StockSettings;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -69,6 +71,10 @@ class CombinationStock
      * Quantity to add (positive) or remove (negative) from the available stock.
      * Write-only: responses expose the resulting quantity instead.
      */
+    #[Assert\Range(
+        min: StockSettings::INT_32_MAX_NEGATIVE - StockSettings::INT_32_MAX_POSITIVE,
+        max: StockSettings::INT_32_MAX_POSITIVE + StockSettings::INT_32_MAX_POSITIVE,
+    )]
     public ?int $deltaQuantity;
 
     /**

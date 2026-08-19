@@ -338,5 +338,28 @@ class ProductSuppliersEndpointTest extends ApiTestCase
                 'message' => 'This value should be positive.',
             ],
         ], $validationErrorsResponse);
+
+        // The association details follow the same rules as the BO form: valid reference
+        // characters and a positive price
+        $validationErrorsResponse = $this->partialUpdateItem(sprintf('/products/%d/suppliers', $productId), [
+            'productSuppliers' => [
+                [
+                    'supplierId' => 1,
+                    'reference' => 'invalid > reference',
+                    'priceTaxExcluded' => '-2.5',
+                ],
+            ],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'productSuppliers[0][reference]',
+                'message' => '"invalid > reference" is invalid',
+            ],
+            [
+                'propertyPath' => 'productSuppliers[0][priceTaxExcluded]',
+                'message' => 'This value should be either positive or zero.',
+            ],
+        ], $validationErrorsResponse);
     }
 }

@@ -124,9 +124,28 @@ class ProductStockEndpointTest extends ApiTestCase
     public function testInvalidProductStock(int $productId): void
     {
         // The out of stock type only accepts the values 0, 1 and 2
-        $this->updateItem(sprintf('/products/%d/stock', $productId), [
+        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/stock', $productId), [
             'outOfStockType' => 99,
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'outOfStockType',
+                'message' => 'The value you selected is not a valid choice.',
+            ],
+        ], $validationErrorsResponse);
+
+        // The delta quantity is limited to the range coverable by an int32 stock
+        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/stock', $productId), [
+            'deltaQuantity' => 5000000000,
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'deltaQuantity',
+                'message' => 'This value should be between -4294967295 and 4294967294.',
+            ],
+        ], $validationErrorsResponse);
 
         // A zero product id is invalid (it passes the URI requirements but fails the domain constraint)
         $this->updateItem('/products/0/stock', [

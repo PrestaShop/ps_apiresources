@@ -27,6 +27,7 @@ use PrestaShop\PrestaShop\Adapter\AttributeGroup\Repository\AttributeGroupReposi
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\ValueObject\AttributeGroupId;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\Resetter\ProductResetter;
 
 class ProductCombinationEndpointTest extends ApiTestCase
@@ -343,5 +344,52 @@ class ProductCombinationEndpointTest extends ApiTestCase
         ], $combination);
 
         return $combinationId;
+    }
+
+    /**
+     * @depends testAddProductWithCombinations
+     */
+    public function testInvalidCombinationGeneration(int $productId): void
+    {
+        // The grouped attributes cannot be empty
+        $validationErrorsResponse = $this->createItem(
+            sprintf('/products/%d/generate-combinations', $productId),
+            ['groupedAttributes' => []],
+            ['product_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'groupedAttributes',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
+
+        // Each group must reference a valid attribute group and its attributes
+        $validationErrorsResponse = $this->createItem(
+            sprintf('/products/%d/generate-combinations', $productId),
+            [
+                'groupedAttributes' => [
+                    [
+                        'attributeGroupId' => 0,
+                        'attributeIds' => [],
+                    ],
+                ],
+            ],
+            ['product_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'groupedAttributes[0][attributeGroupId]',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'groupedAttributes[0][attributeIds]',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
     }
 }

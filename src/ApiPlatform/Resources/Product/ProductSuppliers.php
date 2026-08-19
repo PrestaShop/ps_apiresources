@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
@@ -33,6 +34,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetSuppliersComma
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\UpdateProductSuppliersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Exception\ProductSupplierException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Query\GetProductSupplierOptions;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\Reference;
 use PrestaShop\PrestaShop\Core\Domain\Supplier\Exception\SupplierException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -141,5 +143,26 @@ class ProductSuppliers
         ],
     ])]
     #[Assert\NotBlank(groups: ['UpdateSuppliers'])]
+    #[Assert\All(
+        constraints: [
+            new Assert\Collection(
+                fields: [
+                    'supplierId' => [new Assert\Positive(groups: ['UpdateSuppliers'])],
+                    'reference' => [
+                        new TypedRegex(['type' => TypedRegex::TYPE_REFERENCE, 'groups' => ['UpdateSuppliers']]),
+                        new Assert\Length(max: Reference::MAX_LENGTH, groups: ['UpdateSuppliers']),
+                    ],
+                    'priceTaxExcluded' => [
+                        new Assert\Type('numeric', groups: ['UpdateSuppliers']),
+                        new Assert\PositiveOrZero(groups: ['UpdateSuppliers']),
+                    ],
+                ],
+                allowExtraFields: true,
+                allowMissingFields: true,
+                groups: ['UpdateSuppliers'],
+            ),
+        ],
+        groups: ['UpdateSuppliers'],
+    )]
     public array $productSuppliers;
 }
