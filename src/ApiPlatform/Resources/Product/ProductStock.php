@@ -1,0 +1,92 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
+
+use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Command\UpdateProductStockAvailableCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Exception\ProductStockConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\StockSettings;
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\ValueObject\OutOfStockType;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ApiResource(
+    operations: [
+        new CQRSUpdate(
+            uriTemplate: '/products/{productId}/stock',
+            requirements: ['productId' => '\d+'],
+            read: false,
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
+            CQRSCommand: UpdateProductStockAvailableCommand::class,
+            CQRSCommandMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+            ],
+            CQRSQuery: GetProductForEditing::class,
+            CQRSQueryMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+                '[_context][langId]' => '[displayLanguageId]',
+                '[stockInformation][quantity]' => '[quantity]',
+                '[stockInformation][outOfStockType]' => '[outOfStockType]',
+                '[stockInformation][location]' => '[location]',
+            ],
+            scopes: ['product_write'],
+        ),
+    ],
+    exceptionToStatus: [
+        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        ProductStockConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
+)]
+class ProductStock
+{
+    #[ApiProperty(identifier: true)]
+    public int $productId;
+
+    /**
+     * Quantity to add (positive) or remove (negative) from the available stock.
+     * Write-only: responses expose the resulting quantity instead.
+     */
+    #[Assert\Range(
+        min: StockSettings::INT_32_MAX_NEGATIVE - StockSettings::INT_32_MAX_POSITIVE,
+        max: StockSettings::INT_32_MAX_POSITIVE + StockSettings::INT_32_MAX_POSITIVE,
+    )]
+    public ?int $deltaQuantity;
+
+    /**
+     * Available quantity after the update (read-only).
+     */
+    public ?int $quantity;
+
+    #[Assert\Choice(choices: OutOfStockType::ALLOWED_OUT_OF_STOCK_TYPES)]
+    public ?int $outOfStockType;
+
+    public ?string $location;
+}

@@ -25,11 +25,26 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AddProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\DeleteProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Pack\ValueObject\PackStockType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ProductSettings;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
+use PrestaShop\PrestaShop\Core\Domain\Product\Stock\ValueObject\OutOfStockType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\DeliveryTimeNoteType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\Gtin;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\Isbn;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductCondition;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductVisibility;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\RedirectType;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\Reference;
+use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\Upc;
 use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopAssociationNotFound;
 use PrestaShop\PrestaShop\Core\Util\DateTime\DateImmutable;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -38,6 +53,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -58,6 +74,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: Product::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_MAPPING,
+            validationContext: ['groups' => ['Default', 'Create']],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/products/{productId}',
@@ -68,6 +85,7 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: Product::QUERY_MAPPING,
             CQRSCommandMapping: Product::UPDATE_MAPPING,
+            validationContext: ['groups' => ['Default', 'Update']],
         ),
         new CQRSDelete(
             uriTemplate: '/products/{productId}',
@@ -83,6 +101,7 @@ use Symfony\Component\HttpFoundation\Response;
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
         ShopAssociationNotFound::class => Response::HTTP_NOT_FOUND,
+        ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Product
@@ -90,11 +109,22 @@ class Product
     #[ApiProperty(identifier: true)]
     public int $productId;
 
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Choice(choices: ProductType::AVAILABLE_TYPES)]
     public string $type;
 
     public bool $enabled;
 
     #[LocalizedValue]
+    // Only checked on creation: the partial update endpoint supports partial localized
+    // values (the core merges them per language)
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::TYPE_CATALOG_NAME,
+        ]),
+        new Assert\Length(max: ProductSettings::MAX_NAME_LENGTH),
+    ])]
     public array $names;
 
     #[LocalizedValue]
@@ -104,6 +134,11 @@ class Product
     public array $shortDescriptions;
 
     #[LocalizedValue]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::TYPE_GENERIC_NAME,
+        ]),
+    ])]
     public array $tags;
 
     public DecimalNumber $priceTaxExcluded;
@@ -128,6 +163,7 @@ class Product
 
     public DecimalNumber $unitPriceRatio;
 
+    #[Assert\Choice(choices: ProductVisibility::AVAILABLE_VISIBILITY_VALUES)]
     public string $visibility;
 
     public bool $availableForOrder;
@@ -136,20 +172,30 @@ class Product
 
     public bool $showPrice;
 
+    #[Assert\Choice(choices: ProductCondition::AVAILABLE_CONDITIONS)]
     public string $condition;
 
     public bool $showCondition;
 
     public int $manufacturerId;
 
+    #[TypedRegex(['type' => TypedRegex::TYPE_ISBN])]
+    #[Assert\Length(max: Isbn::MAX_LENGTH)]
     public string $isbn;
 
+    #[TypedRegex(['type' => TypedRegex::TYPE_UPC])]
+    #[Assert\Length(max: Upc::MAX_LENGTH)]
     public string $upc;
 
+    #[TypedRegex(['type' => TypedRegex::TYPE_GTIN])]
+    #[Assert\Length(max: Gtin::MAX_LENGTH)]
     public string $gtin;
 
+    #[Assert\Length(max: ProductSettings::MAX_MPN_LENGTH)]
     public string $mpn;
 
+    #[TypedRegex(['type' => TypedRegex::TYPE_REFERENCE])]
+    #[Assert\Length(max: Reference::MAX_LENGTH)]
     public string $reference;
 
     public DecimalNumber $width;
@@ -165,6 +211,7 @@ class Product
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $carrierReferenceIds;
 
+    #[Assert\Choice(choices: DeliveryTimeNoteType::ALLOWED_TYPES)]
     public int $deliveryTimeNoteType;
 
     #[LocalizedValue]
@@ -174,24 +221,40 @@ class Product
     public array $deliveryTimeOutOfStockNotes;
 
     #[LocalizedValue]
+    #[Assert\All(constraints: [
+        new Assert\Length(max: ProductSettings::MAX_META_TITLE_LENGTH),
+    ])]
     public array $metaTitles;
 
     #[LocalizedValue]
+    #[Assert\All(constraints: [
+        new Assert\Length(max: ProductSettings::MAX_META_DESCRIPTION_LENGTH),
+    ])]
     public array $metaDescriptions;
 
     #[LocalizedValue]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::TYPE_LINK_REWRITE,
+        ]),
+        new Assert\Length(max: ProductSettings::MAX_LINK_REWRITE_LENGTH),
+    ])]
     public array $linkRewrites;
 
+    #[Assert\Choice(choices: RedirectType::AVAILABLE_REDIRECT_TYPES)]
     public string $redirectType;
 
     public ?int $redirectTarget = null;
 
+    #[Assert\Choice(choices: PackStockType::ALLOWED_PACK_STOCK_TYPES)]
     public int $packStockType;
 
+    #[Assert\Choice(choices: OutOfStockType::ALLOWED_OUT_OF_STOCK_TYPES)]
     public int $outOfStockType;
 
     public int $quantity;
 
+    #[Assert\Positive]
     public int $minimalQuantity;
 
     public int $lowStockThreshold;
@@ -199,14 +262,44 @@ class Product
     public bool $lowStockAlertEnabled;
 
     #[LocalizedValue]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::TYPE_GENERIC_NAME,
+        ]),
+        new Assert\Length(max: ProductSettings::MAX_AVAILABLE_NOW_LABEL_LENGTH),
+    ])]
     public array $availableNowLabels;
 
     public string $location;
 
     #[LocalizedValue]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::TYPE_GENERIC_NAME,
+        ]),
+        new Assert\Length(max: ProductSettings::MAX_AVAILABLE_LATER_LABEL_LENGTH),
+    ])]
     public array $availableLaterLabels;
 
     public ?DateImmutable $availableDate = null;
+
+    /**
+     * Virtual product file attached to the product (null for products without one).
+     * Managed via the /products/{productId}/virtual-files endpoints.
+     */
+    #[ApiProperty(openapiContext: [
+        'type' => 'object',
+        'nullable' => true,
+        'properties' => [
+            'id' => ['type' => 'integer'],
+            'fileName' => ['type' => 'string'],
+            'displayName' => ['type' => 'string'],
+            'accessDays' => ['type' => 'integer'],
+            'downloadTimesLimit' => ['type' => 'integer'],
+            'expirationDate' => ['type' => 'string', 'format' => 'date-time', 'nullable' => true],
+        ],
+    ])]
+    public ?array $virtualProductFile = null;
 
     public string $coverThumbnailUrl;
 

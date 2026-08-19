@@ -368,6 +368,47 @@ class ProductMultiShopEndpointTest extends ApiTestCase
         return $productId;
     }
 
+    /**
+     * @depends testUpdateProductForShops
+     */
+    public function testInvalidProductShops(int $productId): void
+    {
+        // Both the source shop and the associated shops are required
+        $validationErrorsResponse = $this->partialUpdateItem('/products/' . $productId . '/shops', [
+            'sourceShopId' => 0,
+            'associatedShopIds' => [],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
+            'extra' => [
+                'parameters' => [
+                    'shopId' => self::DEFAULT_SHOP_ID,
+                ],
+            ],
+        ]);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'sourceShopId',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'associatedShopIds',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
+
+        // The source shop must be part of the associated shops
+        $this->partialUpdateItem('/products/' . $productId . '/shops', [
+            'sourceShopId' => self::DEFAULT_SHOP_ID,
+            'associatedShopIds' => [self::$secondShopId],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
+            'extra' => [
+                'parameters' => [
+                    'shopId' => self::DEFAULT_SHOP_ID,
+                ],
+            ],
+        ]);
+    }
+
     protected function getProduct(int $productId, int $shopId): array
     {
         return $this->getItem('/products/' . $productId, ['product_read'], Response::HTTP_OK, [

@@ -30,6 +30,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -72,6 +73,7 @@ class NewProductImage
 
     public array $shopIds;
 
+    #[Assert\NotNull]
     public File $image;
 
     public const QUERY_MAPPING = [

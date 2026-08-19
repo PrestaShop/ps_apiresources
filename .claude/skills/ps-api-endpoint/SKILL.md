@@ -15,6 +15,7 @@ Ask the user (all in one message if not already specified):
 1. **Entity name** — e.g. `TaxRule`, `Warehouse` (PascalCase, singular)
 2. **Operations needed** — GET single, POST (create), PATCH (partial update), PUT (full update), DELETE, GET list (paginated). Also ask about bulk operations (e.g. bulk delete) or custom sub-resource actions (e.g. status toggle).
 3. **PrestaShop core path** — absolute path to the PS root, e.g. `/home/user/prestashop-90x`. Needed to look up CQRS classes. Offer to skip this step if the user already knows the class names.
+4. **Minimum core version** — does the endpoint rely on CQRS classes or core behaviour only available (or only working) since a specific PrestaShop version? If so, the operations must declare `extraProperties: ['minVersion' => 'X.Y.Z']` and the test needs version-skip handling (see "Core version constraints" and "Version-dependent endpoints" in `CONTEXT.md`).
 
 ## Step 2: Discover CQRS classes
 
@@ -162,6 +163,7 @@ See `references/conventions.md` for the full ruleset. The most important ones:
 - **Mapping**: `QUERY_MAPPING` maps `[queryResultFieldName] => [apiFieldName]`. `CREATE_COMMAND_MAPPING` maps `[apiFieldName] => [commandParamName]`. When Create and Update commands share the same param names, use a single `COMMAND_MAPPING` constant.
 - **Forbidden**: no custom normalizers, no custom processors, no Value Objects as properties (only scalar types and arrays).
 - **Strict typing**: every property needs an explicit type.
+- **Version constraint**: if the endpoint requires a minimum core version, add `extraProperties: ['minVersion' => 'X.Y.Z']` to the operation — it is then filtered out (404) on older cores. Full details in `CONTEXT.md` → "Core version constraints".
 
 ### List endpoints (PaginatedList)
 
@@ -306,6 +308,7 @@ class {Entity}EndpointTest extends ApiTestCase
 - Always include a `testInvalid*` test that covers validation constraints.
 - Include `'skip_null_values' => false` in assertions when using `assertEquals` on the full response array.
 - Drop `LanguageResetter::resetLanguages()` from setUp/tearDown if the entity has no localized fields.
+- **Version-dependent endpoints**: if the resource declares a `minVersion`, use the `ApiTestCase` helpers (`markTestSkippedByMinVersion`, `isVersionAtLeast`, `isVersionUnder`) instead of hand-rolled `version_compare` checks. When every operation is constrained, skip the whole class in `setUpBeforeClass()` before calling the parent, and keep `getProtectedEndpoints()` yielding unconditionally (an empty data provider is a PHPUnit error). The exact patterns and examples are in `CONTEXT.md` → "Version-dependent endpoints".
 
 ## Step 6: Write the files
 

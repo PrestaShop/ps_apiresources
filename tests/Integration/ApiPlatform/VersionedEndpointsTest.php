@@ -108,12 +108,12 @@ class VersionedEndpointsTest extends ApiTestCase
 
         yield 'minVersion 9.1.0, filtered on lower core versions' => [
             '/test/module/versioned/min-91/hook/1',
-            version_compare(Version::VERSION, '9.1.0', '>='),
+            self::isVersionAtLeast('9.1.0'),
         ];
 
         yield 'minVersion 9.2.0, filtered on lower core versions' => [
             '/test/module/versioned/min-92/hook/1',
-            version_compare(Version::VERSION, '9.2.0', '>='),
+            self::isVersionAtLeast('9.2.0'),
         ];
 
         yield 'maxVersion 9.1.9999, filtered on higher core versions' => [
