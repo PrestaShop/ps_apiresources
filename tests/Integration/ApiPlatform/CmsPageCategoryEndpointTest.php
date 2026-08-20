@@ -53,7 +53,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
     {
         yield 'breadcrumb endpoint' => ['GET', '/cms-page-categories/1/breadcrumbs'];
         yield 'localized name endpoint' => ['GET', '/cms-page-categories/1/localized-names'];
-        yield 'parent-for-redirection endpoint' => ['GET', '/cms-page-categories/1/parent-for-redirection'];
+        yield 'parent-for-redirection endpoint' => ['GET', '/cms-page-categories/1/parent-for-redirections'];
 
         yield 'get endpoint' => [
             'GET',
@@ -133,7 +133,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $child = $this->createChildCategory($parent['cmsPageCategoryId'], 'redirect-child');
 
         $result = $this->getItem(
-            '/cms-page-categories/' . $child['cmsPageCategoryId'] . '/parent-for-redirection',
+            '/cms-page-categories/' . $child['cmsPageCategoryId'] . '/parent-for-redirections',
             ['cms_page_category_read']
         );
 
