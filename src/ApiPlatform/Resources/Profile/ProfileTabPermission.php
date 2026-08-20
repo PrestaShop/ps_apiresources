@@ -38,6 +38,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             requirements: ['profileId' => '\d+'],
             read: false,
             output: false,
+            // Without this the empty body of an unauthorized request is decoded as JSON before
+            // the scope check runs, and the endpoint answers 400 instead of 403
+            allowEmptyBody: true,
             CQRSCommand: UpdateTabPermissionsCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             scopes: ['profile_write'],
