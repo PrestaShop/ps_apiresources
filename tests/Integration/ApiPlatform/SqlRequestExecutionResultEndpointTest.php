@@ -1,0 +1,84 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PsApiResourcesTest\Integration\ApiPlatform;
+
+use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\DatabaseDump;
+
+class SqlRequestExecutionResultEndpointTest extends ApiTestCase
+{
+    private static int $sqlRequestId = 0;
+
+    public static function setUpBeforeClass(): void
+    {
+        parent::setUpBeforeClass();
+        self::createApiClient(['sql_request_read']);
+
+        // Insert a saved SQL request that hits a stable seed table so the assertions
+        // don't drift when the languages fixture changes.
+        \Db::getInstance()->insert('request_sql', [
+            'name' => 'test_execution_result',
+            'sql' => 'SELECT id_lang, name FROM ' . _DB_PREFIX_ . 'lang ORDER BY id_lang ASC',
+        ]);
+        self::$sqlRequestId = (int) \Db::getInstance()->Insert_ID();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        parent::tearDownAfterClass();
+        DatabaseDump::restoreTables(['request_sql']);
+    }
+
+    public static function getProtectedEndpoints(): iterable
+    {
+        yield 'get execution result endpoint' => ['GET', '/sql-management/1/execution-results'];
+    }
+
+    public function testGetSqlRequestExecutionResult(): void
+    {
+        $response = $this->getItem(
+            '/sql-management/' . self::$sqlRequestId . '/execution-results',
+            ['sql_request_read']
+        );
+
+        $this->assertIsArray($response);
+        $this->assertArrayHasKey('columns', $response);
+        $this->assertArrayHasKey('rows', $response);
+        $this->assertSame(['id_lang', 'name'], $response['columns']);
+        $this->assertNotEmpty($response['rows']);
+
+        foreach ($response['rows'] as $row) {
+            $this->assertArrayHasKey('id_lang', $row);
+            $this->assertArrayHasKey('name', $row);
+        }
+    }
+
+    public function testGetNonExistentSqlRequestExecutionResult(): void
+    {
+        $this->getItem(
+            '/sql-management/999999/execution-results',
+            ['sql_request_read'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+}
