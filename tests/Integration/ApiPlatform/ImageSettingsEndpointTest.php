@@ -30,7 +30,7 @@ class ImageSettingsEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['image_settings_write']);
+        self::createApiClient(['image_settings_read', 'image_settings_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -41,30 +41,76 @@ class ImageSettingsEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get image settings endpoint' => ['GET', '/image-settings'];
         yield 'edit image settings endpoint' => ['PUT', '/image-settings'];
     }
 
-    public function testEditImageSettings(): void
+    /**
+     * The settings are a singleton resource, so the initial GET is the only fixture this test
+     * needs: everything else is built from the API itself.
+     */
+    public function testGetImageSettings(): array
     {
-        $this->updateItem(
-            '/image-settings',
+        $settings = $this->getItem('/image-settings', ['image_settings_read']);
+
+        $this->assertEquals(
             [
-                'formats' => ['jpg', 'webp'],
-                'baseFormat' => 'jpg',
-                'avifQuality' => 90,
-                'jpegQuality' => 82,
-                'pngQuality' => 7,
-                'webpQuality' => 80,
-                'generationMethod' => 0,
-                'pictureMaxSize' => 2000000,
-                'pictureMaxWidth' => 1200,
-                'pictureMaxHeight' => 1200,
+                'formats',
+                'baseFormat',
+                'avifQuality',
+                'jpegQuality',
+                'pngQuality',
+                'webpQuality',
+                'generationMethod',
+                'pictureMaxSize',
+                'pictureMaxWidth',
+                'pictureMaxHeight',
             ],
-            ['image_settings_write'],
-            Response::HTTP_NO_CONTENT
+            array_keys($settings)
         );
 
-        $this->assertSame(82, (int) \Configuration::get('PS_JPEG_QUALITY'));
-        $this->assertSame(80, (int) \Configuration::get('PS_WEBP_QUALITY'));
+        return $settings;
+    }
+
+    /**
+     * @depends testGetImageSettings
+     */
+    public function testUpdateImageSettings(array $initialSettings): array
+    {
+        $updatedSettings = [
+            'formats' => ['jpg', 'webp'],
+            'baseFormat' => 'jpg',
+            'avifQuality' => 90,
+            'jpegQuality' => 82,
+            'pngQuality' => 7,
+            'webpQuality' => 80,
+            'generationMethod' => 0,
+            'pictureMaxSize' => 2000000,
+            'pictureMaxWidth' => 1200,
+            'pictureMaxHeight' => 1200,
+        ];
+        $this->assertNotEquals($initialSettings, $updatedSettings);
+
+        // The update returns the updated settings, built by replaying the GET query
+        $response = $this->updateItem(
+            '/image-settings',
+            $updatedSettings,
+            ['image_settings_write'],
+            Response::HTTP_OK
+        );
+
+        $this->assertEquals($updatedSettings, $response);
+
+        return $updatedSettings;
+    }
+
+    /**
+     * @depends testUpdateImageSettings
+     */
+    public function testGetUpdatedImageSettings(array $updatedSettings): void
+    {
+        $settings = $this->getItem('/image-settings', ['image_settings_read']);
+
+        $this->assertEquals($updatedSettings, $settings);
     }
 }
