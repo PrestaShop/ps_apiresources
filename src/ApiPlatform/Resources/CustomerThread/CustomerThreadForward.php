@@ -20,7 +20,7 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CustomerService;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CustomerThread;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\CustomerService\Command\ForwardCustomerThreadCommand;
@@ -30,13 +30,22 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * Forwarding a customer thread appends a message to it. The handler returns void and the
+ * thread representation lives on CustomerThreadDetails, so this operation answers an empty
+ * 204: the result is observed through GET /customer-threads/{customerThreadId}/details.
+ *
+ * Requires PrestaShop/PrestaShop#42047, which gives ForwardCustomerThreadCommand a public
+ * constructor — the named constructors it ships with today cannot be used by the serializer.
+ */
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/customer-services/{customerThreadId}/forwards',
+            uriTemplate: '/customer-threads/{customerThreadId}/forwards',
             requirements: ['customerThreadId' => '\d+'],
+            output: false,
             CQRSCommand: ForwardCustomerThreadCommand::class,
-            scopes: ['customer_thread_write'],
+            scopes: ['customer_service_write'],
         ),
     ],
     exceptionToStatus: [
