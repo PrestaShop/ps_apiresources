@@ -22,26 +22,59 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Symfony\Component\HttpFoundation\Response;
+
 class ShopLogosEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['shop_read']);
+        self::createApiClient(['shop_read', 'shop_write']);
     }
 
     public static function getProtectedEndpoints(): iterable
     {
         yield 'get shop logos endpoint' => ['GET', '/shops/logos'];
+        yield 'upload shop logos endpoint' => ['PUT', '/shops/logos', 'multipart/form-data'];
     }
 
-    public function testGetShopLogos(): void
+    public function testGetShopLogos(): array
     {
         $logos = $this->getItem('/shops/logos', ['shop_read']);
 
-        $this->assertArrayHasKey('headerLogoPath', $logos);
-        $this->assertArrayHasKey('mailLogoPath', $logos);
-        $this->assertArrayHasKey('invoiceLogoPath', $logos);
-        $this->assertArrayHasKey('faviconPath', $logos);
+        // The uploaded* properties are write only and must never be normalized back out
+        $this->assertEquals(
+            ['headerLogoPath', 'mailLogoPath', 'invoiceLogoPath', 'faviconPath'],
+            array_keys($logos)
+        );
+
+        return $logos;
+    }
+
+    /**
+     * The legacy logo uploader relies on move_uploaded_file()/is_uploaded_file(), which only
+     * succeed for genuine HTTP POST uploads and therefore cannot run against a simulated
+     * request in the test kernel (same limitation as the Title image upload). The endpoint
+     * wiring — routing, scope, multipart negotiation and command dispatch — is exercised with
+     * an empty payload, which touches no file.
+     *
+     * What the merge adds is the assertion below: the upload now replays GetLogosPaths, so it
+     * answers with the logo paths instead of an empty 204, and an upload that changed nothing
+     * must return exactly what the GET returns.
+     *
+     * @depends testGetShopLogos
+     */
+    public function testUploadLogosReturnsTheLogoPaths(array $logos): void
+    {
+        $response = $this->requestApi('PUT', '/shops/logos', null, ['shop_write'], Response::HTTP_OK, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => [],
+            ],
+        ]);
+
+        $this->assertEquals($logos, $response);
     }
 }
