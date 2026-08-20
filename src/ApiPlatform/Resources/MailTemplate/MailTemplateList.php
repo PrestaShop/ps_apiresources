@@ -32,6 +32,9 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/mail-templates',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSQuery: GetEmailBodyTemplatesForListing::class,
             scopes: ['mail_template_read'],
             parameters: new Parameters([

@@ -38,6 +38,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSGet(
             uriTemplate: '/mail-templates/{templateName}',
             requirements: ['templateName' => '[a-zA-Z0-9_-]+'],
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSQuery: GetEmailBodyTemplateForEditing::class,
             scopes: ['mail_template_read'],
             openapiContext: [
@@ -52,6 +55,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/mail-templates/{templateName}',
             requirements: ['templateName' => '[a-zA-Z0-9_-]+'],
             read: false,
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSCommand: EditEmailBodyTemplateCommand::class,
             scopes: ['mail_template_write'],
         ),

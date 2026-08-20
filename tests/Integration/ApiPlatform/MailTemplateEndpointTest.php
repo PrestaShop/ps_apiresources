@@ -28,18 +28,32 @@ class MailTemplateEndpointTest extends ApiTestCase
 {
     private const LOCALE = 'en-US';
 
+    /**
+     * The listing, get and edit endpoints all use CQRS classes that landed in 9.2. Below that
+     * version ApiResourceScopesExtractor drops the operations, so neither their routes nor the
+     * mail_template_read scope exist. Only the generate endpoint is available everywhere.
+     */
+    private const READ_EDIT_MIN_VERSION = '9.2.0';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['mail_template_read', 'mail_template_write']);
+        self::createApiClient(
+            self::isVersionAtLeast(self::READ_EDIT_MIN_VERSION)
+                ? ['mail_template_read', 'mail_template_write']
+                : ['mail_template_write']
+        );
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'list mail templates endpoint' => ['GET', '/mail-templates?locale=en-US'];
         yield 'generate theme mail templates endpoint' => ['PUT', '/mail-templates'];
-        yield 'get mail template' => ['GET', '/mail-templates/order_conf?locale=en-US&source=core'];
-        yield 'edit mail template' => ['PATCH', '/mail-templates/order_conf'];
+
+        if (self::isVersionAtLeast(self::READ_EDIT_MIN_VERSION)) {
+            yield 'list mail templates endpoint' => ['GET', '/mail-templates?locale=en-US'];
+            yield 'get mail template' => ['GET', '/mail-templates/order_conf?locale=en-US&source=core'];
+            yield 'edit mail template' => ['PATCH', '/mail-templates/order_conf'];
+        }
     }
 
     /**
@@ -47,6 +61,8 @@ class MailTemplateEndpointTest extends ApiTestCase
      */
     public function testListMailTemplates(): array
     {
+        $this->markTestSkippedByMinVersion(self::READ_EDIT_MIN_VERSION);
+
         $result = $this->getItem('/mail-templates?locale=' . self::LOCALE, ['mail_template_read']);
 
         $this->assertIsArray($result);
