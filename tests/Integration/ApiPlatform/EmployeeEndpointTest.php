@@ -23,16 +23,27 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Crypto\Hashing;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class EmployeeEndpointTest extends ApiTestCase
 {
+    private static int $profileId;
+
+    private static int $langId;
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
         self::resetTables();
         self::createApiClient(['employee_write', 'employee_read']);
+
+        // Any profile but the super admin one, which no employee may grant
+        self::$profileId = (int) \Db::getInstance()->getValue(
+            'SELECT id_profile FROM `' . _DB_PREFIX_ . 'profile` WHERE id_profile <> 1 ORDER BY id_profile ASC'
+        );
+        self::$langId = (int) \Configuration::get('PS_LANG_DEFAULT');
     }
 
     public static function tearDownAfterClass(): void
@@ -51,11 +62,6 @@ class EmployeeEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'create endpoint' => [
-            'POST',
-            '/employees',
-        ];
-
         yield 'get endpoint' => [
             'GET',
             '/employees/1',
@@ -93,27 +99,24 @@ class EmployeeEndpointTest extends ApiTestCase
     }
 
     /**
-     * Every fixture below is created through POST /employees. The status/bulk PR seeded them
-     * through the legacy Employee object, on the grounds that AddEmployeeCommand refuses a
-     * profile the context employee cannot grant — but the create endpoint of this same
-     * resource does it fine, as testAddEmployee shows.
+     * Seeded through the legacy object model, and not through the API: this resource has no
+     * create operation, because AddEmployeeCommand builds the Password value object itself and
+     * so requires the password policy bounds the CQRS normalizer has no way to supply. See the
+     * class docblock of the Employee resource.
      */
     private function createEmployee(string $email): int
     {
-        $employee = $this->createItem('/employees', [
-            'firstName' => 'John',
-            'lastName' => 'Doe',
-            'email' => $email,
-            'password' => 'TestPassword123!',
-            'defaultPageId' => 1,
-            'languageId' => 1,
-            'enabled' => true,
-            'profileId' => 1,
-            'shopAssociation' => [1],
-            'hasEnabledGravatar' => false,
-        ], ['employee_write'], Response::HTTP_CREATED);
+        $employee = new \Employee();
+        $employee->id_profile = self::$profileId;
+        $employee->id_lang = self::$langId;
+        $employee->firstname = 'John';
+        $employee->lastname = 'Doe';
+        $employee->email = $email;
+        $employee->passwd = (new Hashing())->hash('Pr3st@Sh0p!Test');
+        $employee->active = true;
+        $employee->add();
 
-        return (int) $employee['employeeId'];
+        return (int) $employee->id;
     }
 
     private function isEmployeeEnabled(int $employeeId): bool
@@ -121,55 +124,18 @@ class EmployeeEndpointTest extends ApiTestCase
         return (bool) $this->getItem('/employees/' . $employeeId, ['employee_read'])['enabled'];
     }
 
-    public function testAddEmployee(): int
+    public function testGetEmployee(): int
     {
-        $itemsCount = $this->countItems('/employees', ['employee_read']);
+        $employeeId = $this->createEmployee('john.doe@example.com');
 
-        $postData = [
-            'firstName' => 'John',
-            'lastName' => 'Doe',
-            'email' => 'john.doe@example.com',
-            'password' => 'TestPassword123!',
-            'defaultPageId' => 1,
-            'languageId' => 1,
-            'enabled' => true,
-            'profileId' => 1,
-            'shopAssociation' => [1],
-            'hasEnabledGravatar' => false,
-        ];
-
-        $employee = $this->createItem('/employees', $postData, ['employee_write'], Response::HTTP_CREATED);
-        $this->assertArrayHasKey('employeeId', $employee);
-        $employeeId = $employee['employeeId'];
-
-        $this->assertSame('John', $employee['firstName']);
-        $this->assertSame('Doe', $employee['lastName']);
-        $this->assertSame('john.doe@example.com', $employee['email']);
-        $this->assertSame(1, $employee['profileId']);
-        $this->assertTrue($employee['enabled']);
-        // The password is write only and must never be normalized back out
-        $this->assertArrayNotHasKey('password', $employee);
-
-        $newItemsCount = $this->countItems('/employees', ['employee_read']);
-        $this->assertEquals($itemsCount + 1, $newItemsCount);
-
-        return $employeeId;
-    }
-
-    /**
-     * @depends testAddEmployee
-     */
-    public function testGetEmployee(int $employeeId): int
-    {
         $employee = $this->getItem('/employees/' . $employeeId, ['employee_read']);
         $this->assertEquals($employeeId, $employee['employeeId']);
         $this->assertSame('John', $employee['firstName']);
         $this->assertSame('Doe', $employee['lastName']);
         $this->assertSame('john.doe@example.com', $employee['email']);
-        $this->assertSame(1, $employee['defaultPageId']);
-        $this->assertSame(1, $employee['languageId']);
+        $this->assertSame(self::$profileId, $employee['profileId']);
         $this->assertTrue($employee['enabled']);
-        $this->assertSame(1, $employee['profileId']);
+        // The resource carries no password property at all, in either direction
         $this->assertArrayNotHasKey('password', $employee);
 
         return $employeeId;
@@ -217,7 +183,19 @@ class EmployeeEndpointTest extends ApiTestCase
             }
         }
         $this->assertNotNull($testEmployee);
-        $this->assertEquals($employeeId, $testEmployee['employeeId']);
+        $this->assertEquals(
+            ['employeeId', 'firstName', 'lastName', 'email', 'profileId', 'profileName', 'enabled', 'lastConnectionDate'],
+            array_keys($testEmployee)
+        );
+        $this->assertSame('Johnny', $testEmployee['firstName']);
+        $this->assertSame('Updated', $testEmployee['lastName']);
+        $this->assertSame('john.doe@example.com', $testEmployee['email']);
+        $this->assertSame(self::$profileId, $testEmployee['profileId']);
+        $this->assertTrue($testEmployee['enabled']);
+        // The grid selects e.*, so the raw rows carry the password hash and the reset token —
+        // neither is declared on the resource, so neither is normalized out
+        $this->assertArrayNotHasKey('passwd', $testEmployee);
+        $this->assertArrayNotHasKey('resetPasswordToken', $testEmployee);
 
         return $employeeId;
     }

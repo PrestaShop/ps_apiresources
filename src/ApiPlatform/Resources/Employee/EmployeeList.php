@@ -31,9 +31,7 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new PaginatedList(
             uriTemplate: '/employees',
-            ApiResourceMapping: [
-                '[employee_id]' => '[employeeId]',
-            ],
+            ApiResourceMapping: self::API_RESOURCE_MAPPING,
             gridDataFactory: 'prestashop.core.grid.data_provider.employee',
             filtersClass: EmployeeFilters::class,
             filtersMapping: [
@@ -53,6 +51,38 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class EmployeeList
 {
+    /**
+     * The grid selects `e.*, pl.name as profile_name`, so the raw rows carry every employee
+     * column — the password hash and the reset token included. Only the columns listed below
+     * are declared, so only those are ever normalized out.
+     */
+    public const API_RESOURCE_MAPPING = [
+        '[id_employee]' => '[employeeId]',
+        '[firstname]' => '[firstName]',
+        '[lastname]' => '[lastName]',
+        '[id_profile]' => '[profileId]',
+        '[profile_name]' => '[profileName]',
+        '[active]' => '[enabled]',
+        '[last_connection_date]' => '[lastConnectionDate]',
+    ];
+
     #[ApiProperty(identifier: true)]
     public int $employeeId;
+
+    public string $firstName;
+
+    public string $lastName;
+
+    public string $email;
+
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
+    public int $profileId;
+
+    public string $profileName;
+
+    #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => true])]
+    public bool $enabled;
+
+    // Null as long as the employee has never signed in
+    public ?string $lastConnectionDate = null;
 }
