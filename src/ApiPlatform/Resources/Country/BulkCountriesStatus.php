@@ -34,6 +34,11 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSUpdate(
             uriTemplate: '/countries/bulk-toggle-status',
+            // ToggleCountryStatusCommand, BulkToggleCountriesStatusCommand, BulkUpdateCountryZoneCommand
+            // and BulkDeleteCountriesCommand were introduced by the Countries grid migration in 9.2.0
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             read: false,
             CQRSCommand: BulkToggleCountriesStatusCommand::class,
             scopes: ['country_write'],
