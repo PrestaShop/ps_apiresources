@@ -27,41 +27,14 @@ use Tests\Resources\DatabaseDump;
 
 class ProfilePermissionEndpointTest extends ApiTestCase
 {
+    private const SUPER_ADMIN_PROFILE_ID = 1;
+
     private static int $profileId;
-    private static int $tabId;
-    private static int $moduleId;
 
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['profile_write']);
-
-        $profile = new \Profile();
-        $profile->name = [];
-        foreach (\Language::getIDs(false) as $langId) {
-            $profile->name[(int) $langId] = 'API permission test profile';
-        }
-        $profile->add();
-        self::$profileId = (int) $profile->id;
-
-        // Pick a tab/module that actually has a "view" (READ) authorization role, otherwise
-        // updateLgcAccess() raises "slug not found" and the command fails.
-        self::$tabId = (int) \Db::getInstance()->getValue(
-            'SELECT t.`id_tab` FROM `' . _DB_PREFIX_ . 'tab` t
-             WHERE t.`class_name` != "" AND EXISTS (
-                 SELECT 1 FROM `' . _DB_PREFIX_ . 'authorization_role` r
-                 WHERE r.`slug` = CONCAT("ROLE_MOD_TAB_", UPPER(t.`class_name`), "_READ")
-             )
-             ORDER BY t.`id_tab` ASC'
-        );
-        self::$moduleId = (int) \Db::getInstance()->getValue(
-            'SELECT m.`id_module` FROM `' . _DB_PREFIX_ . 'module` m
-             WHERE EXISTS (
-                 SELECT 1 FROM `' . _DB_PREFIX_ . 'authorization_role` r
-                 WHERE r.`slug` = CONCAT("ROLE_MOD_MODULE_", UPPER(m.`name`), "_READ")
-             )
-             ORDER BY m.`id_module` ASC'
-        );
+        self::createApiClient(['profile_read', 'profile_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -72,40 +45,86 @@ class ProfilePermissionEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'permissions configuration endpoint' => ['GET', '/profiles/permissions?employeeProfileId=1'];
         yield 'tab permission endpoint' => ['PUT', '/profiles/1/tab-permissions'];
         yield 'module permission endpoint' => ['PUT', '/profiles/1/module-permissions'];
     }
 
+    /**
+     * The profile is created through POST /profiles, which the Profile resource of this same
+     * PR provides. The permission tests used to seed it with new Profile()->add().
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (!isset(self::$profileId)) {
+            self::$profileId = (int) $this->createItem('/profiles', [
+                'names' => ['en-US' => 'API permission test profile', 'fr-FR' => 'API permission test profile'],
+            ], ['profile_write'])['profileId'];
+        }
+    }
+
+    private function getPermissionsConfiguration(): array
+    {
+        return $this->getItem(
+            '/profiles/permissions?employeeProfileId=' . self::SUPER_ADMIN_PROFILE_ID,
+            ['profile_read']
+        );
+    }
+
+    public function testGetPermissionsConfiguration(): void
+    {
+        $result = $this->getPermissionsConfiguration();
+
+        $this->assertEquals(
+            [
+                'employeeProfileId',
+                'hasEmployeeEditPermission',
+                'profilePermissionsForTabs',
+                'profilePermissionsForModules',
+                'bulkConfiguration',
+                'profiles',
+                'tabs',
+                'permissions',
+            ],
+            array_keys($result)
+        );
+        $this->assertSame(self::SUPER_ADMIN_PROFILE_ID, $result['employeeProfileId']);
+
+        // The profile created by this suite is part of the configuration
+        $this->assertArrayHasKey(self::$profileId, $result['profilePermissionsForTabs']);
+        $this->assertArrayHasKey(self::$profileId, $result['profilePermissionsForModules']);
+    }
+
     public function testUpdateTabPermission(): void
     {
-        // Disable the "view" permission on the tab
-        $this->updateItem(
-            '/profiles/' . self::$profileId . '/tab-permissions',
-            ['tabId' => self::$tabId, 'permission' => 'view', 'enabled' => false],
-            ['profile_write'],
-            Response::HTTP_NO_CONTENT
-        );
-        \Profile::resetStaticCache();
-        $access = \Profile::getProfileAccess(self::$profileId, self::$tabId);
-        $this->assertSame('0', $access['view']);
+        $tabId = $this->getConfigurableTabId();
 
-        // Enable it
+        // Disable the "view" permission on the tab, then read it back through the API instead
+        // of Profile::resetStaticCache() + Profile::getProfileAccess()
         $this->updateItem(
             '/profiles/' . self::$profileId . '/tab-permissions',
-            ['tabId' => self::$tabId, 'permission' => 'view', 'enabled' => true],
+            ['tabId' => $tabId, 'permission' => 'view', 'enabled' => false],
             ['profile_write'],
             Response::HTTP_NO_CONTENT
         );
-        \Profile::resetStaticCache();
-        $access = \Profile::getProfileAccess(self::$profileId, self::$tabId);
-        $this->assertSame('1', $access['view']);
+        $this->assertFalse($this->getTabViewPermission($tabId));
+
+        $this->updateItem(
+            '/profiles/' . self::$profileId . '/tab-permissions',
+            ['tabId' => $tabId, 'permission' => 'view', 'enabled' => true],
+            ['profile_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        $this->assertTrue($this->getTabViewPermission($tabId));
     }
 
     public function testUpdateTabPermissionWithInvalidPermissionIsRejected(): void
     {
         $this->updateItem(
             '/profiles/' . self::$profileId . '/tab-permissions',
-            ['tabId' => self::$tabId, 'permission' => 'not-a-permission', 'enabled' => true],
+            ['tabId' => $this->getConfigurableTabId(), 'permission' => 'not-a-permission', 'enabled' => true],
             ['profile_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
@@ -113,12 +132,93 @@ class ProfilePermissionEndpointTest extends ApiTestCase
 
     public function testUpdateModulePermission(): void
     {
-        // Handler throws on failure, so a 204 confirms the module permission was updated
+        $moduleId = $this->getConfigurableModuleId();
+
         $this->updateItem(
             '/profiles/' . self::$profileId . '/module-permissions',
-            ['moduleId' => self::$moduleId, 'permission' => 'view', 'enabled' => true],
+            ['moduleId' => $moduleId, 'permission' => 'view', 'enabled' => true],
             ['profile_write'],
             Response::HTTP_NO_CONTENT
         );
+        $this->assertTrue($this->getModuleViewPermission($moduleId));
+
+        $this->updateItem(
+            '/profiles/' . self::$profileId . '/module-permissions',
+            ['moduleId' => $moduleId, 'permission' => 'view', 'enabled' => false],
+            ['profile_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        $this->assertFalse($this->getModuleViewPermission($moduleId));
+    }
+
+    /**
+     * A tab that is both configurable (the configuration endpoint only returns a whitelist of
+     * tabs) and has a READ authorization role — without one, updateLgcAccess() raises
+     * "slug not found" and the command fails. The role part is a SQL lookup because no
+     * endpoint exposes ps_authorization_role; the whitelist part comes from the API.
+     */
+    private function getConfigurableTabId(): int
+    {
+        $configurableTabIds = array_column(
+            $this->getPermissionsConfiguration()['profilePermissionsForTabs'][self::$profileId],
+            'id_tab'
+        );
+
+        $rows = \Db::getInstance()->executeS(
+            'SELECT t.`id_tab` FROM `' . _DB_PREFIX_ . 'tab` t
+             WHERE t.`class_name` != \'\' AND EXISTS (
+                 SELECT 1 FROM `' . _DB_PREFIX_ . 'authorization_role` r
+                 WHERE r.`slug` = CONCAT(\'ROLE_MOD_TAB_\', UPPER(t.`class_name`), \'_READ\')
+             )
+             ORDER BY t.`id_tab` ASC'
+        );
+
+        foreach ($rows ?: [] as $row) {
+            if (in_array((int) $row['id_tab'], array_map('intval', $configurableTabIds), true)) {
+                return (int) $row['id_tab'];
+            }
+        }
+
+        $this->markTestSkipped('No tab is both configurable and carries a READ authorization role.');
+    }
+
+    private function getConfigurableModuleId(): int
+    {
+        $moduleId = (int) \Db::getInstance()->getValue(
+            'SELECT m.`id_module` FROM `' . _DB_PREFIX_ . 'module` m
+             WHERE EXISTS (
+                 SELECT 1 FROM `' . _DB_PREFIX_ . 'authorization_role` r
+                 WHERE r.`slug` = CONCAT(\'ROLE_MOD_MODULE_\', UPPER(m.`name`), \'_READ\')
+             )
+             ORDER BY m.`id_module` ASC'
+        );
+
+        if (0 === $moduleId) {
+            $this->markTestSkipped('No module carries a READ authorization role.');
+        }
+
+        return $moduleId;
+    }
+
+    private function getTabViewPermission(int $tabId): bool
+    {
+        foreach ($this->getPermissionsConfiguration()['profilePermissionsForTabs'][self::$profileId] as $access) {
+            if ((int) $access['id_tab'] === $tabId) {
+                return (bool) $access['view'];
+            }
+        }
+
+        $this->fail(sprintf('Tab %d is not part of the permission configuration.', $tabId));
+    }
+
+    private function getModuleViewPermission(int $moduleId): bool
+    {
+        foreach ($this->getPermissionsConfiguration()['profilePermissionsForModules'][self::$profileId] as $access) {
+            if ((int) $access['id_module'] === $moduleId) {
+                return (bool) $access['view'];
+            }
+        }
+
+        $this->fail(sprintf('Module %d is not part of the permission configuration.', $moduleId));
     }
 }
