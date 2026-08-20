@@ -18,15 +18,15 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-declare(strict_types=1);
-
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderState;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Command\AddOrderStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Command\DeleteOrderStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Command\EditOrderStateCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderState\Exception\DuplicateOrderStateNameException;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Exception\OrderStateConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Exception\OrderStateNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Query\GetOrderStateForEditing;
@@ -40,42 +40,51 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
+        new CQRSGet(
+            uriTemplate: '/order-states/{orderStateId}',
+            requirements: ['orderStateId' => '\d+'],
+            CQRSQuery: GetOrderStateForEditing::class,
+            scopes: [
+                'order_state_read',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+        ),
         new CQRSCreate(
             uriTemplate: '/order-states',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddOrderStateCommand::class,
+            CQRSQuery: GetOrderStateForEditing::class,
+            scopes: [
+                'order_state_write',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
-            scopes: ['order_state_write'],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/order-states/{orderStateId}',
+            requirements: ['orderStateId' => '\d+'],
+            CQRSCommand: EditOrderStateCommand::class,
+            CQRSQuery: GetOrderStateForEditing::class,
+            scopes: [
+                'order_state_write',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
         ),
         new CQRSDelete(
             uriTemplate: '/order-states/{orderStateId}',
             requirements: ['orderStateId' => '\d+'],
             output: false,
             CQRSCommand: DeleteOrderStateCommand::class,
-            scopes: ['order_state_write'],
-        ),
-        new CQRSGet(
-            uriTemplate: '/order-states/{orderStateId}',
-            requirements: ['orderStateId' => '\d+'],
-            CQRSQuery: GetOrderStateForEditing::class,
-            CQRSQueryMapping: self::QUERY_MAPPING,
-            scopes: ['order_state_read'],
-        ),
-        new CQRSPartialUpdate(
-            uriTemplate: '/order-states/{orderStateId}',
-            requirements: ['orderStateId' => '\d+'],
-            read: false,
-            CQRSCommand: EditOrderStateCommand::class,
-            CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
-            CQRSQuery: GetOrderStateForEditing::class,
-            CQRSQueryMapping: self::QUERY_MAPPING,
-            scopes: ['order_state_write'],
+            scopes: [
+                'order_state_write',
+            ],
         ),
     ],
-    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         OrderStateNotFoundException::class => Response::HTTP_NOT_FOUND,
         OrderStateConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        DuplicateOrderStateNameException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class OrderState
@@ -84,59 +93,45 @@ class OrderState
     public int $orderStateId;
 
     #[LocalizedValue]
-    #[Assert\NotBlank(groups: ['Create'])]
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
+    #[DefaultLanguage(groups: ['Update'], fieldName: 'names', allowNull: true)]
     public array $names;
+
+    #[LocalizedValue]
+    public array $templates;
 
     #[Assert\NotBlank(groups: ['Create'])]
     public string $color;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $loggable;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $invoice;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $hidden;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $sendEmail;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $pdfInvoice;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $pdfDelivery;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $shipped;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $paid;
 
-    #[Assert\NotNull(groups: ['Create'])]
     public bool $delivery;
-
-    #[LocalizedValue]
-    #[Assert\NotNull(groups: ['Create'])]
-    public array $templates;
-
-    public bool $deleted;
 
     public const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
         '[localizedTemplates]' => '[templates]',
-        // EditableOrderState exposes isSendEmailEnabled(); "deleted" maps by identity
         '[sendEmailEnabled]' => '[sendEmail]',
     ];
 
-    // AddOrderStateCommand expects "localizedNames" / "localizedTemplates"
     public const CREATE_COMMAND_MAPPING = [
         '[names]' => '[localizedNames]',
         '[templates]' => '[localizedTemplates]',
     ];
 
-    // EditOrderStateCommand expects "name" / "template"
     public const UPDATE_COMMAND_MAPPING = [
         '[names]' => '[name]',
         '[templates]' => '[template]',

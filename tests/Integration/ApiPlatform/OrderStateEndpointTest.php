@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -23,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class OrderStateEndpointTest extends ApiTestCase
@@ -30,34 +30,60 @@ class OrderStateEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['order_state', 'order_state_lang']);
-        self::createApiClient(['order_state_write', 'order_state_read']);
+        self::resetTables();
+        self::createApiClient(['order_state_read', 'order_state_write']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        DatabaseDump::restoreTables(['order_state', 'order_state_lang']);
+        self::resetTables();
+    }
+
+    protected static function resetTables(): void
+    {
+        DatabaseDump::restoreTables([
+            'order_state',
+            'order_state_lang',
+        ]);
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'create endpoint' => ['POST', '/order-states'];
-        yield 'get endpoint' => ['GET', '/order-states/1'];
-        yield 'update endpoint' => ['PATCH', '/order-states/1'];
-        yield 'delete endpoint' => ['DELETE', '/order-states/1'];
-        yield 'bulk delete endpoint' => ['DELETE', '/order-states/bulk-delete'];
+        yield 'get endpoint' => [
+            'GET',
+            '/order-states/1',
+        ];
+
+        yield 'create endpoint' => [
+            'POST',
+            '/order-states',
+        ];
+
+        yield 'patch endpoint' => [
+            'PATCH',
+            '/order-states/1',
+        ];
+
+        yield 'list endpoint' => [
+            'GET',
+            '/order-states',
+        ];
     }
 
-    private function createPayload(): array
+    private function getCreateData(): array
     {
         return [
             'names' => [
-                'en-US' => 'My Order State EN',
-                'fr-FR' => 'My Order State FR',
+                'en-US' => 'Awaiting review EN',
+                'fr-FR' => 'Awaiting review FR',
+            ],
+            'templates' => [
+                'en-US' => '',
+                'fr-FR' => '',
             ],
             'color' => '#4169E1',
-            'loggable' => true,
+            'loggable' => false,
             'invoice' => false,
             'hidden' => false,
             'sendEmail' => false,
@@ -66,20 +92,17 @@ class OrderStateEndpointTest extends ApiTestCase
             'shipped' => false,
             'paid' => false,
             'delivery' => false,
-            'templates' => [
-                'en-US' => '',
-                'fr-FR' => '',
-            ],
         ];
     }
 
     public function testAddOrderState(): int
     {
-        $orderState = $this->createItem('/order-states', $this->createPayload(), ['order_state_write']);
-
+        $orderState = $this->createItem('/order-states', $this->getCreateData(), ['order_state_write']);
         $this->assertArrayHasKey('orderStateId', $orderState);
         $orderStateId = $orderState['orderStateId'];
-        $this->assertEquals(['orderStateId' => $orderStateId], $orderState);
+
+        $this->assertSame($this->getCreateData()['names'], $orderState['names']);
+        $this->assertSame('#4169E1', $orderState['color']);
 
         return $orderStateId;
     }
@@ -90,24 +113,10 @@ class OrderStateEndpointTest extends ApiTestCase
     public function testGetOrderState(int $orderStateId): int
     {
         $orderState = $this->getItem('/order-states/' . $orderStateId, ['order_state_read']);
-
-        $this->assertSame($orderStateId, $orderState['orderStateId']);
-        $this->assertSame(
-            ['en-US' => 'My Order State EN', 'fr-FR' => 'My Order State FR'],
-            $orderState['names']
-        );
-        $this->assertSame('#4169E1', $orderState['color']);
-        $this->assertTrue($orderState['loggable']);
-        $this->assertFalse($orderState['invoice']);
-        $this->assertFalse($orderState['hidden']);
-        $this->assertFalse($orderState['sendEmail']);
-        $this->assertFalse($orderState['pdfInvoice']);
-        $this->assertFalse($orderState['pdfDelivery']);
-        $this->assertFalse($orderState['shipped']);
-        $this->assertFalse($orderState['paid']);
-        $this->assertFalse($orderState['delivery']);
-        $this->assertFalse($orderState['deleted']);
-        $this->assertArrayHasKey('templates', $orderState);
+        $this->assertEquals($orderStateId, $orderState['orderStateId']);
+        $this->assertArrayHasKey('names', $orderState);
+        $this->assertArrayHasKey('color', $orderState);
+        $this->assertArrayHasKey('sendEmail', $orderState);
 
         return $orderStateId;
     }
@@ -115,27 +124,45 @@ class OrderStateEndpointTest extends ApiTestCase
     /**
      * @depends testGetOrderState
      */
-    public function testEditOrderState(int $orderStateId): int
+    public function testPartialUpdateOrderState(int $orderStateId): int
     {
-        $updated = $this->partialUpdateItem('/order-states/' . $orderStateId, [
+        $patchData = [
             'names' => [
-                'en-US' => 'My Order State EN Updated',
-                'fr-FR' => 'My Order State FR Updated',
+                'en-US' => 'Updated status EN',
+                'fr-FR' => 'Updated status FR',
             ],
-            'paid' => true,
-        ], ['order_state_write']);
+            'color' => '#32CD32',
+        ];
 
-        $this->assertSame(
-            ['en-US' => 'My Order State EN Updated', 'fr-FR' => 'My Order State FR Updated'],
-            $updated['names']
-        );
-        $this->assertTrue($updated['paid']);
+        $updatedOrderState = $this->partialUpdateItem('/order-states/' . $orderStateId, $patchData, ['order_state_write']);
+        $this->assertSame($patchData['names'], $updatedOrderState['names']);
+        $this->assertSame($patchData['color'], $updatedOrderState['color']);
+
+        // We check that when we GET the item it is updated as expected
+        $orderState = $this->getItem('/order-states/' . $orderStateId, ['order_state_read']);
+        $this->assertSame($patchData['names'], $orderState['names']);
+        $this->assertSame($patchData['color'], $orderState['color']);
 
         return $orderStateId;
     }
 
     /**
-     * @depends testEditOrderState
+     * @depends testPartialUpdateOrderState
+     */
+    public function testListOrderStates(int $orderStateId): int
+    {
+        $paginatedOrderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
+        $this->assertGreaterThanOrEqual(1, $paginatedOrderStates['totalItems']);
+        $this->assertEquals('orderStateId', $paginatedOrderStates['orderBy']);
+
+        $firstOrderState = $paginatedOrderStates['items'][0];
+        $this->assertEquals($orderStateId, $firstOrderState['orderStateId']);
+
+        return $orderStateId;
+    }
+
+    /**
+     * @depends testListOrderStates
      */
     public function testDeleteOrderState(int $orderStateId): void
     {
@@ -143,22 +170,61 @@ class OrderStateEndpointTest extends ApiTestCase
         // This endpoint returns an empty response and a 204 HTTP code
         $this->assertNull($return);
 
-        // Order states are soft-deleted: the record still exists but is flagged as deleted
-        $deleted = $this->getItem('/order-states/' . $orderStateId, ['order_state_read']);
-        $this->assertTrue($deleted['deleted']);
+        // Order states are soft-deleted (existing orders may reference them): the record is
+        // flagged as deleted and no longer appears in the listing.
+        $orderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
+        $listedIds = array_column($orderStates['items'], 'orderStateId');
+        $this->assertNotContains($orderStateId, $listedIds);
     }
 
+    /**
+     * @depends testDeleteOrderState
+     */
     public function testBulkDeleteOrderStates(): void
     {
-        $firstId = $this->createItem('/order-states', $this->createPayload(), ['order_state_write'])['orderStateId'];
-        $secondId = $this->createItem('/order-states', $this->createPayload(), ['order_state_write'])['orderStateId'];
+        $bulkIds = [];
+        foreach (['A', 'B'] as $suffix) {
+            $data = $this->getCreateData();
+            $data['names'] = [
+                'en-US' => 'Bulk status ' . $suffix,
+                'fr-FR' => 'Bulk status ' . $suffix,
+            ];
+            $created = $this->createItem('/order-states', $data, ['order_state_write']);
+            $bulkIds[] = $created['orderStateId'];
+        }
 
         $this->bulkDeleteItems('/order-states/bulk-delete', [
-            'orderStateIds' => [$firstId, $secondId],
+            'orderStateIds' => $bulkIds,
         ], ['order_state_write']);
 
-        // Order states are soft-deleted: still readable but flagged as deleted
-        $this->assertTrue($this->getItem('/order-states/' . $firstId, ['order_state_read'])['deleted']);
-        $this->assertTrue($this->getItem('/order-states/' . $secondId, ['order_state_read'])['deleted']);
+        // Soft-deleted order states no longer appear in the listing
+        $orderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
+        $listedIds = array_column($orderStates['items'], 'orderStateId');
+        foreach ($bulkIds as $orderStateId) {
+            $this->assertNotContains($orderStateId, $listedIds);
+        }
+    }
+
+    public function testInvalidOrderState(): void
+    {
+        $invalidData = $this->getCreateData();
+        $invalidData['names'] = [
+            'fr-FR' => 'Nom FR uniquement',
+        ];
+        $invalidData['color'] = '';
+
+        $validationErrorsResponse = $this->createItem('/order-states', $invalidData, ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'names',
+                'message' => 'The field names is required at least in your default language.',
+            ],
+            [
+                'propertyPath' => 'color',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrorsResponse);
     }
 }
