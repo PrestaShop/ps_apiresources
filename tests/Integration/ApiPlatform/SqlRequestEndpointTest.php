@@ -100,6 +100,12 @@ class SqlRequestEndpointTest extends ApiTestCase
     }
 
     /**
+     * This test stays red until PrestaShop/PrestaShop#41742 is merged:
+     * EditSqlRequestCommand::__construct() only accepts a SqlRequestId value object, and the
+     * CQRS normalizer builds the command from the scalar id in the URI, so the request fails
+     * with a TypeError before the handler is reached. DeleteSqlRequestCommand has the same
+     * constructor, so testDeleteSqlRequest depends on the same core change.
+     *
      * @depends testGetSqlRequest
      */
     public function testEditSqlRequest(int $sqlRequestId): int
@@ -168,7 +174,8 @@ class SqlRequestEndpointTest extends ApiTestCase
             ['sql_management_read']
         );
 
-        $this->assertEquals(['columns', 'rows'], array_keys($response));
+        $this->assertEquals(['sqlRequestId', 'columns', 'rows'], array_keys($response));
+        $this->assertSame($sqlRequestId, $response['sqlRequestId']);
         $this->assertSame(['id_lang', 'name'], $response['columns']);
         $this->assertNotEmpty($response['rows']);
 
