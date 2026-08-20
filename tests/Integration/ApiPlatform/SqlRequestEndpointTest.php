@@ -48,6 +48,8 @@ class SqlRequestEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get execution result endpoint' => ['GET', '/sql-requests/1/execution-results'];
+
         yield 'create endpoint' => ['POST', '/sql-requests'];
         yield 'get endpoint' => ['GET', '/sql-requests/1'];
         yield 'update endpoint' => ['PATCH', '/sql-requests/1'];
@@ -64,7 +66,17 @@ class SqlRequestEndpointTest extends ApiTestCase
 
         $this->assertArrayHasKey('sqlRequestId', $sqlRequest);
         $sqlRequestId = $sqlRequest['sqlRequestId'];
-        $this->assertEquals(['sqlRequestId' => $sqlRequestId], $sqlRequest);
+
+        // The create replays GetSqlRequestForEditing, so it returns the whole entity instead of
+        // just {sqlRequestId}, and must answer exactly what the GET does
+        $this->assertEquals(
+            [
+                'sqlRequestId' => $sqlRequestId,
+                'name' => 'My SQL Request',
+                'sql' => $this->validSql(),
+            ],
+            $sqlRequest
+        );
 
         return $sqlRequestId;
     }
@@ -96,8 +108,13 @@ class SqlRequestEndpointTest extends ApiTestCase
             'name' => 'My SQL Request Updated',
         ], ['sql_management_write']);
 
-        $this->assertSame('My SQL Request Updated', $updated['name']);
-        $this->assertSame($this->validSql(), $updated['sql']);
+        $expected = [
+            'sqlRequestId' => $sqlRequestId,
+            'name' => 'My SQL Request Updated',
+            'sql' => $this->validSql(),
+        ];
+        $this->assertEquals($expected, $updated);
+        $this->assertEquals($expected, $this->getItem('/sql-requests/' . $sqlRequestId, ['sql_management_read']));
 
         return $sqlRequestId;
     }
@@ -130,5 +147,42 @@ class SqlRequestEndpointTest extends ApiTestCase
 
         $this->getItem('/sql-requests/' . $firstId, ['sql_management_read'], Response::HTTP_NOT_FOUND);
         $this->getItem('/sql-requests/' . $secondId, ['sql_management_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * The saved SQL request is created through POST /sql-requests instead of an
+     * INSERT INTO ps_request_sql: the create endpoint is in this same PR now.
+     *
+     * It selects from a stable seed table so the assertions do not drift when the languages
+     * fixture changes.
+     */
+    public function testGetSqlRequestExecutionResult(): void
+    {
+        $sqlRequestId = (int) $this->createItem('/sql-requests', [
+            'name' => 'test_execution_result',
+            'sql' => 'SELECT id_lang, name FROM ' . _DB_PREFIX_ . 'lang ORDER BY id_lang ASC',
+        ], ['sql_management_write'])['sqlRequestId'];
+
+        $response = $this->getItem(
+            '/sql-requests/' . $sqlRequestId . '/execution-results',
+            ['sql_management_read']
+        );
+
+        $this->assertEquals(['columns', 'rows'], array_keys($response));
+        $this->assertSame(['id_lang', 'name'], $response['columns']);
+        $this->assertNotEmpty($response['rows']);
+
+        foreach ($response['rows'] as $row) {
+            $this->assertEquals(['id_lang', 'name'], array_keys($row));
+        }
+    }
+
+    public function testGetNonExistentSqlRequestExecutionResult(): void
+    {
+        $this->getItem(
+            '/sql-requests/999999/execution-results',
+            ['sql_management_read'],
+            Response::HTTP_NOT_FOUND
+        );
     }
 }

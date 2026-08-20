@@ -20,7 +20,7 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SqlManagement;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SqlRequest;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
@@ -30,13 +30,19 @@ use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Query\GetSqlRequestExecution
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * The result of running a saved SQL request. It lives on the SqlRequest namespace, and not on
+ * a SqlManagement one, because the id in the URI is a sql request id: the first URI segment is
+ * derived from the namespace by ApiResourceUriTemplateRector, so a SqlManagement namespace
+ * forced /sql-management/{sqlRequestId}/... — a sql request addressed under another noun.
+ */
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/sql-management/{sqlRequestId}/execution-results',
+            uriTemplate: '/sql-requests/{sqlRequestId}/execution-results',
             requirements: ['sqlRequestId' => '\d+'],
             CQRSQuery: GetSqlRequestExecutionResultQuery::class,
-            scopes: ['sql_request_read'],
+            scopes: ['sql_management_read'],
             openapiContext: [
                 'summary' => 'Execute a saved SQL request and return its rows',
                 'description' => 'Runs the SQL query stored under the given SqlRequest identifier and returns the resulting columns and rows. Sensitive attributes (e.g. password fields) are automatically obfuscated.',

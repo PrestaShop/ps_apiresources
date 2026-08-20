@@ -43,7 +43,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/sql-requests',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddSqlRequestCommand::class,
+            CQRSQuery: GetSqlRequestForEditing::class,
             scopes: ['sql_management_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            ApiResourceMapping: self::RESOURCE_MAPPING,
         ),
         new CQRSGet(
             uriTemplate: '/sql-requests/{sqlRequestId}',
