@@ -152,9 +152,12 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
     public function testBulkDeleteProductsFromOrderReturn(): void
     {
         [$orderReturnId, $orderDetailIds] = $this->seedOrderReturn();
-        if ([] === $orderDetailIds) {
-            $this->markTestSkipped('The fixture order has no order detail to return.');
+        if (count($orderDetailIds) < 2) {
+            $this->markTestSkipped('The fixture order has fewer than two order details to return.');
         }
+
+        // A merchandise return must keep at least one product, so the last one stays
+        $kept = array_pop($orderDetailIds);
 
         $this->requestApi(
             'DELETE',
@@ -172,7 +175,34 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
             Response::HTTP_NO_CONTENT
         );
 
-        $this->assertSame([], $this->listProductIds($orderReturnId));
+        $this->assertSame([$kept], $this->listProductIds($orderReturnId));
+    }
+
+    public function testBulkDeleteEveryProductFromOrderReturnIsRefused(): void
+    {
+        [$orderReturnId, $orderDetailIds] = $this->seedOrderReturn();
+        if ([] === $orderDetailIds) {
+            $this->markTestSkipped('The fixture order has no order detail to return.');
+        }
+
+        // Emptying a merchandise return is refused by the core, which is a client error
+        $this->requestApi(
+            'DELETE',
+            '/order-returns/' . $orderReturnId . '/products/bulk-delete',
+            [
+                'stagedProductRows' => array_map(
+                    static fn (int $orderDetailId): array => [
+                        'order_detail_id' => $orderDetailId,
+                        'customization_id' => 0,
+                    ],
+                    $orderDetailIds
+                ),
+            ],
+            ['order_return_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+
+        $this->assertSame($orderDetailIds, $this->listProductIds($orderReturnId));
     }
 
     public function testDeleteOrderReturn(): void
