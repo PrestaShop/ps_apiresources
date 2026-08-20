@@ -29,7 +29,6 @@ use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Exception\InvalidPermis
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Exception\PermissionUpdateException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -60,8 +59,12 @@ class ProfileTabPermission
 
     /**
      * One of view, add, edit, delete, all.
+     *
+     * Deliberately unconstrained: ApiPlatform validates before the scope check runs, so a
+     * NotBlank here answers 422 to an unauthorized request that carries no body, where it
+     * should answer 403. The command rejects an invalid value on its own, through
+     * InvalidPermissionValueException, which is mapped to 422 below.
      */
-    #[Assert\NotBlank]
     public string $permission;
 
     public bool $enabled;
