@@ -51,6 +51,10 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'breadcrumb endpoint' => ['GET', '/cms-page-categories/1/breadcrumbs'];
+        yield 'localized name endpoint' => ['GET', '/cms-page-categories/1/localized-names'];
+        yield 'parent-for-redirection endpoint' => ['GET', '/cms-page-categories/1/parent-for-redirection'];
+
         yield 'get endpoint' => [
             'GET',
             '/cms-page-categories/1',
@@ -70,6 +74,72 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             'GET',
             '/cms-page-categories',
         ];
+    }
+
+    /**
+     * Creates a child category under the one it is given, so the read helpers below are
+     * asserted on a hierarchy this suite owns. The three source PRs all queried the ROOT
+     * category (id 1) because they had no create endpoint of their own.
+     */
+    private function createChildCategory(int $parentId, string $slug): array
+    {
+        $data = $this->getCreateData();
+        $data['parentId'] = $parentId;
+        $data['names'] = ['en-US' => 'Child ' . $slug . ' EN', 'fr-FR' => 'Child ' . $slug . ' FR'];
+        $data['linkRewrites'] = ['en-US' => 'child-' . $slug . '-en', 'fr-FR' => 'child-' . $slug . '-fr'];
+
+        return $this->createItem('/cms-page-categories', $data, ['cms_page_category_write']);
+    }
+
+    public function testGetCmsPageCategoryLocalizedName(): void
+    {
+        $category = $this->createChildCategory(1, 'localized-name');
+
+        $result = $this->getItem(
+            '/cms-page-categories/' . $category['cmsPageCategoryId'] . '/localized-names',
+            ['cms_page_category_read']
+        );
+
+        $this->assertEquals(['cmsPageCategoryId', 'name'], array_keys($result));
+        $this->assertSame($category['cmsPageCategoryId'], $result['cmsPageCategoryId']);
+        // Asserted against the name this suite gave the category, not just "is a string"
+        $this->assertSame($category['names']['en-US'], $result['name']);
+    }
+
+    public function testGetCmsPageCategoryBreadcrumb(): void
+    {
+        $parent = $this->createChildCategory(1, 'breadcrumb-parent');
+        $child = $this->createChildCategory($parent['cmsPageCategoryId'], 'breadcrumb-child');
+
+        $result = $this->getItem(
+            '/cms-page-categories/' . $child['cmsPageCategoryId'] . '/breadcrumbs',
+            ['cms_page_category_read']
+        );
+
+        $this->assertNotEmpty($result);
+        foreach ($result as $row) {
+            $this->assertEquals(['cmsPageCategoryId', 'name'], array_keys($row));
+        }
+
+        // A two-level hierarchy: the breadcrumb of the child must contain its parent. The
+        // standalone test could only assert that ROOT points to itself.
+        $breadcrumbIds = array_map('intval', array_column($result, 'cmsPageCategoryId'));
+        $this->assertContains($parent['cmsPageCategoryId'], $breadcrumbIds);
+    }
+
+    public function testGetCmsPageCategoryParentForRedirection(): void
+    {
+        $parent = $this->createChildCategory(1, 'redirect-parent');
+        $child = $this->createChildCategory($parent['cmsPageCategoryId'], 'redirect-child');
+
+        $result = $this->getItem(
+            '/cms-page-categories/' . $child['cmsPageCategoryId'] . '/parent-for-redirection',
+            ['cms_page_category_read']
+        );
+
+        $this->assertEquals(['cmsPageCategoryId', 'parentId'], array_keys($result));
+        $this->assertSame($child['cmsPageCategoryId'], $result['cmsPageCategoryId']);
+        $this->assertSame($parent['cmsPageCategoryId'], $result['parentId']);
     }
 
     private function getCreateData(): array
