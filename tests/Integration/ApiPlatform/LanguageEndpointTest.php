@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 
 class LanguageEndpointTest extends ApiTestCase
@@ -31,53 +31,123 @@ class LanguageEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['language_write']);
+        DatabaseDump::restoreTables(['lang', 'lang_shop']);
+        self::createApiClient(['language_read', 'language_write']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
+        DatabaseDump::restoreTables(['lang', 'lang_shop']);
         // Reset the languages (and the related tables) to the state they had before this test
         LanguageResetter::resetLanguages();
     }
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'set status endpoint' => [
-            'PATCH',
-            '/languages/1/set-status',
-        ];
+        yield 'get endpoint' => ['GET', '/languages/1'];
+        yield 'create endpoint' => ['POST', '/languages'];
+        yield 'update endpoint' => ['PATCH', '/languages/1'];
+        yield 'set status endpoint' => ['PATCH', '/languages/1/set-status'];
+        yield 'delete endpoint' => ['DELETE', '/languages/1'];
+        yield 'bulk update status endpoint' => ['PUT', '/languages/bulk-update-status'];
+        yield 'bulk delete endpoint' => ['DELETE', '/languages/bulk-delete'];
+    }
 
-        yield 'delete endpoint' => [
-            'DELETE',
-            '/languages/1',
-        ];
+    /**
+     * Every language these tests operate on is created through POST /languages. The status and
+     * delete tests used the addLanguageByLocale() command-bus helper because the create
+     * endpoint lived in another PR.
+     *
+     * The handler calls copy() on both image paths — PHP 8.1+ raises a ValueError on an empty
+     * string — so a real image from the shop image directory is passed.
+     */
+    private function createLanguage(string $isoCode, bool $enabled = true): array
+    {
+        $flag = _PS_IMG_DIR_ . 'l/en.jpg';
 
-        yield 'bulk update status endpoint' => [
-            'PUT',
-            '/languages/bulk-update-status',
-        ];
+        return $this->createItem('/languages', [
+            'name' => 'Test ' . strtoupper($isoCode),
+            'isoCode' => $isoCode,
+            'tagIETF' => $isoCode . '-' . strtoupper($isoCode),
+            'shortDateFormat' => 'Y-m-d',
+            'fullDateFormat' => 'Y-m-d H:i:s',
+            'flagImagePath' => $flag,
+            'noPictureImagePath' => $flag,
+            'rtl' => false,
+            'enabled' => $enabled,
+            'shopIds' => [1],
+        ], ['language_write'], Response::HTTP_CREATED);
+    }
 
-        yield 'bulk delete endpoint' => [
-            'DELETE',
-            '/languages/bulk-delete',
-        ];
+    private function getLanguage(int $languageId): array
+    {
+        return $this->getItem('/languages/' . $languageId, ['language_read']);
+    }
+
+    private function isLanguageEnabled(int $languageId): bool
+    {
+        return (bool) $this->getLanguage($languageId)['enabled'];
+    }
+
+    public function testCreateLanguage(): int
+    {
+        $language = $this->createLanguage('ts');
+
+        $this->assertSame('Test TS', $language['name']);
+        $this->assertSame('ts', $language['isoCode']);
+        $this->assertTrue($language['enabled']);
+        // Write only, must never be normalized back out
+        $this->assertArrayNotHasKey('flagImagePath', $language);
+        $this->assertArrayNotHasKey('noPictureImagePath', $language);
+
+        // The create replays GetLanguageForEditing, so it answers exactly what the GET does
+        $this->assertEquals($this->getLanguage($language['languageId']), $language);
+
+        return (int) $language['languageId'];
+    }
+
+    /**
+     * @depends testCreateLanguage
+     */
+    public function testEditLanguage(int $languageId): void
+    {
+        // Asserted through the API instead of
+        // SELECT name FROM ps_lang WHERE id_lang = ...
+        $updated = $this->partialUpdateItem(
+            '/languages/' . $languageId,
+            ['name' => 'RenamedTest'],
+            ['language_write']
+        );
+
+        $this->assertSame('RenamedTest', $updated['name']);
+        $this->assertEquals($this->getLanguage($languageId), $updated);
+    }
+
+    public function testEditUnknownLanguageReturnsNotFound(): void
+    {
+        $this->partialUpdateItem(
+            '/languages/999999',
+            ['name' => 'Whatever'],
+            ['language_write'],
+            Response::HTTP_NOT_FOUND
+        );
     }
 
     public function testSetStatus(): void
     {
-        $languageId = self::addLanguageByLocale('es-ES');
-        $this->assertTrue($this->getLanguageActiveStatus($languageId));
+        $languageId = (int) $this->createLanguage('tu')['languageId'];
+        $this->assertTrue($this->isLanguageEnabled($languageId));
 
         $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
             'enabled' => false,
         ], ['language_write'], Response::HTTP_NO_CONTENT);
-        $this->assertFalse($this->getLanguageActiveStatus($languageId));
+        $this->assertFalse($this->isLanguageEnabled($languageId));
 
         $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
             'enabled' => true,
         ], ['language_write'], Response::HTTP_NO_CONTENT);
-        $this->assertTrue($this->getLanguageActiveStatus($languageId));
+        $this->assertTrue($this->isLanguageEnabled($languageId));
     }
 
     public function testSetStatusNotFound(): void
@@ -89,51 +159,51 @@ class LanguageEndpointTest extends ApiTestCase
 
     public function testBulkUpdateStatus(): void
     {
-        $languageId1 = self::addLanguageByLocale('it-IT');
-        $languageId2 = self::addLanguageByLocale('de-DE');
+        $languageIds = [
+            (int) $this->createLanguage('tv')['languageId'],
+            (int) $this->createLanguage('tw')['languageId'],
+        ];
 
         $this->updateItem('/languages/bulk-update-status', [
-            'languageIds' => [$languageId1, $languageId2],
+            'languageIds' => $languageIds,
             'enabled' => false,
         ], ['language_write'], Response::HTTP_NO_CONTENT);
-
-        $this->assertFalse($this->getLanguageActiveStatus($languageId1));
-        $this->assertFalse($this->getLanguageActiveStatus($languageId2));
+        foreach ($languageIds as $languageId) {
+            $this->assertFalse($this->isLanguageEnabled($languageId));
+        }
 
         $this->updateItem('/languages/bulk-update-status', [
-            'languageIds' => [$languageId1, $languageId2],
+            'languageIds' => $languageIds,
             'enabled' => true,
         ], ['language_write'], Response::HTTP_NO_CONTENT);
-
-        $this->assertTrue($this->getLanguageActiveStatus($languageId1));
-        $this->assertTrue($this->getLanguageActiveStatus($languageId2));
+        foreach ($languageIds as $languageId) {
+            $this->assertTrue($this->isLanguageEnabled($languageId));
+        }
     }
 
     public function testDelete(): void
     {
-        $languageId = self::addLanguageByLocale('pt-PT');
-        $this->assertTrue(\Validate::isLoadedObject(new \Language($languageId)));
+        $languageId = (int) $this->createLanguage('tx')['languageId'];
 
         $this->deleteItem('/languages/' . $languageId, ['language_write']);
 
-        $this->assertFalse(\Validate::isLoadedObject(new \Language($languageId)));
+        // Asserted through the API instead of Validate::isLoadedObject(new Language($id))
+        $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkDelete(): void
     {
-        $languageId1 = self::addLanguageByLocale('nl-NL');
-        $languageId2 = self::addLanguageByLocale('pl-PL');
+        $languageIds = [
+            (int) $this->createLanguage('ty')['languageId'],
+            (int) $this->createLanguage('tz')['languageId'],
+        ];
 
         $this->bulkDeleteItems('/languages/bulk-delete', [
-            'languageIds' => [$languageId1, $languageId2],
+            'languageIds' => $languageIds,
         ], ['language_write']);
 
-        $this->assertFalse(\Validate::isLoadedObject(new \Language($languageId1)));
-        $this->assertFalse(\Validate::isLoadedObject(new \Language($languageId2)));
-    }
-
-    private function getLanguageActiveStatus(int $languageId): bool
-    {
-        return (bool) (new \Language($languageId))->active;
+        foreach ($languageIds as $languageId) {
+            $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
+        }
     }
 }
