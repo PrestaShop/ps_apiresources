@@ -50,7 +50,11 @@ class CurrencyEndpointTest extends ApiTestCase
         yield 'toggle status endpoint' => ['PUT', '/currencies/1/toggle-status'];
         yield 'bulk toggle status endpoint' => ['PUT', '/currencies/bulk-toggle-status'];
         yield 'bulk delete endpoint' => ['DELETE', '/currencies/bulk-delete'];
+        yield 'create unofficial endpoint' => ['POST', '/currencies/unofficials'];
+        yield 'update unofficial endpoint' => ['PATCH', '/currencies/unofficials/999999'];
     }
+
+    private array $lastCreatedCurrency = [];
 
     private function createCurrency(string $isoCode): int
     {
@@ -60,14 +64,37 @@ class CurrencyEndpointTest extends ApiTestCase
             'enabled' => true,
         ], ['currency_write']);
         $this->assertArrayHasKey('currencyId', $currency);
+        $this->lastCreatedCurrency = $currency;
 
         return $currency['currencyId'];
+    }
+
+    /**
+     * Unofficial currencies are created through their own endpoint, on the same resource:
+     * the edit test used to seed one with a raw INSERT into ps_currency because the create
+     * endpoint lived in another PR.
+     */
+    private function createUnofficialCurrency(string $isoCode): array
+    {
+        return $this->createItem('/currencies/unofficials', [
+            'isoCode' => $isoCode,
+            'exchangeRate' => 1.5,
+            'enabled' => true,
+        ], ['currency_write']);
     }
 
     public function testAddCurrency(): int
     {
         // CAD is a valid ISO currency that is not the default one in the fixtures
-        return $this->createCurrency('CAD');
+        $currencyId = $this->createCurrency('CAD');
+
+        // The create replays GetCurrencyForEditing, so it must answer exactly what the GET does
+        $this->assertEquals(
+            $this->getItem('/currencies/' . $currencyId, ['currency_read']),
+            $this->lastCreatedCurrency
+        );
+
+        return $currencyId;
     }
 
     /**
@@ -166,5 +193,55 @@ class CurrencyEndpointTest extends ApiTestCase
     public function testGetNonExistentCurrency(): void
     {
         $this->getItem('/currencies/999999', ['currency_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testAddUnofficialCurrency(): array
+    {
+        // ABC is not a real ISO code, which is the point of an unofficial currency
+        $currency = $this->createUnofficialCurrency('ABC');
+
+        $this->assertSame('ABC', strtoupper((string) $currency['isoCode']));
+        $this->assertTrue($currency['unofficial']);
+        $this->assertTrue($currency['enabled']);
+
+        // Asserted through the API instead of
+        // SELECT iso_code FROM ps_currency WHERE id_currency = ...
+        $this->assertEquals(
+            $this->getItem('/currencies/' . $currency['currencyId'], ['currency_read']),
+            $currency
+        );
+
+        return $currency;
+    }
+
+    /**
+     * @depends testAddUnofficialCurrency
+     */
+    public function testEditUnofficialCurrency(array $currency): void
+    {
+        $updated = $this->partialUpdateItem(
+            '/currencies/unofficials/' . $currency['currencyId'],
+            ['isoCode' => 'ABD', 'enabled' => false],
+            ['currency_write']
+        );
+
+        $this->assertSame('ABD', strtoupper((string) $updated['isoCode']));
+        $this->assertFalse($updated['enabled']);
+
+        // The update returns the entity through the same query as the GET
+        $this->assertEquals(
+            $this->getItem('/currencies/' . $currency['currencyId'], ['currency_read']),
+            $updated
+        );
+    }
+
+    public function testEditUnknownUnofficialCurrencyReturnsNotFound(): void
+    {
+        $this->partialUpdateItem(
+            '/currencies/unofficials/999999',
+            ['isoCode' => 'ZZZ'],
+            ['currency_write'],
+            Response::HTTP_NOT_FOUND
+        );
     }
 }

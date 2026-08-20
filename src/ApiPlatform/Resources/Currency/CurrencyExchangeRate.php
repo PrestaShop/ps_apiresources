@@ -27,11 +27,20 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
 use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Command\RefreshExchangeRatesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CannotRefreshExchangeRatesException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\ExchangeRateNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Query\GetCurrencyExchangeRate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * The exchange rate of a currency against the shop's default one.
+ *
+ * The PUT refreshes every rate from the remote service at once, so it is a collection level
+ * operation with no payload and no single entity to return; the GET reads one rate back.
+ */
 #[ApiResource(
     operations: [
         new CQRSGet(
@@ -54,9 +63,18 @@ use Symfony\Component\HttpFoundation\Response;
                 ],
             ],
         ),
+        new CQRSUpdate(
+            uriTemplate: '/currencies/exchange-rates',
+            read: false,
+            output: false,
+            allowEmptyBody: true,
+            CQRSCommand: RefreshExchangeRatesCommand::class,
+            scopes: ['currency_write'],
+        ),
     ],
     exceptionToStatus: [
         ExchangeRateNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CannotRefreshExchangeRatesException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CurrencyExchangeRate
