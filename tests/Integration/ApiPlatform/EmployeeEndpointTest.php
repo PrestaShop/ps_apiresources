@@ -146,14 +146,18 @@ class EmployeeEndpointTest extends ApiTestCase
      */
     public function testPartialUpdateEmployee(int $employeeId): int
     {
+        // EditEmployeeHandler dereferences $command->getEmail()->getValue() unconditionally,
+        // so a partial update must carry the email even when it does not change it
         $updatedEmployee = $this->partialUpdateItem('/employees/' . $employeeId, [
             'firstName' => 'Johnny',
+            'email' => 'john.doe@example.com',
         ], ['employee_write']);
         $this->assertSame('Johnny', $updatedEmployee['firstName']);
         $this->assertSame('Doe', $updatedEmployee['lastName']);
 
         $updatedEmployee = $this->partialUpdateItem('/employees/' . $employeeId, [
             'lastName' => 'Updated',
+            'email' => 'john.doe@example.com',
         ], ['employee_write']);
         $this->assertSame('Johnny', $updatedEmployee['firstName']);
         $this->assertSame('Updated', $updatedEmployee['lastName']);
