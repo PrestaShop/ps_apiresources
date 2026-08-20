@@ -497,7 +497,9 @@ class CountryEndpointTest extends ApiTestCase
     {
         $this->markTestSkippedByMinVersion('9.2.0');
 
-        $countryIds = [$this->createCountry('YD', true), $this->createCountry('YE', true)];
+        // YE is Yemen: the fixtures already ship it, and the create then fails with
+        // DuplicateCountryIsoCodeException. YD and YH are unassigned in ISO 3166-1.
+        $countryIds = [$this->createCountry('YD', true), $this->createCountry('YH', true)];
 
         $this->updateItem('/countries/bulk-toggle-status', [
             'countryIds' => $countryIds,
