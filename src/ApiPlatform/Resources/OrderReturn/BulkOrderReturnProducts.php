@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\BulkDeleteProductsFromOrderReturnCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\CannotDeleteLastProductFromOrderReturnException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
@@ -46,6 +47,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     exceptionToStatus: [
         OrderReturnNotFoundException::class => Response::HTTP_NOT_FOUND,
         OrderReturnConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // A merchandise return must keep at least one product: a client error, not a 500
+        CannotDeleteLastProductFromOrderReturnException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkOrderReturnProducts
