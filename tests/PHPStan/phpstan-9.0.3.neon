@@ -23,6 +23,6 @@ parameters:
         # operations declare minVersion 9.2.0, so ApiResourceScopesExtractor drops them on
         # older cores and they are expected to be absent here.
         -
-            message: "#Class .*OrderReturn\\\\(Command|Exception).* not found.#"
+            message: "#Class .*OrderReturn\\\\(Command|Exception|Query).* not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/OrderReturn/*
