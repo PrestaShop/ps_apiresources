@@ -75,6 +75,50 @@ class EmployeeEndpointTest extends ApiTestCase
             'GET',
             '/employees',
         ];
+
+        yield 'toggle status endpoint' => [
+            'PUT',
+            '/employees/1/toggle-status',
+        ];
+
+        yield 'bulk update status endpoint' => [
+            'PUT',
+            '/employees/bulk-update-status',
+        ];
+
+        yield 'bulk delete endpoint' => [
+            'DELETE',
+            '/employees/bulk-delete',
+        ];
+    }
+
+    /**
+     * Every fixture below is created through POST /employees. The status/bulk PR seeded them
+     * through the legacy Employee object, on the grounds that AddEmployeeCommand refuses a
+     * profile the context employee cannot grant — but the create endpoint of this same
+     * resource does it fine, as testAddEmployee shows.
+     */
+    private function createEmployee(string $email): int
+    {
+        $employee = $this->createItem('/employees', [
+            'firstName' => 'John',
+            'lastName' => 'Doe',
+            'email' => $email,
+            'password' => 'TestPassword123!',
+            'defaultPageId' => 1,
+            'languageId' => 1,
+            'enabled' => true,
+            'profileId' => 1,
+            'shopAssociation' => [1],
+            'hasEnabledGravatar' => false,
+        ], ['employee_write'], Response::HTTP_CREATED);
+
+        return (int) $employee['employeeId'];
+    }
+
+    private function isEmployeeEnabled(int $employeeId): bool
+    {
+        return (bool) $this->getItem('/employees/' . $employeeId, ['employee_read'])['enabled'];
     }
 
     public function testAddEmployee(): int
@@ -103,6 +147,8 @@ class EmployeeEndpointTest extends ApiTestCase
         $this->assertSame('john.doe@example.com', $employee['email']);
         $this->assertSame(1, $employee['profileId']);
         $this->assertTrue($employee['enabled']);
+        // The password is write only and must never be normalized back out
+        $this->assertArrayNotHasKey('password', $employee);
 
         $newItemsCount = $this->countItems('/employees', ['employee_read']);
         $this->assertEquals($itemsCount + 1, $newItemsCount);
@@ -124,6 +170,7 @@ class EmployeeEndpointTest extends ApiTestCase
         $this->assertSame(1, $employee['languageId']);
         $this->assertTrue($employee['enabled']);
         $this->assertSame(1, $employee['profileId']);
+        $this->assertArrayNotHasKey('password', $employee);
 
         return $employeeId;
     }
@@ -186,5 +233,67 @@ class EmployeeEndpointTest extends ApiTestCase
 
         // Getting the item should result in a 404 now
         $this->getItem('/employees/' . $employeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testToggleStatus(): void
+    {
+        $employeeId = $this->createEmployee('toggle.actions@example.com');
+        $this->assertTrue($this->isEmployeeEnabled($employeeId));
+
+        // Blind toggle: enabled -> disabled
+        $this->updateItem('/employees/' . $employeeId . '/toggle-status', [], ['employee_write'], Response::HTTP_NO_CONTENT);
+        $this->assertFalse($this->isEmployeeEnabled($employeeId));
+
+        // Blind toggle again: disabled -> enabled
+        $this->updateItem('/employees/' . $employeeId . '/toggle-status', [], ['employee_write'], Response::HTTP_NO_CONTENT);
+        $this->assertTrue($this->isEmployeeEnabled($employeeId));
+    }
+
+    public function testToggleStatusNotFound(): void
+    {
+        $this->updateItem('/employees/999999/toggle-status', [], ['employee_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testBulkUpdateStatus(): void
+    {
+        $employeeIds = [
+            $this->createEmployee('bulk1.actions@example.com'),
+            $this->createEmployee('bulk2.actions@example.com'),
+        ];
+
+        $this->updateItem('/employees/bulk-update-status', [
+            'employeeIds' => $employeeIds,
+            'enabled' => false,
+        ], ['employee_write'], Response::HTTP_NO_CONTENT);
+
+        foreach ($employeeIds as $employeeId) {
+            $this->assertFalse($this->isEmployeeEnabled($employeeId));
+        }
+
+        $this->updateItem('/employees/bulk-update-status', [
+            'employeeIds' => $employeeIds,
+            'enabled' => true,
+        ], ['employee_write'], Response::HTTP_NO_CONTENT);
+
+        foreach ($employeeIds as $employeeId) {
+            $this->assertTrue($this->isEmployeeEnabled($employeeId));
+        }
+    }
+
+    public function testBulkDelete(): void
+    {
+        $employeeIds = [
+            $this->createEmployee('bulkdelete1.actions@example.com'),
+            $this->createEmployee('bulkdelete2.actions@example.com'),
+        ];
+
+        $this->bulkDeleteItems('/employees/bulk-delete', [
+            'employeeIds' => $employeeIds,
+        ], ['employee_write']);
+
+        // Deleted employees are really gone, the GET no longer resolves them
+        foreach ($employeeIds as $employeeId) {
+            $this->getItem('/employees/' . $employeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
+        }
     }
 }

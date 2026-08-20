@@ -108,7 +108,12 @@ class Employee
     #[Assert\Email(mode: Assert\Email::VALIDATION_MODE_STRICT)]
     public string $email;
 
+    /**
+     * Write only: GetEmployeeForEditing never returns a password, and this resource is also
+     * served by the GET and the list, so the property must never be normalized back out.
+     */
     #[Assert\NotBlank(groups: ['Create'])]
+    #[ApiProperty(readable: false)]
     public string $password;
 
     #[Assert\NotBlank(groups: ['Create'])]
