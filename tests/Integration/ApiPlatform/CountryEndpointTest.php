@@ -59,6 +59,26 @@ class CountryEndpointTest extends ApiTestCase
         yield 'update endpoint' => ['PATCH', '/countries/1'];
         yield 'delete endpoint' => ['DELETE', '/countries/1'];
         yield 'list endpoint' => ['GET', '/countries'];
+        yield 'get required fields endpoint' => ['GET', '/countries/1/required-fields'];
+
+        // The commands behind these four operations only exist since 9.2.0, so the operations
+        // are filtered out of the routing on older cores and the endpoints answer 404, not 401.
+        if (self::isVersionAtLeast('9.2.0')) {
+            yield 'bulk delete endpoint' => ['DELETE', '/countries/bulk-delete'];
+            yield 'toggle status endpoint' => ['PUT', '/countries/1/toggle-status'];
+            yield 'bulk toggle status endpoint' => ['PUT', '/countries/bulk-toggle-status'];
+            yield 'bulk update zone endpoint' => ['PUT', '/countries/bulk-update-zone'];
+        }
+    }
+
+    public function testGetCountryRequiredFields(): void
+    {
+        $requiredFields = $this->getItem('/countries/1/required-fields', ['country_read']);
+
+        $this->assertEquals(['countryId', 'stateRequired', 'dniRequired'], array_keys($requiredFields));
+        $this->assertSame(1, $requiredFields['countryId']);
+        $this->assertIsBool($requiredFields['stateRequired']);
+        $this->assertIsBool($requiredFields['dniRequired']);
     }
 
     public function testAddCountry(): int
@@ -390,6 +410,131 @@ class CountryEndpointTest extends ApiTestCase
     private function expectedAddressFormat(string $sentFormat): string
     {
         return interface_exists(self::CORE_ADDRESS_FORMAT_CHECKER) ? $sentFormat : '';
+    }
+
+    /**
+     * BulkDeleteCountriesCommand only exists since 9.2.0, so the operation is filtered out of
+     * the routing on older cores and the test is skipped there.
+     */
+    public function testBulkDeleteCountries(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $ids = [];
+        foreach (['YA', 'YB'] as $isoCode) {
+            $payload = $this->getCreatePayload();
+            $payload['isoCode'] = $isoCode;
+            $payload['names'] = [
+                'en-US' => 'Bulk Country ' . $isoCode,
+                'fr-FR' => 'Pays Bulk ' . $isoCode,
+            ];
+            $created = $this->createItem('/countries', $payload, ['country_write']);
+            $ids[] = $created['countryId'];
+        }
+
+        $this->bulkDeleteItems('/countries/bulk-delete', [
+            'countryIds' => $ids,
+        ], ['country_write']);
+
+        foreach ($ids as $countryId) {
+            $this->getItem('/countries/' . $countryId, ['country_read'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    /**
+     * The status and zone tests used to look their countries up with
+     * SELECT id_country FROM ps_country and assert with SELECT active / SELECT id_zone.
+     * They now create the countries they operate on, so they never touch a fixture country,
+     * and read the result back through the GET.
+     */
+    private function createCountry(string $isoCode, bool $enabled = true, int $zoneId = 1): int
+    {
+        $payload = $this->getCreatePayload();
+        $payload['isoCode'] = $isoCode;
+        $payload['names'] = [
+            'en-US' => 'Country ' . $isoCode,
+            'fr-FR' => 'Pays ' . $isoCode,
+        ];
+        $payload['enabled'] = $enabled;
+        $payload['zoneId'] = $zoneId;
+
+        return (int) $this->createItem('/countries', $payload, ['country_write'])['countryId'];
+    }
+
+    private function getCountry(int $countryId): array
+    {
+        return $this->getItem('/countries/' . $countryId, ['country_read']);
+    }
+
+    public function testToggleCountryStatus(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $countryId = $this->createCountry('YC', true);
+
+        // These three operations declare no output: false, so they answer 200 with the
+        // denormalized command result rather than an empty 204.
+        $this->requestApi(
+            'PUT',
+            '/countries/' . $countryId . '/toggle-status',
+            null,
+            ['country_write'],
+            Response::HTTP_OK
+        );
+        $this->assertFalse($this->getCountry($countryId)['enabled']);
+
+        $this->requestApi(
+            'PUT',
+            '/countries/' . $countryId . '/toggle-status',
+            null,
+            ['country_write'],
+            Response::HTTP_OK
+        );
+        $this->assertTrue($this->getCountry($countryId)['enabled']);
+    }
+
+    public function testBulkToggleCountriesStatus(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        // YE is Yemen: the fixtures already ship it, and the create then fails with
+        // DuplicateCountryIsoCodeException. YD and YH are unassigned in ISO 3166-1.
+        $countryIds = [$this->createCountry('YD', true), $this->createCountry('YH', true)];
+
+        $this->updateItem('/countries/bulk-toggle-status', [
+            'countryIds' => $countryIds,
+            'enabled' => false,
+        ], ['country_write'], Response::HTTP_OK);
+        foreach ($countryIds as $countryId) {
+            $this->assertFalse($this->getCountry($countryId)['enabled']);
+        }
+
+        $this->updateItem('/countries/bulk-toggle-status', [
+            'countryIds' => $countryIds,
+            'enabled' => true,
+        ], ['country_write'], Response::HTTP_OK);
+        foreach ($countryIds as $countryId) {
+            $this->assertTrue($this->getCountry($countryId)['enabled']);
+        }
+    }
+
+    public function testBulkUpdateCountriesZone(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $countryIds = [$this->createCountry('YF', true, 1), $this->createCountry('YG', true, 1)];
+
+        // Any zone other than the one the countries were created in
+        $newZoneId = 1 === $this->getCountry($countryIds[0])['zoneId'] ? 2 : 1;
+
+        $this->updateItem('/countries/bulk-update-zone', [
+            'countryIds' => $countryIds,
+            'newZoneId' => $newZoneId,
+        ], ['country_write'], Response::HTTP_OK);
+
+        foreach ($countryIds as $countryId) {
+            $this->assertSame($newZoneId, $this->getCountry($countryId)['zoneId']);
+        }
     }
 
     /**
