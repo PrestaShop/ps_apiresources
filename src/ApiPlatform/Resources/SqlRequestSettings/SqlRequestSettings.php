@@ -25,17 +25,29 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SqlRequestSetting
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Command\SaveSqlRequestSettingsCommand;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Exception\SqlRequestSettingsConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Query\GetSqlRequestSettings;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * Settings applied to the files exported by the SQL manager. This is a singleton resource:
+ * it has no identifier, the GET and the PUT share the same URI and expose the very same
+ * properties, and the PUT returns the updated settings by replaying the GET query.
+ */
 #[ApiResource(
     operations: [
+        new CQRSGet(
+            uriTemplate: '/sql-request-settings',
+            CQRSQuery: GetSqlRequestSettings::class,
+            scopes: ['sql_management_read'],
+        ),
         new CQRSUpdate(
             uriTemplate: '/sql-request-settings',
             read: false,
-            output: false,
             CQRSCommand: SaveSqlRequestSettingsCommand::class,
+            CQRSQuery: GetSqlRequestSettings::class,
             scopes: ['sql_management_write'],
         ),
     ],
