@@ -122,6 +122,9 @@ class MailTemplateEndpointTest extends ApiTestCase
             [
                 'locale' => self::LOCALE,
                 'source' => 'core',
+                // EditEmailBodyTemplateCommand types $moduleName as a plain string with no
+                // default, so it has to be sent even for a core template
+                'moduleName' => '',
                 'htmlContent' => $htmlContent,
                 'txtContent' => $txtContent,
             ],

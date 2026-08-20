@@ -25,8 +25,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\MailTemplate;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\MailTemplate\Command\EditEmailBodyTemplateCommand;
-use PrestaShop\PrestaShop\Core\Domain\MailTemplate\Exception\FileNotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\MailTemplate\Exception\InvalidArgumentException;
+use PrestaShop\PrestaShop\Core\Domain\MailTemplate\Exception\EmailTemplateConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\MailTemplate\Exception\EmailTemplateNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\MailTemplate\Query\GetEmailBodyTemplateForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
@@ -63,8 +63,8 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     exceptionToStatus: [
-        FileNotFoundException::class => Response::HTTP_NOT_FOUND,
-        InvalidArgumentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        EmailTemplateNotFoundException::class => Response::HTTP_NOT_FOUND,
+        EmailTemplateConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class MailTemplate
@@ -79,6 +79,10 @@ class MailTemplate
     #[Assert\Choice(choices: ['core', 'module'], groups: ['Create'])]
     public string $source;
 
+    /**
+     * Empty for a core template. EditEmailBodyTemplateCommand types it as a plain string with
+     * no default, so the edit request has to carry it either way.
+     */
     public string $moduleName = '';
 
     public string $htmlContent = '';
