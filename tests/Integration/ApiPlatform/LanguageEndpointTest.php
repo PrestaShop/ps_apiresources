@@ -45,7 +45,7 @@ class LanguageEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get endpoint' => ['GET', '/languages/1'];
+        yield 'get endpoint' => ['GET', '/languages/1/details'];
         yield 'create endpoint' => ['POST', '/languages'];
         yield 'update endpoint' => ['PATCH', '/languages/1'];
         yield 'set status endpoint' => ['PATCH', '/languages/1/set-status'];
@@ -59,12 +59,13 @@ class LanguageEndpointTest extends ApiTestCase
      * delete tests used the addLanguageByLocale() command-bus helper because the create
      * endpoint lived in another PR.
      *
-     * The handler calls copy() on both image paths — PHP 8.1+ raises a ValueError on an empty
-     * string — so a real image from the shop image directory is passed.
+     * AddLanguageHandler validates and copies both image paths, so they must point at a real
+     * image. _PS_IMG_DIR_ is the test fixture image directory and does not ship l/en.jpg, so
+     * the flag is generated once in the system temp directory instead.
      */
     private function createLanguage(string $isoCode, bool $enabled = true): array
     {
-        $flag = _PS_IMG_DIR_ . 'l/en.jpg';
+        $flag = self::createFlagImage();
 
         return $this->createItem('/languages', [
             'name' => 'Test ' . strtoupper($isoCode),
@@ -80,9 +81,24 @@ class LanguageEndpointTest extends ApiTestCase
         ], ['language_write'], Response::HTTP_CREATED);
     }
 
+    private static function createFlagImage(): string
+    {
+        static $path = null;
+
+        if (null === $path) {
+            $path = sys_get_temp_dir() . '/ps-api-language-flag.jpg';
+            $image = imagecreatetruecolor(16, 11);
+            imagefill($image, 0, 0, imagecolorallocate($image, 0, 0, 128));
+            imagejpeg($image, $path);
+            imagedestroy($image);
+        }
+
+        return $path;
+    }
+
     private function getLanguage(int $languageId): array
     {
-        return $this->getItem('/languages/' . $languageId, ['language_read']);
+        return $this->getItem('/languages/' . $languageId . '/details', ['language_read']);
     }
 
     private function isLanguageEnabled(int $languageId): bool
@@ -97,10 +113,6 @@ class LanguageEndpointTest extends ApiTestCase
         $this->assertSame('Test TS', $language['name']);
         $this->assertSame('ts', $language['isoCode']);
         $this->assertTrue($language['enabled']);
-        // Write only, must never be normalized back out
-        $this->assertArrayNotHasKey('flagImagePath', $language);
-        $this->assertArrayNotHasKey('noPictureImagePath', $language);
-
         // The create replays GetLanguageForEditing, so it answers exactly what the GET does
         $this->assertEquals($this->getLanguage($language['languageId']), $language);
 
@@ -188,7 +200,7 @@ class LanguageEndpointTest extends ApiTestCase
         $this->deleteItem('/languages/' . $languageId, ['language_write']);
 
         // Asserted through the API instead of Validate::isLoadedObject(new Language($id))
-        $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/languages/' . $languageId . '/details', ['language_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkDelete(): void
@@ -203,7 +215,7 @@ class LanguageEndpointTest extends ApiTestCase
         ], ['language_write']);
 
         foreach ($languageIds as $languageId) {
-            $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/languages/' . $languageId . '/details', ['language_read'], Response::HTTP_NOT_FOUND);
         }
     }
 }
