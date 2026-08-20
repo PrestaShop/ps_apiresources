@@ -25,22 +25,29 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\ImageSettings;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Command\EditImageSettingsCommand;
-use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Exception\ImageTypeException;
+use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Query\GetImageSettingsForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
-use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Global image generation settings. This is a singleton resource: it has no identifier,
+ * the GET and the PUT share the same URI and expose the very same properties, and the PUT
+ * returns the updated settings by replaying the GET query.
+ */
 #[ApiResource(
     operations: [
+        new CQRSGet(
+            uriTemplate: '/image-settings',
+            CQRSQuery: GetImageSettingsForEditing::class,
+            scopes: ['image_settings_read'],
+        ),
         new CQRSUpdate(
             uriTemplate: '/image-settings',
             read: false,
-            output: false,
             CQRSCommand: EditImageSettingsCommand::class,
+            CQRSQuery: GetImageSettingsForEditing::class,
             scopes: ['image_settings_write'],
         ),
-    ],
-    exceptionToStatus: [
-        ImageTypeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ImageSettings
