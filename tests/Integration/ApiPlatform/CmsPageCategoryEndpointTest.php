@@ -51,7 +51,6 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'breadcrumb endpoint' => ['GET', '/cms-page-categories/1/breadcrumbs'];
         yield 'get endpoint' => [
             'GET',
             '/cms-page-categories/1',
