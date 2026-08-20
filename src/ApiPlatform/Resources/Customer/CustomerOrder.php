@@ -26,32 +26,42 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerOrders;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * One order of a customer, as summarized by GetCustomerOrders.
+ *
+ * The query returns a list, so this is a collection operation: QueryResultSerializerTrait
+ * only wraps a query result behind "_queryResult" when it is a scalar, so the
+ * ['[_queryResult]' => '[...]'] mapping the source PR used could never fill anything and the
+ * response came back with the identifier alone.
+ */
 #[ApiResource(
     operations: [
-        new CQRSGet(
+        new CQRSGetCollection(
             uriTemplate: '/customers/{customerId}/orders',
             requirements: ['customerId' => '\d+'],
             CQRSQuery: GetCustomerOrders::class,
             scopes: ['customer_read'],
-            CQRSQueryMapping: [
-                '[_queryResult]' => '[orders]',
-            ],
         ),
     ],
     exceptionToStatus: [
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-class CustomerOrders
+class CustomerOrder
 {
     #[ApiProperty(identifier: true)]
-    public int $customerId;
+    public int $orderId;
 
-    /**
-     * @var array<array{orderId: int, orderPlacedDate: string, paymentMethodName: string, orderStatus: string, orderProductsCount: int, totalPaid: string}>
-     */
-    public array $orders;
+    public string $orderPlacedDate;
+
+    public string $paymentMethodName;
+
+    public string $orderStatus;
+
+    public int $orderProductsCount;
+
+    public string $totalPaid;
 }

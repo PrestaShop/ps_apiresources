@@ -562,10 +562,9 @@ class CustomerEndpointTest extends ApiTestCase
     {
         $response = $this->getItem('/customers/' . $customerId . '/orders', ['customer_read']);
 
-        // A freshly created customer has no orders yet
-        $this->assertSame($customerId, $response['customerId']);
-        $this->assertArrayHasKey('orders', $response);
-        $this->assertSame([], $response['orders']);
+        // The query returns a list, so the endpoint is a collection: a freshly created customer
+        // has no orders yet, hence an empty list
+        $this->assertSame([], $response);
     }
 
     /**
@@ -575,10 +574,9 @@ class CustomerEndpointTest extends ApiTestCase
     {
         $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
 
-        // A freshly created customer has no carts yet
-        $this->assertSame($customerId, $response['customerId']);
-        $this->assertArrayHasKey('carts', $response);
-        $this->assertSame([], $response['carts']);
+        // The query returns a list, so the endpoint is a collection: a freshly created customer
+        // has no carts yet, hence an empty list
+        $this->assertSame([], $response);
     }
 
     /**
