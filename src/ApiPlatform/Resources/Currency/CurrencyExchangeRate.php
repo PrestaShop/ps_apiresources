@@ -47,8 +47,10 @@ use Symfony\Component\HttpFoundation\Response;
             uriTemplate: '/currencies/exchange-rates',
             CQRSQuery: GetCurrencyExchangeRate::class,
             scopes: ['currency_read'],
+            // GetCurrencyExchangeRateHandler returns a QueryResult\ExchangeRate, not a scalar and
+            // not a ValueObject, so it is normalized through its getValue() getter as [value]
             CQRSQueryMapping: [
-                '[_queryResult]' => '[exchangeRate]',
+                '[value]' => '[exchangeRate]',
             ],
             parameters: new Parameters([
                 new QueryParameter(
