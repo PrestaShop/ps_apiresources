@@ -19,3 +19,10 @@ parameters:
             identifier: class.notFound
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
+        # The OrderReturn delete/bulk CQRS classes only exist since PrestaShop 9.2. The
+        # operations declare minVersion 9.2.0, so ApiResourceScopesExtractor drops them on
+        # older cores and they are expected to be absent here.
+        -
+            message: "#Class .*OrderReturn\\\\(Command|Exception).* not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/OrderReturn/*
