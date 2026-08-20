@@ -22,7 +22,6 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerCarts;
@@ -32,16 +31,15 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * One cart of a customer, as summarized by GetCustomerCarts.
  *
- * The query returns a list, so this is a collection operation: QueryResultSerializerTrait
- * only wraps a query result behind "_queryResult" when it is a scalar, so the
- * ['[_queryResult]' => '[...]'] mapping the source PR used could never fill anything and the
- * response came back with the identifier alone.
+ * The query returns a list, so this is a collection operation, declared like ProductImageList:
+ * QueryResultSerializerTrait only wraps a query result behind "_queryResult" when it is a
+ * scalar, so the ['[_queryResult]' => '[carts]'] mapping the source PR used could never fill
+ * anything and the response came back with the identifier alone.
  */
 #[ApiResource(
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/customers/{customerId}/carts',
-            requirements: ['customerId' => '\d+'],
             CQRSQuery: GetCustomerCarts::class,
             scopes: ['customer_read'],
         ),
@@ -52,7 +50,8 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class CustomerCart
 {
-    #[ApiProperty(identifier: true)]
+    public int $customerId;
+
     public int $cartId;
 
     public string $creationDate;
