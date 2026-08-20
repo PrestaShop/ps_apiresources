@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class SecuritySessionEndpointTest extends ApiTestCase
@@ -50,25 +51,33 @@ class SecuritySessionEndpointTest extends ApiTestCase
         ]);
     }
 
-    private function seedCustomerSession(int $idCustomer = 1): int
+    /**
+     * Sessions are created by logging in, the domain exposes no "add session" command, so this
+     * is the one thing these tests cannot get from the API. Everything they assert goes back
+     * through the list endpoint.
+     *
+     * $ageInSeconds moves date_upd into the past: a session older than PS_COOKIE_LIFETIME_FO /
+     * PS_COOKIE_LIFETIME_BO (480 hours by default) is what "outdated" means for the core.
+     */
+    private function seedCustomerSession(int $idCustomer = 1, string $age = 'now'): int
     {
         \Db::getInstance()->insert('customer_session', [
             'id_customer' => $idCustomer,
             'token' => bin2hex(random_bytes(16)),
-            'date_add' => date('Y-m-d H:i:s'),
-            'date_upd' => date('Y-m-d H:i:s'),
+            'date_add' => date('Y-m-d H:i:s', strtotime($age)),
+            'date_upd' => date('Y-m-d H:i:s', strtotime($age)),
         ]);
 
         return (int) \Db::getInstance()->Insert_ID();
     }
 
-    private function seedEmployeeSession(int $idEmployee = 1): int
+    private function seedEmployeeSession(int $idEmployee = 1, string $age = 'now'): int
     {
         \Db::getInstance()->insert('employee_session', [
             'id_employee' => $idEmployee,
             'token' => bin2hex(random_bytes(16)),
-            'date_add' => date('Y-m-d H:i:s'),
-            'date_upd' => date('Y-m-d H:i:s'),
+            'date_add' => date('Y-m-d H:i:s', strtotime($age)),
+            'date_upd' => date('Y-m-d H:i:s', strtotime($age)),
         ]);
 
         return (int) \Db::getInstance()->Insert_ID();
@@ -90,6 +99,8 @@ class SecuritySessionEndpointTest extends ApiTestCase
         yield 'customer delete endpoint' => ['DELETE', '/customer-sessions/1'];
         yield 'employee list endpoint' => ['GET', '/employee-sessions'];
         yield 'employee delete endpoint' => ['DELETE', '/employee-sessions/1'];
+        yield 'customer clear outdated endpoint' => ['DELETE', '/customer-sessions/bulk-clear-outdated'];
+        yield 'employee clear outdated endpoint' => ['DELETE', '/employee-sessions/bulk-clear-outdated'];
     }
 
     public function testListCustomerSessions(): void
@@ -175,5 +186,48 @@ class SecuritySessionEndpointTest extends ApiTestCase
         foreach ($bulkIds as $sessionId) {
             $this->assertNotContains($sessionId, $listed);
         }
+    }
+
+    public function testClearOutdatedCustomerSessions(): void
+    {
+        $outdatedId = $this->seedCustomerSession(1, '-1 year');
+        $currentId = $this->seedCustomerSession(1);
+
+        $listUrl = '/customer-sessions?orderBy=sessionId&sortOrder=desc';
+        $this->assertContains($outdatedId, $this->listedIds($listUrl, ['customer_session_read']));
+
+        $this->requestApi(
+            'DELETE',
+            '/customer-sessions/bulk-clear-outdated',
+            null,
+            ['customer_session_write'],
+            Response::HTTP_NO_CONTENT
+        );
+
+        // Only the outdated one is cleared, the current session survives
+        $listed = $this->listedIds($listUrl, ['customer_session_read']);
+        $this->assertNotContains($outdatedId, $listed);
+        $this->assertContains($currentId, $listed);
+    }
+
+    public function testClearOutdatedEmployeeSessions(): void
+    {
+        $outdatedId = $this->seedEmployeeSession(1, '-1 year');
+        $currentId = $this->seedEmployeeSession(1);
+
+        $listUrl = '/employee-sessions?orderBy=sessionId&sortOrder=desc';
+        $this->assertContains($outdatedId, $this->listedIds($listUrl, ['employee_session_read']));
+
+        $this->requestApi(
+            'DELETE',
+            '/employee-sessions/bulk-clear-outdated',
+            null,
+            ['employee_session_write'],
+            Response::HTTP_NO_CONTENT
+        );
+
+        $listed = $this->listedIds($listUrl, ['employee_session_read']);
+        $this->assertNotContains($outdatedId, $listed);
+        $this->assertContains($currentId, $listed);
     }
 }
