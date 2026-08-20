@@ -27,19 +27,19 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Command\UpdateModulePermissionsCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Exception\InvalidPermissionValueException;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Exception\PermissionUpdateException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
-        new CQRSPartialUpdate(
+        new CQRSUpdate(
             uriTemplate: '/profiles/{profileId}/module-permissions',
             requirements: ['profileId' => '\d+'],
-            read: false,
             output: false,
-            // Without this the empty body of an unauthorized request is decoded as JSON before
-            // the scope check runs, and the endpoint answers 400 instead of 403
-            allowEmptyBody: true,
+            // No read: false here. With it, ApiPlatform deserializes the body and builds the
+            // command before the scope check runs, so an unauthorized request carrying no body
+            // answers 400 instead of 403. /categories/bulk-update-status is declared the same
+            // way and does answer 403.
             CQRSCommand: UpdateModulePermissionsCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             scopes: ['profile_write'],
