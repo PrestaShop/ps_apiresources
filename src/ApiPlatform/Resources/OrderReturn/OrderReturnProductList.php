@@ -32,6 +32,9 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/order-returns/{orderReturnId}/products',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSQuery: GetOrderReturnProducts::class,
             scopes: ['order_return_read'],
         ),
