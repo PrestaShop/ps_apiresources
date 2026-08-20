@@ -26,6 +26,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\DeleteProductFromOrderReturnCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\CannotDeleteLastProductFromOrderReturnException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
@@ -58,6 +59,8 @@ use Symfony\Component\HttpFoundation\Response;
     exceptionToStatus: [
         OrderReturnNotFoundException::class => Response::HTTP_NOT_FOUND,
         OrderReturnConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // A merchandise return must keep at least one product: a client error, not a 500
+        CannotDeleteLastProductFromOrderReturnException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class OrderReturnProduct

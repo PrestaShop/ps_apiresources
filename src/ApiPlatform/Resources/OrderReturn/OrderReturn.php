@@ -51,6 +51,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: UpdateOrderReturnStateCommand::class,
             CQRSQuery: GetOrderReturnForEditing::class,
             scopes: ['order_return_write'],
+            validationContext: ['groups' => ['Default', 'Update']],
         ),
         new CQRSDelete(
             uriTemplate: '/order-returns/{orderReturnId}',
@@ -84,7 +85,11 @@ class OrderReturn
 
     public string $orderDate;
 
-    #[Assert\NotNull]
+    /**
+     * Only required when updating: the constraint is unscoped no more, because ApiPlatform
+     * validates the resource on the DELETE too and the state is never sent there.
+     */
+    #[Assert\NotNull(groups: ['Update'])]
     public int $orderReturnStateId;
 
     public string $question;
