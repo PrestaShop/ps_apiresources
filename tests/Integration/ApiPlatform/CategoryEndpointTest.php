@@ -324,33 +324,69 @@ class CategoryEndpointTest extends ApiTestCase
         }
     }
 
+    /**
+     * GetCategoryForEditing does not expose a position, so the only read side of a reorder is
+     * the categories tree: Category::getNestedCategories() orders siblings by
+     * category_shop.position, which is exactly what this endpoint rewrites. The source PR
+     * asserted on a "position" field of GET /categories/{id} that the query never returns.
+     *
+     * @return int[] the ids of the children of the given category, in tree order
+     */
+    private function getSiblingOrder(int $parentCategoryId): array
+    {
+        foreach ($this->flattenTree($this->getItem('/categories/trees', ['category_read'])) as $node) {
+            if ((int) $node['categoryId'] === $parentCategoryId) {
+                return array_map(static fn (array $child): int => (int) $child['categoryId'], $node['children'] ?? []);
+            }
+        }
+
+        $this->fail(sprintf('Category %d is not part of the categories tree.', $parentCategoryId));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $tree
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function flattenTree(array $tree): array
+    {
+        $nodes = [];
+        foreach ($tree as $node) {
+            $nodes[] = $node;
+            if (!empty($node['children'])) {
+                $nodes = array_merge($nodes, $this->flattenTree($node['children']));
+            }
+        }
+
+        return $nodes;
+    }
+
     public function testUpdateCategoryPosition(): void
     {
-        // Two fresh siblings under Home (parent 2). Their initial positions are the
-        // next two slots; we then send the position tokens in reversed order so the
-        // second created category ends up in the first sibling's slot.
+        // Two fresh siblings under Home (parent 2), created in order, then reordered by
+        // sending the position tokens the other way round.
         [$catA, $catB] = $this->createTemporaryCategories();
 
-        $initialA = $this->getItem('/categories/' . $catA, ['category_read']);
-        $initialB = $this->getItem('/categories/' . $catB, ['category_read']);
-        $this->assertLessThan($initialB['position'], $initialA['position']);
-
-        $positions = [
-            $initialA['position'] => 'tr_2_' . $catB,
-            $initialB['position'] => 'tr_2_' . $catA,
-        ];
+        $before = $this->getSiblingOrder(2);
+        $indexA = array_search($catA, $before, true);
+        $indexB = array_search($catB, $before, true);
+        $this->assertNotFalse($indexA);
+        $this->assertNotFalse($indexB);
+        $this->assertLessThan($indexB, $indexA);
 
         $this->updateItem('/categories/update-positions', [
             'categoryId' => $catA,
             'parentCategoryId' => 2,
             'way' => 1,
-            'positions' => $positions,
+            'positions' => [
+                $indexA => 'tr_2_' . $catB,
+                $indexB => 'tr_2_' . $catA,
+            ],
             'foundFirst' => true,
         ], ['category_write'], Response::HTTP_NO_CONTENT);
 
-        $updatedA = $this->getItem('/categories/' . $catA, ['category_read']);
-        $updatedB = $this->getItem('/categories/' . $catB, ['category_read']);
-        $this->assertGreaterThan($updatedB['position'], $updatedA['position']);
+        $after = $this->getSiblingOrder(2);
+        $this->assertGreaterThan(array_search($catB, $after, true), array_search($catA, $after, true));
 
         // Clean up so the sibling count doesn't drift for later tests.
         $this->deleteItem('/categories/' . $catA . '/associate_and_disable', ['category_write']);
@@ -421,14 +457,9 @@ class CategoryEndpointTest extends ApiTestCase
      */
     private function flattenTreeIds(array $tree): array
     {
-        $ids = [];
-        foreach ($tree as $node) {
-            $ids[] = (int) $node['categoryId'];
-            if (!empty($node['children'])) {
-                $ids = array_merge($ids, $this->flattenTreeIds($node['children']));
-            }
-        }
-
-        return $ids;
+        return array_map(
+            static fn (array $node): int => (int) $node['categoryId'],
+            $this->flattenTree($tree)
+        );
     }
 }

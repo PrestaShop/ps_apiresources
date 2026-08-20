@@ -185,8 +185,6 @@ class Category
     #[DefaultLanguage(groups: ['Update'], fieldName: 'metaDescriptions', allowNull: true)]
     public array $metaDescriptions;
 
-    public int $position;
-
     public int $parentCategoryId;
 
     public string $redirectType;
