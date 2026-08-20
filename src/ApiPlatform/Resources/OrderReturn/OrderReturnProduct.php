@@ -36,6 +36,9 @@ use Symfony\Component\HttpFoundation\Response;
         new CQRSDelete(
             uriTemplate: '/order-returns/{orderReturnId}/products/{orderDetailId}',
             requirements: ['orderReturnId' => '\d+', 'orderDetailId' => '\d+'],
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSCommand: DeleteProductFromOrderReturnCommand::class,
             scopes: ['order_return_write'],
             parameters: new Parameters([
