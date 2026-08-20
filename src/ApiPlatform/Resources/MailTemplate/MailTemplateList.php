@@ -36,6 +36,9 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                 'minVersion' => '9.2.0',
             ],
             CQRSQuery: GetEmailBodyTemplatesForListing::class,
+            // EmailBodyTemplateRepository returns raw rows keyed on the file scan, not on the
+            // resource property names
+            ApiResourceMapping: self::API_RESOURCE_MAPPING,
             scopes: ['mail_template_read'],
             parameters: new Parameters([
                 new QueryParameter(
@@ -54,6 +57,13 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 )]
 class MailTemplateList
 {
+    public const API_RESOURCE_MAPPING = [
+        '[template_name]' => '[templateName]',
+        '[module_name]' => '[moduleName]',
+        '[has_html]' => '[hasHtml]',
+        '[has_txt]' => '[hasTxt]',
+    ];
+
     public string $templateName;
 
     public string $source;
