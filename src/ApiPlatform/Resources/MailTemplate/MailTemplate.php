@@ -45,7 +45,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['mail_template_read'],
             openapiContext: [
                 'parameters' => [
-                    ['name' => 'locale', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string']],
+                    ['name' => 'locale', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string', 'example' => 'en'], 'description' => 'Language ISO code, the mails/<iso> directory the template lives in'],
                     ['name' => 'source', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string', 'enum' => ['core', 'module']]],
                     ['name' => 'moduleName', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'string', 'default' => '']],
                 ],

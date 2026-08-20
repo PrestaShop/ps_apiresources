@@ -41,7 +41,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                 new QueryParameter(
                     key: 'locale',
                     required: true,
-                    description: 'Locale identifier (e.g. en-US, fr-FR)'
+                    description: 'Language ISO code, the mails/<iso> directory to list (e.g. en, fr)'
                 ),
             ]),
             openapiContext: [

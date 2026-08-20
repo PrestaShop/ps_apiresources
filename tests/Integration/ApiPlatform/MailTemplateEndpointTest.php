@@ -26,7 +26,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class MailTemplateEndpointTest extends ApiTestCase
 {
-    private const LOCALE = 'en-US';
+    /**
+     * The mail templates live in mails/<iso>, so what these endpoints call a locale is really
+     * the language ISO code — 'en-US' matches no directory and lists nothing.
+     */
+    private const LOCALE = 'en';
 
     /**
      * The listing, get and edit endpoints all use CQRS classes that landed in 9.2. Below that
@@ -50,8 +54,8 @@ class MailTemplateEndpointTest extends ApiTestCase
         yield 'generate theme mail templates endpoint' => ['PUT', '/mail-templates'];
 
         if (self::isVersionAtLeast(self::READ_EDIT_MIN_VERSION)) {
-            yield 'list mail templates endpoint' => ['GET', '/mail-templates?locale=en-US'];
-            yield 'get mail template' => ['GET', '/mail-templates/order_conf?locale=en-US&source=core'];
+            yield 'list mail templates endpoint' => ['GET', '/mail-templates?locale=' . self::LOCALE];
+            yield 'get mail template' => ['GET', '/mail-templates/order_conf?locale=' . self::LOCALE . '&source=core'];
             yield 'edit mail template' => ['PATCH', '/mail-templates/order_conf'];
         }
     }
