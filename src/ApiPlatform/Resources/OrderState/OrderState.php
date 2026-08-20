@@ -63,6 +63,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSPartialUpdate(
             uriTemplate: '/order-states/{orderStateId}',
             requirements: ['orderStateId' => '\d+'],
+            read: false,
             CQRSCommand: EditOrderStateCommand::class,
             CQRSQuery: GetOrderStateForEditing::class,
             scopes: [
@@ -81,6 +82,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
     ],
+    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         OrderStateNotFoundException::class => Response::HTTP_NOT_FOUND,
         OrderStateConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -120,6 +122,11 @@ class OrderState
     public bool $paid;
 
     public bool $delivery;
+
+    /**
+     * Read only: order states are soft deleted, EditableOrderState exposes isDeleted().
+     */
+    public bool $deleted;
 
     public const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
