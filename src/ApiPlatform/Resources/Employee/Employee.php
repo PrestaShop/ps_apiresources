@@ -80,8 +80,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     exceptionToStatus: [
-        EmployeeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The specific one first: ApiPlatform keeps the first entry the exception is an
+        // instance of, and EmployeeNotFoundException extends EmployeeException
         EmployeeNotFoundException::class => Response::HTTP_NOT_FOUND,
+        EmployeeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Employee
