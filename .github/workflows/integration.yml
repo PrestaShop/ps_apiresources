@@ -34,12 +34,12 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout Module
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           path: ps_apiresources
 
       - name: Checkout PrestaShop repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           repository: PrestaShop/PrestaShop
