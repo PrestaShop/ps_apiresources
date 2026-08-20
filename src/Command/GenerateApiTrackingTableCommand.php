@@ -55,6 +55,16 @@ class GenerateApiTrackingTableCommand extends Command
         'BulkDeleteQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
         'ToggleQuickAccessNewWindowCommand' => self::REASON_BACK_OFFICE_UI,
         'GetQuickAccessForEditing' => self::REASON_BACK_OFFICE_UI,
+        // The CMS page category breadcrumb, listing name and post-delete redirection target are
+        // three back office view helpers, and none of them is addressable over HTTP:
+        // GetCmsPageCategoryNameForListing takes no id at all and reads id_cms_category off the
+        // current request, falling back to the root category; GetCmsPageCategoriesForBreadcrumb
+        // returns an iterator-only Breadcrumb whose items expose a CmsPageCategoryId object;
+        // GetCmsPageParentCategoryIdForRedirection returns a CmsPageCategoryId object too. The
+        // names and the parent are already served by GET /cms-page-categories/{id}.
+        'GetCmsPageCategoryNameForListing' => self::REASON_BACK_OFFICE_UI,
+        'GetCmsPageCategoriesForBreadcrumb' => self::REASON_BACK_OFFICE_UI,
+        'GetCmsPageParentCategoryIdForRedirection' => self::REASON_BACK_OFFICE_UI,
     ];
 
     private array $cqrsEndpoints = [];
