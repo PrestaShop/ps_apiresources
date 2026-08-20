@@ -41,9 +41,11 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
  * the PUT share the same URI.
  *
  * Read and write are not the same shape here — the write side takes uploaded files, the read
- * side returns the paths the core stored them at — so the two are expressed as write-only and
- * read-only properties of one resource rather than as two classes. The PUT replays
- * GetLogosPaths so an upload answers with the resulting paths instead of an empty 204.
+ * side returns the paths the core stored them at — so the uploaded* properties are declared
+ * readable: false and stay out of the responses.
+ *
+ * The upload answers an empty 204 rather than replaying GetLogosPaths: the result of an upload
+ * is read back with the GET on the same URI.
  */
 #[ApiResource(
     operations: [
@@ -55,8 +57,8 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
         new CQRSUpdate(
             uriTemplate: '/shops/logos',
             read: false,
+            output: false,
             CQRSCommand: UploadLogosCommand::class,
-            CQRSQuery: GetLogosPaths::class,
             scopes: ['shop_write'],
             inputFormats: ['multipart' => ['multipart/form-data']],
             // Form data values are all strings/files, so disable type enforcement.
@@ -72,16 +74,12 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 )]
 class ShopLogos
 {
-    #[ApiProperty(writable: false)]
     public string $headerLogoPath;
 
-    #[ApiProperty(writable: false)]
     public string $mailLogoPath;
 
-    #[ApiProperty(writable: false)]
     public string $invoiceLogoPath;
 
-    #[ApiProperty(writable: false)]
     public string $faviconPath;
 
     #[ApiProperty(readable: false)]

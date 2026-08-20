@@ -58,15 +58,14 @@ class ShopLogosEndpointTest extends ApiTestCase
      * wiring — routing, scope, multipart negotiation and command dispatch — is exercised with
      * an empty payload, which touches no file.
      *
-     * What the merge adds is the assertion below: the upload now replays GetLogosPaths, so it
-     * answers with the logo paths instead of an empty 204, and an upload that changed nothing
-     * must return exactly what the GET returns.
+     * What the merge adds is the assertion below: an upload that changed nothing must leave
+     * the logo paths exactly as the GET reported them.
      *
      * @depends testGetShopLogos
      */
-    public function testUploadLogosReturnsTheLogoPaths(array $logos): void
+    public function testUploadLogosLeavesTheLogoPathsUnchanged(array $logos): void
     {
-        $response = $this->requestApi('PUT', '/shops/logos', null, ['shop_write'], Response::HTTP_OK, [
+        $return = $this->requestApi('PUT', '/shops/logos', null, ['shop_write'], Response::HTTP_NO_CONTENT, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -75,6 +74,9 @@ class ShopLogosEndpointTest extends ApiTestCase
             ],
         ]);
 
-        $this->assertEquals($logos, $response);
+        // This endpoint returns an empty response and a 204 HTTP code
+        $this->assertNull($return);
+
+        $this->assertEquals($logos, $this->getItem('/shops/logos', ['shop_read']));
     }
 }
