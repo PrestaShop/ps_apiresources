@@ -48,6 +48,8 @@ class ImageTypeEndpointTest extends ApiTestCase
         yield 'update endpoint' => ['PATCH', '/image-types/1'];
         yield 'delete endpoint' => ['DELETE', '/image-types/1'];
         yield 'bulk delete endpoint' => ['DELETE', '/image-types/bulk-delete'];
+        yield 'delete images from type endpoint' => ['DELETE', '/image-types/1/images'];
+        yield 'regenerate thumbnails endpoint' => ['PUT', '/image-types/regenerate-thumbnails'];
     }
 
     private function createPayload(string $name): array
@@ -138,5 +140,43 @@ class ImageTypeEndpointTest extends ApiTestCase
 
         $this->getItem('/image-types/' . $firstId, ['image_type_read'], Response::HTTP_NOT_FOUND);
         $this->getItem('/image-types/' . $secondId, ['image_type_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testDeleteImagesFromType(): void
+    {
+        // The image type is created through POST /image-types instead of picking the first id
+        // with a raw SELECT, so the test owns the type whose images it wipes.
+        $imageTypeId = $this->createItem(
+            '/image-types',
+            $this->createPayload('delete_images_type'),
+            ['image_type_write']
+        )['imageTypeId'];
+
+        // Removes the generated thumbnail files of that image type (none for a type that was
+        // just created), so a 204 confirms the command ran successfully.
+        $return = $this->deleteItem('/image-types/' . $imageTypeId . '/images', ['image_type_write']);
+        $this->assertNull($return);
+
+        // Wiping the images does not remove the type itself
+        $this->assertEquals(
+            $imageTypeId,
+            $this->getItem('/image-types/' . $imageTypeId, ['image_type_read'])['imageTypeId']
+        );
+    }
+
+    public function testRegenerateThumbnails(): void
+    {
+        // Regenerate the supplier thumbnails (a small image domain) for every image type,
+        // without erasing the existing images.
+        $this->updateItem(
+            '/image-types/regenerate-thumbnails',
+            [
+                'image' => 'suppliers',
+                'imageTypeId' => 0,
+                'erasePreviousImages' => false,
+            ],
+            ['image_type_write'],
+            Response::HTTP_NO_CONTENT
+        );
     }
 }
