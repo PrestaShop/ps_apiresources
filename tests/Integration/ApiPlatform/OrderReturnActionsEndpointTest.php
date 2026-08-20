@@ -27,10 +27,22 @@ use Tests\Resources\DatabaseDump;
 
 class OrderReturnActionsEndpointTest extends ApiTestCase
 {
+    private const MIN_VERSION = '9.2.0';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
         DatabaseDump::restoreTables(['order_return', 'order_return_detail']);
+        // Every command and query this class exercises landed in 9.2. On older cores the
+        // operations are filtered out of the API (ApiResourceScopesExtractor drops operations
+        // whose CQRS class is missing), so the routes and the scopes do not exist at all.
+        if (!self::isVersionAtLeast(self::MIN_VERSION)) {
+            self::markTestSkipped(sprintf(
+                'The OrderReturn command and query classes require PrestaShop >= %s',
+                self::MIN_VERSION
+            ));
+        }
+
         self::createApiClient(['order_return_read', 'order_return_write']);
     }
 

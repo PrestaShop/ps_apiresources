@@ -34,6 +34,9 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSDelete(
             uriTemplate: '/order-returns/bulk-delete',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSCommand: BulkDeleteOrderReturnsCommand::class,
             scopes: ['order_return_write'],
         ),

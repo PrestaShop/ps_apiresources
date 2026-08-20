@@ -55,6 +55,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSDelete(
             uriTemplate: '/order-returns/{orderReturnId}',
             requirements: ['orderReturnId' => '\d+'],
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSCommand: DeleteOrderReturnCommand::class,
             scopes: ['order_return_write'],
         ),
