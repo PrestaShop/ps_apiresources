@@ -51,7 +51,7 @@ class CmsPageEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'category-for-redirection endpoint' => ['GET', '/cms-pages/1/category-for-redirection'];
+        yield 'category-for-redirection endpoint' => ['GET', '/cms-pages/1/category-for-redirections'];
 
         yield 'get endpoint' => [
             'GET',
@@ -87,7 +87,7 @@ class CmsPageEndpointTest extends ApiTestCase
         $cmsPage = $this->createItem('/cms-pages', $data, ['cms_page_write']);
 
         $result = $this->getItem(
-            '/cms-pages/' . $cmsPage['cmsPageId'] . '/category-for-redirection',
+            '/cms-pages/' . $cmsPage['cmsPageId'] . '/category-for-redirections',
             ['cms_page_read']
         );
 
@@ -99,7 +99,7 @@ class CmsPageEndpointTest extends ApiTestCase
     public function testGetCmsPageCategoryForRedirectionOfUnknownPage(): void
     {
         // An unknown page id is caught by the handler, which falls back to ROOT
-        $result = $this->getItem('/cms-pages/999999/category-for-redirection', ['cms_page_read']);
+        $result = $this->getItem('/cms-pages/999999/category-for-redirections', ['cms_page_read']);
 
         $this->assertSame(999999, $result['cmsPageId']);
         $this->assertIsInt($result['cmsPageCategoryId']);

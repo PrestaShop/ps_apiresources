@@ -30,7 +30,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/cms-page-categories/{cmsPageCategoryId}/parent-for-redirection',
+            uriTemplate: '/cms-page-categories/{cmsPageCategoryId}/parent-for-redirections',
             requirements: ['cmsPageCategoryId' => '\d+'],
             CQRSQuery: GetCmsPageParentCategoryIdForRedirection::class,
             scopes: ['cms_page_category_read'],

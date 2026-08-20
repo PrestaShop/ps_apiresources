@@ -27,7 +27,7 @@ use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\AddCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\DeleteCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\EditCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\ToggleCmsPageStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Query\GetCmsPageForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -93,7 +93,10 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         CmsPageNotFoundException::class => Response::HTTP_NOT_FOUND,
-        CmsPageConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The CmsPage domain has no constraint exception — unlike CmsPageCategory — so the
+        // base exception carries the CannotAdd/CannotEdit/CannotDelete/CannotToggle cases.
+        // CmsPageNotFoundException is declared above and wins, being more specific.
+        CmsPageException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CmsPage
