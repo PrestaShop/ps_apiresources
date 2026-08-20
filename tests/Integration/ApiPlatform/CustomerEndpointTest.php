@@ -538,14 +538,21 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testSetCustomerPrivateNote(int $customerId): void
     {
+        $privateNote = 'A private note about this customer';
+
         $return = $this->partialUpdateItem(
             '/customers/' . $customerId . '/private-notes',
-            ['privateNote' => 'A private note about this customer'],
+            ['privateNote' => $privateNote],
             ['customer_write'],
             Response::HTTP_NO_CONTENT
         );
         // This endpoint returns an empty response and a 204 HTTP code
         $this->assertNull($return);
+
+        // The private note is the generalInformation of the customer details: the write had no
+        // read side to check against while the two endpoints lived in separate PRs.
+        $details = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
+        $this->assertSame($privateNote, $details['generalInformation']['privateNote']);
     }
 
     /**
