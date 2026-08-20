@@ -26,10 +26,14 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\AddCurrencyCommand;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Command\AddUnofficialCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\DeleteCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\EditCurrencyCommand;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Command\EditUnofficialCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\ToggleCurrencyStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CannotUpdateCurrencyException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Query\GetCurrencyForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -48,6 +52,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddCurrencyCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            CQRSQuery: GetCurrencyForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['currency_write'],
         ),
         new CQRSDelete(
@@ -74,6 +80,27 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['currency_write'],
         ),
+        // Unofficial currencies are the same structure, created and edited through their own
+        // commands because the core does not resolve them against the CLDR reference data.
+        new CQRSCreate(
+            uriTemplate: '/currencies/unofficials',
+            validationContext: ['groups' => ['Default', 'Create']],
+            CQRSCommand: AddUnofficialCurrencyCommand::class,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
+            CQRSQuery: GetCurrencyForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['currency_write'],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/currencies/unofficials/{currencyId}',
+            requirements: ['currencyId' => '\d+'],
+            read: false,
+            CQRSCommand: EditUnofficialCurrencyCommand::class,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
+            CQRSQuery: GetCurrencyForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['currency_write'],
+        ),
         new CQRSUpdate(
             uriTemplate: '/currencies/{currencyId}/toggle-status',
             requirements: ['currencyId' => '\d+'],
@@ -87,6 +114,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     exceptionToStatus: [
         CurrencyNotFoundException::class => Response::HTTP_NOT_FOUND,
         CurrencyConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CannotUpdateCurrencyException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CurrencyException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Currency

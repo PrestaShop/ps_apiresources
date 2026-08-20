@@ -27,22 +27,35 @@ class CurrencyExchangeRateEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['currency_read']);
+        self::createApiClient(['currency_read', 'currency_write']);
     }
 
     public static function getProtectedEndpoints(): iterable
     {
         yield 'get exchange rate endpoint' => ['GET', '/currencies/exchange-rates?isoCode=USD'];
+        yield 'refresh exchange rates endpoint' => ['PUT', '/currencies/exchange-rates'];
     }
 
     public function testGetExchangeRate(): void
     {
         $result = $this->getItem('/currencies/exchange-rates?isoCode=USD', ['currency_read']);
 
-        $this->assertArrayHasKey('isoCode', $result);
+        // The response carries the rate and nothing else
+        $this->assertEquals(['isoCode', 'exchangeRate'], array_keys($result));
         $this->assertSame('USD', $result['isoCode']);
-        $this->assertArrayHasKey('exchangeRate', $result);
         // Post-normalization, DecimalNumber-typed props serialize as string.
         $this->assertTrue(is_string($result['exchangeRate']) || is_numeric($result['exchangeRate']));
     }
+
+    /**
+     * PUT /currencies/exchange-rates is declared in getProtectedEndpoints() but has no
+     * behavioural test: RefreshExchangeRatesCommand calls the remote PrestaShop currency
+     * service, so a live assertion would depend on network access from the CI runner and
+     * would fail with CannotRefreshExchangeRatesException whenever it is unavailable. The
+     * scope protection and the routing are covered, the refresh itself is not.
+     *
+     * The GET above already depends on that same feed being reachable, which is why no
+     * "unknown iso code returns 404" case is asserted either: it would only be testing the
+     * runner's network.
+     */
 }
