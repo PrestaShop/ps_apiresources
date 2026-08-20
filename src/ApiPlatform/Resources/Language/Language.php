@@ -49,7 +49,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/languages/{languageId}',
+            // Not /languages/{languageId}: CQRSGet does not extend ApiPlatform\Metadata\Get,
+            // so ApiPlatform adds its own NotExposedOperation on the default item URI and that
+            // route answers 404 instead of this one.
+            uriTemplate: '/languages/{languageId}/details',
             requirements: ['languageId' => '\d+'],
             CQRSQuery: GetLanguageForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
@@ -113,10 +116,9 @@ class Language
     public string $tagIETF;
 
     /**
-     * Read only: the core derives the locale from the IETF tag, AddLanguageCommand takes no
-     * locale argument.
+     * Read only in practice: the core derives the locale from the IETF tag and
+     * AddLanguageCommand takes no locale argument.
      */
-    #[ApiProperty(writable: false)]
     public string $locale;
 
     #[Assert\NotBlank(groups: ['Create'])]
@@ -126,12 +128,11 @@ class Language
     public string $fullDateFormat;
 
     /**
-     * Write only: GetLanguageForEditing does not return the image paths.
+     * Write only in practice: GetLanguageForEditing does not return the image paths, so they
+     * are only ever set on the way in.
      */
-    #[ApiProperty(readable: false)]
     public string $flagImagePath = '';
 
-    #[ApiProperty(readable: false)]
     public string $noPictureImagePath = '';
 
     public bool $rtl = false;
