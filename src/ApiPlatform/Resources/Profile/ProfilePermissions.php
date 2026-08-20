@@ -43,6 +43,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
         new CQRSGet(
             uriTemplate: '/profiles/permissions',
             CQRSQuery: GetPermissionsForConfiguration::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['profile_read'],
             parameters: new Parameters([
                 new QueryParameter(
@@ -67,6 +68,13 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 )]
 class ProfilePermissions
 {
+    // ConfigurablePermissions exposes hasEmployeeEditPermission(), which the serializer
+    // normalizes to "employeeEditPermission" — without this the property is never populated
+    // and the field silently disappears from the response.
+    public const QUERY_MAPPING = [
+        '[employeeEditPermission]' => '[hasEmployeeEditPermission]',
+    ];
+
     #[ApiProperty(identifier: true)]
     public int $employeeProfileId;
 
