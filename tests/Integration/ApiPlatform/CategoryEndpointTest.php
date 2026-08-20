@@ -55,6 +55,8 @@ class CategoryEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get categories tree endpoint' => ['GET', '/categories/trees'];
+
         yield 'get endpoint' => [
             'GET',
             '/categories/3',
@@ -385,5 +387,48 @@ class CategoryEndpointTest extends ApiTestCase
         ], ['category_write']);
 
         return [$cat1['categoryId'], $cat2['categoryId']];
+    }
+
+    /**
+     * The tree is the read side of the whole category hierarchy, so it is asserted against a
+     * category this suite created rather than against whatever the fixtures ship: the
+     * standalone test could only check that the first row had the expected keys.
+     */
+    public function testGetCategoriesTree(): void
+    {
+        $categoryId = $this->createItem('/categories', [
+            'names' => ['en-US' => 'Tree probe EN', 'fr-FR' => 'Tree probe FR'],
+            'linkRewrites' => ['en-US' => 'tree-probe-en', 'fr-FR' => 'tree-probe-fr'],
+            'isActive' => true,
+            'parentCategoryId' => 2,
+            'shopIds' => [1],
+        ], ['category_write'])['categoryId'];
+
+        $tree = $this->getItem('/categories/trees', ['category_read']);
+        $this->assertNotEmpty($tree);
+        $this->assertEquals(
+            ['categoryId', 'enabled', 'name', 'displayName', 'children'],
+            array_keys($tree[0])
+        );
+
+        $this->assertContains($categoryId, $this->flattenTreeIds($tree));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $tree
+     *
+     * @return int[]
+     */
+    private function flattenTreeIds(array $tree): array
+    {
+        $ids = [];
+        foreach ($tree as $node) {
+            $ids[] = (int) $node['categoryId'];
+            if (!empty($node['children'])) {
+                $ids = array_merge($ids, $this->flattenTreeIds($node['children']));
+            }
+        }
+
+        return $ids;
     }
 }

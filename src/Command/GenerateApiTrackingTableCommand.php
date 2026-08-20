@@ -48,6 +48,9 @@ class GenerateApiTrackingTableCommand extends Command
         'GetCustomerForAddressCreation' => self::USELESS_DUPLICATE,
         'ResetEmployeePasswordCommand' => self::USELESS_DUPLICATE,
         'GetEmployeeEmailById' => self::USELESS_DUPLICATE,
+        // /categories/bulk-update-status already toggles a set of categories either way
+        'BulkEnableCategoriesCommand' => self::USELESS_DUPLICATE,
+        'BulkDisableCategoriesCommand' => self::USELESS_DUPLICATE,
         // Quick access links are a back office UI customization feature.
         'AddQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
         'EditQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
