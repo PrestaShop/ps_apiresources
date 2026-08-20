@@ -1,0 +1,13 @@
+includes:
+    - %currentWorkingDirectory%/tests/PHPStan/phpstan.neon
+
+parameters:
+    tmpDir: %currentWorkingDirectory%/var/phpstan-tmp/9.2.x
+    ignoreErrors:
+        # Combination × FeatureValues CQRS layer only exists on develop; gated via experimentalOperation.
+        # InvalidProductFeatureValuesFormatException exists here, only the 3 CQRS classes are missing.
+        -
+            message: "#Class .*Combination\\\\FeatureValue\\\\(Command|Query).* not found.#"
+            identifier: class.notFound
+            count: 3
+            path: ../../src/ApiPlatform/Resources/Product/CombinationFeatureValues.php
