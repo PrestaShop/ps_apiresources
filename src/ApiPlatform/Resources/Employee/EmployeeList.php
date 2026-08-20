@@ -34,7 +34,7 @@ use Symfony\Component\HttpFoundation\Response;
             ApiResourceMapping: [
                 '[employee_id]' => '[employeeId]',
             ],
-            gridDataFactory: 'prestashop.core.grid.data.factory.employee',
+            gridDataFactory: 'prestashop.core.grid.data_provider.employee',
             filtersClass: EmployeeFilters::class,
             filtersMapping: [
                 '[employeeId]' => '[id_employee]',
