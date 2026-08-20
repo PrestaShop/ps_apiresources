@@ -46,8 +46,8 @@ class ProfilePermissionEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'permissions configuration endpoint' => ['GET', '/profiles/permissions?employeeProfileId=1'];
-        yield 'tab permission endpoint' => ['PATCH', '/profiles/1/tab-permissions'];
-        yield 'module permission endpoint' => ['PATCH', '/profiles/1/module-permissions'];
+        yield 'tab permission endpoint' => ['PUT', '/profiles/1/tab-permissions'];
+        yield 'module permission endpoint' => ['PUT', '/profiles/1/module-permissions'];
     }
 
     /**
@@ -103,7 +103,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
 
         // Disable the "view" permission on the tab, then read it back through the API instead
         // of Profile::resetStaticCache() + Profile::getProfileAccess()
-        $this->partialUpdateItem(
+        $this->updateItem(
             '/profiles/' . self::$profileId . '/tab-permissions',
             ['tabId' => $tabId, 'permission' => 'view', 'enabled' => false],
             ['profile_write'],
@@ -111,7 +111,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
         );
         $this->assertFalse($this->getTabViewPermission($tabId));
 
-        $this->partialUpdateItem(
+        $this->updateItem(
             '/profiles/' . self::$profileId . '/tab-permissions',
             ['tabId' => $tabId, 'permission' => 'view', 'enabled' => true],
             ['profile_write'],
@@ -122,7 +122,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
 
     public function testUpdateTabPermissionWithInvalidPermissionIsRejected(): void
     {
-        $this->partialUpdateItem(
+        $this->updateItem(
             '/profiles/' . self::$profileId . '/tab-permissions',
             ['tabId' => $this->getConfigurableTabId(), 'permission' => 'not-a-permission', 'enabled' => true],
             ['profile_write'],
@@ -134,7 +134,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
     {
         $moduleId = $this->getConfigurableModuleId();
 
-        $this->partialUpdateItem(
+        $this->updateItem(
             '/profiles/' . self::$profileId . '/module-permissions',
             ['moduleId' => $moduleId, 'permission' => 'view', 'enabled' => true],
             ['profile_write'],
@@ -142,7 +142,7 @@ class ProfilePermissionEndpointTest extends ApiTestCase
         );
         $this->assertTrue($this->getModuleViewPermission($moduleId));
 
-        $this->partialUpdateItem(
+        $this->updateItem(
             '/profiles/' . self::$profileId . '/module-permissions',
             ['moduleId' => $moduleId, 'permission' => 'view', 'enabled' => false],
             ['profile_write'],
