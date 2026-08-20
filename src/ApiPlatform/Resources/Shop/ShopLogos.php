@@ -57,8 +57,9 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
         new CQRSUpdate(
             uriTemplate: '/shops/logos',
             read: false,
-            output: false,
             CQRSCommand: UploadLogosCommand::class,
+            // Replays the query of the GET, so the upload answers with the resulting paths
+            CQRSQuery: GetLogosPaths::class,
             scopes: ['shop_write'],
             inputFormats: ['multipart' => ['multipart/form-data']],
             // Form data values are all strings/files, so disable type enforcement.
@@ -74,6 +75,13 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 )]
 class ShopLogos
 {
+    /**
+     * The four paths are readable on both operations and are never sent in: the upload takes
+     * files, not paths. They are deliberately not marked writable: false — that flag also
+     * keeps a property out of the responses in this stack, which emptied GET /shops/logos.
+     * The two places on dev that use it (AttributeList, FeatureValueList) pair it with
+     * readable: false to hide a property in both directions.
+     */
     public string $headerLogoPath;
 
     public string $mailLogoPath;
