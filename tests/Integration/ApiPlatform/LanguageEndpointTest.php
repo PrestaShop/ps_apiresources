@@ -61,11 +61,13 @@ class LanguageEndpointTest extends ApiTestCase
      *
      * AddLanguageHandler validates and copies both image paths, so they must point at a real
      * image. _PS_IMG_DIR_ is the test fixture image directory and does not ship l/en.jpg, so
-     * the flag is generated once in the system temp directory instead.
+     * the images are generated in the system temp directory instead.
      */
     private function createLanguage(string $isoCode, bool $enabled = true): array
     {
-        $flag = self::createFlagImage();
+        // AddLanguageHandler consumes the files it is given, so each call needs its own copies
+        $flag = self::createFlagImage('flag');
+        $noPicture = self::createFlagImage('no-picture');
 
         return $this->createItem('/languages', [
             'name' => 'Test ' . strtoupper($isoCode),
@@ -74,24 +76,26 @@ class LanguageEndpointTest extends ApiTestCase
             'shortDateFormat' => 'Y-m-d',
             'fullDateFormat' => 'Y-m-d H:i:s',
             'flagImagePath' => $flag,
-            'noPictureImagePath' => $flag,
+            'noPictureImagePath' => $noPicture,
             'rtl' => false,
             'enabled' => $enabled,
             'shopIds' => [1],
         ], ['language_write'], Response::HTTP_CREATED);
     }
 
-    private static function createFlagImage(): string
+    /**
+     * Writes a fresh 16x11 JPEG and returns its path. AddLanguageHandler copies the file away
+     * from where it is given, so the image cannot be generated once and reused: every create
+     * needs its own file, for the flag and for the no-picture image alike.
+     */
+    private static function createFlagImage(string $suffix): string
     {
-        static $path = null;
+        $path = sprintf('%s/ps-api-language-%s-%s.jpg', sys_get_temp_dir(), $suffix, uniqid());
 
-        if (null === $path) {
-            $path = sys_get_temp_dir() . '/ps-api-language-flag.jpg';
-            $image = imagecreatetruecolor(16, 11);
-            imagefill($image, 0, 0, imagecolorallocate($image, 0, 0, 128));
-            imagejpeg($image, $path);
-            imagedestroy($image);
-        }
+        $image = imagecreatetruecolor(16, 11);
+        imagefill($image, 0, 0, imagecolorallocate($image, 0, 0, 128));
+        imagejpeg($image, $path);
+        imagedestroy($image);
 
         return $path;
     }
