@@ -34,6 +34,11 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSDelete(
             uriTemplate: '/countries/bulk-delete',
+            // ToggleCountryStatusCommand, BulkToggleCountriesStatusCommand, BulkUpdateCountryZoneCommand
+            // and BulkDeleteCountriesCommand were introduced by the Countries grid migration in 9.2.0
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSCommand: BulkDeleteCountriesCommand::class,
             openapiContext: [
                 'summary' => 'Delete multiple countries at once',

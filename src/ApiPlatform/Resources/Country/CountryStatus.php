@@ -33,6 +33,11 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSUpdate(
             uriTemplate: '/countries/{countryId}/toggle-status',
+            // ToggleCountryStatusCommand, BulkToggleCountriesStatusCommand, BulkUpdateCountryZoneCommand
+            // and BulkDeleteCountriesCommand were introduced by the Countries grid migration in 9.2.0
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             requirements: ['countryId' => '\d+'],
             allowEmptyBody: true,
             read: false,

@@ -22,7 +22,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Country\Command\BulkDeleteCountriesCommand;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -61,10 +60,15 @@ class CountryEndpointTest extends ApiTestCase
         yield 'delete endpoint' => ['DELETE', '/countries/1'];
         yield 'list endpoint' => ['GET', '/countries'];
         yield 'get required fields endpoint' => ['GET', '/countries/1/required-fields'];
-        yield 'bulk delete endpoint' => ['DELETE', '/countries/bulk-delete'];
-        yield 'toggle status endpoint' => ['PUT', '/countries/1/toggle-status'];
-        yield 'bulk toggle status endpoint' => ['PUT', '/countries/bulk-toggle-status'];
-        yield 'bulk update zone endpoint' => ['PUT', '/countries/bulk-update-zone'];
+
+        // The commands behind these four operations only exist since 9.2.0, so the operations
+        // are filtered out of the routing on older cores and the endpoints answer 404, not 401.
+        if (self::isVersionAtLeast('9.2.0')) {
+            yield 'bulk delete endpoint' => ['DELETE', '/countries/bulk-delete'];
+            yield 'toggle status endpoint' => ['PUT', '/countries/1/toggle-status'];
+            yield 'bulk toggle status endpoint' => ['PUT', '/countries/bulk-toggle-status'];
+            yield 'bulk update zone endpoint' => ['PUT', '/countries/bulk-update-zone'];
+        }
     }
 
     public function testGetCountryRequiredFields(): void
@@ -409,14 +413,12 @@ class CountryEndpointTest extends ApiTestCase
     }
 
     /**
-     * BulkDeleteCountriesCommand landed in PS develop (post-9.1). Gate the test so
-     * older cores that don't ship the command simply skip it.
+     * BulkDeleteCountriesCommand only exists since 9.2.0, so the operation is filtered out of
+     * the routing on older cores and the test is skipped there.
      */
     public function testBulkDeleteCountries(): void
     {
-        if (!class_exists(BulkDeleteCountriesCommand::class)) {
-            $this->markTestSkipped('BulkDeleteCountriesCommand is not available on this PrestaShop version.');
-        }
+        $this->markTestSkippedByMinVersion('9.2.0');
 
         $ids = [];
         foreach (['YA', 'YB'] as $isoCode) {
@@ -466,6 +468,8 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testToggleCountryStatus(): void
     {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
         $countryId = $this->createCountry('YC', true);
 
         // These three operations declare no output: false, so they answer 200 with the
@@ -491,6 +495,8 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testBulkToggleCountriesStatus(): void
     {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
         $countryIds = [$this->createCountry('YD', true), $this->createCountry('YE', true)];
 
         $this->updateItem('/countries/bulk-toggle-status', [
@@ -512,6 +518,8 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testBulkUpdateCountriesZone(): void
     {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
         $countryIds = [$this->createCountry('YF', true, 1), $this->createCountry('YG', true, 1)];
 
         // Any zone other than the one the countries were created in
