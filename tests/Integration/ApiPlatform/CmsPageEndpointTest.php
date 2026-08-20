@@ -51,6 +51,8 @@ class CmsPageEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'category-for-redirection endpoint' => ['GET', '/cms-pages/1/category-for-redirection'];
+
         yield 'get endpoint' => [
             'GET',
             '/cms-pages/1',
@@ -70,6 +72,37 @@ class CmsPageEndpointTest extends ApiTestCase
             'GET',
             '/cms-pages',
         ];
+    }
+
+    /**
+     * The source PR could not create a CMS page, so it queried /cms-pages/999999/... and
+     * asserted the handler's fallback to ROOT — the nominal case was never covered. With the
+     * create endpoint in the same PR, the page is created in a known category.
+     */
+    public function testGetCmsPageCategoryForRedirection(): void
+    {
+        $data = $this->getCreateData();
+        $data['titles'] = ['en-US' => 'Redirect page EN', 'fr-FR' => 'Redirect page FR'];
+        $data['linkRewrites'] = ['en-US' => 'redirect-page-en', 'fr-FR' => 'redirect-page-fr'];
+        $cmsPage = $this->createItem('/cms-pages', $data, ['cms_page_write']);
+
+        $result = $this->getItem(
+            '/cms-pages/' . $cmsPage['cmsPageId'] . '/category-for-redirection',
+            ['cms_page_read']
+        );
+
+        $this->assertEquals(['cmsPageId', 'cmsPageCategoryId'], array_keys($result));
+        $this->assertSame($cmsPage['cmsPageId'], $result['cmsPageId']);
+        $this->assertSame($data['cmsPageCategoryId'], $result['cmsPageCategoryId']);
+    }
+
+    public function testGetCmsPageCategoryForRedirectionOfUnknownPage(): void
+    {
+        // An unknown page id is caught by the handler, which falls back to ROOT
+        $result = $this->getItem('/cms-pages/999999/category-for-redirection', ['cms_page_read']);
+
+        $this->assertSame(999999, $result['cmsPageId']);
+        $this->assertIsInt($result['cmsPageCategoryId']);
     }
 
     private function getCreateData(): array
