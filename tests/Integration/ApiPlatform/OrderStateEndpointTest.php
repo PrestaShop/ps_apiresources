@@ -95,14 +95,29 @@ class OrderStateEndpointTest extends ApiTestCase
         ];
     }
 
+    /**
+     * The create operation replays GetOrderStateForEditing, so it returns the whole entity and
+     * not just its id. Asserting the complete structure here is what pins that contract.
+     */
+    private function getExpectedOrderState(int $orderStateId, array $data): array
+    {
+        return array_merge($data, [
+            'orderStateId' => $orderStateId,
+            // Order states are soft deleted, a freshly created one is never flagged
+            'deleted' => false,
+        ]);
+    }
+
     public function testAddOrderState(): int
     {
         $orderState = $this->createItem('/order-states', $this->getCreateData(), ['order_state_write']);
         $this->assertArrayHasKey('orderStateId', $orderState);
         $orderStateId = $orderState['orderStateId'];
 
-        $this->assertSame($this->getCreateData()['names'], $orderState['names']);
-        $this->assertSame('#4169E1', $orderState['color']);
+        $this->assertEquals(
+            $this->getExpectedOrderState($orderStateId, $this->getCreateData()),
+            $orderState
+        );
 
         return $orderStateId;
     }
@@ -113,10 +128,12 @@ class OrderStateEndpointTest extends ApiTestCase
     public function testGetOrderState(int $orderStateId): int
     {
         $orderState = $this->getItem('/order-states/' . $orderStateId, ['order_state_read']);
-        $this->assertEquals($orderStateId, $orderState['orderStateId']);
-        $this->assertArrayHasKey('names', $orderState);
-        $this->assertArrayHasKey('color', $orderState);
-        $this->assertArrayHasKey('sendEmail', $orderState);
+
+        // The GET must return exactly what the POST returned
+        $this->assertEquals(
+            $this->getExpectedOrderState($orderStateId, $this->getCreateData()),
+            $orderState
+        );
 
         return $orderStateId;
     }
@@ -134,14 +151,17 @@ class OrderStateEndpointTest extends ApiTestCase
             'color' => '#32CD32',
         ];
 
-        $updatedOrderState = $this->partialUpdateItem('/order-states/' . $orderStateId, $patchData, ['order_state_write']);
-        $this->assertSame($patchData['names'], $updatedOrderState['names']);
-        $this->assertSame($patchData['color'], $updatedOrderState['color']);
+        $expected = $this->getExpectedOrderState(
+            $orderStateId,
+            array_merge($this->getCreateData(), $patchData)
+        );
 
-        // We check that when we GET the item it is updated as expected
-        $orderState = $this->getItem('/order-states/' . $orderStateId, ['order_state_read']);
-        $this->assertSame($patchData['names'], $orderState['names']);
-        $this->assertSame($patchData['color'], $orderState['color']);
+        // The partial update returns the updated entity through the same query as the GET
+        $updatedOrderState = $this->partialUpdateItem('/order-states/' . $orderStateId, $patchData, ['order_state_write']);
+        $this->assertEquals($expected, $updatedOrderState);
+
+        // And a subsequent GET returns exactly the same thing
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
 
         return $orderStateId;
     }
@@ -171,7 +191,9 @@ class OrderStateEndpointTest extends ApiTestCase
         $this->assertNull($return);
 
         // Order states are soft-deleted (existing orders may reference them): the record is
-        // flagged as deleted and no longer appears in the listing.
+        // still readable but flagged as deleted, and no longer appears in the listing.
+        $this->assertTrue($this->getItem('/order-states/' . $orderStateId, ['order_state_read'])['deleted']);
+
         $orderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
         $listedIds = array_column($orderStates['items'], 'orderStateId');
         $this->assertNotContains($orderStateId, $listedIds);
@@ -197,10 +219,11 @@ class OrderStateEndpointTest extends ApiTestCase
             'orderStateIds' => $bulkIds,
         ], ['order_state_write']);
 
-        // Soft-deleted order states no longer appear in the listing
+        // Soft-deleted order states are still readable but flagged, and no longer listed
         $orderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
         $listedIds = array_column($orderStates['items'], 'orderStateId');
         foreach ($bulkIds as $orderStateId) {
+            $this->assertTrue($this->getItem('/order-states/' . $orderStateId, ['order_state_read'])['deleted']);
             $this->assertNotContains($orderStateId, $listedIds);
         }
     }

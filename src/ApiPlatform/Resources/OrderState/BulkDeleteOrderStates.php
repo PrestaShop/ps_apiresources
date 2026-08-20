@@ -25,7 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderState;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Command\BulkDeleteOrderStateCommand;
-use PrestaShop\PrestaShop\Core\Domain\OrderState\Exception\OrderStateNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\OrderState\Exception\BulkDeleteOrderStateException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -42,7 +42,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     exceptionToStatus: [
-        OrderStateNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // The handler catches every OrderStateException (including "not found") and rethrows a
+        // single BulkDeleteOrderStateException carrying the ids it could not delete, so a
+        // partial failure is unprocessable rather than a 404.
+        BulkDeleteOrderStateException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkDeleteOrderStates
