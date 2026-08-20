@@ -47,7 +47,7 @@ class CurrencyExchangeRateEndpointTest extends ApiTestCase
         $this->assertTrue(is_string($result['exchangeRate']) || is_numeric($result['exchangeRate']));
     }
 
-    /**
+    /*
      * PUT /currencies/exchange-rates is declared in getProtectedEndpoints() but has no
      * behavioural test: RefreshExchangeRatesCommand calls the remote PrestaShop currency
      * service, so a live assertion would depend on network access from the CI runner and
