@@ -24,16 +24,44 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Profile;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Parameters;
+use ApiPlatform\Metadata\QueryParameter;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Query\GetPermissionsForConfiguration;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 
+/**
+ * The permission configuration of the whole back office.
+ *
+ * employeeProfileId is not the profile being read: GetPermissionsForConfiguration returns the
+ * permissions of every profile, and takes the profile of the employee looking at them only to
+ * decide hasEmployeeEditPermission. It is therefore a query parameter of a collection level
+ * read, not a path segment — /profiles/{employeeProfileId}/permissions read as "the
+ * permissions of profile X", which is not what this returns.
+ */
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/profiles/{employeeProfileId}/permissions',
-            requirements: ['employeeProfileId' => '\d+'],
+            uriTemplate: '/profiles/permissions',
             CQRSQuery: GetPermissionsForConfiguration::class,
             scopes: ['profile_read'],
+            parameters: new Parameters([
+                new QueryParameter(
+                    key: 'employeeProfileId',
+                    required: true,
+                    description: 'Profile of the employee the configuration is computed for'
+                ),
+            ]),
+            openapiContext: [
+                'parameters' => [
+                    [
+                        'name' => 'employeeProfileId',
+                        'in' => 'query',
+                        'required' => true,
+                        'schema' => ['type' => 'integer'],
+                        'description' => 'Profile of the employee the configuration is computed for',
+                    ],
+                ],
+            ],
         ),
     ],
 )]
@@ -52,9 +80,15 @@ class ProfilePermissions
     #[ApiProperty(openapiContext: ['type' => 'object'])]
     public array $profilePermissionsForModules;
 
-    /** Map { profileId: { view, add, edit, delete, all } } */
+    /**
+     * Map { profileId: { view, add, edit, delete, all } }.
+     *
+     * Requires PrestaShop/PrestaShop#42048: ConfigurablePermissions only exposes the per
+     * profile isBulkXConfigurationEnabled() accessors on the current cores, so the raw map is
+     * unreachable and this stays an empty array until that core PR is merged.
+     */
     #[ApiProperty(openapiContext: ['type' => 'object'])]
-    public array $bulkConfiguration;
+    public array $bulkConfiguration = [];
 
     public array $profiles;
 
