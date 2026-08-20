@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Country\Command\BulkDeleteCountriesCommand;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
@@ -60,6 +61,10 @@ class CountryEndpointTest extends ApiTestCase
         yield 'delete endpoint' => ['DELETE', '/countries/1'];
         yield 'list endpoint' => ['GET', '/countries'];
         yield 'get required fields endpoint' => ['GET', '/countries/1/required-fields'];
+        yield 'bulk delete endpoint' => ['DELETE', '/countries/bulk-delete'];
+        yield 'toggle status endpoint' => ['PUT', '/countries/1/toggle-status'];
+        yield 'bulk toggle status endpoint' => ['PUT', '/countries/bulk-toggle-status'];
+        yield 'bulk update zone endpoint' => ['PUT', '/countries/bulk-update-zone'];
     }
 
     public function testGetCountryRequiredFields(): void
@@ -401,6 +406,125 @@ class CountryEndpointTest extends ApiTestCase
     private function expectedAddressFormat(string $sentFormat): string
     {
         return interface_exists(self::CORE_ADDRESS_FORMAT_CHECKER) ? $sentFormat : '';
+    }
+
+    /**
+     * BulkDeleteCountriesCommand landed in PS develop (post-9.1). Gate the test so
+     * older cores that don't ship the command simply skip it.
+     */
+    public function testBulkDeleteCountries(): void
+    {
+        if (!class_exists(BulkDeleteCountriesCommand::class)) {
+            $this->markTestSkipped('BulkDeleteCountriesCommand is not available on this PrestaShop version.');
+        }
+
+        $ids = [];
+        foreach (['YA', 'YB'] as $isoCode) {
+            $payload = $this->getCreatePayload();
+            $payload['isoCode'] = $isoCode;
+            $payload['names'] = [
+                'en-US' => 'Bulk Country ' . $isoCode,
+                'fr-FR' => 'Pays Bulk ' . $isoCode,
+            ];
+            $created = $this->createItem('/countries', $payload, ['country_write']);
+            $ids[] = $created['countryId'];
+        }
+
+        $this->bulkDeleteItems('/countries/bulk-delete', [
+            'countryIds' => $ids,
+        ], ['country_write']);
+
+        foreach ($ids as $countryId) {
+            $this->getItem('/countries/' . $countryId, ['country_read'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    /**
+     * The status and zone tests used to look their countries up with
+     * SELECT id_country FROM ps_country and assert with SELECT active / SELECT id_zone.
+     * They now create the countries they operate on, so they never touch a fixture country,
+     * and read the result back through the GET.
+     */
+    private function createCountry(string $isoCode, bool $enabled = true, int $zoneId = 1): int
+    {
+        $payload = $this->getCreatePayload();
+        $payload['isoCode'] = $isoCode;
+        $payload['names'] = [
+            'en-US' => 'Country ' . $isoCode,
+            'fr-FR' => 'Pays ' . $isoCode,
+        ];
+        $payload['enabled'] = $enabled;
+        $payload['zoneId'] = $zoneId;
+
+        return (int) $this->createItem('/countries', $payload, ['country_write'])['countryId'];
+    }
+
+    private function getCountry(int $countryId): array
+    {
+        return $this->getItem('/countries/' . $countryId, ['country_read']);
+    }
+
+    public function testToggleCountryStatus(): void
+    {
+        $countryId = $this->createCountry('YC', true);
+
+        // These three operations declare no output: false, so they answer 200 with the
+        // denormalized command result rather than an empty 204.
+        $this->requestApi(
+            'PUT',
+            '/countries/' . $countryId . '/toggle-status',
+            null,
+            ['country_write'],
+            Response::HTTP_OK
+        );
+        $this->assertFalse($this->getCountry($countryId)['enabled']);
+
+        $this->requestApi(
+            'PUT',
+            '/countries/' . $countryId . '/toggle-status',
+            null,
+            ['country_write'],
+            Response::HTTP_OK
+        );
+        $this->assertTrue($this->getCountry($countryId)['enabled']);
+    }
+
+    public function testBulkToggleCountriesStatus(): void
+    {
+        $countryIds = [$this->createCountry('YD', true), $this->createCountry('YE', true)];
+
+        $this->updateItem('/countries/bulk-toggle-status', [
+            'countryIds' => $countryIds,
+            'enabled' => false,
+        ], ['country_write'], Response::HTTP_OK);
+        foreach ($countryIds as $countryId) {
+            $this->assertFalse($this->getCountry($countryId)['enabled']);
+        }
+
+        $this->updateItem('/countries/bulk-toggle-status', [
+            'countryIds' => $countryIds,
+            'enabled' => true,
+        ], ['country_write'], Response::HTTP_OK);
+        foreach ($countryIds as $countryId) {
+            $this->assertTrue($this->getCountry($countryId)['enabled']);
+        }
+    }
+
+    public function testBulkUpdateCountriesZone(): void
+    {
+        $countryIds = [$this->createCountry('YF', true, 1), $this->createCountry('YG', true, 1)];
+
+        // Any zone other than the one the countries were created in
+        $newZoneId = 1 === $this->getCountry($countryIds[0])['zoneId'] ? 2 : 1;
+
+        $this->updateItem('/countries/bulk-update-zone', [
+            'countryIds' => $countryIds,
+            'newZoneId' => $newZoneId,
+        ], ['country_write'], Response::HTTP_OK);
+
+        foreach ($countryIds as $countryId) {
+            $this->assertSame($newZoneId, $this->getCountry($countryId)['zoneId']);
+        }
     }
 
     /**
