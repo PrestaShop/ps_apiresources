@@ -216,4 +216,39 @@ class CompatibleCarriersEndpointTest extends ApiTestCase
 
         $this->getItem('/carriers/search-compatible-carriers?' . $query, ['carrier_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
+
+    /**
+     * An entry without a quantity used to be accepted with a quantity of 0, returning a plausible
+     * but wrong carrier list instead of an error.
+     *
+     * @depends testCompatibleCarriersFixtures
+     */
+    public function testGetCompatibleCarriersWithoutQuantityIsRejected(array $fixtures): void
+    {
+        $query = http_build_query([
+            'addressId' => $fixtures['addressId'],
+            'productQuantities' => [
+                ['productId' => $fixtures['productId']],
+            ],
+        ]);
+
+        $this->getItem('/carriers/search-compatible-carriers?' . $query, ['carrier_read'], Response::HTTP_BAD_REQUEST);
+    }
+
+    /**
+     * @depends testCompatibleCarriersFixtures
+     */
+    public function testGetCompatibleCarriersWithNonPositiveQuantityIsRejected(array $fixtures): void
+    {
+        foreach ([0, -2] as $quantity) {
+            $query = http_build_query([
+                'addressId' => $fixtures['addressId'],
+                'productQuantities' => [
+                    ['productId' => $fixtures['productId'], 'quantity' => $quantity],
+                ],
+            ]);
+
+            $this->getItem('/carriers/search-compatible-carriers?' . $query, ['carrier_read'], Response::HTTP_BAD_REQUEST);
+        }
+    }
 }

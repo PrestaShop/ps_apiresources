@@ -213,6 +213,56 @@ class CarrierEndpointTest extends ApiTestCase
         ], ['carrier_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
+    public function testShippingMethodBasedOnShopConfigurationRoundTrips(): int
+    {
+        // 0 means the carrier relies on the shipping method configured by PS_SHIPPING_METHOD: it must be stored and
+        // returned as is, not resolved into the configured method
+        $payload = array_merge($this->getCreatePayload(), [
+            'shippingMethod' => ShippingMethod::DEFAULT,
+        ]);
+        $carrier = $this->createItem('/carriers', $payload, ['carrier_write']);
+        $carrierId = $carrier['carrierId'];
+        $this->assertEquals(ShippingMethod::DEFAULT, $carrier['shippingMethod']);
+
+        $carrier = $this->getItem('/carriers/' . $carrierId, ['carrier_read']);
+        $this->assertEquals(ShippingMethod::DEFAULT, $carrier['shippingMethod']);
+
+        // Updating an unrelated field must not resolve the stored shipping method either
+        $updatedCarrier = $this->createItem('/carriers/' . $carrierId, [
+            'name' => 'My configuration based carrier',
+        ], ['carrier_write'], Response::HTTP_OK);
+        $this->assertEquals(ShippingMethod::DEFAULT, $updatedCarrier['shippingMethod']);
+        $this->assertEquals(
+            ShippingMethod::DEFAULT,
+            $this->getItem('/carriers/' . $carrierId, ['carrier_read'])['shippingMethod']
+        );
+
+        return $carrierId;
+    }
+
+    /**
+     * @depends testShippingMethodBasedOnShopConfigurationRoundTrips
+     */
+    public function testRangesOfCarrierBasedOnShopConfiguration(int $carrierId): void
+    {
+        // The ranges of such a carrier are stored and read with the shipping method resolved from the shop
+        // configuration, instead of being rejected as an unknown shipping method
+        $expectedRanges = [
+            'carrierId' => $carrierId,
+            'ranges' => [
+                ['zoneId' => 1, 'rangeFrom' => 0.0, 'rangeTo' => 10.0, 'rangePrice' => 5.0],
+            ],
+        ];
+        $updatedRanges = $this->partialUpdateItem(
+            '/carriers/' . $carrierId . '/ranges',
+            ['ranges' => $expectedRanges['ranges']],
+            ['carrier_write']
+        );
+
+        $this->assertEquals($expectedRanges, $updatedRanges);
+        $this->assertEquals($expectedRanges, $this->getItem('/carriers/' . $carrierId . '/ranges', ['carrier_read']));
+    }
+
     /**
      * @depends testSetAndGetCarrierRanges
      */

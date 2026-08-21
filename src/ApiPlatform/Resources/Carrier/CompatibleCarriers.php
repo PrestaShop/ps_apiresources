@@ -28,6 +28,7 @@ use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetAvailableCarriers;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
@@ -81,6 +82,7 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         AddressNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CarrierConstraintException::class => Response::HTTP_BAD_REQUEST,
     ],
 )]
 /**
