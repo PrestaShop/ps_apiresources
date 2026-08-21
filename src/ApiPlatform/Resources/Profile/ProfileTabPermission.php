@@ -36,10 +36,12 @@ use Symfony\Component\HttpFoundation\Response;
             uriTemplate: '/profiles/{profileId}/tab-permissions',
             requirements: ['profileId' => '\d+'],
             output: false,
-            // No read: false here. With it, ApiPlatform deserializes the body and builds the
-            // command before the scope check runs, so an unauthorized request carrying no body
-            // answers 400 instead of 403. /categories/bulk-update-status is declared the same
-            // way and does answer 403.
+            // Both of these matter for an unauthorized request, which carries no body:
+            // allowEmptyBody keeps the JSON decoder from choking on it, and the absence of
+            // read: false keeps ApiPlatform from building the CQRS command before the scope
+            // check runs. /categories/bulk-update-status is declared the same way, and it does
+            // answer 403.
+            allowEmptyBody: true,
             CQRSCommand: UpdateTabPermissionsCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             scopes: ['profile_write'],
