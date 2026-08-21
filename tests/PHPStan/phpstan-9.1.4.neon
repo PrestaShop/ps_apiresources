@@ -15,14 +15,6 @@ parameters:
             path: ../../src/ApiPlatform/Resources/TaxRule/*
         # The following Shipment domain classes don't exist yet on 9.1.x
         -
-            message: "#Class .*CreateShipment.* not found.#"
-            identifier: class.notFound
-            path: ../../src/ApiPlatform/Resources/Order/Shipment.php
-        -
-            message: "#Class .*AddProductToShipment.* not found.#"
-            identifier: class.notFound
-            path: ../../src/ApiPlatform/Resources/Order/ShipmentProducts.php
-        -
             message: "#Class .*GetShipmentsForOrderDetail.* not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Order/OrderDetailShipments.php
@@ -30,11 +22,3 @@ parameters:
             message: "#Class .*ListAvailableShipmentsForProduct.* not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Order/AvailableShipmentsForProduct.php
-        -
-            message: "#Class .*FulfillShipmentCommand.* not found.#"
-            identifier: class.notFound
-            path: ../../src/ApiPlatform/Resources/Shipment/ShipmentFulfillment.php
-        -
-            message: "#Class .*InvalidShipmentTrackingNumberException.* not found.#"
-            identifier: class.notFound
-            path: ../../src/ApiPlatform/Resources/Shipment/ShipmentFulfillment.php

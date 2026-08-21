@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\AddProductToShipment;
+use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\CreateShipment;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Query\GetShipmentsForOrderDetail;
 use Tests\Resources\DatabaseDump;
 
@@ -43,7 +45,7 @@ class AvailableShipmentsEndpointTest extends ApiTestCase
             self::markTestSkipped('Shipment domain does not exist on this PrestaShop version');
         }
 
-        self::createApiClient(['shipment_read', 'shipment_write']);
+        self::createApiClient(['shipment_read']);
 
         $orderRow = \Db::getInstance()->getRow(
             'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` ASC'
@@ -76,19 +78,21 @@ class AvailableShipmentsEndpointTest extends ApiTestCase
         yield 'available shipments for product endpoint' => ['GET', '/orders/1/products/1/available-shipments'];
     }
 
+    /**
+     * The shipment write endpoints are not exposed yet, the fixture goes through the CQRS
+     * commands directly so the read endpoints can be covered in the meantime.
+     */
     public function testCreateFixtureShipment(): int
     {
-        $shipment = $this->createItem('/orders/' . self::$orderId . '/shipments', [
-            'carrierId' => self::$carrierId,
-            'productId' => self::$productId,
-            'quantity' => 1,
-        ], ['shipment_write']);
-        $shipmentId = $shipment['shipmentId'];
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
 
-        // CreateShipment only creates the shipment shell; the product is attached separately.
-        $this->createItem('/orders/' . self::$orderId . '/shipments/' . $shipmentId . '/products', [
-            'productId' => self::$productId,
-        ], ['shipment_write']);
+        $shipmentId = $commandBus->handle(
+            new CreateShipment(self::$orderId, self::$carrierId, self::$productId, 1)
+        )->getValue();
+
+        $commandBus->handle(
+            new AddProductToShipment($shipmentId, self::$productId, self::$orderId)
+        );
 
         return $shipmentId;
     }

@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\AddProductToShipment;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\CreateShipment;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
@@ -32,7 +33,6 @@ class ShipmentEndpointTest extends ApiTestCase
     private static int $orderId;
     private static int $productId;
     private static int $carrierId;
-    private static int $secondCarrierId;
 
     public static function setUpBeforeClass(): void
     {
@@ -43,7 +43,7 @@ class ShipmentEndpointTest extends ApiTestCase
             self::markTestSkipped('Shipment domain does not exist on this PrestaShop version');
         }
 
-        self::createApiClient(['shipment_read', 'shipment_write']);
+        self::createApiClient(['shipment_read']);
 
         $orderRow = \Db::getInstance()->getRow(
             'SELECT `id_order` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` ASC'
@@ -55,11 +55,10 @@ class ShipmentEndpointTest extends ApiTestCase
         );
         self::$productId = (int) $orderDetailRow['product_id'];
 
-        $carrierRows = \Db::getInstance()->executeS(
-            'SELECT `id_carrier` FROM `' . _DB_PREFIX_ . 'carrier` WHERE `deleted` = 0 AND `active` = 1 ORDER BY `id_carrier` ASC LIMIT 2'
+        $carrierRow = \Db::getInstance()->getRow(
+            'SELECT `id_carrier` FROM `' . _DB_PREFIX_ . 'carrier` WHERE `deleted` = 0 AND `active` = 1 ORDER BY `id_carrier` ASC'
         );
-        self::$carrierId = (int) $carrierRows[0]['id_carrier'];
-        self::$secondCarrierId = (int) ($carrierRows[1]['id_carrier'] ?? $carrierRows[0]['id_carrier']);
+        self::$carrierId = (int) $carrierRow['id_carrier'];
     }
 
     public static function tearDownAfterClass(): void
@@ -70,120 +69,46 @@ class ShipmentEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'create endpoint' => ['POST', '/orders/1/shipments'];
         yield 'get endpoint' => ['GET', '/orders/1/shipments/1'];
-        yield 'add product endpoint' => ['POST', '/orders/1/shipments/1/products'];
-        yield 'switch carrier endpoint' => ['PATCH', '/shipments/1/carriers'];
-        yield 'fulfill endpoint' => ['PATCH', '/shipments/1/fulfill'];
-    }
-
-    public function testCreateShipment(): int
-    {
-        $response = $this->createItem('/orders/' . self::$orderId . '/shipments', [
-            'carrierId' => self::$carrierId,
-            'productId' => self::$productId,
-            'quantity' => 1,
-        ], ['shipment_write']);
-
-        $this->assertArrayHasKey('shipmentId', $response);
-        $this->assertEquals(self::$orderId, $response['orderId']);
-        $this->assertEquals(self::$carrierId, $response['carrierId']);
-        $this->assertEquals('', $response['trackingNumber']);
-        $this->assertEmpty($response['selectedProducts']);
-
-        return $response['shipmentId'];
     }
 
     /**
-     * @depends testCreateShipment
+     * The shipment write endpoints are not exposed yet, the fixture goes through the CQRS
+     * commands directly so the read endpoints can be covered in the meantime.
      */
-    public function testGetShipment(int $shipmentId): int
+    private function createFixtureShipment(): int
     {
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+
+        $shipmentId = $commandBus->handle(
+            new CreateShipment(self::$orderId, self::$carrierId, self::$productId, 1)
+        )->getValue();
+
+        $commandBus->handle(
+            new AddProductToShipment($shipmentId, self::$productId, self::$orderId)
+        );
+
+        return $shipmentId;
+    }
+
+    public function testGetShipment(): void
+    {
+        $shipmentId = $this->createFixtureShipment();
+
         $response = $this->getItem('/orders/' . self::$orderId . '/shipments/' . $shipmentId, ['shipment_read']);
 
         $this->assertEquals(self::$orderId, $response['orderId']);
         $this->assertEquals($shipmentId, $response['shipmentId']);
         $this->assertEquals(self::$carrierId, $response['carrierId']);
         $this->assertEquals('', $response['trackingNumber']);
-        $this->assertEmpty($response['selectedProducts']);
-
-        return $shipmentId;
-    }
-
-    /**
-     * @depends testGetShipment
-     */
-    public function testAddProductToShipment(int $shipmentId): int
-    {
-        $response = $this->createItem('/orders/' . self::$orderId . '/shipments/' . $shipmentId . '/products', [
-            'productId' => self::$productId,
-        ], ['shipment_write']);
-
-        $this->assertEquals($shipmentId, $response['shipmentId']);
         $this->assertArrayHasKey(self::$productId, $response['selectedProducts']);
-
-        return $shipmentId;
     }
 
-    /**
-     * @depends testAddProductToShipment
-     */
-    public function testSwitchShipmentCarrier(int $shipmentId): int
+    public function testGetShipmentNotFound(): void
     {
-        $response = $this->partialUpdateItem(
-            '/shipments/' . $shipmentId . '/carriers',
-            ['carrierId' => self::$secondCarrierId],
-            ['shipment_write'],
-            Response::HTTP_NO_CONTENT
-        );
-        $this->assertNull($response);
-
-        $shipment = $this->getItem('/orders/' . self::$orderId . '/shipments/' . $shipmentId, ['shipment_read']);
-        $this->assertEquals(self::$secondCarrierId, $shipment['carrierId']);
-
-        return $shipmentId;
-    }
-
-    /**
-     * @depends testSwitchShipmentCarrier
-     */
-    public function testFulfillShipment(int $shipmentId): void
-    {
-        $response = $this->partialUpdateItem(
-            '/shipments/' . $shipmentId . '/fulfill',
-            ['trackingNumber' => 'TRACK-12345'],
-            ['shipment_write'],
-            Response::HTTP_NO_CONTENT
-        );
-        $this->assertNull($response);
-
-        $shipment = $this->getItem('/orders/' . self::$orderId . '/shipments/' . $shipmentId, ['shipment_read']);
-        $this->assertEquals('TRACK-12345', $shipment['trackingNumber']);
-    }
-
-    public function testCreateShipmentInvalid(): void
-    {
-        $response = $this->createItem(
-            '/orders/' . self::$orderId . '/shipments',
-            [
-                'productId' => self::$productId,
-                'quantity' => 1,
-            ],
-            ['shipment_write'],
-            Response::HTTP_UNPROCESSABLE_ENTITY
-        );
-
-        $this->assertValidationErrors([
-            ['propertyPath' => 'carrierId', 'message' => 'This value should not be null.'],
-        ], $response);
-    }
-
-    public function testFulfillShipmentNotFound(): void
-    {
-        $this->partialUpdateItem(
-            '/shipments/999999/fulfill',
-            ['trackingNumber' => 'TRACK-99999'],
-            ['shipment_write'],
+        $this->getItem(
+            '/orders/' . self::$orderId . '/shipments/999999',
+            ['shipment_read'],
             Response::HTTP_NOT_FOUND
         );
     }

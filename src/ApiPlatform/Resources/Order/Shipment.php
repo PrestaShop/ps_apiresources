@@ -24,29 +24,15 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
-use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\CreateShipment;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Exception\ShipmentException;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Exception\ShipmentNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Query\GetShipmentForEditing;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSCreate(
-            uriTemplate: '/orders/{orderId}/shipments',
-            requirements: ['orderId' => '\d+'],
-            CQRSCommand: CreateShipment::class,
-            CQRSQuery: GetShipmentForEditing::class,
-            scopes: ['shipment_write'],
-            CQRSQueryMapping: self::QUERY_MAPPING,
-        ),
         new CQRSGet(
             uriTemplate: '/orders/{orderId}/shipments/{shipmentId}',
             requirements: ['orderId' => '\d+', 'shipmentId' => '\d+'],
@@ -58,9 +44,6 @@ use Symfony\Component\Validator\Constraints as Assert;
     exceptionToStatus: [
         ShipmentNotFoundException::class => Response::HTTP_NOT_FOUND,
         OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        CombinationConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ShipmentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
@@ -70,17 +53,7 @@ class Shipment
 
     public int $shipmentId;
 
-    #[Assert\NotNull]
     public int $carrierId;
-
-    #[Assert\NotNull]
-    public int $productId;
-
-    #[Assert\NotNull]
-    #[Assert\Positive]
-    public int $quantity;
-
-    public ?int $combinationId = null;
 
     public string $trackingNumber;
 

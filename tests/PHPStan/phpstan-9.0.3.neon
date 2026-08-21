@@ -24,11 +24,3 @@ parameters:
             message: "#Class .*Shipment.* not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Order/*
-        -
-            message: "#Class .*Shipment.* not found.#"
-            identifier: class.notFound
-            path: ../../src/ApiPlatform/Resources/Shipment/*
-        -
-            message: "#Class .*OrderDetailNotFoundException.* not found.#"
-            identifier: class.notFound
-            path: ../../src/ApiPlatform/Resources/Order/ShipmentProducts.php
