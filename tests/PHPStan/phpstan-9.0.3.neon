@@ -19,3 +19,9 @@ parameters:
             identifier: class.notFound
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
+        # The Shipment CQRS domain was introduced in 9.1.0. The operations declare minVersion
+        # 9.1.0, so their classes are expected to be absent here.
+        -
+            message: "#Class .*Shipment\\\\(Command|Exception|Query|ValueObject).* not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Shipment/*

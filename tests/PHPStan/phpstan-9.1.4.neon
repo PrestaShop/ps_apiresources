@@ -13,3 +13,9 @@ parameters:
             identifier: class.notFound
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
+        # CreateShipment, FulfillShipmentCommand and AddProductToShipment only landed in 9.2.0.
+        # Their operations declare minVersion 9.2.0, so they are expected to be absent here.
+        -
+            message: "#Class .*Shipment\\\\Command\\\\(CreateShipment|FulfillShipmentCommand|AddProductToShipment).* not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Shipment/*
