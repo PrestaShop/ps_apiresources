@@ -34,6 +34,29 @@ use Symfony\Component\Finder\Finder;
 
 class GenerateApiTrackingTableCommand extends Command
 {
+    private const REASON_BACK_OFFICE_UI = 'Back office UI feature, out of API scope';
+    private const USELESS_DUPLICATE = 'Duplicate of another endpoint, not relevant for the Admin API';
+
+    /**
+     * CQRS commands and queries that are intentionally NOT meant to be exposed as Admin API
+     * endpoints: admin-UI-only features, internal helpers used by back office forms, or flows
+     * handled outside of the API. They are filtered out of the tracking table and of every
+     * metric (totals, percentages, per-domain progress).
+     */
+    private const EXCLUDED_CQRS_CLASSES = [
+        // Already covered by other endpoints, not relevant for the Admin API
+        'GetCustomerForAddressCreation' => self::USELESS_DUPLICATE,
+        'ResetEmployeePasswordCommand' => self::USELESS_DUPLICATE,
+        'GetEmployeeEmailById' => self::USELESS_DUPLICATE,
+        // Quick access links are a back office UI customization feature.
+        'AddQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
+        'EditQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
+        'DeleteQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
+        'BulkDeleteQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
+        'ToggleQuickAccessNewWindowCommand' => self::REASON_BACK_OFFICE_UI,
+        'GetQuickAccessForEditing' => self::REASON_BACK_OFFICE_UI,
+    ];
+
     private array $cqrsEndpoints = [];
     private array $cqrsLookup = [];
 
@@ -45,7 +68,8 @@ class GenerateApiTrackingTableCommand extends Command
             ->setDescription('Generate API tracking table for Admin API endpoints')
             ->addOption('output', 'o', InputOption::VALUE_OPTIONAL, 'Output file', 'api-endpoints-tracking.md')
             ->addOption('github-token', 'g', InputOption::VALUE_OPTIONAL, 'GitHub API token for PR status detection')
-            ->addOption('skip-github', null, InputOption::VALUE_NONE, 'Skip GitHub PR analysis for faster execution');
+            ->addOption('skip-github', null, InputOption::VALUE_NONE, 'Skip GitHub PR analysis for faster execution')
+            ->addOption('include-excluded', null, InputOption::VALUE_NONE, 'Count the endpoints flagged as irrelevant for the Admin API in the table and metrics');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -58,8 +82,19 @@ class GenerateApiTrackingTableCommand extends Command
 
             // Step 1: Get all CQRS endpoints from the core
             $io->section('🔍 Scanning CQRS endpoints from the core...');
-            $cqrsEndpoints = $this->getCqrsEndpointsFromCoreCommand();
+            $cqrsEndpoints = $this->getAllCqrsEndpoints();
             $io->info(sprintf('Found %d CQRS endpoints', count($cqrsEndpoints)));
+
+            // Step 1bis: Discard the commands/queries that are not meant to become API endpoints
+            $excludedEndpoints = [];
+            if (!$input->getOption('include-excluded')) {
+                [$cqrsEndpoints, $excludedEndpoints] = $this->splitExcludedEndpoints($cqrsEndpoints);
+                $io->info(sprintf(
+                    'Excluded %d CQRS endpoints not relevant for the Admin API (%d remaining)',
+                    count($excludedEndpoints),
+                    count($cqrsEndpoints)
+                ));
+            }
 
             // Step 2: Scan API Platform resources directly
             $io->section('📄 Scanning API Platform resources...');
@@ -85,7 +120,7 @@ class GenerateApiTrackingTableCommand extends Command
             // Step 4: Generate markdown table
             $io->section('📝 Generating markdown table...');
             $domainGroups = $this->processDomainGroups($matchedEndpoints);
-            $this->generateMarkdownTable($domainGroups, $outputFile);
+            $this->generateMarkdownTable($domainGroups, $excludedEndpoints, $outputFile);
 
             $totalEndpoints = count($matchedEndpoints);
             $implementedCount = $this->countImplementedEndpoints($domainGroups);
@@ -93,14 +128,28 @@ class GenerateApiTrackingTableCommand extends Command
             $percentage = $totalEndpoints > 0 ? round(($implementedCount / $totalEndpoints) * 100, 1) : 0;
             $projectedPercentage = $totalEndpoints > 0 ? round((($implementedCount + $inProgressCount) / $totalEndpoints) * 100, 1) : 0;
 
-            $io->success([
+            $summary = [
                 'API tracking table generated successfully!',
                 sprintf('📁 Saved to: %s', $outputFile),
-                sprintf('📊 Summary: %d implemented, %d in progress, %d missing (%s%% complete)',
-                    $implementedCount, $inProgressCount, $totalEndpoints - $implementedCount - $inProgressCount, $percentage),
-                sprintf('🔮 Projected after merging open PRs: %s%% (+%s%%)',
-                    $projectedPercentage, round($projectedPercentage - $percentage, 1)),
-            ]);
+                sprintf(
+                    '📊 Summary: %d implemented, %d in progress, %d missing (%s%% complete)',
+                    $implementedCount,
+                    $inProgressCount,
+                    $totalEndpoints - $implementedCount - $inProgressCount,
+                    $percentage
+                ),
+                sprintf(
+                    '🔮 Projected after merging open PRs: %s%% (+%s%%)',
+                    $projectedPercentage,
+                    round($projectedPercentage - $percentage, 1)
+                ),
+            ];
+
+            if (!empty($excludedEndpoints)) {
+                $summary[] = sprintf('🚫 %d endpoints excluded from the metrics (not relevant for the Admin API)', count($excludedEndpoints));
+            }
+
+            $io->success($summary);
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
@@ -270,6 +319,44 @@ class GenerateApiTrackingTableCommand extends Command
         return $this->cqrsEndpoints;
     }
 
+    /**
+     * Split the CQRS endpoints into the ones that are trackable as Admin API endpoints and the
+     * ones flagged in self::EXCLUDED_CQRS_CLASSES. Excluded endpoints keep their exclusion reason
+     * so it can be reported in the generated markdown.
+     *
+     * @return array{0: array, 1: array} [$trackable, $excluded]
+     */
+    private function splitExcludedEndpoints(array $cqrsEndpoints): array
+    {
+        $trackable = [];
+        $excluded = [];
+
+        foreach ($cqrsEndpoints as $endpoint) {
+            $reason = $this->getExclusionReason($endpoint['class']);
+
+            if (null === $reason) {
+                $trackable[] = $endpoint;
+                continue;
+            }
+
+            $endpoint['exclusion_reason'] = $reason;
+            $excluded[] = $endpoint;
+        }
+
+        return [$trackable, $excluded];
+    }
+
+    /**
+     * Return why a CQRS class is not relevant as an Admin API endpoint, or null when it is.
+     * Both the short class name and the fully qualified class name are accepted as keys.
+     */
+    private function getExclusionReason(string $cqrsClass): ?string
+    {
+        $shortName = basename(str_replace('\\', '/', $cqrsClass));
+
+        return self::EXCLUDED_CQRS_CLASSES[$cqrsClass] ?? self::EXCLUDED_CQRS_CLASSES[$shortName] ?? null;
+    }
+
     private function compareCqrsWithApi(array $cqrsEndpoints, array $apiEndpoints, array $prStatusMap = []): array
     {
         $matched = [];
@@ -316,7 +403,7 @@ class GenerateApiTrackingTableCommand extends Command
                         'status' => '🚧 In Progress',
                         'pr_url' => $pr['html_url'],
                         'pr_title' => $pr['title'],
-                        'assignee' => $pr['assignee']['login'] ?? $pr['user']['login'] ?? 'Unknown',
+                        'author' => $pr['user']['login'] ?? 'Unknown',
                     ];
                 }
             }
@@ -343,13 +430,13 @@ class GenerateApiTrackingTableCommand extends Command
 
             // Determine final status based on API implementation and PR status
             $finalStatus = '❌ Missing';
-            $assigneeInfo = '';
+            $authorInfo = '';
 
             if ($hasApi) {
                 $finalStatus = '✅ Implemented';
             } elseif ($prStatus) {
                 $finalStatus = $prStatus['status'];
-                $assigneeInfo = $prStatus['assignee'];
+                $authorInfo = $prStatus['author'];
             }
 
             $domainGroups[$domain][] = [
@@ -358,7 +445,7 @@ class GenerateApiTrackingTableCommand extends Command
                 'hasApi' => $hasApi,
                 'api' => $endpoint['api'],
                 'status' => $finalStatus,
-                'assignee' => $assigneeInfo,
+                'author' => $authorInfo,
                 'pr_info' => $prStatus,
             ];
         }
@@ -406,7 +493,20 @@ class GenerateApiTrackingTableCommand extends Command
         return $count;
     }
 
-    private function generateMarkdownTable(array $domainGroups, string $outputFile): void
+    private function statusEmoji(string $status): string
+    {
+        if (str_contains($status, 'Implemented')) {
+            return '✅';
+        }
+
+        if (str_contains($status, 'In Progress')) {
+            return '🚧';
+        }
+
+        return '❌';
+    }
+
+    private function generateMarkdownTable(array $domainGroups, array $excludedEndpoints, string $outputFile): void
     {
         $totalEndpoints = array_sum(array_map('count', $domainGroups));
         $implementedCount = $this->countImplementedEndpoints($domainGroups);
@@ -423,53 +523,96 @@ class GenerateApiTrackingTableCommand extends Command
         $markdown .= "- **In Progress**: $inProgressCount 🚧\n";
         $markdown .= "- **Missing**: $missingCount ❌\n";
         $markdown .= "- **Progress**: $percentage%\n";
-        $markdown .= "- **Projected progress (if all open PRs merged)**: $projectedPercentage% 🔮\n\n";
-        $markdown .= "---\n\n";
+        $markdown .= "- **Projected progress (if all open PRs merged)**: $projectedPercentage% 🔮\n";
+
+        if (!empty($excludedEndpoints)) {
+            $markdown .= '- **Excluded**: ' . count($excludedEndpoints) . " 🚫 *(not relevant for the Admin API, not counted above)*\n";
+        }
+
+        $markdown .= "\n---\n\n";
 
         foreach ($domainGroups as $domain => $endpoints) {
             $domainImplemented = count(array_filter($endpoints, fn ($e) => $e['hasApi']));
             $domainTotal = count($endpoints);
             $domainPercentage = $domainTotal > 0 ? round(($domainImplemented / $domainTotal) * 100, 1) : 0;
 
-            $markdown .= "## 🏷️ Domain: $domain\n\n";
-            $markdown .= "**Progress**: $domainImplemented/$domainTotal ($domainPercentage%)\n\n";
-            $markdown .= "| Action | Type | Status | API Endpoint | Assignee / PR |\n";
-            $markdown .= "|--------|------|--------|--------------|---------------|\n";
+            $markdown .= "## 🏷️ $domain\n\n";
+            $markdown .= "$domainImplemented/$domainTotal ($domainPercentage%)\n\n";
+            $markdown .= "| Action | Type | Status | API Endpoint | Author / PR |\n";
+            $markdown .= "|--------|------|--------|--------------|-------------|\n";
 
             foreach ($endpoints as $endpoint) {
                 $action = '`' . $endpoint['action'] . '`';
                 $type = $endpoint['type'];
-                $status = $endpoint['status'];
+                // Keep only the emoji in the table, the legend explains it.
+                $status = $this->statusEmoji($endpoint['status']);
                 $api = $endpoint['api'];
 
-                // Build assignee/PR info
-                $assigneeInfo = '';
-                if (!empty($endpoint['assignee'])) {
-                    $assigneeInfo = $endpoint['assignee'];
+                // Build author/PR info
+                $authorInfo = '';
+                if (!empty($endpoint['author'])) {
+                    $authorInfo = $endpoint['author'];
                     if ($endpoint['pr_info'] && !empty($endpoint['pr_info']['pr_url'])) {
-                        $assigneeInfo = "[{$endpoint['assignee']}](https://github.com/{$endpoint['assignee']}) / [PR]({$endpoint['pr_info']['pr_url']})";
+                        $authorInfo = "{$endpoint['author']} / [PR]({$endpoint['pr_info']['pr_url']})";
                     }
                 }
 
-                $markdown .= "| $action | $type | $status | $api | $assigneeInfo |\n";
+                $markdown .= "| $action | $type | $status | $api | $authorInfo |\n";
             }
 
             $markdown .= "\n";
         }
 
+        $markdown .= $this->renderExcludedSection($excludedEndpoints);
+
         $markdown .= "## 📋 Status Legend\n\n";
         $markdown .= "- ✅ **Implemented**: API endpoint is available and working\n";
         $markdown .= "- 🚧 **In Progress**: Someone is actively working on this endpoint (PR open)\n";
-        $markdown .= "- ❌ **Missing**: API endpoint needs to be implemented\n\n";
+        $markdown .= "- ❌ **Missing**: API endpoint needs to be implemented\n";
+        $markdown .= "- 🚫 **Excluded**: Command / query intentionally not exposed through the Admin API\n\n";
         $markdown .= '*Last updated: ' . date('Y-m-d H:i:s') . "*\n";
 
         file_put_contents($outputFile, $markdown);
     }
 
-    private function fetchGitHubPRs(string $owner, string $repo, string $state, ?string $token, int $limit = 50): array
+    /**
+     * Render the informative table of the commands/queries deliberately kept out of the Admin API.
+     * They are listed for transparency only and are not part of any metric above.
+     */
+    private function renderExcludedSection(array $excludedEndpoints): string
     {
-        $url = "https://api.github.com/repos/{$owner}/{$repo}/pulls?state={$state}&per_page={$limit}";
+        if (empty($excludedEndpoints)) {
+            return '';
+        }
 
+        usort($excludedEndpoints, function ($a, $b) {
+            if ($a['domain'] !== $b['domain']) {
+                return strcasecmp($a['domain'], $b['domain']);
+            }
+
+            return strcasecmp($a['action'], $b['action']);
+        });
+
+        $markdown = "## 🚫 Excluded from tracking\n\n";
+        $markdown .= "These CQRS commands and queries are intentionally **not** exposed through the Admin API.\n";
+        $markdown .= "(totals, percentages and per-domain progress).\n\n";
+        $markdown .= "| Action | Type | Domain | Reason |\n";
+        $markdown .= "|--------|------|--------|--------|\n";
+
+        foreach ($excludedEndpoints as $endpoint) {
+            $action = $endpoint['action'] ?: basename(str_replace('\\', '/', $endpoint['class']));
+            $domain = $endpoint['domain'] ?: 'Unknown';
+
+            $markdown .= sprintf("| `%s` | %s | %s | %s |\n", $action, $endpoint['type'], $domain, $endpoint['exclusion_reason']);
+        }
+
+        return $markdown . "\n";
+    }
+
+    private function fetchGitHubPRs(string $owner, string $repo, string $state, ?string $token, int $limit = 500): array
+    {
+        // GitHub caps per_page at 100, so we paginate to collect more than 100 PRs.
+        $perPage = 100;
         $headers = [
             'User-Agent: PrestaShop-API-Tracker',
             'Accept: application/vnd.github.v3+json',
@@ -486,12 +629,29 @@ class GenerateApiTrackingTableCommand extends Command
             ],
         ]);
 
-        $response = file_get_contents($url, false, $context);
-        if (false === $response) {
-            throw new \RuntimeException('Failed to fetch PRs from GitHub API');
+        $prs = [];
+        for ($page = 1; count($prs) < $limit; ++$page) {
+            $url = "https://api.github.com/repos/{$owner}/{$repo}/pulls?state={$state}&per_page={$perPage}&page={$page}";
+
+            $response = file_get_contents($url, false, $context);
+            if (false === $response) {
+                throw new \RuntimeException('Failed to fetch PRs from GitHub API');
+            }
+
+            $batch = json_decode($response, true);
+            if (!is_array($batch) || [] === $batch) {
+                break;
+            }
+
+            $prs = array_merge($prs, $batch);
+
+            // Last page reached when GitHub returns fewer than a full page.
+            if (count($batch) < $perPage) {
+                break;
+            }
         }
 
-        return json_decode($response, true) ?: [];
+        return array_slice($prs, 0, $limit);
     }
 
     private function analyzePRChanges(array $pr, ?string $token): array

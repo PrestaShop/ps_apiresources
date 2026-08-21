@@ -51,9 +51,28 @@ services:
   PrestaShop\Module\APIResources\ApiPlatform\Normalizer\GetSearchTermAliasesQuerySerializer:
     autoconfigure: true
 
+  # See class docblock: post-processes attributes[].localizedNames on the
+  # /attributes/groups-with-attributes endpoint (nested locale keys).
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\AttributeGroupWithAttributesNormalizer:
+    autowire: true
+    autoconfigure: true
+    public: false
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'
     autowire: true
+    arguments:
+      $decorated: '@.inner'
+
+  # Filters Admin API operations whose minVersion/maxVersion extra properties don't match the running core
+  # version. On PrestaShop >= 9.2 the equivalent core decorator class exists (checked via class_exists, NOT
+  # injected as a service which would create a circular reference in the decoration chain): when detected
+  # this module decorator is a pure pass-through.
+  # Note: module resources must declare the gating via extraProperties (['minVersion' => 'x.y.z']), NOT via
+  # the named constructor arguments which only exist in the core operation classes since PrestaShop 9.2.
+  # @deprecated remove together with the class once the module requires PrestaShop >= 9.2.
+  PrestaShop\Module\APIResources\ApiPlatform\Metadata\Resource\Factory\CoreVersionCompatibilityMetadataCollectionFactoryDecorator:
+    decorates: api_platform.metadata.resource.metadata_collection_factory
     arguments:
       $decorated: '@.inner'
