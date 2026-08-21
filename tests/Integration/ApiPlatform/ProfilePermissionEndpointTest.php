@@ -46,8 +46,32 @@ class ProfilePermissionEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'permissions configuration endpoint' => ['GET', '/profiles/permissions?employeeProfileId=1'];
-        yield 'tab permission endpoint' => ['PUT', '/profiles/1/tab-permissions'];
-        yield 'module permission endpoint' => ['PUT', '/profiles/1/module-permissions'];
+
+        // The two permission endpoints are covered by testPermissionEndpointsAreProtected()
+        // instead: the generic helper sends no body, and these commands cannot be built without
+        // one, so the request fails at deserialization before the scope check ever runs.
+    }
+
+    /**
+     * The scope protection of the two permission endpoints, asserted with a body.
+     *
+     * ScopeCheckerListener runs on kernel.request, but so does ApiPlatform's DeserializeListener,
+     * and it goes first: UpdateTabPermissionsCommand and UpdateModulePermissionsCommand both
+     * require tabId/moduleId, permission and isActive, none of which the URI carries, so an
+     * empty request answers 400 before the scope is ever looked at. Sending a valid body is what
+     * makes the 401 and the 403 observable.
+     */
+    public function testPermissionEndpointsAreProtected(): void
+    {
+        $endpoints = [
+            '/profiles/' . self::$profileId . '/tab-permissions' => ['tabId' => $this->getConfigurableTabId(), 'permission' => 'view', 'enabled' => true],
+            '/profiles/' . self::$profileId . '/module-permissions' => ['moduleId' => $this->getConfigurableModuleId(), 'permission' => 'view', 'enabled' => true],
+        ];
+
+        foreach ($endpoints as $uri => $payload) {
+            $this->requestApi('PUT', $uri, $payload, [], Response::HTTP_UNAUTHORIZED);
+            $this->requestApi('PUT', $uri, $payload, ['profile_read'], Response::HTTP_FORBIDDEN);
+        }
     }
 
     /**
