@@ -165,9 +165,10 @@ class EmployeeEndpointTest extends ApiTestCase
 
     /**
      * The PATCH is only nominally partial. EditEmployeeHandler overwrites firstname, lastname,
-     * email, default_tab, id_lang, id_profile and has_enabled_gravatar from the command without
-     * checking whether they were sent, and it refuses an employee with no shop association, so
-     * every request has to carry the whole representation. Only the field under test changes.
+     * email, default_tab, id_lang, id_profile, active and has_enabled_gravatar from the command
+     * without checking whether they were sent — omitting `enabled` silently disables the
+     * employee — and it refuses an employee with no shop association. Every request therefore
+     * has to carry the whole representation; only the field under test changes.
      *
      * @depends testGetEmployee
      */
@@ -182,6 +183,7 @@ class EmployeeEndpointTest extends ApiTestCase
             'profileId' => self::$profileId,
             'shopAssociation' => [1],
             'hasEnabledGravatar' => false,
+            'enabled' => true,
         ];
 
         $updatedEmployee = $this->partialUpdateItem(
