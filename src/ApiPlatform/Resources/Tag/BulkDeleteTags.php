@@ -34,6 +34,10 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSDelete(
             uriTemplate: '/tags/bulk-delete',
+            // The Tag CQRS domain was introduced in 9.1.0
+            extraProperties: [
+                'minVersion' => '9.1.0',
+            ],
             CQRSCommand: BulkDeleteTagCommand::class,
             scopes: [
                 'tag_write',

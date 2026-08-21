@@ -28,9 +28,19 @@ use Tests\Resources\DatabaseDump;
 
 class TagEndpointTest extends ApiTestCase
 {
+    private const MIN_VERSION = '9.1.0';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+
+        // The whole Tag CQRS domain was introduced in 9.1.0. Below that version
+        // ApiResourceScopesExtractor drops every operation, so neither their routes nor the
+        // tag_read and tag_write scopes exist and even creating the API client fails.
+        if (self::isVersionUnder(self::MIN_VERSION)) {
+            static::markTestSkipped(sprintf('The Tag domain requires PrestaShop >= %s.', self::MIN_VERSION));
+        }
+
         DatabaseDump::restoreTables(['tag', 'product_tag']);
         self::createApiClient(['tag_write', 'tag_read']);
     }

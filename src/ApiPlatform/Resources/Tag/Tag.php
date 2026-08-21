@@ -41,12 +41,19 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSCreate(
             uriTemplate: '/tags',
+            // The Tag CQRS domain was introduced in 9.1.0
+            extraProperties: [
+                'minVersion' => '9.1.0',
+            ],
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddTagCommand::class,
             scopes: ['tag_write'],
         ),
         new CQRSDelete(
             uriTemplate: '/tags/{tagId}',
+            extraProperties: [
+                'minVersion' => '9.1.0',
+            ],
             requirements: ['tagId' => '\d+'],
             output: false,
             CQRSCommand: DeleteTagCommand::class,
@@ -54,12 +61,18 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSGet(
             uriTemplate: '/tags/{tagId}',
+            extraProperties: [
+                'minVersion' => '9.1.0',
+            ],
             requirements: ['tagId' => '\d+'],
             CQRSQuery: GetTagForEditing::class,
             scopes: ['tag_read'],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/tags/{tagId}',
+            extraProperties: [
+                'minVersion' => '9.1.0',
+            ],
             requirements: ['tagId' => '\d+'],
             read: false,
             CQRSCommand: EditTagCommand::class,
