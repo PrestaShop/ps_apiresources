@@ -109,6 +109,8 @@ class AvailableShipmentsEndpointTest extends ApiTestCase
              VALUES (' . $shipmentId . ', ' . self::$orderDetailId . ', ' . self::$productQuantity . ')'
         );
 
+        $this->assertGreaterThan(0, $shipmentId);
+
         return $shipmentId;
     }
 
