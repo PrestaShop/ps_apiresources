@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Query\GetShipmentsForOrderDetail;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class AvailableShipmentsEndpointTest extends ApiTestCase
@@ -33,6 +34,7 @@ class AvailableShipmentsEndpointTest extends ApiTestCase
     private static int $productId;
     private static int $productQuantity;
     private static int $carrierId;
+    private static int $foreignProductId;
 
     public static function setUpBeforeClass(): void
     {
@@ -56,6 +58,13 @@ class AvailableShipmentsEndpointTest extends ApiTestCase
         self::$orderDetailId = (int) $orderDetailRow['id_order_detail'];
         self::$productId = (int) $orderDetailRow['product_id'];
         self::$productQuantity = (int) $orderDetailRow['product_quantity'];
+
+        $foreignProductRow = \Db::getInstance()->getRow(
+            'SELECT `id_product` FROM `' . _DB_PREFIX_ . 'product` WHERE `id_product` NOT IN
+                (SELECT `product_id` FROM `' . _DB_PREFIX_ . 'order_detail` WHERE `id_order` = ' . self::$orderId . ')
+             ORDER BY `id_product` ASC'
+        );
+        self::$foreignProductId = (int) $foreignProductRow['id_product'];
 
         $carrierRow = \Db::getInstance()->getRow(
             'SELECT `id_carrier` FROM `' . _DB_PREFIX_ . 'carrier` WHERE `deleted` = 0 AND `active` = 1 ORDER BY `id_carrier` ASC'
@@ -154,6 +163,16 @@ class AvailableShipmentsEndpointTest extends ApiTestCase
         $this->assertNotNull($found, 'Expected shipment not found in ListAvailableShipments response');
         $this->assertArrayHasKey('shipmentName', $found);
         $this->assertArrayHasKey('compatible', $found);
+    }
+
+    public function testListAvailableShipmentsForProductNotInTheOrder(): void
+    {
+        // Answers every shipment of the order until PrestaShop/PrestaShop#42092 lands
+        $this->getItem(
+            '/orders/' . self::$orderId . '/products/' . self::$foreignProductId . '/available-shipments',
+            ['shipment_read'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
     }
 
     /**

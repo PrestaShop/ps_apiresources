@@ -113,6 +113,8 @@ class ShipmentEndpointTest extends ApiTestCase
         $this->assertEquals(self::$carrierId, $response['carrierId']);
         $this->assertEquals('', $response['trackingNumber']);
         $this->assertArrayHasKey(self::$productId, $response['selectedProducts']);
+        // Reported as 0 for every product until PrestaShop/PrestaShop#42092 lands
+        $this->assertSame(self::$productQuantity, $response['selectedProducts'][self::$productId]);
     }
 
     public function testGetShipmentNotFound(): void
