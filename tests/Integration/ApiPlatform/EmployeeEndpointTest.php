@@ -142,26 +142,39 @@ class EmployeeEndpointTest extends ApiTestCase
     }
 
     /**
+     * The PATCH is only nominally partial. EditEmployeeHandler overwrites firstname, lastname,
+     * email, default_tab, id_lang, id_profile and has_enabled_gravatar from the command without
+     * checking whether they were sent, and it refuses an employee with no shop association, so
+     * every request has to carry the whole representation. Only the field under test changes.
+     *
      * @depends testGetEmployee
      */
     public function testPartialUpdateEmployee(int $employeeId): int
     {
-        // EditEmployeeHandler::updateEmployeeWithCommandData() dereferences getFirstName(),
-        // getLastName() and getEmail() unconditionally, so those three have to be sent on every
-        // PATCH even when they do not change: the endpoint is only partial for the other fields
-        $updatedEmployee = $this->partialUpdateItem('/employees/' . $employeeId, [
-            'firstName' => 'Johnny',
+        $payload = [
+            'firstName' => 'John',
             'lastName' => 'Doe',
             'email' => 'john.doe@example.com',
-        ], ['employee_write']);
+            'defaultPageId' => 1,
+            'languageId' => self::$langId,
+            'profileId' => self::$profileId,
+            'shopAssociation' => [1],
+            'hasEnabledGravatar' => false,
+        ];
+
+        $updatedEmployee = $this->partialUpdateItem(
+            '/employees/' . $employeeId,
+            ['firstName' => 'Johnny'] + $payload,
+            ['employee_write']
+        );
         $this->assertSame('Johnny', $updatedEmployee['firstName']);
         $this->assertSame('Doe', $updatedEmployee['lastName']);
 
-        $updatedEmployee = $this->partialUpdateItem('/employees/' . $employeeId, [
-            'firstName' => 'Johnny',
-            'lastName' => 'Updated',
-            'email' => 'john.doe@example.com',
-        ], ['employee_write']);
+        $updatedEmployee = $this->partialUpdateItem(
+            '/employees/' . $employeeId,
+            ['firstName' => 'Johnny', 'lastName' => 'Updated'] + $payload,
+            ['employee_write']
+        );
         $this->assertSame('Johnny', $updatedEmployee['firstName']);
         $this->assertSame('Updated', $updatedEmployee['lastName']);
 
