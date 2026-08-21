@@ -45,6 +45,9 @@ use Symfony\Component\HttpFoundation\Response;
             ],
         ),
     ],
+    // lastConnectionDate is null until the employee signs in for the first time, and the key
+    // would otherwise disappear from the row: the list keeps a stable shape instead.
+    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         EmployeeNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
