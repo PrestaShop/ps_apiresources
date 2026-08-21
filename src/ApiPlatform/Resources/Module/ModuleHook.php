@@ -37,12 +37,19 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSCreate(
             uriTemplate: '/modules/{moduleId}/hooks',
+            // HookModuleCommand and EditHookedModuleCommand were introduced in 9.2.0
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             requirements: ['moduleId' => '\d+'],
             CQRSCommand: HookModuleCommand::class,
             scopes: ['module_write'],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/modules/{moduleId}/hooks/{hookId}',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             requirements: ['moduleId' => '\d+', 'hookId' => '\d+'],
             read: false,
             CQRSCommand: EditHookedModuleCommand::class,

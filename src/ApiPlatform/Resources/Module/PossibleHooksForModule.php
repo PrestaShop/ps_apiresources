@@ -30,18 +30,41 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/modules/{moduleId}/possible-hooks',
+            // GetPossibleHooksForModule was introduced in 9.2.0
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSQuery: GetPossibleHooksForModule::class,
+            ApiResourceMapping: self::API_RESOURCE_MAPPING,
             scopes: ['module_read'],
         ),
     ],
 )]
 class PossibleHooksForModule
 {
-    public int $id;
+    /**
+     * HookableInfo exposes the hook id as "id", which ApiPlatform would otherwise take for the
+     * identifier of this resource — and then fail to resolve it from a URI that only carries
+     * {moduleId}, answering 404 "Invalid identifier value or configuration".
+     */
+    public const API_RESOURCE_MAPPING = [
+        '[id]' => '[hookId]',
+    ];
+
+    /**
+     * The module the hooks are listed for, taken from the URI. Declared like ProductImageList
+     * does for productId.
+     */
+    public int $moduleId;
+
+    public int $hookId;
 
     public string $name;
 
-    public ?string $title = null;
+    public string $title;
 
-    public ?string $description = null;
+    /**
+     * Whether the module is already hooked there.
+     */
+    public bool $registered;
 }

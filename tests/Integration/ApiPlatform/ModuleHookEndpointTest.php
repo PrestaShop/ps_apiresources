@@ -24,9 +24,19 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 class ModuleHookEndpointTest extends ApiTestCase
 {
+    private const MIN_VERSION = '9.2.0';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+
+        // GetPossibleHooksForModule, HookModuleCommand and EditHookedModuleCommand were all
+        // introduced in 9.2.0, so below that version ApiResourceScopesExtractor drops the three
+        // operations and their routes do not exist.
+        if (self::isVersionUnder(self::MIN_VERSION)) {
+            static::markTestSkipped(sprintf('The module hook endpoints require PrestaShop >= %s.', self::MIN_VERSION));
+        }
+
         self::createApiClient(['module_read', 'module_write']);
     }
 
@@ -45,5 +55,14 @@ class ModuleHookEndpointTest extends ApiTestCase
 
         $result = $this->getItem('/modules/' . $moduleId . '/possible-hooks', ['module_read']);
         $this->assertIsArray($result);
+        $this->assertNotEmpty($result, 'An active module should expose at least one hookable hook.');
+
+        // HookableInfo names the hook id "id"; the resource renames it so that ApiPlatform does
+        // not mistake it for the identifier of a URI that only carries {moduleId}
+        foreach ($result as $hook) {
+            $this->assertEquals(['hookId', 'name', 'title', 'registered'], array_keys($hook));
+            $this->assertIsInt($hook['hookId']);
+            $this->assertIsBool($hook['registered']);
+        }
     }
 }
