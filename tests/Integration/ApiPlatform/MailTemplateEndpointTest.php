@@ -117,7 +117,7 @@ class MailTemplateEndpointTest extends ApiTestCase
         $htmlContent = '<p>Edited by the Admin API integration test</p>';
         $txtContent = 'Edited by the Admin API integration test';
 
-        $this->partialUpdateItem(
+        $updated = $this->partialUpdateItem(
             '/mail-templates/' . $template['templateName'],
             [
                 'locale' => self::LOCALE,
@@ -128,11 +128,12 @@ class MailTemplateEndpointTest extends ApiTestCase
                 'htmlContent' => $htmlContent,
                 'txtContent' => $txtContent,
             ],
-            ['mail_template_write'],
-            // EditEmailBodyTemplateHandler returns void and the operation declares no
-            // CQRSQuery, so the update answers an empty 204
-            Response::HTTP_NO_CONTENT
+            ['mail_template_write']
         );
+
+        // The edit replays the query of the GET, so it answers with the stored template
+        $this->assertSame($htmlContent, $updated['htmlContent']);
+        $this->assertSame($txtContent, $updated['txtContent']);
 
         // The edit is observed through the get endpoint, which is what #370 and #373 could not
         // do while they lived in separate PRs

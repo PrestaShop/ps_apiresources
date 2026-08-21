@@ -59,6 +59,8 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'minVersion' => '9.2.0',
             ],
             CQRSCommand: EditEmailBodyTemplateCommand::class,
+            // Replays the query of the GET, so the edit answers with the stored template
+            CQRSQuery: GetEmailBodyTemplateForEditing::class,
             scopes: ['mail_template_write'],
         ),
     ],
