@@ -114,9 +114,31 @@ class EmployeeEndpointTest extends ApiTestCase
         $employee->email = $email;
         $employee->passwd = (new Hashing())->hash('Pr3st@Sh0p!Test');
         $employee->active = true;
+        $employee->default_tab = self::accessibleTabId();
         $employee->add();
 
         return (int) $employee->id;
+    }
+
+    /**
+     * EditEmployeeHandler refuses a default page the profile cannot view, so the fixtures and
+     * the update payload have to agree on a tab this profile actually has access to.
+     */
+    private static function accessibleTabId(): int
+    {
+        static $tabId = null;
+
+        if (null === $tabId) {
+            foreach (\Profile::getProfileAccesses(self::$profileId) as $id => $access) {
+                if ('1' === $access['view']) {
+                    $tabId = (int) $id;
+                    break;
+                }
+            }
+            self::assertNotNull($tabId, sprintf('Profile %d can view no tab at all.', self::$profileId));
+        }
+
+        return $tabId;
     }
 
     private function isEmployeeEnabled(int $employeeId): bool
@@ -155,7 +177,7 @@ class EmployeeEndpointTest extends ApiTestCase
             'firstName' => 'John',
             'lastName' => 'Doe',
             'email' => 'john.doe@example.com',
-            'defaultPageId' => 1,
+            'defaultPageId' => self::accessibleTabId(),
             'languageId' => self::$langId,
             'profileId' => self::$profileId,
             'shopAssociation' => [1],
