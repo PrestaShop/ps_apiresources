@@ -75,9 +75,10 @@ class ModuleHookEndpointTest extends ApiTestCase
         }
 
         // HookableInfo names the hook id "id"; the resource renames it so that ApiPlatform does
-        // not mistake it for the identifier of a URI that only carries {moduleId}
+        // not mistake it for the identifier of a URI that only carries {moduleId}, which is
+        // itself merged into every row the way ProductImageList carries productId
         foreach ($hooks as $hook) {
-            $this->assertEquals(['hookId', 'name', 'title', 'registered'], array_keys($hook));
+            $this->assertEquals(['moduleId', 'hookId', 'name', 'title', 'registered'], array_keys($hook));
             $this->assertIsInt($hook['hookId']);
             $this->assertIsBool($hook['registered']);
         }
