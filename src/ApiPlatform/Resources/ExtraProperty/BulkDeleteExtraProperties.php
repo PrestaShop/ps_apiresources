@@ -34,6 +34,10 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSDelete(
             uriTemplate: '/extra-properties/bulk-delete',
+            // The ExtraProperty CQRS domain was introduced in 9.2.0
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             CQRSCommand: BulkDeleteExtraPropertyDefinitionCommand::class,
             scopes: [
                 'extra_property_write',

@@ -31,6 +31,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
     operations: [
         new PaginatedList(
             uriTemplate: '/extra-properties',
+            // The ExtraProperty CQRS domain was introduced in 9.2.0
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             scopes: [
                 'extra_property_read',
             ],

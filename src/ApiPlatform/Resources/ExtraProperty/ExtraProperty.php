@@ -41,6 +41,10 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSGet(
             uriTemplate: '/extra-properties/{extraPropertyId}',
+            // The ExtraProperty CQRS domain was introduced in 9.2.0
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             requirements: ['extraPropertyId' => '\d+'],
             CQRSQuery: GetExtraPropertyDefinitionForEditing::class,
             scopes: [
@@ -50,6 +54,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSCreate(
             uriTemplate: '/extra-properties',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddExtraPropertyDefinitionCommand::class,
             CQRSQuery: GetExtraPropertyDefinitionForEditing::class,
@@ -61,6 +68,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/extra-properties/{extraPropertyId}',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             requirements: ['extraPropertyId' => '\d+'],
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: UpdateExtraPropertyDefinitionCommand::class,
@@ -73,6 +83,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSDelete(
             uriTemplate: '/extra-properties/{extraPropertyId}',
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
             requirements: ['extraPropertyId' => '\d+'],
             CQRSCommand: DeleteExtraPropertyDefinitionCommand::class,
             scopes: [

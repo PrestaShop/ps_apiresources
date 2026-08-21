@@ -27,9 +27,20 @@ use Tests\Resources\DatabaseDump;
 
 class ExtraPropertyEndpointTest extends ApiTestCase
 {
+    private const MIN_VERSION = '9.2.0';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+
+        // The whole ExtraProperty CQRS domain was introduced in 9.2.0, along with the
+        // extra_property_definition table. Below that version ApiResourceScopesExtractor drops
+        // every operation, so neither their routes nor the extra_property_read and
+        // extra_property_write scopes exist — and the table dump does not exist either.
+        if (self::isVersionUnder(self::MIN_VERSION)) {
+            static::markTestSkipped(sprintf('The ExtraProperty domain requires PrestaShop >= %s.', self::MIN_VERSION));
+        }
+
         self::resetTables();
         self::createApiClient(['extra_property_read', 'extra_property_write']);
     }
@@ -42,6 +53,12 @@ class ExtraPropertyEndpointTest extends ApiTestCase
 
     protected static function resetTables(): void
     {
+        // tearDownAfterClass() runs even when the class skipped itself, and the table only
+        // exists from 9.2.0 on
+        if (self::isVersionUnder(self::MIN_VERSION)) {
+            return;
+        }
+
         DatabaseDump::restoreTables([
             'extra_property_definition',
         ]);
