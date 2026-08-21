@@ -34,7 +34,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSUpdate(
             uriTemplate: '/shipments/{shipmentId}/carrier-assignments',
-            // The Shipment CQRS domain was introduced in 9.1.0
+            // SwitchShipmentCarrierCommand is the only one of the four that exists since 9.1.0
             extraProperties: [
                 'minVersion' => '9.1.0',
             ],
