@@ -81,9 +81,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/languages/{languageId}/set-status',
             requirements: ['languageId' => '\d+'],
             read: false,
-            output: false,
             CQRSCommand: ToggleLanguageStatusCommand::class,
             CQRSCommandMapping: self::STATUS_COMMAND_MAPPING,
+            // Replays the query of the GET, so the status change answers with the language
+            CQRSQuery: GetLanguageForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['language_write'],
         ),
         new CQRSDelete(

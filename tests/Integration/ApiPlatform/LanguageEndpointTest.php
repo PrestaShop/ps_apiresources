@@ -155,14 +155,19 @@ class LanguageEndpointTest extends ApiTestCase
         $languageId = (int) $this->createLanguage('tu')['languageId'];
         $this->assertTrue($this->isLanguageEnabled($languageId));
 
-        $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
+        // The status change replays the query of the GET, so it answers with the language
+        $updated = $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
             'enabled' => false,
-        ], ['language_write'], Response::HTTP_NO_CONTENT);
+        ], ['language_write']);
+        $this->assertFalse($updated['enabled']);
+        $this->assertEquals($this->getLanguage($languageId), $updated);
         $this->assertFalse($this->isLanguageEnabled($languageId));
 
-        $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
+        $updated = $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
             'enabled' => true,
-        ], ['language_write'], Response::HTTP_NO_CONTENT);
+        ], ['language_write']);
+        $this->assertTrue($updated['enabled']);
+        $this->assertEquals($this->getLanguage($languageId), $updated);
         $this->assertTrue($this->isLanguageEnabled($languageId));
     }
 
