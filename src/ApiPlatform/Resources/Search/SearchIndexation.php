@@ -30,6 +30,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
     operations: [
         new CQRSUpdate(
             uriTemplate: '/searches/indexations',
+            // SearchIndexationCommand was introduced in 9.1.0
+            extraProperties: [
+                'minVersion' => '9.1.0',
+            ],
             output: false,
             CQRSCommand: SearchIndexationCommand::class,
             scopes: ['search_write'],

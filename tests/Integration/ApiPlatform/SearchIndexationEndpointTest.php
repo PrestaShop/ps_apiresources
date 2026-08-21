@@ -27,9 +27,19 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SearchIndexationEndpointTest extends ApiTestCase
 {
+    private const MIN_VERSION = '9.1.0';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+
+        // SearchIndexationCommand was introduced in 9.1.0. Below that version
+        // ApiResourceScopesExtractor drops the operation, so neither its route nor the
+        // search_write scope exists and even creating the API client fails.
+        if (self::isVersionUnder(self::MIN_VERSION)) {
+            static::markTestSkipped(sprintf('The search indexation endpoint requires PrestaShop >= %s.', self::MIN_VERSION));
+        }
+
         self::createApiClient(['search_write']);
     }
 

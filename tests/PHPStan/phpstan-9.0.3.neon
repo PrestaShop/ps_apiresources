@@ -19,3 +19,9 @@ parameters:
             identifier: class.notFound
             count: 6
             path: ../../src/ApiPlatform/Resources/TaxRule/*
+        # SearchIndexationCommand was introduced in 9.1.0. The operation declares minVersion
+        # 9.1.0, so the class is expected to be absent here.
+        -
+            message: "#Class .*Search\\\\Command.* not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Search/*
