@@ -104,9 +104,11 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSUpdate(
             uriTemplate: '/currencies/{currencyId}/toggle-status',
             requirements: ['currencyId' => '\d+'],
-            output: false,
             allowEmptyBody: true,
             CQRSCommand: ToggleCurrencyStatusCommand::class,
+            // Replays the query of the GET, so the toggle answers with the currency it flipped
+            CQRSQuery: GetCurrencyForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['currency_write'],
         ),
     ],

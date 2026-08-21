@@ -134,11 +134,13 @@ class CurrencyEndpointTest extends ApiTestCase
      */
     public function testToggleCurrencyStatus(int $currencyId): int
     {
-        // The blind toggle returns 204; the status round-trip is verified through the
-        // explicit bulk-toggle below (per-shop currency status makes the single toggle
-        // unreliable to assert via the editing query).
-        $return = $this->updateItem('/currencies/' . $currencyId . '/toggle-status', [], ['currency_write'], Response::HTTP_NO_CONTENT);
-        $this->assertNull($return);
+        // The toggle replays the query of the GET, so it answers with the currency it flipped.
+        // The status itself is asserted through the explicit bulk-toggle below: per-shop
+        // currency status makes the single toggle unreliable to read back from the editing query.
+        $toggled = $this->updateItem('/currencies/' . $currencyId . '/toggle-status', [], ['currency_write']);
+
+        $this->assertSame($currencyId, $toggled['currencyId']);
+        $this->assertEquals($this->getItem('/currencies/' . $currencyId, ['currency_read']), $toggled);
 
         return $currencyId;
     }
