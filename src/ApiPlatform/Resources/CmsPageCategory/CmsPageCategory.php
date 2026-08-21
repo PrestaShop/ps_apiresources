@@ -74,9 +74,11 @@ use Symfony\Component\HttpFoundation\Response;
         new CQRSUpdate(
             uriTemplate: '/cms-page-categories/{cmsPageCategoryId}/toggle-status',
             requirements: ['cmsPageCategoryId' => '\d+'],
-            output: false,
             allowEmptyBody: true,
             CQRSCommand: ToggleCmsPageCategoryStatusCommand::class,
+            // Replays the query of the GET, so the toggle answers with the category it flipped
+            CQRSQuery: GetCmsPageCategoryForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: [
                 'cms_page_category_write',
             ],

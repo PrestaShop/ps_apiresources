@@ -193,11 +193,14 @@ class CmsPageEndpointTest extends ApiTestCase
      */
     public function testToggleStatusCmsPage(int $cmsPageId): int
     {
-        // Status is currently false (set by the partial update), toggling it should enable it back
-        $this->updateItem('/cms-pages/' . $cmsPageId . '/toggle-status', [], ['cms_page_write'], Response::HTTP_NO_CONTENT);
+        // Status is currently false (set by the partial update), toggling it should enable it back.
+        // The toggle replays the query of the GET, so it answers with the entity it flipped.
+        $toggled = $this->updateItem('/cms-pages/' . $cmsPageId . '/toggle-status', [], ['cms_page_write']);
+        $this->assertTrue($toggled['displayed']);
 
         $cmsPage = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
         $this->assertTrue($cmsPage['displayed']);
+        $this->assertEquals($cmsPage, $toggled);
 
         return $cmsPageId;
     }
