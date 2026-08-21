@@ -23,15 +23,16 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\AddProductToShipment;
-use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\CreateShipment;
+use PrestaShop\PrestaShop\Core\Domain\Shipment\Query\GetShipmentsForOrderDetail;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class ShipmentEndpointTest extends ApiTestCase
 {
     private static int $orderId;
+    private static int $orderDetailId;
     private static int $productId;
+    private static int $productQuantity;
     private static int $carrierId;
 
     public static function setUpBeforeClass(): void
@@ -39,7 +40,7 @@ class ShipmentEndpointTest extends ApiTestCase
         parent::setUpBeforeClass();
         // The Shipment domain is only shipped on PrestaShop 9.2+; skip the whole class on older versions
         // instead of letting the scopes below fail (they don't resolve to any route there).
-        if (!class_exists(CreateShipment::class)) {
+        if (!class_exists(GetShipmentsForOrderDetail::class)) {
             self::markTestSkipped('Shipment domain does not exist on this PrestaShop version');
         }
 
@@ -51,9 +52,11 @@ class ShipmentEndpointTest extends ApiTestCase
         self::$orderId = (int) $orderRow['id_order'];
 
         $orderDetailRow = \Db::getInstance()->getRow(
-            'SELECT `product_id` FROM `' . _DB_PREFIX_ . 'order_detail` WHERE `id_order` = ' . self::$orderId . ' ORDER BY `id_order_detail` ASC'
+            'SELECT `id_order_detail`, `product_id`, `product_quantity` FROM `' . _DB_PREFIX_ . 'order_detail` WHERE `id_order` = ' . self::$orderId . ' ORDER BY `id_order_detail` ASC'
         );
+        self::$orderDetailId = (int) $orderDetailRow['id_order_detail'];
         self::$productId = (int) $orderDetailRow['product_id'];
+        self::$productQuantity = (int) $orderDetailRow['product_quantity'];
 
         $carrierRow = \Db::getInstance()->getRow(
             'SELECT `id_carrier` FROM `' . _DB_PREFIX_ . 'carrier` WHERE `deleted` = 0 AND `active` = 1 ORDER BY `id_carrier` ASC'
@@ -73,19 +76,27 @@ class ShipmentEndpointTest extends ApiTestCase
     }
 
     /**
-     * The shipment write endpoints are not exposed yet, the fixture goes through the CQRS
-     * commands directly so the read endpoints can be covered in the meantime.
+     * Putting a product in a shipment is not exposed yet, and the CQRS commands that do it are
+     * the subject of https://github.com/PrestaShop/PrestaShop/issues/42397, so the fixture is
+     * inserted directly rather than built through a contract that is still moving.
      */
     private function createFixtureShipment(): int
     {
-        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $db = \Db::getInstance();
+        $addressId = (int) $db->getValue(
+            'SELECT `id_address_delivery` FROM `' . _DB_PREFIX_ . 'orders` WHERE `id_order` = ' . self::$orderId
+        );
 
-        $shipmentId = $commandBus->handle(
-            new CreateShipment(self::$orderId, self::$carrierId, self::$productId, 1)
-        )->getValue();
+        $db->execute(
+            'INSERT INTO `' . _DB_PREFIX_ . 'shipment`
+                (`id_order`, `id_carrier`, `id_delivery_address`, `deleted`, `date_add`, `date_upd`)
+             VALUES (' . self::$orderId . ', ' . self::$carrierId . ', ' . $addressId . ', 0, NOW(), NOW())'
+        );
+        $shipmentId = (int) $db->Insert_ID();
 
-        $commandBus->handle(
-            new AddProductToShipment($shipmentId, self::$productId, self::$orderId)
+        $db->execute(
+            'INSERT INTO `' . _DB_PREFIX_ . 'shipment_product` (`id_shipment`, `id_order_detail`, `quantity`)
+             VALUES (' . $shipmentId . ', ' . self::$orderDetailId . ', ' . self::$productQuantity . ')'
         );
 
         return $shipmentId;

@@ -23,8 +23,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\AddProductToShipment;
-use PrestaShop\PrestaShop\Core\Domain\Shipment\Command\CreateShipment;
 use PrestaShop\PrestaShop\Core\Domain\Shipment\Query\GetShipmentsForOrderDetail;
 use Tests\Resources\DatabaseDump;
 
@@ -79,19 +77,27 @@ class AvailableShipmentsEndpointTest extends ApiTestCase
     }
 
     /**
-     * The shipment write endpoints are not exposed yet, the fixture goes through the CQRS
-     * commands directly so the read endpoints can be covered in the meantime.
+     * Putting a product in a shipment is not exposed yet, and the CQRS commands that do it are
+     * the subject of https://github.com/PrestaShop/PrestaShop/issues/42397, so the fixture is
+     * inserted directly rather than built through a contract that is still moving.
      */
     public function testCreateFixtureShipment(): int
     {
-        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $db = \Db::getInstance();
+        $addressId = (int) $db->getValue(
+            'SELECT `id_address_delivery` FROM `' . _DB_PREFIX_ . 'orders` WHERE `id_order` = ' . self::$orderId
+        );
 
-        $shipmentId = $commandBus->handle(
-            new CreateShipment(self::$orderId, self::$carrierId, self::$productId, 1)
-        )->getValue();
+        $db->execute(
+            'INSERT INTO `' . _DB_PREFIX_ . 'shipment`
+                (`id_order`, `id_carrier`, `id_delivery_address`, `deleted`, `date_add`, `date_upd`)
+             VALUES (' . self::$orderId . ', ' . self::$carrierId . ', ' . $addressId . ', 0, NOW(), NOW())'
+        );
+        $shipmentId = (int) $db->Insert_ID();
 
-        $commandBus->handle(
-            new AddProductToShipment($shipmentId, self::$productId, self::$orderId)
+        $db->execute(
+            'INSERT INTO `' . _DB_PREFIX_ . 'shipment_product` (`id_shipment`, `id_order_detail`, `quantity`)
+             VALUES (' . $shipmentId . ', ' . self::$orderDetailId . ', ' . self::$productQuantity . ')'
         );
 
         return $shipmentId;
