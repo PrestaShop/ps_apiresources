@@ -33,6 +33,10 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSCreate(
             uriTemplate: '/shipments',
+            // The Shipment CQRS domain was introduced in 9.1.0
+            extraProperties: [
+                'minVersion' => '9.1.0',
+            ],
             CQRSCommand: CreateShipmentCommand::class,
             scopes: ['shipment_write'],
         ),

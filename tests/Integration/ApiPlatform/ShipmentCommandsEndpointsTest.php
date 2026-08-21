@@ -24,9 +24,19 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 class ShipmentCommandsEndpointsTest extends ApiTestCase
 {
+    private const MIN_VERSION = '9.1.0';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+
+        // The whole Shipment CQRS domain was introduced in 9.1.0. Below that version
+        // ApiResourceScopesExtractor drops every operation, so neither their routes nor the
+        // shipment_write scope exist and even creating the API client fails.
+        if (self::isVersionUnder(self::MIN_VERSION)) {
+            static::markTestSkipped(sprintf('The Shipment domain requires PrestaShop >= %s.', self::MIN_VERSION));
+        }
+
         self::createApiClient(['shipment_write']);
     }
 
