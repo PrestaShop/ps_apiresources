@@ -58,9 +58,13 @@ use Symfony\Component\Validator\Constraints as Assert;
             extraProperties: [
                 'minVersion' => '9.2.0',
             ],
+            // No CQRSQuery replay here, unlike the other writes in these PRs.
+            // CommandProcessor::denormalizeCommandResult() builds the query from the URI
+            // variables and the command result, and EditEmailBodyTemplateHandler returns void —
+            // so locale and source, which only ever exist in the request body, cannot reach
+            // GetEmailBodyTemplateForEditing. The edit therefore answers an empty 204.
+            output: false,
             CQRSCommand: EditEmailBodyTemplateCommand::class,
-            // Replays the query of the GET, so the edit answers with the stored template
-            CQRSQuery: GetEmailBodyTemplateForEditing::class,
             scopes: ['mail_template_write'],
         ),
     ],

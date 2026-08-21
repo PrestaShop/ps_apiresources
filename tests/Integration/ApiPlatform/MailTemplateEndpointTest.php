@@ -117,7 +117,7 @@ class MailTemplateEndpointTest extends ApiTestCase
         $htmlContent = '<p>Edited by the Admin API integration test</p>';
         $txtContent = 'Edited by the Admin API integration test';
 
-        $updated = $this->partialUpdateItem(
+        $this->partialUpdateItem(
             '/mail-templates/' . $template['templateName'],
             [
                 'locale' => self::LOCALE,
@@ -128,12 +128,12 @@ class MailTemplateEndpointTest extends ApiTestCase
                 'htmlContent' => $htmlContent,
                 'txtContent' => $txtContent,
             ],
-            ['mail_template_write']
+            ['mail_template_write'],
+            // The edit cannot replay the query of the GET: locale and source only exist in the
+            // request body, and the query is built from the URI variables and the command
+            // result, which is void here. See the resource for the details.
+            Response::HTTP_NO_CONTENT
         );
-
-        // The edit replays the query of the GET, so it answers with the stored template
-        $this->assertSame($htmlContent, $updated['htmlContent']);
-        $this->assertSame($txtContent, $updated['txtContent']);
 
         // The edit is observed through the get endpoint, which is what #370 and #373 could not
         // do while they lived in separate PRs
