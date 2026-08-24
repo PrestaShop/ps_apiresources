@@ -139,8 +139,11 @@ class CartProduct
     #[ApiProperty(openapiContext: ['type' => 'number', 'format' => 'float', 'example' => 19.99])]
     public float $price;
 
-    // Optional, for products with combinations
-    #[Assert\Positive(groups: ['AddProduct', 'UpdateQuantity', 'UpdatePrice'])]
+    // Optional, except on price where UpdateProductPriceInCartCommand takes it without a default value: send 0
+    // for a product without combination.
+    #[Assert\NotNull(groups: ['UpdatePrice'])]
+    #[Assert\PositiveOrZero(groups: ['UpdatePrice'])]
+    #[Assert\Positive(groups: ['AddProduct', 'UpdateQuantity'])]
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => null, 'nullable' => true])]
     public ?int $combinationId;
 
