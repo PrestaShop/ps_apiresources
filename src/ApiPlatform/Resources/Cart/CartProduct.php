@@ -24,7 +24,6 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Cart;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Cart\Command\AddCustomizationCommand;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Command\AddProductToCartCommand;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Command\RemoveProductFromCartCommand;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Command\UpdateProductPriceInCartCommand;
@@ -75,14 +74,6 @@ use Symfony\Component\Validator\Constraints as Assert;
             requirements: ['cartId' => '\d+', 'productId' => '\d+'],
             validationContext: ['groups' => ['Default', 'UpdatePrice']],
             CQRSCommand: UpdateProductPriceInCartCommand::class,
-            CQRSQuery: GetCartForOrderCreation::class,
-            scopes: ['cart_write'],
-        ),
-        new CQRSCreate(
-            uriTemplate: '/carts/{cartId}/products/{productId}/customizations',
-            requirements: ['cartId' => '\d+', 'productId' => '\d+'],
-            validationContext: ['groups' => ['Default', 'AddCustomization']],
-            CQRSCommand: AddCustomizationCommand::class,
             CQRSQuery: GetCartForOrderCreation::class,
             scopes: ['cart_write'],
         ),
@@ -158,19 +149,13 @@ class CartProduct
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => null, 'nullable' => true])]
     public ?int $customizationId;
 
+    // Optional, text customizations to attach to the product being added. Only text fields are supported: file
+    // fields expect an UploadedFile, which a JSON body cannot carry.
     #[ApiProperty(openapiContext: [
         'type' => 'object',
         'nullable' => true,
-        'description' => 'Key-value pairs where key is the customization field ID and value is the customization value',
-    ])]
-    public array $customizationsByFieldIds;
-
-    // Body of POST /products/{productId}/customizations
-    #[Assert\NotBlank(groups: ['AddCustomization'])]
-    #[ApiProperty(openapiContext: [
-        'type' => 'object',
         'description' => 'Key-value pairs where key is the customization field ID and value is the text customization value',
         'example' => ['1' => 'My custom text'],
     ])]
-    public array $customizationValuesByFieldIds;
+    public array $customizationsByFieldIds;
 }
