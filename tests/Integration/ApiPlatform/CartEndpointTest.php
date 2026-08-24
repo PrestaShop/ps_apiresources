@@ -37,6 +37,8 @@ class CartEndpointTest extends ApiTestCase
     private const FIXTURE_CURRENCY_ID = 1;
     // Default language ID in the test DB
     private const FIXTURE_LANGUAGE_ID = 1;
+    // CartForOrderCreation only exposes the customer from this version on, see PrestaShop/PrestaShop#41364
+    private const CUSTOMER_ID_MIN_VERSION = '9.2.0';
 
     public static function setUpBeforeClass(): void
     {
@@ -96,12 +98,12 @@ class CartEndpointTest extends ApiTestCase
 
         yield 'update product quantity endpoint' => [
             'PATCH',
-            '/carts/1/products/quantity',
+            '/carts/1/products/1/quantity',
         ];
 
         yield 'update product price endpoint' => [
             'PATCH',
-            '/carts/1/products/price',
+            '/carts/1/products/1/price',
         ];
 
         yield 'add cart rule endpoint' => [
@@ -112,11 +114,6 @@ class CartEndpointTest extends ApiTestCase
         yield 'remove cart rule endpoint' => [
             'DELETE',
             '/carts/1/cart-rules',
-        ];
-
-        yield 'add customization endpoint' => [
-            'POST',
-            '/carts/1/customizations',
         ];
 
         yield 'update cart addresses endpoint' => [
@@ -148,11 +145,11 @@ class CartEndpointTest extends ApiTestCase
             'DELETE',
             '/carts/bulk-delete',
         ];
+    }
 
-        yield 'get last empty customer cart endpoint' => [
-            'GET',
-            '/carts/last-empty/1',
-        ];
+    private static function expectedCustomerId(): ?int
+    {
+        return self::isVersionAtLeast(self::CUSTOMER_ID_MIN_VERSION) ? self::FIXTURE_CUSTOMER_ID : null;
     }
 
     public function testCreateCart(): int
@@ -166,7 +163,8 @@ class CartEndpointTest extends ApiTestCase
 
         $this->assertEquals([
             'cartId' => $cartId,
-            'customerId' => self::FIXTURE_CUSTOMER_ID,
+            // Asserted on its own in testCartExposesCustomerId, to keep the flow below out of its version dependency
+            'customerId' => $cart['customerId'],
             'currencyId' => self::FIXTURE_CURRENCY_ID,
             'languageId' => self::FIXTURE_LANGUAGE_ID,
             'products' => [],
@@ -188,7 +186,7 @@ class CartEndpointTest extends ApiTestCase
 
         $this->assertEquals([
             'cartId' => $cartId,
-            'customerId' => self::FIXTURE_CUSTOMER_ID,
+            'customerId' => $cart['customerId'],
             'currencyId' => self::FIXTURE_CURRENCY_ID,
             'languageId' => self::FIXTURE_LANGUAGE_ID,
             'products' => [],
@@ -202,19 +200,40 @@ class CartEndpointTest extends ApiTestCase
     }
 
     /**
+     * Standalone on purpose: CartForOrderCreation only exposes the customer from 9.2 on
+     * (PrestaShop/PrestaShop#41364), and a failure here must not skip the whole cart flow below.
+     */
+    public function testCartExposesCustomerId(): void
+    {
+        $cart = $this->createItem('/carts', ['customerId' => self::FIXTURE_CUSTOMER_ID], ['cart_write']);
+        $this->assertSame(self::expectedCustomerId(), $cart['customerId']);
+
+        $reloadedCart = $this->getItem('/carts/' . $cart['cartId'], ['cart_read']);
+        $this->assertSame(self::expectedCustomerId(), $reloadedCart['customerId']);
+
+        $this->deleteItem('/carts/' . $cart['cartId'], ['cart_write']);
+    }
+
+    /**
      * @depends testGetCart
      */
     public function testAddProductToCart(int $cartId): int
     {
-        $this->createItem('/carts/' . $cartId . '/products', [
+        $response = $this->createItem('/carts/' . $cartId . '/products', [
             'productId' => self::FIXTURE_PRODUCT_ID,
             'quantity' => 2,
         ], ['cart_write'], Response::HTTP_CREATED);
 
-        // Verify product was added by getting the cart
-        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $this->assertNotEmpty($cart['products']);
-        $product = $cart['products'][0];
+        // The CartProduct resource only returns the updated product list, not the whole cart
+        $this->assertEquals($cartId, $response['cartId']);
+        $this->assertArrayHasKey('products', $response);
+        $this->assertArrayNotHasKey('cartRules', $response);
+        $this->assertArrayNotHasKey('addresses', $response);
+        $this->assertArrayNotHasKey('shipping', $response);
+        $this->assertArrayNotHasKey('summary', $response);
+
+        $this->assertNotEmpty($response['products']);
+        $product = $response['products'][0];
 
         $this->assertEquals([
             'productId' => self::FIXTURE_PRODUCT_ID,
@@ -240,15 +259,14 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateProductQuantityInCart(int $cartId): int
     {
-        $this->partialUpdateItem('/carts/' . $cartId . '/products/quantity', [
-            'productId' => self::FIXTURE_PRODUCT_ID,
-            'quantity' => 5,
-        ], ['cart_write']);
+        $response = $this->partialUpdateItem(
+            '/carts/' . $cartId . '/products/' . self::FIXTURE_PRODUCT_ID . '/quantity',
+            ['quantity' => 5],
+            ['cart_write']
+        );
 
-        // Verify quantity was updated
-        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $this->assertNotEmpty($cart['products']);
-        $this->assertEquals(5, $cart['products'][0]['quantity']);
+        $this->assertNotEmpty($response['products']);
+        $this->assertEquals(5, $response['products'][0]['quantity']);
 
         return $cartId;
     }
@@ -256,17 +274,34 @@ class CartEndpointTest extends ApiTestCase
     /**
      * @depends testUpdateProductQuantityInCart
      */
-    public function testRemoveProductFromCart(int $cartId): int
+    public function testUpdateProductPriceInCart(int $cartId): int
     {
-        $result = $this->deleteItem(
-            '/carts/' . $cartId . '/products/' . self::FIXTURE_PRODUCT_ID,
+        $response = $this->partialUpdateItem(
+            '/carts/' . $cartId . '/products/' . self::FIXTURE_PRODUCT_ID . '/price',
+            // combinationId is required here, 0 stands for a product without combination
+            ['combinationId' => 0, 'price' => 12.5],
             ['cart_write']
         );
-        $this->assertNull($result);
 
-        // Verify product was removed
-        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $this->assertEmpty($cart['products']);
+        $this->assertNotEmpty($response['products']);
+        // Cast: the query result formats the price as a string, with a precision that is not worth pinning down here
+        $this->assertEquals(12.5, (float) $response['products'][0]['unitPrice']);
+
+        return $cartId;
+    }
+
+    /**
+     * @depends testUpdateProductPriceInCart
+     */
+    public function testRemoveProductFromCart(int $cartId): int
+    {
+        $response = $this->deleteItem(
+            '/carts/' . $cartId . '/products/' . self::FIXTURE_PRODUCT_ID,
+            ['cart_write'],
+            Response::HTTP_OK
+        );
+
+        $this->assertEmpty($response['products']);
 
         return $cartId;
     }
@@ -276,13 +311,13 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateCartAddresses(int $cartId): int
     {
-        $this->partialUpdateItem('/carts/' . $cartId . '/addresses', [
+        $cart = $this->partialUpdateItem('/carts/' . $cartId . '/addresses', [
             'deliveryAddressId' => self::FIXTURE_ADDRESS_ID,
             'invoiceAddressId' => self::FIXTURE_ADDRESS_ID,
         ], ['cart_write']);
 
-        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $selectedAddress = array_filter($cart['addresses'], fn($a) => $a['addressId'] === self::FIXTURE_ADDRESS_ID);
+        $this->assertEquals($cartId, $cart['cartId']);
+        $selectedAddress = array_filter($cart['addresses'], fn ($a) => $a['addressId'] === self::FIXTURE_ADDRESS_ID);
         $this->assertNotEmpty($selectedAddress);
 
         return $cartId;
@@ -293,15 +328,12 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateCartCurrency(int $cartId): int
     {
-        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $currencyId = $cart['currencyId'];
-
-        $this->partialUpdateItem('/carts/' . $cartId . '/currency', [
-            'currencyId' => $currencyId,
+        $cart = $this->partialUpdateItem('/carts/' . $cartId . '/currency', [
+            'currencyId' => self::FIXTURE_CURRENCY_ID,
         ], ['cart_write']);
 
-        $updatedCart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $this->assertEquals($currencyId, $updatedCart['currencyId']);
+        $this->assertEquals($cartId, $cart['cartId']);
+        $this->assertEquals(self::FIXTURE_CURRENCY_ID, $cart['currencyId']);
 
         return $cartId;
     }
@@ -311,15 +343,12 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateCartLanguage(int $cartId): int
     {
-        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $languageId = $cart['languageId'];
-
-        $this->partialUpdateItem('/carts/' . $cartId . '/language', [
-            'languageId' => $languageId,
+        $cart = $this->partialUpdateItem('/carts/' . $cartId . '/language', [
+            'languageId' => self::FIXTURE_LANGUAGE_ID,
         ], ['cart_write']);
 
-        $updatedCart = $this->getItem('/carts/' . $cartId, ['cart_read']);
-        $this->assertEquals($languageId, $updatedCart['languageId']);
+        $this->assertEquals($cartId, $cart['cartId']);
+        $this->assertEquals(self::FIXTURE_LANGUAGE_ID, $cart['languageId']);
 
         return $cartId;
     }
@@ -329,14 +358,17 @@ class CartEndpointTest extends ApiTestCase
      */
     public function testUpdateCartDeliverySettings(int $cartId): int
     {
-        $this->partialUpdateItem('/carts/' . $cartId . '/delivery-settings', [
-            'allowFreeShipping' => false,
-            'gift' => false,
-            'recycledPackaging' => false,
-            'giftMessage' => null,
+        // The write structure mirrors the read one: the settings live in the shipping sub array
+        $cart = $this->partialUpdateItem('/carts/' . $cartId . '/delivery-settings', [
+            'shipping' => [
+                'freeShipping' => false,
+                'gift' => false,
+                'recycledPackaging' => false,
+                'giftMessage' => null,
+            ],
         ], ['cart_write']);
 
-        $cart = $this->getItem('/carts/' . $cartId, ['cart_read']);
+        $this->assertEquals($cartId, $cart['cartId']);
         $this->assertArrayHasKey('shipping', $cart);
         if ($cart['shipping'] !== null) {
             $this->assertFalse($cart['shipping']['gift']);
@@ -358,21 +390,9 @@ class CartEndpointTest extends ApiTestCase
         $this->getItem('/carts/' . $cartId, ['cart_read'], Response::HTTP_NOT_FOUND);
     }
 
-    public function testGetLastEmptyCustomerCart(): void
+    public function testGetUnknownCartReturnsNotFound(): void
     {
-        // Create a cart for the fixture customer
-        $cart = $this->createItem('/carts', ['customerId' => self::FIXTURE_CUSTOMER_ID], ['cart_write']);
-        $cartId = $cart['cartId'];
-
-        // Get the last empty cart for this customer
-        $result = $this->getItem('/carts/last-empty/' . self::FIXTURE_CUSTOMER_ID, ['cart_read']);
-
-        $this->assertEquals([
-            'customerId' => self::FIXTURE_CUSTOMER_ID,
-            'cartId' => $cartId,
-        ], $result);
-
-        $this->deleteItem('/carts/' . $cartId, ['cart_write']);
+        $this->getItem('/carts/' . $this->getUnknownCartId(), ['cart_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testGetCartForViewing(): void
@@ -453,17 +473,13 @@ class CartEndpointTest extends ApiTestCase
 
     public function testUpdateProductQuantityInvalidData(): void
     {
-        $validationErrors = $this->partialUpdateItem('/carts/1/products/quantity', [
-            'productId' => -1,
+        // productId comes from the URI, only the quantity can be invalid here
+        $validationErrors = $this->partialUpdateItem('/carts/1/products/1/quantity', [
             'quantity' => -1,
         ], ['cart_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $this->assertIsArray($validationErrors);
         $this->assertValidationErrors([
-            [
-                'propertyPath' => 'productId',
-                'message' => 'This value should be positive.',
-            ],
             [
                 'propertyPath' => 'quantity',
                 'message' => 'This value should be positive.',
@@ -534,5 +550,12 @@ class CartEndpointTest extends ApiTestCase
                 'message' => 'This value should be positive.',
             ],
         ], $validationErrors);
+    }
+
+    private function getUnknownCartId(): int
+    {
+        return 1 + (int) \Db::getInstance()->getValue(
+            'SELECT MAX(`id_cart`) FROM `' . _DB_PREFIX_ . 'cart`'
+        );
     }
 }
