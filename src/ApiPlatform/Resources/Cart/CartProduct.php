@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Cart;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Command\AddProductToCartCommand;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Command\RemoveProductFromCartCommand;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Command\UpdateProductPriceInCartCommand;
@@ -133,11 +134,11 @@ class CartProduct
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 2])]
     public int $quantity;
 
-    // Must be sent as a JSON number, UpdateProductPriceInCartCommand rejects anything that is not a PHP float
+    // Must be sent as a JSON number: UpdateProductPriceInCartCommand asserts is_float() on the raw body value,
+    // so a string is rejected. A negative value is caught there too, hence no constraint beyond NotNull here.
     #[Assert\NotNull(groups: ['UpdatePrice'])]
-    #[Assert\PositiveOrZero(groups: ['UpdatePrice'])]
-    #[ApiProperty(openapiContext: ['type' => 'number', 'format' => 'float', 'example' => 19.99])]
-    public float $price;
+    #[ApiProperty(openapiContext: ['type' => 'number', 'example' => 19.99])]
+    public DecimalNumber $price;
 
     // Optional, except on price where UpdateProductPriceInCartCommand takes it without a default value: send 0
     // for a product without combination.
