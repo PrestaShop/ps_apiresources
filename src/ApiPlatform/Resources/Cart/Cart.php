@@ -24,16 +24,25 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Cart;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\AddCartRuleToCartCommand;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Command\CreateEmptyCustomerCartCommand;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Command\DeleteCartCommand;
-use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CannotDeleteCartException;
-use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CannotDeleteOrderedCartException;
-use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\RemoveCartRuleFromCartCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\SendCartToCustomerCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\UpdateCartAddressesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\UpdateCartCarrierCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\UpdateCartCurrencyCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\UpdateCartDeliverySettingsCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\UpdateCartLanguageCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartException;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Query\GetCartForOrderCreation;
+use PrestaShop\PrestaShop\Core\Domain\CartRule\Exception\CartRuleValidityException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -60,13 +69,90 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: DeleteCartCommand::class,
             scopes: ['cart_write'],
         ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/carts/{cartId}/addresses',
+            requirements: ['cartId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'UpdateAddresses']],
+            CQRSCommand: UpdateCartAddressesCommand::class,
+            CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['cart_write'],
+            CQRSCommandMapping: self::COMMAND_MAPPING_ADDRESSES,
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/carts/{cartId}/carrier',
+            requirements: ['cartId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'UpdateCarrier']],
+            CQRSCommand: UpdateCartCarrierCommand::class,
+            CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['cart_write'],
+            CQRSCommandMapping: self::COMMAND_MAPPING_CARRIER,
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/carts/{cartId}/currency',
+            requirements: ['cartId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'UpdateCurrency']],
+            CQRSCommand: UpdateCartCurrencyCommand::class,
+            CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['cart_write'],
+            CQRSCommandMapping: self::COMMAND_MAPPING_CURRENCY,
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/carts/{cartId}/language',
+            requirements: ['cartId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'UpdateLanguage']],
+            CQRSCommand: UpdateCartLanguageCommand::class,
+            CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['cart_write'],
+            CQRSCommandMapping: self::COMMAND_MAPPING_LANGUAGE,
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/carts/{cartId}/delivery-settings',
+            requirements: ['cartId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'UpdateDeliverySettings']],
+            CQRSCommand: UpdateCartDeliverySettingsCommand::class,
+            CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['cart_write'],
+            CQRSCommandMapping: self::COMMAND_MAPPING_DELIVERY_SETTINGS,
+        ),
+        new CQRSCreate(
+            uriTemplate: '/carts/{cartId}/cart-rules',
+            requirements: ['cartId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'AddCartRule']],
+            CQRSCommand: AddCartRuleToCartCommand::class,
+            CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['cart_write'],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/carts/{cartId}/cart-rules',
+            requirements: ['cartId' => '\d+'],
+            // ApiPlatform skips validation on DELETE unless it is explicitly enabled.
+            validationContext: ['groups' => ['Default', 'RemoveCartRule']],
+            validate: true,
+            CQRSCommand: RemoveCartRuleFromCartCommand::class,
+            scopes: ['cart_write'],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/carts/{cartId}/emails',
+            requirements: ['cartId' => '\d+'],
+            allowEmptyBody: true,
+            CQRSCommand: SendCartToCustomerCommand::class,
+            CQRSQuery: GetCartForOrderCreation::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['cart_write'],
+        ),
     ],
     normalizationContext: ['skip_null_values' => false],
+    // Order matters, the first match wins: CartNotFoundException extends CartException.
     exceptionToStatus: [
-        CartConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CartNotFoundException::class => Response::HTTP_NOT_FOUND,
-        CannotDeleteCartException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        CannotDeleteOrderedCartException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CartException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CartRuleValidityException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Cart
@@ -79,14 +165,19 @@ class Cart
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public ?int $customerId = null;
 
+    #[Assert\NotBlank(groups: ['UpdateCurrency'])]
+    #[Assert\Positive(groups: ['UpdateCurrency'])]
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $currencyId;
 
+    #[Assert\NotBlank(groups: ['UpdateLanguage'])]
+    #[Assert\Positive(groups: ['UpdateLanguage'])]
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $languageId;
 
     #[ApiProperty(openapiContext: [
         'type' => 'array',
+        'description' => 'Read-only. Products are managed through the /carts/{cartId}/products endpoints.',
         'items' => [
             'type' => 'object',
             'properties' => [
@@ -117,6 +208,7 @@ class Cart
 
     #[ApiProperty(openapiContext: [
         'type' => 'array',
+        'description' => 'Read-only. Cart rules are managed through the /carts/{cartId}/cart-rules endpoints.',
         'items' => [
             'type' => 'object',
             'properties' => [
@@ -131,6 +223,7 @@ class Cart
 
     #[ApiProperty(openapiContext: [
         'type' => 'array',
+        'description' => 'Read-only. Addresses are managed through PATCH /carts/{cartId}/addresses.',
         'items' => [
             'type' => 'object',
             'properties' => [
@@ -144,6 +237,14 @@ class Cart
     ])]
     public array $addresses;
 
+    // Also the body of PATCH /delivery-settings, with the same structure as in read: only the four keys below are
+    // mapped onto the command, the other ones can be sent back untouched and are ignored.
+    #[Assert\NotNull(groups: ['UpdateDeliverySettings'])]
+    #[Assert\Collection(
+        fields: ['freeShipping' => new Assert\Required(groups: ['UpdateDeliverySettings'])],
+        groups: ['UpdateDeliverySettings'],
+        allowExtraFields: true,
+    )]
     #[ApiProperty(openapiContext: [
         'nullable' => true,
         'type' => 'object',
@@ -172,6 +273,7 @@ class Cart
 
     #[ApiProperty(openapiContext: [
         'type' => 'object',
+        'description' => 'Read-only. Recomputed by the core on every write.',
         'properties' => [
             'totalProductsPrice' => ['type' => 'string'],
             'totalDiscount' => ['type' => 'string'],
@@ -186,7 +288,54 @@ class Cart
     ])]
     public array $summary;
 
+    // Write-only fields below, body of PATCH /addresses
+    #[Assert\NotBlank(groups: ['UpdateAddresses'])]
+    #[Assert\Positive(groups: ['UpdateAddresses'])]
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
+    public int $deliveryAddressId;
+
+    #[Assert\NotBlank(groups: ['UpdateAddresses'])]
+    #[Assert\Positive(groups: ['UpdateAddresses'])]
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
+    public int $invoiceAddressId;
+
+    // Body of PATCH /carrier, the selected carrier is read in shipping.selectedCarrierId
+    #[Assert\NotBlank(groups: ['UpdateCarrier'])]
+    #[Assert\Positive(groups: ['UpdateCarrier'])]
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 2])]
+    public int $carrierId;
+
+    // Body of POST and DELETE /cart-rules, the applied cart rules are read in cartRules
+    #[Assert\NotBlank(groups: ['AddCartRule', 'RemoveCartRule'])]
+    #[Assert\Positive(groups: ['AddCartRule', 'RemoveCartRule'])]
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
+    public int $cartRuleId;
+
     public const QUERY_MAPPING = [
         '[langId]' => '[languageId]',
+    ];
+
+    public const COMMAND_MAPPING_ADDRESSES = [
+        '[deliveryAddressId]' => '[newDeliveryAddressId]',
+        '[invoiceAddressId]' => '[newInvoiceAddressId]',
+    ];
+
+    public const COMMAND_MAPPING_CARRIER = [
+        '[carrierId]' => '[newCarrierId]',
+    ];
+
+    public const COMMAND_MAPPING_CURRENCY = [
+        '[currencyId]' => '[newCurrencyId]',
+    ];
+
+    public const COMMAND_MAPPING_DELIVERY_SETTINGS = [
+        '[shipping][freeShipping]' => '[allowFreeShipping]',
+        '[shipping][gift]' => '[isAGift]',
+        '[shipping][giftMessage]' => '[giftMessage]',
+        '[shipping][recycledPackaging]' => '[useRecycledPackaging]',
+    ];
+
+    public const COMMAND_MAPPING_LANGUAGE = [
+        '[languageId]' => '[newLanguageId]',
     ];
 }

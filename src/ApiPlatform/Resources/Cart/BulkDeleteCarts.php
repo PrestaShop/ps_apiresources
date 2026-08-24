@@ -35,6 +35,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSDelete(
             uriTemplate: '/carts/bulk-delete',
+            // ApiPlatform skips validation on DELETE unless it is explicitly enabled.
+            validate: true,
             CQRSCommand: BulkDeleteCartCommand::class,
             scopes: ['cart_write'],
         ),
