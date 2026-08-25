@@ -214,9 +214,9 @@ class Cart
     public array $products;
 
     #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'description' => 'Read-only. Cart rules are managed through the /carts/{cartId}/cart-rules endpoints.',
-        'items' => [
+        'type' => 'object',
+        'description' => 'Read-only, keyed by cart rule ID, empty array when the cart has none. Cart rules are managed through the /carts/{cartId}/cart-rules endpoints.',
+        'additionalProperties' => [
             'type' => 'object',
             'properties' => [
                 'cartRuleId' => ['type' => 'integer'],
