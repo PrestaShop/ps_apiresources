@@ -180,8 +180,7 @@ class Carrier
 
     /**
      * The accepted values are the ones of the value object, so the shipping methods available on the running core
-     * version: the 0 value, which falls back to the shipping method of the shop configuration, only exists since
-     * PrestaShop 9.2.0 (PrestaShop/PrestaShop#42022).
+     * version.
      */
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\Choice(choices: ShippingMethod::AVAILABLE_VALUES)]
