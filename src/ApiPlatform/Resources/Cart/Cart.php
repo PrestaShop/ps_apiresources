@@ -134,8 +134,15 @@ use Symfony\Component\Validator\Constraints as Assert;
             // ApiPlatform skips validation on DELETE unless it is explicitly enabled.
             validationContext: ['groups' => ['Default', 'RemoveCartRule']],
             validate: true,
+            // CQRSDelete answers 204 and exposes no CQRSQuery parameter, hence the overrides.
+            status: Response::HTTP_OK,
             CQRSCommand: RemoveCartRuleFromCartCommand::class,
             scopes: ['cart_write'],
+            output: Cart::class,
+            extraProperties: [
+                'CQRSQuery' => GetCartForOrderCreation::class,
+                'CQRSQueryMapping' => self::QUERY_MAPPING,
+            ],
         ),
         new CQRSUpdate(
             uriTemplate: '/carts/{cartId}/emails',

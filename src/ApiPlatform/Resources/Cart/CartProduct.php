@@ -54,8 +54,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSDelete(
             uriTemplate: '/carts/{cartId}/products/{productId}',
             requirements: ['cartId' => '\d+', 'productId' => '\d+'],
-            // A CQRSDelete answers 204 with no content by default, but here the updated product list is the whole
-            // point of the endpoint, hence the explicit status and output.
+            // CQRSDelete answers 204 and exposes no CQRSQuery parameter, hence the overrides.
             status: Response::HTTP_OK,
             CQRSCommand: RemoveProductFromCartCommand::class,
             scopes: ['cart_write'],
