@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -70,7 +71,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                 '[_context][uriVariables][combinationId]' => '[combinationId]',
                 '[imageIds]' => '[imageIds]',
             ],
-            CQRSQueryMapping: ProductCombination::QUERY_MAPPING,
+            CQRSQueryMapping: Combination::QUERY_MAPPING,
             validationContext: ['groups' => ['Default', 'Update']],
         ),
     ],

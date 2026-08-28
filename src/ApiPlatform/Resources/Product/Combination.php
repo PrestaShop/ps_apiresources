@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -41,16 +42,14 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGet(
             uriTemplate: '/products/combinations/{combinationId}',
-            requirements: ['combinationId' => '\\d+'],
             CQRSQuery: GetCombinationForEditing::class,
             scopes: [
                 'product_read',
             ],
-            CQRSQueryMapping: ProductCombination::QUERY_MAPPING,
+            CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSDelete(
             uriTemplate: '/products/combinations/{combinationId}',
-            requirements: ['combinationId' => '\\d+'],
             output: false,
             CQRSCommand: DeleteCombinationCommand::class,
             scopes: [
@@ -62,7 +61,6 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/products/combinations/{combinationId}',
-            requirements: ['combinationId' => '\\d+'],
             CQRSCommand: UpdateCombinationCommand::class,
             CQRSQuery: GetCombinationForEditing::class,
             scopes: [
@@ -71,10 +69,12 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSCommandMapping: [
                 '[_context][shopConstraint]' => '[shopConstraint]',
                 '[default]' => '[isDefault]',
+                '[impactOnPriceTaxExcluded]' => '[impactOnPrice]',
+                '[ecotaxTaxExcluded]' => '[ecoTax]',
                 '[availableNowLabels]' => '[localizedAvailableNowLabels]',
                 '[availableLaterLabels]' => '[localizedAvailableLaterLabels]',
             ],
-            CQRSQueryMapping: ProductCombination::QUERY_MAPPING,
+            CQRSQueryMapping: self::QUERY_MAPPING,
             validationContext: ['groups' => ['Default', 'Update']],
         ),
     ],
@@ -84,37 +84,40 @@ use Symfony\Component\HttpFoundation\Response;
         CannotUpdateCombinationException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class ProductCombination
+class Combination
 {
+    public int $productId;
+
     #[ApiProperty(identifier: true)]
     public int $combinationId;
-
+    public string $name;
     public ?bool $default = null;
 
     public ?string $gtin = null;
-
     public ?string $isbn = null;
-
     public ?string $mpn = null;
-
     public ?string $reference = null;
-
     public ?string $upc = null;
 
-    public ?DecimalNumber $impactOnWeight = null;
+    public string $coverThumbnailUrl;
+    #[ApiProperty(openapiContext: ['type' => 'array', 'description' => 'List of image IDs', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    public array $imageIds;
 
-    public ?DecimalNumber $impactOnPrice = null;
-
-    public ?DecimalNumber $ecoTax = null;
-
+    public ?DecimalNumber $impactOnPriceTaxExcluded = null;
+    public DecimalNumber $impactOnPriceTaxIncluded;
     public ?DecimalNumber $impactOnUnitPrice = null;
-
+    public DecimalNumber $impactOnUnitPriceTaxIncluded;
+    public ?DecimalNumber $ecotaxTaxExcluded = null;
+    public DecimalNumber $ecotaxTaxIncluded;
+    public ?DecimalNumber $impactOnWeight = null;
     public ?DecimalNumber $wholesalePrice = null;
+    public DecimalNumber $productTaxRate;
+    public DecimalNumber $productPriceTaxExcluded;
+    public DecimalNumber $productEcotaxTaxExcluded;
 
+    public int $quantity;
     public ?int $minimalQuantity = null;
-
     public ?int $lowStockThreshold = null;
-
     public ?\DateTimeImmutable $availableDate = null;
 
     #[ApiProperty(openapiContext: ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'nullable' => true])]
@@ -126,26 +129,24 @@ class ProductCombination
     public ?array $availableLaterLabels = null;
 
     public const QUERY_MAPPING = [
-        // inputs (for CQRSQuery construction)
         '[_context][shopConstraint]' => '[shopConstraint]',
-        '[_context][uriVariables][combinationId]' => '[combinationId]',
-        // identifiers
-        '[combinationId]' => '[combinationId]',
-        // root flags
-        '[isDefault]' => '[default]',
-        // details → flat fields
-        '[details][reference]' => '[reference]',
         '[details][gtin]' => '[gtin]',
         '[details][isbn]' => '[isbn]',
         '[details][mpn]' => '[mpn]',
+        '[details][reference]' => '[reference]',
         '[details][upc]' => '[upc]',
         '[details][impactOnWeight]' => '[impactOnWeight]',
-        // prices → flat fields
-        '[prices][impactOnPrice]' => '[impactOnPrice]',
-        '[prices][ecotax]' => '[ecoTax]',
-        '[prices][impactOnUnitPrice]' => '[impactOnUnitPrice]',
+        '[prices][impactOnPrice]' => '[impactOnPriceTaxExcluded]',
+        '[prices][impactOnPriceTaxIncluded]' => '[impactOnPriceTaxIncluded]',
+        '[prices][impactOnUnitPrice]' => '[impactOnUnitPriceTaxExcluded]',
+        '[prices][impactOnUnitPriceTaxIncluded]' => '[impactOnUnitPriceTaxIncluded]',
+        '[prices][ecotax]' => '[ecotaxTaxExcluded]',
+        '[prices][ecotaxTaxIncluded]' => '[ecotaxTaxIncluded]',
         '[prices][wholesalePrice]' => '[wholesalePrice]',
-        // stock → flat/localized fields
+        '[prices][productTaxRate]' => '[productTaxRate]',
+        '[prices][productPrice]' => '[productPriceTaxExcluded]',
+        '[prices][productEcotax]' => '[productEcotaxTaxExcluded]',
+        '[stock][quantity]' => '[quantity]',
         '[stock][minimalQuantity]' => '[minimalQuantity]',
         '[stock][lowStockThreshold]' => '[lowStockThreshold]',
         '[stock][availableDate]' => '[availableDate]',

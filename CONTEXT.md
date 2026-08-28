@@ -370,7 +370,7 @@ for the patterns above:
   `ApiResourceMapping`, `itemsField`, `countField`, and `DecimalNumber`
   properties).
 - **Sub-resource** —
-  `src/ApiPlatform/Resources/Product/ProductCombination.php`.
+  `src/ApiPlatform/Resources/Product/ProductCombinationSuppliers.php`.
 - **Bulk operation** —
   `src/ApiPlatform/Resources/Attribute/BulkAttributeGroups.php`
   (URI `/attributes/groups/bulk-delete`, `attributeGroupIds` input).
