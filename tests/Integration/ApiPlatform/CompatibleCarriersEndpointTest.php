@@ -194,6 +194,24 @@ class CompatibleCarriersEndpointTest extends ApiTestCase
     }
 
     /**
+     * The searched products are loaded by the core before the carriers are filtered, so an unknown
+     * product identifier gets the same 404 as an unknown address.
+     *
+     * @depends testCompatibleCarriersFixtures
+     */
+    public function testGetCompatibleCarriersForUnknownProductIsRejected(array $fixtures): void
+    {
+        $query = http_build_query([
+            'addressId' => $fixtures['addressId'],
+            'productQuantities' => [
+                ['productId' => 999999, 'quantity' => 1],
+            ],
+        ]);
+
+        $this->getItem('/carriers/search-compatible-carriers?' . $query, ['carrier_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    /**
      * @depends testCompatibleCarriersFixtures
      */
     public function testGetCompatibleCarriersMissingAddressId(array $fixtures): void

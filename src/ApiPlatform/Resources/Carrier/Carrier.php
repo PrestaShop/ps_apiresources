@@ -38,7 +38,10 @@ use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierNotFoundException
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetCarrierForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\ValueObject\OutOfRangeBehavior;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\ValueObject\ShippingMethod;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Exception\GroupNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Zone\Exception\ZoneNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
@@ -122,7 +125,12 @@ use Symfony\Component\Validator\Constraints as Assert;
         CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CannotAddCarrierException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CannotUpdateCarrierException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The payloads reference other entities by their ids, and the core checks they exist: an unknown
+        // group, shop, tax rules group or zone gets the same 404 as an unknown carrier
+        GroupNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ShopNotFoundException::class => Response::HTTP_NOT_FOUND,
         TaxRulesGroupNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ZoneNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class Carrier

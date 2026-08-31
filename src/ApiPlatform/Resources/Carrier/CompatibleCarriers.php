@@ -30,6 +30,7 @@ use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CarrierConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Query\GetAvailableCarriers;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -75,7 +76,8 @@ use Symfony\Component\HttpFoundation\Response;
                             ],
                         ],
                     ],
-                    description: 'List of products and quantities the carriers must be able to deliver'
+                    description: 'List of products and quantities the carriers must be able to deliver. An unknown '
+                        . 'product identifier returns a 404 response.'
                 ),
             ]),
         ),
@@ -83,6 +85,9 @@ use Symfony\Component\HttpFoundation\Response;
     exceptionToStatus: [
         AddressNotFoundException::class => Response::HTTP_NOT_FOUND,
         CarrierConstraintException::class => Response::HTTP_BAD_REQUEST,
+        // The searched products are loaded by the core before the carriers are filtered, so an unknown
+        // product identifier gets the same 404 as an unknown address
+        ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 /**

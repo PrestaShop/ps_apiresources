@@ -555,6 +555,67 @@ class CarrierEndpointTest extends ApiTestCase
     }
 
     /**
+     * The payload references the customer groups by their ids, and the core checks they exist: an
+     * unknown group gets the same 404 as an unknown carrier.
+     */
+    public function testCreateCarrierWithAnUnknownGroupIsRejected(): void
+    {
+        $invalidPayload = array_merge($this->getCreatePayload(), [
+            'associatedGroupIds' => [999999],
+        ]);
+        $this->createItem('/carriers', $invalidPayload, ['carrier_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testCreateCarrierWithAnUnknownShopIsRejected(): void
+    {
+        $invalidPayload = array_merge($this->getCreatePayload(), [
+            'associatedShopIds' => [999999],
+        ]);
+        $this->createItem('/carriers', $invalidPayload, ['carrier_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testCreateCarrierWithAnUnknownZoneIsRejected(): void
+    {
+        // The zones of the payload are only checked against the existing ones since PrestaShop 9.2.0
+        // (PrestaShop/PrestaShop#42022): older cores associate the unknown zone silently
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $invalidPayload = array_merge($this->getCreatePayload(), [
+            'zones' => [999999],
+        ]);
+        $this->createItem('/carriers', $invalidPayload, ['carrier_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * @depends testPartialUpdateCarrier
+     */
+    public function testUpdateCarrierWithAnUnknownGroupIsRejected(int $carrierId): void
+    {
+        $this->createItem(
+            '/carriers/' . $carrierId,
+            ['associatedGroupIds' => [999999]],
+            ['carrier_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
+    /**
+     * @depends testPartialUpdateCarrier
+     */
+    public function testUpdateCarrierWithAnUnknownZoneIsRejected(int $carrierId): void
+    {
+        // See testCreateCarrierWithAnUnknownZoneIsRejected about the version
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $this->createItem(
+            '/carriers/' . $carrierId,
+            ['zones' => [999999]],
+            ['carrier_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
+    /**
      * @depends testPartialUpdateCarrier
      */
     public function testUpdateCarrierWithoutGroupIsRejected(int $carrierId): void
