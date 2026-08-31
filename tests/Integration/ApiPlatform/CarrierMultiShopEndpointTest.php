@@ -119,6 +119,79 @@ class CarrierMultiShopEndpointTest extends ApiTestCase
     }
 
     /**
+     * When the payload omits the shops, the carrier is associated with the shops of the request
+     * context: the ones of the selected shop scope, here a single shop.
+     */
+    public function testAddCarrierWithoutShopsIsAssociatedWithTheContextShops(): void
+    {
+        // The default values are applied by the operation, a feature that only exists since PrestaShop 9.2.0
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $payload = array_merge($this->getCreatePayload(), [
+            'name' => 'Carrier without explicit shops',
+        ]);
+        unset($payload['associatedShopIds']);
+
+        $carrier = $this->createItem('/carriers', $payload, ['carrier_write'], Response::HTTP_CREATED, [
+            'extra' => [
+                'parameters' => [
+                    'shopId' => self::$secondShopId,
+                ],
+            ],
+        ]);
+
+        $this->assertEquals([self::$secondShopId], $carrier['associatedShopIds']);
+    }
+
+    /**
+     * The context only fills the shops when the payload omits them: a provided list always wins,
+     * even when the context covers more shops.
+     */
+    public function testAddCarrierWithExplicitShopsIgnoresTheContextShops(): int
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        // The all shops context resolves to every shop, but the payload explicitly picks the first one
+        $payload = array_merge($this->getCreatePayload(), [
+            'name' => 'Carrier with explicit shops',
+            'associatedShopIds' => [self::DEFAULT_SHOP_ID],
+        ]);
+
+        $carrier = $this->createItem('/carriers', $payload, ['carrier_write'], Response::HTTP_CREATED, [
+            'extra' => [
+                'parameters' => [
+                    'allShops' => true,
+                ],
+            ],
+        ]);
+
+        $this->assertEquals([self::DEFAULT_SHOP_ID], $carrier['associatedShopIds']);
+
+        return $carrier['carrierId'];
+    }
+
+    /**
+     * The context default only exists on the create operation: an update that omits the shops keeps the
+     * ones already associated with the carrier, even when the context resolves to a different shop list.
+     *
+     * @depends testAddCarrierWithExplicitShopsIgnoresTheContextShops
+     */
+    public function testUpdateCarrierWithoutShopsKeepsTheAssociatedShops(int $carrierId): void
+    {
+        $updatedCarrier = $this->createItem('/carriers/' . $carrierId, [
+            'name' => 'Carrier with explicit shops updated',
+        ], ['carrier_write'], Response::HTTP_OK, [
+            'extra' => [
+                'parameters' => [
+                    'allShops' => true,
+                ],
+            ],
+        ]);
+
+        $this->assertEquals([self::DEFAULT_SHOP_ID], $updatedCarrier['associatedShopIds']);
+    }
+
+    /**
      * @depends testAddCarrierForFirstShop
      */
     public function testSetCarrierRanges(int $carrierId): int

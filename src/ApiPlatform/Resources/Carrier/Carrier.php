@@ -210,6 +210,11 @@ class Carrier
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $zones;
 
+    /**
+     * When the create payload omits the shops, they default to the ones of the request context: the shops of
+     * the selected scope, so the single shop of the installation when multistore is disabled. An update never
+     * fills them by default, an omitted field keeps the shops already associated with the carrier.
+     */
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\Count(min: 1)]
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
@@ -234,6 +239,10 @@ class Carrier
         'free' => false,
         'shippingMethod' => ShippingMethod::BY_PRICE,
         'rangeBehavior' => OutOfRangeBehavior::USE_HIGHEST_RANGE,
+        // A context path default is resolved against the request context when the payload omits the field
+        // (see DefaultValuesTrait in the core). Like every entry here it concerns the create operation only:
+        // on update an absent field keeps the stored value, so these defaults must never be applied there.
+        'associatedShopIds' => '[_context][shopIds]',
     ];
 
     public const QUERY_MAPPING = [

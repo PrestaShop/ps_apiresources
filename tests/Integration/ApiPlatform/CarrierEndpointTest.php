@@ -423,7 +423,6 @@ class CarrierEndpointTest extends ApiTestCase
             'enabled' => true,
             'associatedGroupIds' => [1, 2, 3],
             'zones' => [1],
-            'associatedShopIds' => [1],
         ];
     }
 
@@ -441,6 +440,9 @@ class CarrierEndpointTest extends ApiTestCase
                 'maxHeight' => 0,
                 'maxDepth' => 0,
                 'maxWeight' => 0,
+                // The declared default is a context path, resolved here to the single shop of the installation
+                // since these tests run without multistore
+                'associatedShopIds' => [1],
             ] + $expectedDefaultValues,
             $carrier
         );
@@ -448,6 +450,8 @@ class CarrierEndpointTest extends ApiTestCase
 
     /**
      * The fields with a default value can be omitted, exactly like the BO form fields that are left untouched.
+     * The shops are part of them: without multistore, the omitted associatedShopIds default to the single shop
+     * of the installation, which is the shop of the request context.
      */
     public function testCreateCarrierWithTheDefaultValues(): void
     {
@@ -459,6 +463,7 @@ class CarrierEndpointTest extends ApiTestCase
 
         $this->assertCarrierMatchesMinimalistPayload($carrier, $payload, Carrier::CREATE_DEFAULT_VALUES);
         $this->assertFalse($carrier['free']);
+        $this->assertEquals([1], $carrier['associatedShopIds']);
     }
 
     /**
