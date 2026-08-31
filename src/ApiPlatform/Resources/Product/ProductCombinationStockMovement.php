@@ -43,13 +43,13 @@ use Symfony\Component\HttpFoundation\Response;
             parameters: [
                 'limit' => new QueryParameter(
                     key: 'limit',
-                    schema: ['type' => 'integer', 'default' => '5'],
+                    schema: ['type' => 'integer', 'default' => 5],
                     required: false,
                     description: 'Maximum number of movements to return'
                 ),
                 'offset' => new QueryParameter(
                     key: 'offset',
-                    schema: ['type' => 'integer', 'default' => '0'],
+                    schema: ['type' => 'integer', 'default' => 0],
                     required: false,
                     description: 'Offset of the first movement to return'
                 ),

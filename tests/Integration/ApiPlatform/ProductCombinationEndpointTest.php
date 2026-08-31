@@ -467,16 +467,16 @@ class ProductCombinationEndpointTest extends ApiTestCase
         $updated = $this->partialUpdateItem('/products/combinations/' . $combinationId . '/suppliers', [
             'combinationSuppliers' => [
                 [
-                    'supplier_id' => 1,
-                    'currency_id' => 1,
+                    'supplierId' => 1,
+                    'currencyId' => 1,
                     'reference' => 'SUP-REF-001',
-                    'price_tax_excluded' => '10.50',
+                    'priceTaxExcluded' => '10.50',
                 ],
                 [
-                    'supplier_id' => 2,
-                    'currency_id' => 1,
+                    'supplierId' => 2,
+                    'currencyId' => 1,
                     'reference' => 'SUP-REF-002',
-                    'price_tax_excluded' => '20.00',
+                    'priceTaxExcluded' => '20.00',
                 ],
             ],
         ], ['product_write'], Response::HTTP_NO_CONTENT);
@@ -502,6 +502,26 @@ class ProductCombinationEndpointTest extends ApiTestCase
 
         $errors = $this->partialUpdateItem('/products/combinations/' . $combinationId . '/suppliers', [
             'combinationSuppliers' => [],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($errors);
+    }
+
+    /**
+     * @depends testAddProductWithCombinations
+     * @depends testGetProductCombination
+     */
+    public function testUpdateCombinationSuppliersInvalidItemPayload(int $productId, int $combinationId): void
+    {
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand($productId, [1, 2]));
+
+        $errors = $this->partialUpdateItem('/products/combinations/' . $combinationId . '/suppliers', [
+            'combinationSuppliers' => [
+                [
+                    'reference' => 'SUP-REF-INCOMPLETE',
+                ],
+            ],
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $this->assertIsArray($errors);

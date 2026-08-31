@@ -61,7 +61,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSCommandMapping: [
                 '[_context][uriVariables][combinationId]' => '[combinationId]',
-                '[combinationSuppliers]' => '[combinationSuppliers]',
+                '[combinationSuppliers][@index][supplierId]' => '[combinationSuppliers][@index][supplier_id]',
+                '[combinationSuppliers][@index][currencyId]' => '[combinationSuppliers][@index][currency_id]',
+                '[combinationSuppliers][@index][reference]' => '[combinationSuppliers][@index][reference]',
+                '[combinationSuppliers][@index][priceTaxExcluded]' => '[combinationSuppliers][@index][price_tax_excluded]',
+                '[combinationSuppliers][@index][productSupplierId]' => '[combinationSuppliers][@index][product_supplier_id]',
             ],
             validationContext: ['groups' => ['Default', 'Update']],
         ),
@@ -100,7 +104,7 @@ class ProductCombinationSuppliers
 
     /**
      * Write-only: list of supplier associations for the PATCH operation.
-     * Each item: {supplier_id, currency_id, reference, price_tax_excluded, product_supplier_id?}
+     * Each item: {supplierId, currencyId, reference, priceTaxExcluded, productSupplierId?}
      *
      * @var array<int, array<string, string|int|null>>|null
      */
@@ -108,16 +112,35 @@ class ProductCombinationSuppliers
         'type' => 'array',
         'items' => [
             'type' => 'object',
-            'required' => ['supplier_id', 'currency_id', 'reference', 'price_tax_excluded'],
+            'required' => ['supplierId', 'currencyId', 'reference', 'priceTaxExcluded'],
             'properties' => [
-                'supplier_id' => ['type' => 'integer'],
-                'currency_id' => ['type' => 'integer'],
+                'supplierId' => ['type' => 'integer'],
+                'currencyId' => ['type' => 'integer'],
                 'reference' => ['type' => 'string'],
-                'price_tax_excluded' => ['type' => 'string', 'example' => '10.50'],
-                'product_supplier_id' => ['type' => 'integer', 'nullable' => true],
+                'priceTaxExcluded' => ['type' => 'string', 'example' => '10.50'],
+                'productSupplierId' => ['type' => 'integer', 'nullable' => true],
             ],
         ],
     ])]
     #[Assert\NotBlank(groups: ['Update'])]
+    #[Assert\All(constraints: [
+        new Assert\Collection(
+            fields: [
+                'supplierId' => [new Assert\NotBlank(), new Assert\Type('integer')],
+                // Add supplier_id because after normalization both supplierId and supplier_id are present
+                'supplier_id' => new Assert\Optional(new Assert\Type('integer')),
+                'currencyId' => [new Assert\NotBlank(), new Assert\Type('integer')],
+                // Add currency_id because after normalization both currencyId and currency_id are present
+                'currency_id' => new Assert\Optional(new Assert\Type('integer')),
+                'reference' => [new Assert\NotBlank(), new Assert\Type('string')],
+                'priceTaxExcluded' => new Assert\NotBlank(),
+                // Add price_tax_excluded because after normalization both priceTaxExcluded and price_tax_excluded are present
+                'price_tax_excluded' => new Assert\Optional(),
+                'productSupplierId' => new Assert\Optional(new Assert\Type('integer')),
+                // Add product_supplier_id because after normalization both productSupplierId and product_supplier_id are present
+                'product_supplier_id' => new Assert\Optional(new Assert\Type('integer')),
+            ],
+        ),
+    ])]
     public ?array $combinationSuppliers = null;
 }
