@@ -58,6 +58,12 @@ services:
     autoconfigure: true
     public: false
 
+  # See class docblock: flattens the zone-grouped GetCarrierRanges result into the flat range list
+  # taken by SetCarrierRangesCommand, so /carriers/{carrierId}/ranges reads and writes one format.
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\CarrierRangesCollectionNormalizer:
+    autoconfigure: true
+    public: false
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'

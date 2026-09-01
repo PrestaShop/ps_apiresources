@@ -121,6 +121,7 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         'duplicate',
         'close',
         'send-password-reset-email',
+        'set-tax-rule-group',
     ];
 
     public function __construct()
