@@ -93,7 +93,7 @@ class CartProduct
     // From the URI, except on POST /products where it comes from the body
     #[Assert\NotNull(groups: ['AddProduct'])]
     #[Assert\Positive(groups: ['AddProduct'])]
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $productId;
 
     #[ApiProperty(openapiContext: [
@@ -130,13 +130,13 @@ class CartProduct
     // Write-only fields below, body of POST /products and of PATCH /products/{productId}/quantity
     #[Assert\NotNull(groups: ['AddProduct', 'UpdateQuantity'])]
     #[Assert\Positive(groups: ['AddProduct', 'UpdateQuantity'])]
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 2])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => 2])]
     public int $quantity;
 
     // Must be sent as a JSON number: UpdateProductPriceInCartCommand asserts is_float() on the raw body value,
     // so a string is rejected. A negative value is caught there too, hence no constraint beyond NotNull here.
     #[Assert\NotNull(groups: ['UpdatePrice'])]
-    #[ApiProperty(openapiContext: ['type' => 'number', 'example' => 19.99])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'number', 'example' => 19.99])]
     public DecimalNumber $price;
 
     // Optional, except on price where UpdateProductPriceInCartCommand takes it without a default value: send 0
@@ -144,17 +144,17 @@ class CartProduct
     #[Assert\NotNull(groups: ['UpdatePrice'])]
     #[Assert\PositiveOrZero(groups: ['UpdatePrice'])]
     #[Assert\Positive(groups: ['AddProduct', 'UpdateQuantity'])]
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => null, 'nullable' => true])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => null, 'nullable' => true])]
     public ?int $combinationId;
 
     // Optional, to target a single customized line of the product rather than all of them
     #[Assert\Positive(groups: ['UpdateQuantity'])]
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => null, 'nullable' => true])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => null, 'nullable' => true])]
     public ?int $customizationId;
 
     // Optional, text customizations to attach to the product being added. Only text fields are supported: file
     // fields expect an UploadedFile, which a JSON body cannot carry.
-    #[ApiProperty(openapiContext: [
+    #[ApiProperty(readable: false, openapiContext: [
         'type' => 'object',
         'nullable' => true,
         'description' => 'Key-value pairs where key is the customization field ID and value is the text customization value',

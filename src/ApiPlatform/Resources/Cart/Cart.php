@@ -298,24 +298,24 @@ class Cart
     // Write-only fields below, body of PATCH /addresses
     #[Assert\NotBlank(groups: ['UpdateAddresses'])]
     #[Assert\Positive(groups: ['UpdateAddresses'])]
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $deliveryAddressId;
 
     #[Assert\NotBlank(groups: ['UpdateAddresses'])]
     #[Assert\Positive(groups: ['UpdateAddresses'])]
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $invoiceAddressId;
 
     // Body of PATCH /carrier, the selected carrier is read in shipping.selectedCarrierId
     #[Assert\NotBlank(groups: ['UpdateCarrier'])]
     #[Assert\Positive(groups: ['UpdateCarrier'])]
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 2])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => 2])]
     public int $carrierId;
 
     // Body of POST and DELETE /cart-rules, the applied cart rules are read in cartRules
     #[Assert\NotBlank(groups: ['AddCartRule', 'RemoveCartRule'])]
     #[Assert\Positive(groups: ['AddCartRule', 'RemoveCartRule'])]
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
+    #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $cartRuleId;
 
     public const QUERY_MAPPING = [
