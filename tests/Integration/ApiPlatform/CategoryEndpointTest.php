@@ -55,6 +55,8 @@ class CategoryEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get categories tree endpoint' => ['GET', '/categories/trees'];
+
         yield 'get endpoint' => [
             'GET',
             '/categories/3',
@@ -85,6 +87,11 @@ class CategoryEndpointTest extends ApiTestCase
             '/categories/3/status',
         ];
 
+        yield 'get status endpoint' => [
+            'GET',
+            '/categories/3/status',
+        ];
+
         yield 'delete thumbnail endpoint' => [
             'DELETE',
             '/categories/3/thumbnail',
@@ -98,6 +105,11 @@ class CategoryEndpointTest extends ApiTestCase
         yield 'bulk delete endpoint' => [
             'DELETE',
             '/categories/bulk-delete/associate_and_disable',
+        ];
+
+        yield 'update position endpoint' => [
+            'PUT',
+            '/categories/update-positions',
         ];
     }
 
@@ -220,6 +232,35 @@ class CategoryEndpointTest extends ApiTestCase
         $this->assertTrue($category['enabled']);
     }
 
+    public function testGetCategoryStatus(): void
+    {
+        // Force a known status, then read it back through the dedicated status endpoint
+        $this->requestApi(
+            Request::METHOD_PATCH,
+            '/categories/3/status',
+            ['enabled' => false],
+            ['category_write'],
+            Response::HTTP_OK
+        );
+
+        $status = $this->getItem('/categories/3/status', ['category_read']);
+        $this->assertEquals(3, $status['categoryId']);
+        $this->assertFalse($status['enabled']);
+
+        // Re-enable and assert the status endpoint reflects the change
+        $this->requestApi(
+            Request::METHOD_PATCH,
+            '/categories/3/status',
+            ['enabled' => true],
+            ['category_write'],
+            Response::HTTP_OK
+        );
+
+        $status = $this->getItem('/categories/3/status', ['category_read']);
+        $this->assertEquals(3, $status['categoryId']);
+        $this->assertTrue($status['enabled']);
+    }
+
     public function testDeleteCategoryThumbnail(): void
     {
         // This test checks the happy path of the "delete thumbnail" endpoint.
@@ -284,6 +325,75 @@ class CategoryEndpointTest extends ApiTestCase
     }
 
     /**
+     * GetCategoryForEditing does not expose a position, so the only read side of a reorder is
+     * the categories tree: Category::getNestedCategories() orders siblings by
+     * category_shop.position, which is exactly what this endpoint rewrites. The source PR
+     * asserted on a "position" field of GET /categories/{id} that the query never returns.
+     *
+     * @return int[] the ids of the children of the given category, in tree order
+     */
+    private function getSiblingOrder(int $parentCategoryId): array
+    {
+        foreach ($this->flattenTree($this->getItem('/categories/trees', ['category_read'])) as $node) {
+            if ((int) $node['categoryId'] === $parentCategoryId) {
+                return array_map(static fn (array $child): int => (int) $child['categoryId'], $node['children'] ?? []);
+            }
+        }
+
+        $this->fail(sprintf('Category %d is not part of the categories tree.', $parentCategoryId));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $tree
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function flattenTree(array $tree): array
+    {
+        $nodes = [];
+        foreach ($tree as $node) {
+            $nodes[] = $node;
+            if (!empty($node['children'])) {
+                $nodes = array_merge($nodes, $this->flattenTree($node['children']));
+            }
+        }
+
+        return $nodes;
+    }
+
+    public function testUpdateCategoryPosition(): void
+    {
+        // Two fresh siblings under Home (parent 2), created in order, then reordered by
+        // sending the position tokens the other way round.
+        [$catA, $catB] = $this->createTemporaryCategories();
+
+        $before = $this->getSiblingOrder(2);
+        $indexA = array_search($catA, $before, true);
+        $indexB = array_search($catB, $before, true);
+        $this->assertNotFalse($indexA);
+        $this->assertNotFalse($indexB);
+        $this->assertLessThan($indexB, $indexA);
+
+        $this->updateItem('/categories/update-positions', [
+            'categoryId' => $catA,
+            'parentCategoryId' => 2,
+            'way' => 1,
+            'positions' => [
+                $indexA => 'tr_2_' . $catB,
+                $indexB => 'tr_2_' . $catA,
+            ],
+            'foundFirst' => true,
+        ], ['category_write'], Response::HTTP_NO_CONTENT);
+
+        $after = $this->getSiblingOrder(2);
+        $this->assertGreaterThan(array_search($catB, $after, true), array_search($catA, $after, true));
+
+        // Clean up so the sibling count doesn't drift for later tests.
+        $this->deleteItem('/categories/' . $catA . '/associate_and_disable', ['category_write']);
+        $this->deleteItem('/categories/' . $catB . '/associate_and_disable', ['category_write']);
+    }
+
+    /**
      * Create two temporary categories for bulk operation tests.
      *
      * @return int[] The IDs of the created categories
@@ -313,5 +423,43 @@ class CategoryEndpointTest extends ApiTestCase
         ], ['category_write']);
 
         return [$cat1['categoryId'], $cat2['categoryId']];
+    }
+
+    /**
+     * The tree is the read side of the whole category hierarchy, so it is asserted against a
+     * category this suite created rather than against whatever the fixtures ship: the
+     * standalone test could only check that the first row had the expected keys.
+     */
+    public function testGetCategoriesTree(): void
+    {
+        $categoryId = $this->createItem('/categories', [
+            'names' => ['en-US' => 'Tree probe EN', 'fr-FR' => 'Tree probe FR'],
+            'linkRewrites' => ['en-US' => 'tree-probe-en', 'fr-FR' => 'tree-probe-fr'],
+            'isActive' => true,
+            'parentCategoryId' => 2,
+            'shopIds' => [1],
+        ], ['category_write'])['categoryId'];
+
+        $tree = $this->getItem('/categories/trees', ['category_read']);
+        $this->assertNotEmpty($tree);
+        $this->assertEquals(
+            ['categoryId', 'enabled', 'name', 'displayName', 'children'],
+            array_keys($tree[0])
+        );
+
+        $this->assertContains($categoryId, $this->flattenTreeIds($tree));
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $tree
+     *
+     * @return int[]
+     */
+    private function flattenTreeIds(array $tree): array
+    {
+        return array_map(
+            static fn (array $node): int => (int) $node['categoryId'],
+            $this->flattenTree($tree)
+        );
     }
 }
