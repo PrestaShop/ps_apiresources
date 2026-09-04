@@ -37,8 +37,6 @@ class CartEndpointTest extends ApiTestCase
     private const FIXTURE_CURRENCY_ID = 1;
     // Default language ID in the test DB
     private const FIXTURE_LANGUAGE_ID = 1;
-    // CartForOrderCreation only exposes the customer from this version on, see PrestaShop/PrestaShop#41364
-    private const CUSTOMER_ID_MIN_VERSION = '9.2.0';
 
     public static function setUpBeforeClass(): void
     {
@@ -147,11 +145,6 @@ class CartEndpointTest extends ApiTestCase
         ];
     }
 
-    private static function expectedCustomerId(): ?int
-    {
-        return self::isVersionAtLeast(self::CUSTOMER_ID_MIN_VERSION) ? self::FIXTURE_CUSTOMER_ID : null;
-    }
-
     public function testCreateCart(): int
     {
         $cart = $this->createItem('/carts', ['customerId' => self::FIXTURE_CUSTOMER_ID], ['cart_write']);
@@ -163,8 +156,7 @@ class CartEndpointTest extends ApiTestCase
 
         $this->assertEquals([
             'cartId' => $cartId,
-            // Asserted on its own in testCartExposesCustomerId, to keep the flow below out of its version dependency
-            'customerId' => $cart['customerId'],
+            'customerId' => self::FIXTURE_CUSTOMER_ID,
             'currencyId' => self::FIXTURE_CURRENCY_ID,
             'languageId' => self::FIXTURE_LANGUAGE_ID,
             'products' => [],
@@ -186,7 +178,7 @@ class CartEndpointTest extends ApiTestCase
 
         $this->assertEquals([
             'cartId' => $cartId,
-            'customerId' => $cart['customerId'],
+            'customerId' => self::FIXTURE_CUSTOMER_ID,
             'currencyId' => self::FIXTURE_CURRENCY_ID,
             'languageId' => self::FIXTURE_LANGUAGE_ID,
             'products' => [],
@@ -197,21 +189,6 @@ class CartEndpointTest extends ApiTestCase
         ], $cart);
 
         return $cartId;
-    }
-
-    /**
-     * Standalone on purpose: CartForOrderCreation only exposes the customer from 9.2 on
-     * (PrestaShop/PrestaShop#41364), and a failure here must not skip the whole cart flow below.
-     */
-    public function testCartExposesCustomerId(): void
-    {
-        $cart = $this->createItem('/carts', ['customerId' => self::FIXTURE_CUSTOMER_ID], ['cart_write']);
-        $this->assertSame(self::expectedCustomerId(), $cart['customerId']);
-
-        $reloadedCart = $this->getItem('/carts/' . $cart['cartId'], ['cart_read']);
-        $this->assertSame(self::expectedCustomerId(), $reloadedCart['customerId']);
-
-        $this->deleteItem('/carts/' . $cart['cartId'], ['cart_write']);
     }
 
     /**
