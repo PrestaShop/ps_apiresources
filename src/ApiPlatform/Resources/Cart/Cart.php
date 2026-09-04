@@ -129,11 +129,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['cart_write'],
         ),
         new CQRSDelete(
-            uriTemplate: '/carts/{cartId}/cart-rules',
-            requirements: ['cartId' => '\d+'],
-            // ApiPlatform skips validation on DELETE unless it is explicitly enabled.
-            validationContext: ['groups' => ['Default', 'RemoveCartRule']],
-            validate: true,
+            uriTemplate: '/carts/{cartId}/cart-rules/{cartRuleId}',
+            requirements: ['cartId' => '\d+', 'cartRuleId' => '\d+'],
             // CQRSDelete answers 204 and exposes no CQRSQuery parameter, hence the overrides.
             status: Response::HTTP_OK,
             CQRSCommand: RemoveCartRuleFromCartCommand::class,
@@ -312,9 +309,9 @@ class Cart
     #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => 2])]
     public int $carrierId;
 
-    // Body of POST and DELETE /cart-rules, the applied cart rules are read in cartRules
-    #[Assert\NotBlank(groups: ['AddCartRule', 'RemoveCartRule'])]
-    #[Assert\Positive(groups: ['AddCartRule', 'RemoveCartRule'])]
+    // Body of POST /cart-rules, the applied cart rules are read in cartRules
+    #[Assert\NotBlank(groups: ['AddCartRule'])]
+    #[Assert\Positive(groups: ['AddCartRule'])]
     #[ApiProperty(readable: false, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $cartRuleId;
 

@@ -113,7 +113,7 @@ class CartEndpointTest extends ApiTestCase
 
         yield 'remove cart rule endpoint' => [
             'DELETE',
-            '/carts/1/cart-rules',
+            '/carts/1/cart-rules/1',
         ];
 
         yield 'update cart addresses endpoint' => [
