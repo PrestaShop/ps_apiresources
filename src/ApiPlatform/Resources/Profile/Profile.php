@@ -26,11 +26,13 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\AddProfileCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\DeleteProfileCommand;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Command\EditProfileCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Query\GetProfileForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -46,6 +48,16 @@ use Symfony\Component\HttpFoundation\Response;
         new CQRSCreate(
             uriTemplate: '/profiles',
             CQRSCommand: AddProfileCommand::class,
+            CQRSQuery: GetProfileForEditing::class,
+            scopes: ['profile_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/profiles/{profileId}',
+            requirements: ['profileId' => '\d+'],
+            read: false,
+            CQRSCommand: EditProfileCommand::class,
             CQRSQuery: GetProfileForEditing::class,
             scopes: ['profile_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,

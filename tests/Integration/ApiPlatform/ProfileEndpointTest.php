@@ -52,9 +52,19 @@ class ProfileEndpointTest extends ApiTestCase
             '/profiles',
         ];
 
+        yield 'patch endpoint' => [
+            'PATCH',
+            '/profiles/1',
+        ];
+
         yield 'delete endpoint' => [
             'DELETE',
             '/profiles/1',
+        ];
+
+        yield 'bulk delete endpoint' => [
+            'DELETE',
+            '/profiles/bulk-delete',
         ];
     }
 
@@ -100,9 +110,55 @@ class ProfileEndpointTest extends ApiTestCase
     /**
      * @depends testGetProfile
      */
+    public function testEditProfile(int $profileId): int
+    {
+        $response = $this->partialUpdateItem('/profiles/' . $profileId, [
+            'names' => [
+                'en-US' => 'Profile En Updated',
+                'fr-FR' => 'Profile Fr Updated',
+            ],
+        ], ['profile_write']);
+
+        $this->assertEquals([
+            'profileId' => $profileId,
+            'names' => [
+                'en-US' => 'Profile En Updated',
+                'fr-FR' => 'Profile Fr Updated',
+            ],
+        ], $response);
+
+        return $profileId;
+    }
+
+    /**
+     * @depends testEditProfile
+     */
     public function testDeleteProfile(int $profileId): void
     {
         $this->deleteItem('/profiles/' . $profileId, ['profile_write']);
         $this->getItem('/profiles/' . $profileId, ['profile_read'], 404);
+    }
+
+    public function testBulkDeleteProfiles(): void
+    {
+        $firstProfileId = $this->createItem('/profiles', [
+            'names' => [
+                'en-US' => 'Bulk Profile 1 En',
+                'fr-FR' => 'Bulk Profile 1 Fr',
+            ],
+        ], ['profile_write'])['profileId'];
+        $secondProfileId = $this->createItem('/profiles', [
+            'names' => [
+                'en-US' => 'Bulk Profile 2 En',
+                'fr-FR' => 'Bulk Profile 2 Fr',
+            ],
+        ], ['profile_write'])['profileId'];
+
+        $this->bulkDeleteItems('/profiles/bulk-delete', [
+            'profileIds' => [$firstProfileId, $secondProfileId],
+        ], ['profile_write']);
+
+        $this->getItem('/profiles/' . $firstProfileId, ['profile_read'], 404);
+        $this->getItem('/profiles/' . $secondProfileId, ['profile_read'], 404);
     }
 }
