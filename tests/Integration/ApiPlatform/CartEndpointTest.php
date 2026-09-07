@@ -378,15 +378,84 @@ class CartEndpointTest extends ApiTestCase
         $cart = $this->createItem('/carts', ['customerId' => self::FIXTURE_CUSTOMER_ID], ['cart_write']);
         $cartId = $cart['cartId'];
 
+        // A product is needed to check that the product lines are mapped as well
+        $this->createItem('/carts/' . $cartId . '/products', [
+            'productId' => self::FIXTURE_PRODUCT_ID,
+            'quantity' => 2,
+        ], ['cart_write'], Response::HTTP_CREATED);
+
         $cartView = $this->getItem('/carts/' . $cartId . '/view', ['cart_read']);
 
-        $this->assertEquals([
-            'cartId' => $cartId,
-            'currencyId' => self::FIXTURE_CURRENCY_ID,
-            'customerInformation' => $cartView['customerInformation'],
-            'orderInformation' => $cartView['orderInformation'],
-            'cartSummary' => $cartView['cartSummary'],
-        ], $cartView);
+        // The legacy query result containers must not leak into the contract, only their camelCase counterparts
+        $this->assertSame([
+            'cartId',
+            'currencyId',
+            'customer',
+            'order',
+            'products',
+            'cartRules',
+            'summary',
+            'cartLink',
+            'dateAdd',
+            'dateUpd',
+        ], array_keys($cartView));
+
+        $this->assertSame($cartId, $cartView['cartId']);
+        $this->assertSame(self::FIXTURE_CURRENCY_ID, $cartView['currencyId']);
+
+        $this->assertSame([
+            'customerId',
+            'firstName',
+            'lastName',
+            'gender',
+            'email',
+            'registrationDate',
+            'validOrdersCount',
+            'totalSpentSinceRegistration',
+        ], array_keys($cartView['customer']));
+        $this->assertSame(self::FIXTURE_CUSTOMER_ID, $cartView['customer']['customerId']);
+
+        $this->assertSame(['orderId', 'placedDate'], array_keys($cartView['order']));
+
+        $this->assertCount(1, $cartView['products']);
+        $this->assertSame([
+            'productId',
+            'name',
+            'attribute',
+            'reference',
+            'supplierReference',
+            'availableStock',
+            'quantity',
+            'unitPrice',
+            'unitPriceFormatted',
+            'totalPrice',
+            'totalPriceFormatted',
+            'image',
+            'customization',
+        ], array_keys($cartView['products'][0]));
+        $this->assertSame(self::FIXTURE_PRODUCT_ID, $cartView['products'][0]['productId']);
+        $this->assertSame(2, $cartView['products'][0]['quantity']);
+
+        // An empty list must still be exposed, the mapping does not create the target path when the source is empty
+        $this->assertSame([], $cartView['cartRules']);
+
+        $this->assertSame([
+            'totalProducts',
+            'totalProductsFormatted',
+            'totalDiscounts',
+            'totalDiscountsFormatted',
+            'totalWrapping',
+            'totalWrappingFormatted',
+            'totalShipping',
+            'totalShippingFormatted',
+            'total',
+            'totalFormatted',
+            'taxIncluded',
+        ], array_keys($cartView['summary']));
+
+        $this->assertIsString($cartView['cartLink']);
+        $this->assertIsString($cartView['dateAdd']);
+        $this->assertIsString($cartView['dateUpd']);
 
         $this->deleteItem('/carts/' . $cartId, ['cart_write']);
     }

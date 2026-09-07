@@ -29,6 +29,12 @@ use PrestaShop\PrestaShop\Core\Domain\Cart\Query\GetCartForViewing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * The query result is mostly made of flat legacy arrays whose snake_case keys would land as-is in the JSON contract.
+ * QUERY_MAPPING copies each value into a new camelCase root path, named after the Cart resource when both expose the
+ * same value. The original containers (customerInformation, orderInformation, cartSummary) are deliberately not
+ * declared below, so denormalization drops them.
+ */
 #[ApiResource(
     operations: [
         new CQRSGet(
@@ -52,97 +58,155 @@ class CartView
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
     public int $currencyId;
 
-    // Keys of the three arrays below are snake_case: they come straight from the legacy query result, unmapped.
     #[ApiProperty(openapiContext: [
         'type' => 'object',
         'properties' => [
-            'id' => ['type' => 'integer'],
-            'first_name' => ['type' => 'string'],
-            'last_name' => ['type' => 'string'],
+            'customerId' => ['type' => 'integer'],
+            'firstName' => ['type' => 'string'],
+            'lastName' => ['type' => 'string'],
             'gender' => ['type' => 'string'],
             'email' => ['type' => 'string'],
-            'registration_date' => ['type' => 'string'],
-            'valid_orders_count' => ['type' => 'integer'],
-            'total_spent_since_registration' => ['type' => 'string'],
+            'registrationDate' => ['type' => 'string'],
+            'validOrdersCount' => ['type' => 'integer'],
+            'totalSpentSinceRegistration' => ['type' => 'string'],
         ],
     ])]
-    public array $customerInformation;
+    public array $customer = [];
 
     #[ApiProperty(openapiContext: [
         'type' => 'object',
         'description' => 'Empty values when the cart has not been ordered yet.',
         'properties' => [
-            'id' => ['type' => 'integer', 'nullable' => true],
-            'placed_date' => ['type' => 'string'],
+            'orderId' => ['type' => 'integer', 'nullable' => true],
+            'placedDate' => ['type' => 'string'],
         ],
     ])]
-    public array $orderInformation;
+    public array $order = [];
 
     #[ApiProperty(openapiContext: [
-        'type' => 'object',
-        'properties' => [
-            'products' => [
-                'type' => 'array',
-                'items' => [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'productId' => ['type' => 'integer'],
+                'name' => ['type' => 'string'],
+                'attribute' => ['type' => 'string'],
+                'reference' => ['type' => 'string'],
+                'supplierReference' => ['type' => 'string'],
+                'availableStock' => ['type' => 'integer'],
+                'quantity' => ['type' => 'integer'],
+                'unitPrice' => ['type' => 'number'],
+                'unitPriceFormatted' => ['type' => 'string'],
+                'totalPrice' => ['type' => 'number'],
+                'totalPriceFormatted' => ['type' => 'string'],
+                'image' => ['type' => 'string', 'description' => 'Ready to use HTML img tag, empty when the product has no image.'],
+                'customization' => [
                     'type' => 'object',
+                    'description' => 'Empty array when the product line is not customized.',
                     'properties' => [
-                        'id' => ['type' => 'integer'],
-                        'name' => ['type' => 'string'],
-                        'attributes' => ['type' => 'string'],
-                        'reference' => ['type' => 'string'],
-                        'supplier_reference' => ['type' => 'string'],
-                        'stock_quantity' => ['type' => 'integer'],
-                        'cart_quantity' => ['type' => 'integer'],
-                        'total_price' => ['type' => 'number'],
-                        'unit_price' => ['type' => 'number'],
-                        'total_price_formatted' => ['type' => 'string'],
-                        'unit_price_formatted' => ['type' => 'string'],
-                        'image' => ['type' => 'string', 'description' => 'Ready to use HTML img tag, empty when the product has no image.'],
-                        'customization' => [
-                            'type' => 'object',
-                            'description' => 'Empty array when the product line is not customized.',
-                            'properties' => [
-                                'quantity' => ['type' => 'integer'],
-                                'fields' => [
-                                    'type' => 'array',
-                                    'description' => 'Each entry has a name, a value and a type, customizable_text_field or customizable_file.',
-                                ],
-                            ],
+                        'quantity' => ['type' => 'integer'],
+                        'fields' => [
+                            'type' => 'array',
+                            'description' => 'Each entry has a name, a value and a type, customizable_text_field or customizable_file. Text fields also carry allow_html, file fields an image path.',
                         ],
                     ],
                 ],
             ],
-            'cart_rules' => [
-                'type' => 'array',
-                'items' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'id' => ['type' => 'integer'],
-                        'name' => ['type' => 'string'],
-                        'is_free_shipping' => ['type' => 'boolean'],
-                        'formatted_value' => ['type' => 'string'],
-                    ],
-                ],
-            ],
-            'total_products' => ['type' => 'number'],
-            'total_products_formatted' => ['type' => 'string'],
-            'total_discounts' => ['type' => 'number'],
-            'total_discounts_formatted' => ['type' => 'string'],
-            'total_wrapping' => ['type' => 'number'],
-            'total_wrapping_formatted' => ['type' => 'string'],
-            'total_shipping' => ['type' => 'number'],
-            'total_shipping_formatted' => ['type' => 'string'],
-            'total' => ['type' => 'number'],
-            'total_formatted' => ['type' => 'string'],
-            'is_tax_included' => ['type' => 'boolean'],
-            'cart_link' => ['type' => 'string', 'nullable' => true, 'description' => 'Null once the cart has been ordered.'],
-            'date_add' => ['type' => 'string'],
-            'date_upd' => ['type' => 'string'],
         ],
     ])]
-    public array $cartSummary;
+    public array $products = [];
+
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'cartRuleId' => ['type' => 'integer'],
+                'name' => ['type' => 'string'],
+                'freeShipping' => ['type' => 'boolean'],
+                'formattedValue' => ['type' => 'string'],
+            ],
+        ],
+    ])]
+    public array $cartRules = [];
+
+    #[ApiProperty(openapiContext: [
+        'type' => 'object',
+        'properties' => [
+            'totalProducts' => ['type' => 'number'],
+            'totalProductsFormatted' => ['type' => 'string'],
+            'totalDiscounts' => ['type' => 'number'],
+            'totalDiscountsFormatted' => ['type' => 'string'],
+            'totalWrapping' => ['type' => 'number'],
+            'totalWrappingFormatted' => ['type' => 'string'],
+            'totalShipping' => ['type' => 'number'],
+            'totalShippingFormatted' => ['type' => 'string'],
+            'total' => ['type' => 'number'],
+            'totalFormatted' => ['type' => 'string'],
+            'taxIncluded' => ['type' => 'boolean'],
+        ],
+    ])]
+    public array $summary = [];
+
+    #[ApiProperty(openapiContext: ['type' => 'string', 'nullable' => true, 'description' => 'Null once the cart has been ordered.'])]
+    public ?string $cartLink = null;
+
+    #[ApiProperty(openapiContext: ['type' => 'string'])]
+    public string $dateAdd = '';
+
+    #[ApiProperty(openapiContext: ['type' => 'string'])]
+    public string $dateUpd = '';
 
     public const QUERY_MAPPING = [
         '[cartCurrencyId]' => '[currencyId]',
+
+        '[customerInformation][id]' => '[customer][customerId]',
+        '[customerInformation][first_name]' => '[customer][firstName]',
+        '[customerInformation][last_name]' => '[customer][lastName]',
+        '[customerInformation][gender]' => '[customer][gender]',
+        '[customerInformation][email]' => '[customer][email]',
+        '[customerInformation][registration_date]' => '[customer][registrationDate]',
+        '[customerInformation][valid_orders_count]' => '[customer][validOrdersCount]',
+        '[customerInformation][total_spent_since_registration]' => '[customer][totalSpentSinceRegistration]',
+
+        '[orderInformation][id]' => '[order][orderId]',
+        '[orderInformation][placed_date]' => '[order][placedDate]',
+
+        '[cartSummary][products][@productIndex][id]' => '[products][@productIndex][productId]',
+        '[cartSummary][products][@productIndex][name]' => '[products][@productIndex][name]',
+        '[cartSummary][products][@productIndex][attributes]' => '[products][@productIndex][attribute]',
+        '[cartSummary][products][@productIndex][reference]' => '[products][@productIndex][reference]',
+        '[cartSummary][products][@productIndex][supplier_reference]' => '[products][@productIndex][supplierReference]',
+        '[cartSummary][products][@productIndex][stock_quantity]' => '[products][@productIndex][availableStock]',
+        '[cartSummary][products][@productIndex][cart_quantity]' => '[products][@productIndex][quantity]',
+        '[cartSummary][products][@productIndex][unit_price]' => '[products][@productIndex][unitPrice]',
+        '[cartSummary][products][@productIndex][unit_price_formatted]' => '[products][@productIndex][unitPriceFormatted]',
+        '[cartSummary][products][@productIndex][total_price]' => '[products][@productIndex][totalPrice]',
+        '[cartSummary][products][@productIndex][total_price_formatted]' => '[products][@productIndex][totalPriceFormatted]',
+        '[cartSummary][products][@productIndex][image]' => '[products][@productIndex][image]',
+        // Copied as a whole: the mapper cannot expand a second "@index" placeholder nested inside a first one, so the
+        // customization fields keep the format built by the core query handler.
+        '[cartSummary][products][@productIndex][customization]' => '[products][@productIndex][customization]',
+
+        '[cartSummary][cart_rules][@cartRuleIndex][id]' => '[cartRules][@cartRuleIndex][cartRuleId]',
+        '[cartSummary][cart_rules][@cartRuleIndex][name]' => '[cartRules][@cartRuleIndex][name]',
+        '[cartSummary][cart_rules][@cartRuleIndex][is_free_shipping]' => '[cartRules][@cartRuleIndex][freeShipping]',
+        '[cartSummary][cart_rules][@cartRuleIndex][formatted_value]' => '[cartRules][@cartRuleIndex][formattedValue]',
+
+        '[cartSummary][total_products]' => '[summary][totalProducts]',
+        '[cartSummary][total_products_formatted]' => '[summary][totalProductsFormatted]',
+        '[cartSummary][total_discounts]' => '[summary][totalDiscounts]',
+        '[cartSummary][total_discounts_formatted]' => '[summary][totalDiscountsFormatted]',
+        '[cartSummary][total_wrapping]' => '[summary][totalWrapping]',
+        '[cartSummary][total_wrapping_formatted]' => '[summary][totalWrappingFormatted]',
+        '[cartSummary][total_shipping]' => '[summary][totalShipping]',
+        '[cartSummary][total_shipping_formatted]' => '[summary][totalShippingFormatted]',
+        '[cartSummary][total]' => '[summary][total]',
+        '[cartSummary][total_formatted]' => '[summary][totalFormatted]',
+        '[cartSummary][is_tax_included]' => '[summary][taxIncluded]',
+
+        '[cartSummary][cart_link]' => '[cartLink]',
+        '[cartSummary][date_add]' => '[dateAdd]',
+        '[cartSummary][date_upd]' => '[dateUpd]',
     ];
 }
