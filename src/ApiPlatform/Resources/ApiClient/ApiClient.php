@@ -28,6 +28,7 @@ use PrestaShop\PrestaShop\Core\Domain\ApiClient\ApiClientSettings;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\AddApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\DeleteApiClientCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\EditApiClientCommand;
+use PrestaShop\PrestaShop\Core\Domain\ApiClient\Command\ForceApiClientSecretCommand;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Exception\ApiClientConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Exception\ApiClientNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\ApiClient\Query\GetApiClientForEditing;
@@ -65,6 +66,15 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: EditApiClientCommand::class,
             CQRSQuery: GetApiClientForEditing::class,
             scopes: ['api_client_write']
+        ),
+        // Set a specific secret value (no content returned)
+        new CQRSPartialUpdate(
+            uriTemplate: '/api-clients/{apiClientId}/secrets',
+            requirements: ['apiClientId' => '\d+'],
+            read: false,
+            output: false,
+            CQRSCommand: ForceApiClientSecretCommand::class,
+            scopes: ['api_client_write'],
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
