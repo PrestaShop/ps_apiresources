@@ -2,7 +2,7 @@ includes:
     - %currentWorkingDirectory%/tests/PHPStan/phpstan.neon
 
 parameters:
-    tmpDir: %currentWorkingDirectory%/var/phpstan-tmp/9.1.x
+    tmpDir: %currentWorkingDirectory%/var/phpstan-tmp/9.1.5
     ignoreErrors:
         # Add version-specific ignores here as needed
         # The TaxRule create/delete CQRS domain layer only exists since PrestaShop 9.2 (develop).
