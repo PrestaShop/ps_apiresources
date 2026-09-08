@@ -70,6 +70,11 @@ class AttributeEndpointTest extends ApiTestCase
             '/attributes/attributes/1',
         ];
 
+        yield 'delete texture endpoint' => [
+            'DELETE',
+            '/attributes/attributes/1/textures',
+        ];
+
         yield 'list endpoint' => [
             'GET',
             '/attributes/groups/1/attributes',
@@ -139,6 +144,18 @@ class AttributeEndpointTest extends ApiTestCase
         ], $attribute);
 
         return $attributeId;
+    }
+
+    /**
+     * @depends testAddAttribute
+     *
+     * @param int $attributeId
+     */
+    public function testDeleteAttributeTextureImage(int $attributeId): void
+    {
+        // The created attribute has no texture image; deleting it is a safe no-op (204)
+        $return = $this->deleteItem('/attributes/attributes/' . $attributeId . '/textures', ['attribute_write']);
+        $this->assertNull($return);
     }
 
     /**
