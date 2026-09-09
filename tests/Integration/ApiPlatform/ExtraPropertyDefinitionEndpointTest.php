@@ -131,32 +131,7 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
         $definitionId = $definition['extraPropertyDefinitionId'];
         $this->assertIsInt($definitionId);
 
-        $this->assertEquals([
-            'extraPropertyDefinitionId' => $definitionId,
-            'entityName' => 'product',
-            'moduleName' => null,
-            'propertyName' => self::PROPERTY_PREFIX . 'string',
-            'type' => 'string',
-            'scope' => 'common',
-            'sqlIndex' => 'key',
-            'displayFront' => true,
-            'required' => false,
-            'nullable' => true,
-            'size' => 64,
-            'defaultValue' => 'n/a',
-            'enumValues' => null,
-            'labelWording' => 'API string',
-            'labelDomain' => 'Modules.Apitest.Admin',
-            'descriptionWording' => 'Created through the Admin API',
-            'descriptionDomain' => 'Modules.Apitest.Admin',
-            'constraints' => "NotBlank\nLength(max: 64, min: 2)",
-            'formType' => null,
-            'formOptions' => ['attr' => ['placeholder' => 'n/a']],
-            'associatedForms' => ['product'],
-            'associatedGrids' => ['product'],
-            'associatedApis' => ['/products', '/products/{productId}'],
-            'shopIds' => null,
-        ], $definition);
+        $this->assertEquals($this->expectedStringDefinition($definitionId), $definition);
 
         return $definitionId;
     }
@@ -211,9 +186,7 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
     public function testGetExtraPropertyDefinition(int $definitionId): int
     {
         $definition = $this->getItem(self::ENDPOINT . '/' . $definitionId, [self::READ]);
-        $this->assertSame($definitionId, $definition['extraPropertyDefinitionId']);
-        $this->assertSame(self::PROPERTY_PREFIX . 'string', $definition['propertyName']);
-        $this->assertSame("NotBlank\nLength(max: 64, min: 2)", $definition['constraints']);
+        $this->assertEquals($this->expectedStringDefinition($definitionId), $definition);
 
         return $definitionId;
     }
@@ -233,18 +206,11 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
             'associatedApis' => ['/products/{productId}'],
         ];
         $updated = $this->partialUpdateItem(self::ENDPOINT . '/' . $definitionId, $patchData, [self::WRITE]);
-        $this->assertSame('API string (edited)', $updated['labelWording']);
-        $this->assertFalse($updated['displayFront']);
-        $this->assertTrue($updated['required']);
-        $this->assertSame(128, $updated['size']);
-        $this->assertSame('Email', $updated['constraints']);
-        $this->assertSame(['/products/{productId}'], $updated['associatedApis']);
-        // Untouched fields keep their value.
-        $this->assertSame('Created through the Admin API', $updated['descriptionWording']);
-        $this->assertSame(['product'], $updated['associatedGrids']);
+        $expected = $this->expectedStringDefinition($definitionId, $patchData);
+        $this->assertEquals($expected, $updated);
 
         $fetched = $this->getItem(self::ENDPOINT . '/' . $definitionId, [self::READ]);
-        $this->assertSame($updated, $fetched);
+        $this->assertEquals($expected, $fetched);
 
         // An empty constraints string removes every constraint (null would leave them untouched).
         $cleared = $this->partialUpdateItem(self::ENDPOINT . '/' . $definitionId, ['constraints' => ''], [self::WRITE]);
@@ -410,6 +376,46 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
         $this->assertSame([1], $updated['shopIds']);
         $reverted = $this->partialUpdateItem(self::ENDPOINT . '/' . $definitionId, ['shopIds' => []], [self::WRITE]);
         $this->assertNull($reverted['shopIds']);
+    }
+
+    /**
+     * The full expected payload for the PROPERTY_PREFIX.'string' definition created by
+     * testAddExtraPropertyDefinition(), shared by every test that asserts the read/write contract
+     * on that same definition through its lifecycle, so the literal isn't duplicated (and left to
+     * drift) at every step — override only the fields a given step actually changed.
+     *
+     * @param array<string, mixed> $overrides
+     *
+     * @return array<string, mixed>
+     */
+    private function expectedStringDefinition(int $definitionId, array $overrides = []): array
+    {
+        return array_replace([
+            'extraPropertyDefinitionId' => $definitionId,
+            'entityName' => 'product',
+            'moduleName' => null,
+            'propertyName' => self::PROPERTY_PREFIX . 'string',
+            'type' => 'string',
+            'scope' => 'common',
+            'sqlIndex' => 'key',
+            'displayFront' => true,
+            'required' => false,
+            'nullable' => true,
+            'size' => 64,
+            'defaultValue' => 'n/a',
+            'enumValues' => null,
+            'labelWording' => 'API string',
+            'labelDomain' => 'Modules.Apitest.Admin',
+            'descriptionWording' => 'Created through the Admin API',
+            'descriptionDomain' => 'Modules.Apitest.Admin',
+            'constraints' => "NotBlank\nLength(max: 64, min: 2)",
+            'formType' => null,
+            'formOptions' => ['attr' => ['placeholder' => 'n/a']],
+            'associatedForms' => ['product'],
+            'associatedGrids' => ['product'],
+            'associatedApis' => ['/products', '/products/{productId}'],
+            'shopIds' => null,
+        ], $overrides);
     }
 
     private function storageColumnExists(string $table, string $column): bool
