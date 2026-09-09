@@ -72,7 +72,6 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSPartialUpdate(
             uriTemplate: '/extra-property-definitions/{extraPropertyDefinitionId}',
             requirements: ['extraPropertyDefinitionId' => '\d+'],
-            read: false,
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: UpdateExtraPropertyDefinitionCommand::class,
             CQRSQuery: GetExtraPropertyDefinitionForEditing::class,
@@ -84,7 +83,6 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSDelete(
             uriTemplate: '/extra-property-definitions/{extraPropertyDefinitionId}',
             requirements: ['extraPropertyDefinitionId' => '\d+'],
-            output: false,
             CQRSCommand: DeleteExtraPropertyDefinitionCommand::class,
             scopes: ['extra_property_definition_write'],
             CQRSCommandMapping: self::COMMAND_MAPPING,
@@ -274,16 +272,12 @@ class ExtraPropertyDefinition
         '[extraPropertyDefinitionId]' => '[id]',
         // Query result → API resource
         '[id]' => '[extraPropertyDefinitionId]',
-        '[fieldType]' => '[type]',
-        '[fieldScope]' => '[scope]',
         '[associatedShopIds]' => '[shopIds]',
     ];
 
     public const COMMAND_MAPPING = [
         // URI parameter → Update/DeleteExtraPropertyDefinitionCommand(int $id)
         '[extraPropertyDefinitionId]' => '[id]',
-        '[type]' => '[fieldType]',
-        '[scope]' => '[fieldScope]',
         '[shopIds]' => '[associatedShopIds]',
     ];
 }
