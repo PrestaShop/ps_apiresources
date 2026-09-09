@@ -19,3 +19,10 @@ parameters:
             message: "#Class .*GetCarriersForProduct not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Product/ProductCarrier.php
+        # The extra property definition CQRS layer (Core\Domain\ExtraProperty, Core\ExtraProperty,
+        # ExtraPropertyDefinitionFilters) only exists since PrestaShop 9.2; the operations declare
+        # minVersion 9.2.0 so they are filtered out of the API on this core version.
+        -
+            message: "#Class .*ExtraProperty.* not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/ExtraPropertyDefinition/*
