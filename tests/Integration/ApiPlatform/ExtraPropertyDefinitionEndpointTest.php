@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\ExtraPropertyDefinition\ExtraPropertyDefinition as ExtraPropertyDefinitionResource;
 use PrestaShop\PrestaShop\Core\ExtraProperty\Definition\ExtraPropertyDefinition;
 use PrestaShop\PrestaShop\Core\ExtraProperty\Definition\ExtraPropertyDefinitionRepositoryInterface;
 use PrestaShop\PrestaShop\Core\ExtraProperty\Definition\ExtraPropertyRegistryInterface;
@@ -150,6 +151,13 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
         ], [self::WRITE]);
         $this->assertSame(1.5, $float['defaultValue']);
         $this->assertNull($float['constraints']);
+        $this->assertReadsBackIdentically($float);
+
+        // Exact-match filter on an enum column, LIKE filter on the name: only the definition created
+        // just above matches.
+        $floats = $this->listItems(self::ENDPOINT, [self::READ], ['type' => 'float', 'propertyName' => self::PROPERTY_PREFIX]);
+        $this->assertSame(1, $floats['totalItems']);
+        $this->assertSame(self::PROPERTY_PREFIX . 'float', $floats['items'][0]['propertyName']);
 
         $int = $this->createItem(self::ENDPOINT, [
             'entityName' => 'product',
@@ -158,6 +166,7 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
             'defaultValue' => 5,
         ], [self::WRITE]);
         $this->assertSame(5, $int['defaultValue']);
+        $this->assertReadsBackIdentically($int);
 
         $bool = $this->createItem(self::ENDPOINT, [
             'entityName' => 'product',
@@ -168,6 +177,7 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
         ], [self::WRITE]);
         $this->assertFalse($bool['defaultValue']);
         $this->assertFalse($bool['nullable']);
+        $this->assertReadsBackIdentically($bool);
 
         $choice = $this->createItem(self::ENDPOINT, [
             'entityName' => 'product',
@@ -178,6 +188,42 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
         ], [self::WRITE]);
         $this->assertSame(['small', 'large'], $choice['enumValues']);
         $this->assertSame('small', $choice['defaultValue']);
+        $this->assertReadsBackIdentically($choice);
+    }
+
+    /**
+     * The fields with a declared default can be omitted, exactly like the BO form fields left
+     * untouched: the create operation injects them before validation, so the minimal payload is the
+     * two identifiers. Every other field falls back to the command's own optional defaults.
+     */
+    public function testCreateWithTheDefaultValues(): void
+    {
+        $created = $this->createItem(self::ENDPOINT, [
+            'entityName' => 'product',
+            'propertyName' => self::PROPERTY_PREFIX . 'defaults',
+        ], [self::WRITE]);
+
+        $this->assertEquals([
+            'extraPropertyDefinitionId' => $created['extraPropertyDefinitionId'],
+            'entityName' => 'product',
+            'moduleName' => null,
+            'propertyName' => self::PROPERTY_PREFIX . 'defaults',
+            'size' => null,
+            'defaultValue' => null,
+            'enumValues' => null,
+            'labelWording' => null,
+            'labelDomain' => null,
+            'descriptionWording' => null,
+            'descriptionDomain' => null,
+            'constraints' => null,
+            'formType' => null,
+            'formOptions' => null,
+            'associatedForms' => null,
+            'associatedGrids' => null,
+            'associatedApis' => null,
+            'shopIds' => null,
+        ] + ExtraPropertyDefinitionResource::CREATE_DEFAULT_VALUES, $created);
+        $this->assertReadsBackIdentically($created);
     }
 
     /**
@@ -247,13 +293,16 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
             'displayFront' => false,
         ], $filtered['items'][0]);
 
-        // Exact-match filters on the enum columns, LIKE filter on the names.
-        $floats = $this->listItems(self::ENDPOINT, [self::READ], ['type' => 'float', 'propertyName' => self::PROPERTY_PREFIX]);
-        $this->assertSame(1, $floats['totalItems']);
-        $this->assertSame(self::PROPERTY_PREFIX . 'float', $floats['items'][0]['propertyName']);
-
+        // LIKE filter on the name: whatever else this class created so far shares the prefix, so only
+        // assert on the shape and on the definition this chain owns — never on a count another test
+        // method happens to contribute to.
         $prefixed = $this->listItems(self::ENDPOINT, [self::READ], ['entityName' => 'product', 'propertyName' => self::PROPERTY_PREFIX]);
-        $this->assertSame(5, $prefixed['totalItems']);
+        $this->assertGreaterThanOrEqual(1, $prefixed['totalItems']);
+        $propertyNames = array_column($prefixed['items'], 'propertyName');
+        $this->assertContains(self::PROPERTY_PREFIX . 'string', $propertyNames);
+        foreach ($propertyNames as $propertyName) {
+            $this->assertStringStartsWith(self::PROPERTY_PREFIX, $propertyName);
+        }
 
         return $definitionId;
     }
@@ -416,6 +465,20 @@ class ExtraPropertyDefinitionEndpointTest extends ApiTestCase
             'associatedApis' => ['/products', '/products/{productId}'],
             'shopIds' => null,
         ], $overrides);
+    }
+
+    /**
+     * The read endpoint must return exactly what the create endpoint answered — the only way the
+     * read path of a typed default value (float, int, bool, choice) gets covered.
+     *
+     * @param array<string, mixed> $created
+     */
+    private function assertReadsBackIdentically(array $created): void
+    {
+        $this->assertSame(
+            $created,
+            $this->getItem(self::ENDPOINT . '/' . $created['extraPropertyDefinitionId'], [self::READ])
+        );
     }
 
     private function storageColumnExists(string $table, string $column): bool

@@ -67,7 +67,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['extra_property_definition_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
-            extraProperties: self::VERSION_GATE,
+            // The defaults are declared as an extra property, not with the dedicated operation argument,
+            // so that older cores still parse this class (they ignore it and the fields stay required
+            // there). Create only: a partial update must never apply them.
+            extraProperties: self::VERSION_GATE + ['defaultValues' => self::CREATE_DEFAULT_VALUES],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/extra-property-definitions/{extraPropertyDefinitionId}',
@@ -137,6 +140,20 @@ class ExtraPropertyDefinition
     public const TYPES = ['int', 'bool', 'string', 'float', 'date', 'html', 'json', 'choice'];
     public const SCOPES = ['common', 'lang', 'shop'];
     public const SQL_INDEXES = ['none', 'key', 'unique'];
+
+    /**
+     * Mirrors the constructor defaults of AddExtraPropertyDefinitionCommand, so a payload that omits
+     * these fields behaves exactly like a back office form left untouched. They are documented as
+     * `default` in the schema and no longer listed as required.
+     */
+    public const CREATE_DEFAULT_VALUES = [
+        'type' => 'string',
+        'scope' => 'common',
+        'sqlIndex' => 'none',
+        'displayFront' => false,
+        'required' => false,
+        'nullable' => true,
+    ];
 
     #[ApiProperty(identifier: true)]
     public int $extraPropertyDefinitionId;
