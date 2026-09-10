@@ -77,6 +77,17 @@ final class ApiResourceNormalizerRule implements Rule
         // Valid: complex denormalization of product-combination generation input.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GenerateCombinationsSerializer',
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GetSearchTermAliasesQuerySerializer',
+        // Valid: CQRSApiSerializer::normalizeLocalizedValues() only rewrites id_lang → locale
+        // for top-level #[LocalizedValue] properties, so per-attribute `localizedNames`
+        // nested inside AttributeGroupWithAttributes::$attributes stays keyed by id_lang.
+        // This narrow normalizer post-processes only that sub-array.
+        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\AttributeGroupWithAttributesNormalizer',
+        // Valid: GetCarrierRanges returns the ranges grouped by zone (zones[].ranges[]) while
+        // SetCarrierRangesCommand takes them as a flat list (ranges[].zoneId). Merging those two
+        // index levels into one cannot be expressed with CQRSQueryMapping, which resolves a single
+        // "@index" placeholder at a time, so this normalizer flattens the query result to keep a
+        // single format on both the read and write operations of the CarrierRanges resource.
+        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\CarrierRangesCollectionNormalizer',
     ];
 
     public function getNodeType(): string

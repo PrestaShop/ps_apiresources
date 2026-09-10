@@ -31,7 +31,11 @@
     "autoload-dev": {
         "psr-4": {
             "PsApiResourcesTest\\": "tests/"
-        }
+        },
+        "exclude-from-classmap": [
+            "tests/Unit/PHPStan/Fixture/",
+            "tests/Unit/Rector/Fixture/"
+        ]
     },
     "config": {
         "preferred-install": "dist",
