@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -43,6 +44,7 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGet(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\\d+'],
             CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_read',
@@ -61,6 +63,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\\d+'],
             CQRSCommand: UpdateProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
@@ -71,6 +74,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSDelete(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\\d+'],
             CQRSCommand: DeleteProductCommand::class,
             scopes: [
                 'product_write',
@@ -229,8 +233,7 @@ class Product
                 'name' => 'Home',
                 'displayName' => 'Home',
             ],
-        ]])
-    ]
+        ]])]
     public array $categories;
 
     public int $defaultCategoryId;

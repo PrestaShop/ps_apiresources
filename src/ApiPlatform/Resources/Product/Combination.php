@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -25,9 +26,16 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\DeleteCombinationCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\UpdateCombinationCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CannotUpdateCombinationException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationForEditing;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
@@ -40,9 +48,40 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
+        new CQRSDelete(
+            uriTemplate: '/products/combinations/{combinationId}',
+            output: false,
+            CQRSCommand: DeleteCombinationCommand::class,
+            scopes: [
+                'product_write',
+            ],
+            CQRSCommandMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+            ],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/products/combinations/{combinationId}',
+            CQRSCommand: UpdateCombinationCommand::class,
+            CQRSQuery: GetCombinationForEditing::class,
+            scopes: [
+                'product_write',
+            ],
+            CQRSCommandMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+                '[default]' => '[isDefault]',
+                '[impactOnPriceTaxExcluded]' => '[impactOnPrice]',
+                '[ecotaxTaxExcluded]' => '[ecoTax]',
+                '[availableNowLabels]' => '[localizedAvailableNowLabels]',
+                '[availableLaterLabels]' => '[localizedAvailableLaterLabels]',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            validationContext: ['groups' => ['Default', 'Update']],
+        ),
     ],
     exceptionToStatus: [
         CombinationNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CombinationConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CannotUpdateCombinationException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Combination
@@ -52,31 +91,42 @@ class Combination
     #[ApiProperty(identifier: true)]
     public int $combinationId;
     public string $name;
-    public bool $default;
+    public ?bool $default = null;
 
-    public string $gtin;
-    public string $isbn;
-    public string $mpn;
-    public string $reference;
-    public string $upc;
+    public ?string $gtin = null;
+    public ?string $isbn = null;
+    public ?string $mpn = null;
+    public ?string $reference = null;
+    public ?string $upc = null;
 
     public string $coverThumbnailUrl;
     #[ApiProperty(openapiContext: ['type' => 'array', 'description' => 'List of image IDs', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     public array $imageIds;
 
-    public DecimalNumber $impactOnPriceTaxExcluded;
+    public ?DecimalNumber $impactOnPriceTaxExcluded = null;
     public DecimalNumber $impactOnPriceTaxIncluded;
-    public DecimalNumber $impactOnUnitPrice;
+    public ?DecimalNumber $impactOnUnitPrice = null;
     public DecimalNumber $impactOnUnitPriceTaxIncluded;
-    public DecimalNumber $ecotaxTaxExcluded;
+    public ?DecimalNumber $ecotaxTaxExcluded = null;
     public DecimalNumber $ecotaxTaxIncluded;
-    public DecimalNumber $impactOnWeight;
-    public DecimalNumber $wholesalePrice;
+    public ?DecimalNumber $impactOnWeight = null;
+    public ?DecimalNumber $wholesalePrice = null;
     public DecimalNumber $productTaxRate;
     public DecimalNumber $productPriceTaxExcluded;
     public DecimalNumber $productEcotaxTaxExcluded;
 
     public int $quantity;
+    public ?int $minimalQuantity = null;
+    public ?int $lowStockThreshold = null;
+    public ?\DateTimeImmutable $availableDate = null;
+
+    #[ApiProperty(openapiContext: ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'nullable' => true])]
+    #[LocalizedValue]
+    public ?array $availableNowLabels = null;
+
+    #[ApiProperty(openapiContext: ['type' => 'object', 'additionalProperties' => ['type' => 'string'], 'nullable' => true])]
+    #[LocalizedValue]
+    public ?array $availableLaterLabels = null;
 
     public const QUERY_MAPPING = [
         '[_context][shopConstraint]' => '[shopConstraint]',
@@ -97,5 +147,10 @@ class Combination
         '[prices][productPrice]' => '[productPriceTaxExcluded]',
         '[prices][productEcotax]' => '[productEcotaxTaxExcluded]',
         '[stock][quantity]' => '[quantity]',
+        '[stock][minimalQuantity]' => '[minimalQuantity]',
+        '[stock][lowStockThreshold]' => '[lowStockThreshold]',
+        '[stock][availableDate]' => '[availableDate]',
+        '[stock][localizedAvailableNowLabels]' => '[availableNowLabels]',
+        '[stock][localizedAvailableLaterLabels]' => '[availableLaterLabels]',
     ];
 }

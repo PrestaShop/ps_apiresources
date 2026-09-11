@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -37,3 +38,7 @@ if (!defined('PHPUNIT_COMPOSER_INSTALL')) {
 if (file_exists(dirname(__DIR__, 2) . '/vendor/autoload.php')) {
     require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 }
+
+// Ensure base ApiTestCase is loaded before PHPUnit parses test files that extend it
+// This avoids class-not-found when PHPUnit loads a child test file before the base class
+require_once __DIR__ . '/ApiPlatform/ApiTestCase.php';

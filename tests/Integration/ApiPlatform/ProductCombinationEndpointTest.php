@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -25,12 +26,37 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 use PrestaShop\PrestaShop\Adapter\Attribute\Repository\AttributeRepository;
 use PrestaShop\PrestaShop\Adapter\AttributeGroup\Repository\AttributeGroupRepository;
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\ValueObject\AttributeGroupId;
+use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\UpdateCombinationStockAvailableCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Supplier\Command\SetSuppliersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
+use Symfony\Component\HttpFoundation\Response;
+use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\ProductResetter;
 
 class ProductCombinationEndpointTest extends ApiTestCase
 {
+    /**
+     * @var string[]
+     */
+    private const MUTATED_TABLES = [
+        'product',
+        'product_shop',
+        'product_lang',
+        'category_product',
+        'product_attribute',
+        'product_attribute_shop',
+        'product_attribute_lang',
+        'product_attribute_combination',
+        'product_attribute_image',
+        'image',
+        'image_shop',
+        'image_lang',
+        'stock_available',
+        'stock_mvt',
+        'product_supplier',
+    ];
+
     /**
      * @var array<string, int>
      */
@@ -42,6 +68,8 @@ class ProductCombinationEndpointTest extends ApiTestCase
 
     public static function setUpBeforeClass(): void
     {
+        // Ensure DB is restored before parent config/init
+        DatabaseDump::restoreTables(self::MUTATED_TABLES);
         parent::setUpBeforeClass();
         ProductResetter::resetProducts();
         // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients
@@ -73,6 +101,7 @@ class ProductCombinationEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         ProductResetter::resetProducts();
+        DatabaseDump::restoreTables(self::MUTATED_TABLES);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -90,6 +119,46 @@ class ProductCombinationEndpointTest extends ApiTestCase
         yield 'get endpoint' => [
             'GET',
             '/products/combinations/1',
+        ];
+
+        yield 'update combination endpoint' => [
+            'PATCH',
+            '/products/combinations/1',
+        ];
+
+        yield 'delete combination endpoint' => [
+            'DELETE',
+            '/products/combinations/1',
+        ];
+
+        yield 'bulk delete combinations endpoint' => [
+            'DELETE',
+            '/products/1/combinations/bulk-delete',
+        ];
+
+        yield 'combination stock movements list endpoint' => [
+            'GET',
+            '/products/combinations/1/stock-movements',
+        ];
+
+        yield 'combination suppliers list endpoint' => [
+            'GET',
+            '/products/combinations/1/suppliers',
+        ];
+
+        yield 'combination suppliers update endpoint' => [
+            'PATCH',
+            '/products/combinations/1/suppliers',
+        ];
+
+        yield 'combination images set endpoint' => [
+            'PATCH',
+            '/products/combinations/1/images',
+        ];
+
+        yield 'combination images clear endpoint' => [
+            'DELETE',
+            '/products/combinations/1/images',
         ];
     }
 
@@ -317,6 +386,11 @@ class ProductCombinationEndpointTest extends ApiTestCase
     {
         $combinationId = $newCombinationIds[0];
         $combination = $this->getItem('/products/combinations/' . $combinationId, ['product_read']);
+
+        // minimalQuantity, lowStockThreshold, availableNowLabels and availableLaterLabels were added on top of
+        // the already-released GET response to support the new PATCH operation (see testPartialUpdateCombination).
+        // availableDate is intentionally absent: it is null on a freshly generated combination, and null
+        // properties are omitted from the response rather than serialized as null.
         $this->assertEquals([
             'productId' => $productId,
             'combinationId' => $combinationId,
@@ -340,8 +414,289 @@ class ProductCombinationEndpointTest extends ApiTestCase
             'productPriceTaxExcluded' => 0.0,
             'productEcotaxTaxExcluded' => 0.0,
             'quantity' => 0,
+            'minimalQuantity' => 1,
+            'lowStockThreshold' => 0,
+            'availableNowLabels' => [
+                'en-US' => '',
+                'fr-FR' => '',
+            ],
+            'availableLaterLabels' => [
+                'en-US' => '',
+                'fr-FR' => '',
+            ],
         ], $combination);
 
         return $combinationId;
+    }
+
+    /**
+     * @depends testAddProductWithCombinations
+     * @depends testGetProductCombination
+     */
+    public function testGetCombinationSuppliers(int $productId, int $combinationId): void
+    {
+        // Combination-level supplier rows only exist once suppliers are associated at product level
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand($productId, [1, 2]));
+
+        $suppliers = $this->getItem('/products/combinations/' . $combinationId . '/suppliers', ['product_read']);
+        $this->assertIsArray($suppliers);
+        if (!empty($suppliers)) {
+            $first = $suppliers[0];
+            $this->assertArrayHasKey('productSupplierId', $first);
+            $this->assertArrayHasKey('productId', $first);
+            $this->assertArrayHasKey('supplierId', $first);
+            $this->assertArrayHasKey('supplierName', $first);
+            $this->assertArrayHasKey('reference', $first);
+            $this->assertArrayHasKey('priceTaxExcluded', $first);
+            $this->assertArrayHasKey('currencyId', $first);
+            $this->assertArrayHasKey('combinationId', $first);
+        }
+    }
+
+    /**
+     * @depends testAddProductWithCombinations
+     * @depends testGetProductCombination
+     */
+    public function testUpdateCombinationSuppliers(int $productId, int $combinationId): void
+    {
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand($productId, [1, 2]));
+
+        // Update suppliers (use default suppliers 1 and 2, currency 1)
+        $updated = $this->partialUpdateItem('/products/combinations/' . $combinationId . '/suppliers', [
+            'combinationSuppliers' => [
+                [
+                    'supplierId' => 1,
+                    'currencyId' => 1,
+                    'reference' => 'SUP-REF-001',
+                    'priceTaxExcluded' => '10.50',
+                ],
+                [
+                    'supplierId' => 2,
+                    'currencyId' => 1,
+                    'reference' => 'SUP-REF-002',
+                    'priceTaxExcluded' => '20.00',
+                ],
+            ],
+        ], ['product_write'], Response::HTTP_NO_CONTENT);
+
+        $this->assertNull($updated);
+
+        // The write endpoint stays declarative; read the collection endpoint to assert persisted supplier data.
+        $suppliers = $this->getItem('/products/combinations/' . $combinationId . '/suppliers', ['product_read']);
+        $this->assertIsArray($suppliers);
+        $this->assertNotEmpty($suppliers);
+        $this->assertArrayHasKey('supplierId', $suppliers[0]);
+        $this->assertArrayHasKey('reference', $suppliers[0]);
+    }
+
+    /**
+     * @depends testAddProductWithCombinations
+     * @depends testGetProductCombination
+     */
+    public function testUpdateCombinationSuppliersInvalidPayload(int $productId, int $combinationId): void
+    {
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand($productId, [1, 2]));
+
+        $errors = $this->partialUpdateItem('/products/combinations/' . $combinationId . '/suppliers', [
+            'combinationSuppliers' => [],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($errors);
+    }
+
+    /**
+     * @depends testAddProductWithCombinations
+     * @depends testGetProductCombination
+     */
+    public function testUpdateCombinationSuppliersInvalidItemPayload(int $productId, int $combinationId): void
+    {
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $commandBus->handle(new SetSuppliersCommand($productId, [1, 2]));
+
+        $errors = $this->partialUpdateItem('/products/combinations/' . $combinationId . '/suppliers', [
+            'combinationSuppliers' => [
+                [
+                    'reference' => 'SUP-REF-INCOMPLETE',
+                ],
+            ],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($errors);
+    }
+
+    /**
+     * @depends testAddProductWithCombinations
+     * @depends testGetProductCombination
+     */
+    public function testSetAndClearCombinationImages(int $productId, int $combinationId): void
+    {
+        // Upload two images to the product
+        $assetPath = __DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg';
+        if (!file_exists($assetPath)) {
+            // Fallback to an existing language flag image from assets if product image not present
+            $assetPath = __DIR__ . '/../../Resources/assets/lang/en.jpg';
+        }
+        $upload = $this->prepareUploadedFile($assetPath);
+        $image1 = $this->createItem('/products/' . $productId . '/images', null, ['product_write'], null, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'files' => [
+                    'image' => $upload,
+                ],
+            ],
+        ]);
+        $this->assertArrayHasKey('imageId', $image1);
+        $upload2 = $this->prepareUploadedFile($assetPath);
+        $image2 = $this->createItem('/products/' . $productId . '/images', null, ['product_write'], null, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'files' => [
+                    'image' => $upload2,
+                ],
+            ],
+        ]);
+        $this->assertArrayHasKey('imageId', $image2);
+
+        // Set images on the combination
+        $updated = $this->partialUpdateItem('/products/combinations/' . $combinationId . '/images', [
+            'imageIds' => [
+                $image1['imageId'],
+                $image2['imageId'],
+            ],
+        ], ['product_write']);
+        $this->assertIsArray($updated);
+        $this->assertArrayHasKey('combinationId', $updated);
+        $this->assertArrayHasKey('imageIds', $updated);
+        $this->assertEqualsCanonicalizing([$image1['imageId'], $image2['imageId']], $updated['imageIds']);
+
+        // Clear images on the combination
+        $this->deleteItem('/products/combinations/' . $combinationId . '/images', ['product_write']);
+    }
+
+    /**
+     * @depends testGetProductCombination
+     */
+    public function testSetCombinationImagesInvalidPayload(int $combinationId): void
+    {
+        // Missing/empty imageIds -> 422
+        $this->partialUpdateItem('/products/combinations/' . $combinationId . '/images', ['imageIds' => []], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * @depends testGetProductCombination
+     */
+    public function testGetCombinationStockMovements(int $combinationId): void
+    {
+        // Add a stock movement so there is always at least one to assert against
+        \Context::getContext()->employee = new \Employee(1);
+        $commandBus = static::createClient()->getContainer()->get('prestashop.core.command_bus');
+        $commandBus->handle(
+            (new UpdateCombinationStockAvailableCommand($combinationId, ShopConstraint::allShops()))
+                ->setDeltaQuantity(1)
+        );
+
+        // Fetch stock movements
+        $movements = $this->getItem('/products/combinations/' . $combinationId . '/stock-movements?limit=3', ['product_read']);
+        $this->assertIsArray($movements);
+        $this->assertNotEmpty($movements);
+        $first = $movements[0];
+        $this->assertArrayHasKey('type', $first);
+        $this->assertArrayHasKey('dates', $first);
+        $this->assertArrayHasKey('deltaQuantity', $first);
+        $this->assertArrayHasKey('stockMovementIds', $first);
+    }
+
+    /**
+     * @depends testGetProductCombination
+     */
+    public function testPartialUpdateCombination(int $combinationId): void
+    {
+        // Patch combination and expect updated details
+        $updated = $this->partialUpdateItem('/products/combinations/' . $combinationId, [
+            'reference' => 'REF-UPDATED',
+            'default' => false,
+            'availableNowLabels' => [
+                'en-US' => 'now',
+                'fr-FR' => 'maintenant',
+            ],
+        ], ['product_write']);
+        $this->assertIsArray($updated);
+        $this->assertSame($combinationId, $updated['combinationId']);
+        $this->assertSame('REF-UPDATED', $updated['reference']);
+        $this->assertSame('now', $updated['availableNowLabels']['en-US']);
+        $this->assertSame('maintenant', $updated['availableNowLabels']['fr-FR']);
+    }
+
+    /**
+     * Deletes the same combination already exercised by the previous tests in this chain (suppliers, images,
+     * stock movements, patch) — declared after them so it stays the last consumer of that combination in this file.
+     *
+     * @depends testAddProductWithCombinations
+     * @depends testGetProductCombination
+     */
+    public function testDeleteSingleCombination(int $productId, int $combinationId): void
+    {
+        // Delete single combination
+        $this->deleteItem('/products/combinations/' . $combinationId, ['product_write']);
+
+        // Ensure it is gone
+        $remainingList = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($remainingList);
+        $ids = array_map(static fn ($row) => $row['combinationId'], $remainingList['items']);
+        $this->assertNotContains($combinationId, $ids);
+    }
+
+    /**
+     * Bulk-deletes whatever combinations remain on the shared product — declared last among the consumers of
+     * testAddProductWithCombinations in this file, since it empties the combination list.
+     *
+     * @depends testAddProductWithCombinations
+     */
+    public function testBulkDeleteCombinations(int $productId): void
+    {
+        // Retrieve remaining combination IDs from API JSON (explicit limit: the list endpoint paginates by
+        // default, and this product carries 18 combinations from testCreateProductCombinations)
+        $list = $this->getItem('/products/' . $productId . '/combinations?limit=100', ['product_read']);
+        $this->assertIsArray($list);
+        $combinationIds = array_map(static fn ($row) => $row['combinationId'], $list['items']);
+        $this->assertGreaterThan(0, count($combinationIds));
+        $this->assertSame($list['totalItems'], count($combinationIds));
+
+        // Bulk delete combinations (DELETE with body, productId in URL)
+        $this->bulkDeleteItems('/products/' . $productId . '/combinations/bulk-delete', [
+            'combinationIds' => $combinationIds,
+        ], ['product_write'], Response::HTTP_NO_CONTENT);
+
+        // Ensure there is no combinations left
+        $list = $this->getItem('/products/' . $productId . '/combinations', ['product_read']);
+        $this->assertIsArray($list);
+        $this->assertSame(0, $list['totalItems']);
+    }
+
+    public function testBulkDeleteCombinationsInvalidPayload(): void
+    {
+        // Missing required fields should return validation errors
+        $product = $this->createItem('/products', [
+            'type' => 'combinations',
+            'names' => [
+                'en-US' => 'Combinations product invalid bulk delete',
+            ],
+        ], ['product_write']);
+        $productId = $product['productId'];
+        $errors = $this->bulkDeleteItems('/products/' . $productId . '/combinations/bulk-delete', ['combinationIds' => []], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($errors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'combinationIds',
+                'message' => '',
+            ],
+        ], $errors);
     }
 }
