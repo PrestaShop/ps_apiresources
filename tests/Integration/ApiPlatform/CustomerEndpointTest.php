@@ -59,9 +59,24 @@ class CustomerEndpointTest extends ApiTestCase
             '/customers/1/details',
         ];
 
+        yield 'get customer orders endpoint' => [
+            'GET',
+            '/customers/1/orders',
+        ];
+
+        yield 'get customer carts endpoint' => [
+            'GET',
+            '/customers/1/carts',
+        ];
+
         yield 'update customer endpoint' => [
             'PATCH',
             '/customers/1',
+        ];
+
+        yield 'set private note endpoint' => [
+            'PATCH',
+            '/customers/1/private-notes',
         ];
 
         yield 'delete customer endpoint' => [
@@ -516,6 +531,52 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('email', $customer);
         $this->assertArrayHasKey('defaultGroupId', $customer);
         $this->assertArrayHasKey('groupIds', $customer);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testSetCustomerPrivateNote(int $customerId): void
+    {
+        $privateNote = 'A private note about this customer';
+
+        $return = $this->partialUpdateItem(
+            '/customers/' . $customerId . '/private-notes',
+            ['privateNote' => $privateNote],
+            ['customer_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        // This endpoint returns an empty response and a 204 HTTP code
+        $this->assertNull($return);
+
+        // The private note is the generalInformation of the customer details: the write had no
+        // read side to check against while the two endpoints lived in separate PRs.
+        $details = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
+        $this->assertSame($privateNote, $details['generalInformation']['privateNote']);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testGetCustomerOrders(int $customerId): void
+    {
+        $response = $this->getItem('/customers/' . $customerId . '/orders', ['customer_read']);
+
+        // The query returns a list, so the endpoint is a collection: a freshly created customer
+        // has no orders yet, hence an empty list
+        $this->assertSame([], $response);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testGetCustomerCarts(int $customerId): void
+    {
+        $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
+
+        // The query returns a list, so the endpoint is a collection: a freshly created customer
+        // has no carts yet, hence an empty list
+        $this->assertSame([], $response);
     }
 
     /**
