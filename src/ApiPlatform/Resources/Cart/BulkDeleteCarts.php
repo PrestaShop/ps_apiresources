@@ -24,33 +24,31 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Cart;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Cart\Command\SendCartToCustomerCommand;
-use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartException;
-use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartNotFoundException;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\BulkDeleteCartCommand;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\BulkCartException;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartConstraintException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
-            uriTemplate: '/carts/{cartId}/emails',
-            requirements: ['cartId' => '\d+'],
-            read: false,
-            output: false,
-            allowEmptyBody: true,
-            CQRSCommand: SendCartToCustomerCommand::class,
-            scopes: [
-                'cart_write',
-            ],
+        new CQRSDelete(
+            uriTemplate: '/carts/bulk-delete',
+            // ApiPlatform skips validation on DELETE unless it is explicitly enabled.
+            validate: true,
+            CQRSCommand: BulkDeleteCartCommand::class,
+            scopes: ['cart_write'],
         ),
     ],
     exceptionToStatus: [
-        CartNotFoundException::class => Response::HTTP_NOT_FOUND,
-        CartException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CartConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        BulkCartException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class CartEmail
+class BulkDeleteCarts
 {
-    #[ApiProperty(identifier: true)]
-    public int $cartId;
+    #[Assert\NotBlank]
+    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 2]])]
+    public array $cartIds;
 }

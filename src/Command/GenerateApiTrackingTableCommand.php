@@ -35,6 +35,7 @@ use Symfony\Component\Finder\Finder;
 class GenerateApiTrackingTableCommand extends Command
 {
     private const REASON_BACK_OFFICE_UI = 'Back office UI feature, out of API scope';
+    private const REASON_UNUSED_LEGACY = 'Unused legacy query, candidate for deprecation in the core';
     private const USELESS_DUPLICATE = 'Duplicate of another endpoint, not relevant for the Admin API';
 
     /**
@@ -55,6 +56,8 @@ class GenerateApiTrackingTableCommand extends Command
         'BulkDeleteQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
         'ToggleQuickAccessNewWindowCommand' => self::REASON_BACK_OFFICE_UI,
         'GetQuickAccessForEditing' => self::REASON_BACK_OFFICE_UI,
+        // Never used anywhere in the core, the Cart endpoints do not expose it.
+        'GetLastEmptyCustomerCart' => self::REASON_UNUSED_LEGACY,
     ];
 
     private array $cqrsEndpoints = [];
