@@ -896,18 +896,21 @@ class CustomerEndpointTest extends ApiTestCase
         // Find our customer in the results
         $foundCustomer = null;
         foreach ($searchResults as $result) {
-            if ($result['idCustomer'] === $customerId) {
+            if ($result['customerId'] === $customerId) {
                 $foundCustomer = $result;
                 break;
             }
         }
 
         $this->assertNotNull($foundCustomer, 'Created customer should be found in search results');
-        $this->assertEquals('Search', $foundCustomer['firstname']);
-        $this->assertEquals('Test', $foundCustomer['lastname']);
+        $this->assertEquals('Search', $foundCustomer['firstName']);
+        $this->assertEquals('Test', $foundCustomer['lastName']);
         $this->assertEquals('search.test@example.com', $foundCustomer['email']);
         $this->assertArrayHasKey('fullnameAndEmail', $foundCustomer);
         $this->assertArrayHasKey('groups', $foundCustomer);
+        // The keys a client gets back must be the ones it sent to POST /customers
+        $this->assertArrayHasKey('customerId', $foundCustomer);
+        $this->assertArrayHasKey('defaultGroupId', $foundCustomer);
     }
 
     public function testSearchCustomersByEmail(): void
@@ -934,7 +937,7 @@ class CustomerEndpointTest extends ApiTestCase
 
         $foundCustomer = null;
         foreach ($searchResults as $result) {
-            if ($result['idCustomer'] === $customerId) {
+            if ($result['customerId'] === $customerId) {
                 $foundCustomer = $result;
                 break;
             }
@@ -983,7 +986,7 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertNotEmpty($searchResults);
 
         // Both customers should be found (they both match "Multi")
-        $foundIds = array_column($searchResults, 'idCustomer');
+        $foundIds = array_column($searchResults, 'customerId');
         $this->assertContains($customer1['customerId'], $foundIds);
         $this->assertContains($customer2['customerId'], $foundIds);
     }
