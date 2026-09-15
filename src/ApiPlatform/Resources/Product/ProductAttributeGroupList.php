@@ -67,18 +67,44 @@ class ProductAttributeGroupList
     #[ApiProperty(
         openapiContext: [
             'type' => 'array',
-            'description' => 'Attributes belonging to the group. Nested `names` are keyed by language locale.',
+            'description' => 'Attributes of the group used by the product combinations. Nested `names` are keyed by language locale.',
             'items' => [
                 'type' => 'object',
                 'properties' => [
                     'attributeId' => ['type' => 'integer'],
                     'position' => ['type' => 'integer'],
-                    'color' => ['type' => 'string'],
+                    'color' => ['type' => 'string', 'description' => 'Hexadecimal color, empty when the group is not a color group.'],
                     'names' => [
                         'type' => 'object',
-                        'additionalProperties' => ['type' => 'string'],
+                        'description' => 'Attribute names keyed by language locale.',
+                        'example' => [
+                            'en-US' => 'M',
+                            'fr-FR' => 'M',
+                        ],
                     ],
                     'textureFilePath' => ['type' => 'string', 'nullable' => true],
+                ],
+            ],
+            'example' => [
+                [
+                    'attributeId' => 1,
+                    'position' => 0,
+                    'color' => '',
+                    'names' => [
+                        'en-US' => 'S',
+                        'fr-FR' => 'S',
+                    ],
+                    'textureFilePath' => null,
+                ],
+                [
+                    'attributeId' => 2,
+                    'position' => 1,
+                    'color' => '',
+                    'names' => [
+                        'en-US' => 'M',
+                        'fr-FR' => 'M',
+                    ],
+                    'textureFilePath' => null,
                 ],
             ],
         ]
