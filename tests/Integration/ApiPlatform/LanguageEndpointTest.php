@@ -45,7 +45,7 @@ class LanguageEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get endpoint' => ['GET', '/languages/1/details'];
+        yield 'get endpoint' => ['GET', '/languages/1'];
         yield 'create endpoint' => ['POST', '/languages'];
         yield 'update endpoint' => ['PATCH', '/languages/1'];
         yield 'set status endpoint' => ['PATCH', '/languages/1/set-status'];
@@ -102,7 +102,7 @@ class LanguageEndpointTest extends ApiTestCase
 
     private function getLanguage(int $languageId): array
     {
-        return $this->getItem('/languages/' . $languageId . '/details', ['language_read']);
+        return $this->getItem('/languages/' . $languageId, ['language_read']);
     }
 
     private function isLanguageEnabled(int $languageId): bool
@@ -209,7 +209,7 @@ class LanguageEndpointTest extends ApiTestCase
         $this->deleteItem('/languages/' . $languageId, ['language_write']);
 
         // Asserted through the API instead of Validate::isLoadedObject(new Language($id))
-        $this->getItem('/languages/' . $languageId . '/details', ['language_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkDelete(): void
@@ -224,7 +224,7 @@ class LanguageEndpointTest extends ApiTestCase
         ], ['language_write']);
 
         foreach ($languageIds as $languageId) {
-            $this->getItem('/languages/' . $languageId . '/details', ['language_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
         }
     }
 }

@@ -49,14 +49,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            // Not /languages/{languageId}: CQRSGet does not extend ApiPlatform\Metadata\Get,
-            // so ApiPlatform adds its own NotExposedOperation on the default item URI and that
-            // route answers 404 instead of this one.
-            uriTemplate: '/languages/{languageId}/details',
+            uriTemplate: '/languages/{languageId}',
             requirements: ['languageId' => '\d+'],
             CQRSQuery: GetLanguageForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['language_read'],
+            extraProperties: [
+                'minVersion' => '9.3.0',
+            ],
         ),
         new CQRSCreate(
             uriTemplate: '/languages',
