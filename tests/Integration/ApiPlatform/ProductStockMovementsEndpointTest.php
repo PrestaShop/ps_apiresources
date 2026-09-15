@@ -67,7 +67,7 @@ class ProductStockMovementsEndpointTest extends ApiTestCase
 
         // Each stock update creates one "edition" stock movement
         foreach ([10, -4, 7] as $deltaQuantity) {
-            $this->updateItem(sprintf('/products/%d/stock', $productId), [
+            $this->partialUpdateItem(sprintf('/products/%d/stock', $productId), [
                 'deltaQuantity' => $deltaQuantity,
             ], ['product_write']);
         }

@@ -31,13 +31,13 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Command\UpdateProductStockAv
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Exception\ProductStockConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\StockSettings;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\ValueObject\OutOfStockType;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
+        new CQRSPartialUpdate(
             uriTemplate: '/products/{productId}/stock',
             requirements: ['productId' => '\d+'],
             read: false,

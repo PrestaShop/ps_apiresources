@@ -99,7 +99,7 @@ Some endpoints rely on CQRS classes or core behaviour that only exist
 on the operation with the `minVersion` / `maxVersion` extra properties:
 
 ```php
-new CQRSUpdate(
+new CQRSPartialUpdate(
     uriTemplate: '/products/{productId}/stock',
     // ...
     extraProperties: [

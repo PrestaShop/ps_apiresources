@@ -63,7 +63,7 @@ class CombinationStockEndpointTest extends ApiTestCase
         // endpoint is yielded unconditionally; on cores < 9.2.0 the whole class is skipped anyway
         // and this data set is never executed.
         yield 'update combination stock endpoint' => [
-            'PUT',
+            'PATCH',
             '/products/combinations/1/stock',
         ];
     }
@@ -111,7 +111,7 @@ class CombinationStockEndpointTest extends ApiTestCase
         ], ['product_write']);
         $combinationId = $generatedCombinations['newCombinationIds'][0];
 
-        $updatedStock = $this->updateItem(sprintf('/products/combinations/%d/stock', $combinationId), [
+        $updatedStock = $this->partialUpdateItem(sprintf('/products/combinations/%d/stock', $combinationId), [
             'deltaQuantity' => 8,
             'location' => 'combination shelf',
         ], ['product_write']);
@@ -133,7 +133,7 @@ class CombinationStockEndpointTest extends ApiTestCase
      */
     public function testDecreaseCombinationStock(int $combinationId): void
     {
-        $updatedStock = $this->updateItem(sprintf('/products/combinations/%d/stock', $combinationId), [
+        $updatedStock = $this->partialUpdateItem(sprintf('/products/combinations/%d/stock', $combinationId), [
             'deltaQuantity' => -3,
         ], ['product_write']);
 
@@ -149,7 +149,7 @@ class CombinationStockEndpointTest extends ApiTestCase
 
     public function testUpdateStockForUnknownCombination(): void
     {
-        $this->updateItem('/products/combinations/99999999/stock', [
+        $this->partialUpdateItem('/products/combinations/99999999/stock', [
             'deltaQuantity' => 5,
         ], ['product_write'], Response::HTTP_NOT_FOUND);
     }
@@ -157,12 +157,12 @@ class CombinationStockEndpointTest extends ApiTestCase
     public function testInvalidCombinationStock(): void
     {
         // A zero combination id is invalid (it passes the URI requirements but fails the domain constraint)
-        $this->updateItem('/products/combinations/0/stock', [
+        $this->partialUpdateItem('/products/combinations/0/stock', [
             'deltaQuantity' => 5,
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
         // The delta quantity is limited to the range coverable by an int32 stock
-        $validationErrorsResponse = $this->updateItem('/products/combinations/1/stock', [
+        $validationErrorsResponse = $this->partialUpdateItem('/products/combinations/1/stock', [
             'deltaQuantity' => -5000000000,
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);

@@ -55,7 +55,7 @@ class ProductStockEndpointTest extends ApiTestCase
         // endpoint is yielded unconditionally; on cores < 9.2.0 the whole class is skipped anyway
         // and this data set is never executed.
         yield 'update product stock endpoint' => [
-            'PUT',
+            'PATCH',
             '/products/1/stock',
         ];
     }
@@ -72,7 +72,7 @@ class ProductStockEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('productId', $product);
         $productId = $product['productId'];
 
-        $updatedStock = $this->updateItem(sprintf('/products/%d/stock', $productId), [
+        $updatedStock = $this->partialUpdateItem(sprintf('/products/%d/stock', $productId), [
             'deltaQuantity' => 10,
             'location' => 'shelf A',
         ], ['product_write']);
@@ -95,7 +95,7 @@ class ProductStockEndpointTest extends ApiTestCase
      */
     public function testDecreaseProductStock(int $productId): void
     {
-        $updatedStock = $this->updateItem(sprintf('/products/%d/stock', $productId), [
+        $updatedStock = $this->partialUpdateItem(sprintf('/products/%d/stock', $productId), [
             'deltaQuantity' => -4,
             'outOfStockType' => OutOfStockType::OUT_OF_STOCK_AVAILABLE,
         ], ['product_write']);
@@ -113,7 +113,7 @@ class ProductStockEndpointTest extends ApiTestCase
 
     public function testUpdateStockForUnknownProduct(): void
     {
-        $this->updateItem('/products/99999999/stock', [
+        $this->partialUpdateItem('/products/99999999/stock', [
             'deltaQuantity' => 10,
         ], ['product_write'], Response::HTTP_NOT_FOUND);
     }
@@ -124,7 +124,7 @@ class ProductStockEndpointTest extends ApiTestCase
     public function testInvalidProductStock(int $productId): void
     {
         // The out of stock type only accepts the values 0, 1 and 2
-        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/stock', $productId), [
+        $validationErrorsResponse = $this->partialUpdateItem(sprintf('/products/%d/stock', $productId), [
             'outOfStockType' => 99,
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
@@ -136,7 +136,7 @@ class ProductStockEndpointTest extends ApiTestCase
         ], $validationErrorsResponse);
 
         // The delta quantity is limited to the range coverable by an int32 stock
-        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/stock', $productId), [
+        $validationErrorsResponse = $this->partialUpdateItem(sprintf('/products/%d/stock', $productId), [
             'deltaQuantity' => 5000000000,
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
@@ -148,7 +148,7 @@ class ProductStockEndpointTest extends ApiTestCase
         ], $validationErrorsResponse);
 
         // A zero product id is invalid (it passes the URI requirements but fails the domain constraint)
-        $this->updateItem('/products/0/stock', [
+        $this->partialUpdateItem('/products/0/stock', [
             'deltaQuantity' => 10,
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }

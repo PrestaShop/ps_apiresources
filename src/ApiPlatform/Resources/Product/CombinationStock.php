@@ -30,13 +30,13 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CombinationN
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Query\GetCombinationForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Exception\ProductStockConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\StockSettings;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
-        new CQRSUpdate(
+        new CQRSPartialUpdate(
             uriTemplate: '/products/combinations/{combinationId}/stock',
             requirements: ['combinationId' => '\d+'],
             read: false,
