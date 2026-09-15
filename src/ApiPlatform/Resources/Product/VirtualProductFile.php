@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Link;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\InvalidProductTypeException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
@@ -40,8 +41,10 @@ use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\Virtu
 use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\VirtualProductFileSettings;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -49,6 +52,10 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSCreate(
             uriTemplate: '/products/{productId}/virtual-file',
             requirements: ['productId' => '\d+'],
+            // The file is uploaded with the request, so the payload can only be sent as multipart form data.
+            // Form data values are all strings, hence the disabled type enforcement.
+            inputFormats: ['multipart' => ['multipart/form-data']],
+            denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
             read: false,
             // The class identifier is virtualProductFileId, so the productId URI
             // variable must be explicitly bound
@@ -58,17 +65,32 @@ use Symfony\Component\Validator\Constraints as Assert;
                 ),
             ],
             CQRSCommand: AddVirtualProductFileCommand::class,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
             CQRSQuery: GetProductForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             validationContext: ['groups' => ['Default', 'Create']],
             scopes: ['product_write'],
+            // Two POST operations share this resource, so both describe explicitly what they do
+            // instead of relying on the generated "Creates a …" summary
+            openapi: new OpenApiOperation(
+                summary: 'Add a virtual product file.',
+                description: 'Attaches the downloadable file of a virtual product and returns it. The file is '
+                    . 'uploaded in the multipart `file` part along with the other fields, so the request can only '
+                    . 'be sent as multipart form data.',
+            ),
         ),
-        new CQRSPartialUpdate(
+        // The update is a POST and not a PATCH because a file can only be uploaded through a POST request: PHP fills
+        // the uploaded files of the request for that method only. It still updates the provided fields only.
+        new CQRSUpdate(
+            method: CQRSUpdate::METHOD_POST,
             // The productId is required in the URI because the update command result is
             // empty, so only URI variables can feed the GetProductForEditing query that
             // builds the full-state response
             uriTemplate: '/products/{productId}/virtual-file/{virtualProductFileId}',
             requirements: ['productId' => '\d+', 'virtualProductFileId' => '\d+'],
+            inputFormats: self::INPUT_FORMATS,
+            denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
+            status: Response::HTTP_OK,
             read: false,
             uriVariables: [
                 'productId' => new Link(
@@ -78,10 +100,20 @@ use Symfony\Component\Validator\Constraints as Assert;
                     identifiers: ['virtualProductFileId'],
                 ),
             ],
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: UpdateVirtualProductFileCommand::class,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
             CQRSQuery: GetProductForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['product_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Update a virtual product file.',
+                description: 'Updates an existing virtual product file and returns it. Only the fields present in '
+                    . 'the payload are modified, the other ones are left unchanged. The payload is sent as JSON to '
+                    . 'keep the current file, or as multipart form data with a `file` part to replace it. This '
+                    . 'operation relies on POST and not on PATCH because a file can only be uploaded through a POST '
+                    . 'request, but it never creates a file.',
+            ),
         ),
         new CQRSDelete(
             uriTemplate: '/products/virtual-file/{virtualProductFileId}',
@@ -108,11 +140,15 @@ class VirtualProductFile
     public int $virtualProductFileId;
 
     /**
-     * Path of the source file on the shop filesystem (write-only): the file is moved
-     * to the protected download directory. Responses expose the resulting fileName.
+     * Write-only: the downloadable file, sent as the `file` part of a multipart request. It is
+     * required to add a file; an update sent as JSON keeps the current file, an update sent as
+     * multipart form data replaces it. The file is stored in the protected download directory
+     * under a generated name, exposed by the responses as fileName. The maximum size is the PHP
+     * upload limit, like in the BO form.
      */
-    #[Assert\NotBlank(groups: ['Create'])]
-    public string $filePath;
+    #[Assert\NotNull(groups: ['Create'])]
+    #[Assert\File]
+    public File $file;
 
     /**
      * Name of the stored file in the download directory (read-only).
@@ -133,7 +169,7 @@ class VirtualProductFile
     public ?\DateTimeImmutable $expirationDate = null;
 
     /**
-     * Shared by the create and partial update operations so both return the same
+     * Shared by the create and update operations so both return the same
      * full-state representation based on GetProductForEditing.
      */
     public const QUERY_MAPPING = [
@@ -145,5 +181,20 @@ class VirtualProductFile
         '[virtualProductFile][accessDays]' => '[accessDays]',
         '[virtualProductFile][downloadTimesLimit]' => '[downloadTimesLimit]',
         '[virtualProductFile][expirationDate]' => '[expirationDate]',
+    ];
+
+    /**
+     * The file is uploaded as a file, and the commands expect its path, which the File exposes as pathName.
+     */
+    public const COMMAND_MAPPING = [
+        '[file].pathName' => '[filePath]',
+    ];
+
+    /**
+     * The update operation accepts a JSON payload, and a multipart one when the file is replaced with it.
+     */
+    public const INPUT_FORMATS = [
+        'json' => ['application/json'],
+        'multipart' => ['multipart/form-data'],
     ];
 }

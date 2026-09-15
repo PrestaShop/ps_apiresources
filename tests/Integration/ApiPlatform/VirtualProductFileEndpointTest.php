@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\Resetter\ProductResetter;
 
@@ -46,10 +47,12 @@ class VirtualProductFileEndpointTest extends ApiTestCase
         yield 'add virtual product file endpoint' => [
             'POST',
             '/products/1/virtual-file',
+            'multipart/form-data',
         ];
 
+        // The update is a POST so that the file can be replaced with it
         yield 'update virtual product file endpoint' => [
-            'PATCH',
+            'POST',
             '/products/1/virtual-file/1',
         ];
 
@@ -71,17 +74,25 @@ class VirtualProductFileEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('productId', $product);
         $productId = $product['productId'];
 
-        $createdFile = $this->createItem(
-            sprintf('/products/%d/virtual-file', $productId),
-            [
-                'filePath' => $this->prepareVirtualFile(),
-                'displayName' => 'user manual',
-                'accessDays' => 5,
-                'downloadTimesLimit' => 10,
-                'expirationDate' => '2035-01-15 00:00:00',
+        // The file is uploaded with the request, so the payload is sent as form data
+        $createdFile = $this->requestApi('POST', sprintf('/products/%d/virtual-file', $productId), null, ['product_write'], Response::HTTP_CREATED, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
             ],
-            ['product_write']
-        );
+            'extra' => [
+                'parameters' => [
+                    'displayName' => 'user manual',
+                    // We use strings on purpose because form data are sent like strings, thus we validate here
+                    // that the denormalization still works with string values
+                    'accessDays' => '5',
+                    'downloadTimesLimit' => '10',
+                    'expirationDate' => '2035-01-15 00:00:00',
+                ],
+                'files' => [
+                    'file' => $this->prepareVirtualFile(),
+                ],
+            ],
+        ]);
 
         $this->assertArrayHasKey('virtualProductFileId', $createdFile);
         $virtualProductFileId = $createdFile['virtualProductFileId'];
@@ -128,16 +139,16 @@ class VirtualProductFileEndpointTest extends ApiTestCase
      */
     public function testUpdateVirtualProductFile(array $fixtures): array
     {
-        $updatedFile = $this->partialUpdateItem(
-            sprintf('/products/%d/virtual-file/%d', $fixtures['productId'], $fixtures['virtualProductFileId']),
-            [
-                'displayName' => 'updated manual',
-                'accessDays' => 30,
-            ],
-            ['product_write']
-        );
+        $updateUrl = sprintf('/products/%d/virtual-file/%d', $fixtures['productId'], $fixtures['virtualProductFileId']);
 
-        // The PATCH endpoint returns the same full representation as the POST one
+        // The fields can be updated with a JSON payload when the file itself is not replaced, the update is a POST
+        // (and not a PATCH) so that the file can be uploaded with it, but it is still a partial update
+        $updatedFile = $this->requestApi('POST', $updateUrl, [
+            'displayName' => 'updated manual',
+            'accessDays' => 30,
+        ], ['product_write'], Response::HTTP_OK);
+
+        // The update returns the same full representation as the creation
         $this->assertEquals(
             [
                 'productId' => $fixtures['productId'],
@@ -162,6 +173,38 @@ class VirtualProductFileEndpointTest extends ApiTestCase
                 'expirationDate' => '2035-01-15 00:00:00',
             ],
             $product['virtualProductFile']
+        );
+
+        // The file is replaced by a multipart update, which updates the other fields of the payload at the same time
+        $updatedFile = $this->requestApi('POST', $updateUrl, null, ['product_write'], Response::HTTP_OK, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => [
+                    'downloadTimesLimit' => '20',
+                ],
+                'files' => [
+                    'file' => $this->prepareVirtualFile('replacement content'),
+                ],
+            ],
+        ]);
+        $this->assertArrayHasKey('fileName', $updatedFile);
+        // The stored file name is regenerated for the new file
+        $this->assertNotEquals($fixtures['fileName'], $updatedFile['fileName']);
+        $fixtures['fileName'] = $updatedFile['fileName'];
+
+        $this->assertEquals(
+            [
+                'productId' => $fixtures['productId'],
+                'virtualProductFileId' => $fixtures['virtualProductFileId'],
+                'fileName' => $fixtures['fileName'],
+                'displayName' => 'updated manual',
+                'accessDays' => 30,
+                'downloadTimesLimit' => 20,
+                'expirationDate' => '2035-01-15 00:00:00',
+            ],
+            $updatedFile
         );
 
         return $fixtures;
@@ -196,15 +239,19 @@ class VirtualProductFileEndpointTest extends ApiTestCase
             ],
         ], ['product_write']);
 
-        $this->createItem(
-            sprintf('/products/%d/virtual-file', $product['productId']),
-            [
-                'filePath' => $this->prepareVirtualFile(),
-                'displayName' => 'user manual',
+        $this->requestApi('POST', sprintf('/products/%d/virtual-file', $product['productId']), null, ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
             ],
-            ['product_write'],
-            Response::HTTP_UNPROCESSABLE_ENTITY
-        );
+            'extra' => [
+                'parameters' => [
+                    'displayName' => 'user manual',
+                ],
+                'files' => [
+                    'file' => $this->prepareVirtualFile(),
+                ],
+            ],
+        ]);
     }
 
     public function testInvalidVirtualProductFile(): void
@@ -216,21 +263,29 @@ class VirtualProductFileEndpointTest extends ApiTestCase
                 'fr-FR' => 'produit virtuel sans fichier',
             ],
         ], ['product_write']);
+        $createUrl = sprintf('/products/%d/virtual-file', $product['productId']);
+
+        // The file can only be uploaded as form data, a JSON payload is not supported
+        $this->createItem($createUrl, [
+            'displayName' => 'user manual',
+        ], ['product_write'], Response::HTTP_UNSUPPORTED_MEDIA_TYPE);
 
         // The mandatory creation fields are missing
-        $validationErrorsResponse = $this->createItem(
-            sprintf('/products/%d/virtual-file', $product['productId']),
-            [
-                'accessDays' => 5,
+        $validationErrorsResponse = $this->requestApi('POST', $createUrl, null, ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
             ],
-            ['product_write'],
-            Response::HTTP_UNPROCESSABLE_ENTITY
-        );
+            'extra' => [
+                'parameters' => [
+                    'accessDays' => '5',
+                ],
+            ],
+        ]);
         $this->assertIsArray($validationErrorsResponse);
         $this->assertValidationErrors([
             [
-                'propertyPath' => 'filePath',
-                'message' => 'This value should not be blank.',
+                'propertyPath' => 'file',
+                'message' => 'This value should not be null.',
             ],
             [
                 'propertyPath' => 'displayName',
@@ -239,17 +294,21 @@ class VirtualProductFileEndpointTest extends ApiTestCase
         ], $validationErrorsResponse);
 
         // The display name refuses forbidden characters and the limits are capped
-        $validationErrorsResponse = $this->createItem(
-            sprintf('/products/%d/virtual-file', $product['productId']),
-            [
-                'filePath' => $this->prepareVirtualFile(),
-                'displayName' => 'invalid<name',
-                'accessDays' => 10000000000,
-                'downloadTimesLimit' => 10000000000,
+        $validationErrorsResponse = $this->requestApi('POST', $createUrl, null, ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
             ],
-            ['product_write'],
-            Response::HTTP_UNPROCESSABLE_ENTITY
-        );
+            'extra' => [
+                'parameters' => [
+                    'displayName' => 'invalid<name',
+                    'accessDays' => '10000000000',
+                    'downloadTimesLimit' => '10000000000',
+                ],
+                'files' => [
+                    'file' => $this->prepareVirtualFile(),
+                ],
+            ],
+        ]);
         $this->assertIsArray($validationErrorsResponse);
         $this->assertValidationErrors([
             [
@@ -268,14 +327,14 @@ class VirtualProductFileEndpointTest extends ApiTestCase
     }
 
     /**
-     * Creates a throwaway file to attach: the API moves (and removes) the source file,
+     * Creates a throwaway file to upload: the API moves (and removes) the uploaded file,
      * so each request needs a fresh copy.
      */
-    private function prepareVirtualFile(): string
+    private function prepareVirtualFile(string $content = 'virtual product file test content'): UploadedFile
     {
         $filePath = rtrim(sys_get_temp_dir(), '/') . '/virtual-product-file-test.txt';
-        file_put_contents($filePath, 'virtual product file test content');
+        file_put_contents($filePath, $content);
 
-        return $filePath;
+        return new UploadedFile($filePath, 'user-manual.txt');
     }
 }
