@@ -151,11 +151,23 @@ class ShopProductImagesEndpointTest extends ApiTestCase
         );
 
         // Associate the cover image with both shops, the second image stays on the first shop
-        // only; the operation returns the updated associations
+        // only; the payload has the same shape as the response (the cover flag is optional and
+        // ignored) and the operation returns the updated associations
         $updatedShopImages = $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
             'shopImages' => [
-                ['imageId' => $firstImageId, 'shopIds' => [1, self::$secondShopId]],
-                ['imageId' => $secondImageId, 'shopIds' => [1]],
+                [
+                    'shopId' => 1,
+                    'images' => [
+                        ['imageId' => $firstImageId],
+                        ['imageId' => $secondImageId],
+                    ],
+                ],
+                [
+                    'shopId' => self::$secondShopId,
+                    'images' => [
+                        ['imageId' => $firstImageId],
+                    ],
+                ],
             ],
         ], ['product_write'], Response::HTTP_OK, self::shopContext());
 
@@ -183,6 +195,47 @@ class ShopProductImagesEndpointTest extends ApiTestCase
         $this->assertEquals(
             $expectedShopImages,
             $this->getItem(sprintf('/products/%d/shop-images', $productId), ['product_read'], Response::HTTP_OK, self::shopContext())
+        );
+
+        // The response can be sent back as is (the cover flags are ignored), it leaves the associations unchanged
+        $this->assertEquals(
+            $expectedShopImages,
+            $this->updateItem(sprintf('/products/%d/shop-images', $productId), $expectedShopImages, ['product_write'], Response::HTTP_OK, self::shopContext())
+        );
+
+        // The cover image cannot be removed from a shop
+        $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
+            'shopImages' => [
+                ['shopId' => 1, 'images' => [['imageId' => $secondImageId]]],
+                ['shopId' => self::$secondShopId, 'images' => [['imageId' => $firstImageId]]],
+            ],
+        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, self::shopContext());
+
+        // An image listed under no shop is removed from every shop
+        $this->assertEquals(
+            [
+                'productId' => $productId,
+                'shopImages' => [
+                    [
+                        'shopId' => 1,
+                        'images' => [
+                            ['imageId' => $firstImageId, 'cover' => true],
+                        ],
+                    ],
+                    [
+                        'shopId' => self::$secondShopId,
+                        'images' => [
+                            ['imageId' => $firstImageId, 'cover' => false],
+                        ],
+                    ],
+                ],
+            ],
+            $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
+                'shopImages' => [
+                    ['shopId' => 1, 'images' => [['imageId' => $firstImageId]]],
+                    ['shopId' => self::$secondShopId, 'images' => [['imageId' => $firstImageId]]],
+                ],
+            ], ['product_write'], Response::HTTP_OK, self::shopContext())
         );
     }
 
@@ -222,19 +275,50 @@ class ShopProductImagesEndpointTest extends ApiTestCase
             ],
         ], $validationErrorsResponse);
 
-        // A zero image id fails the domain constraint
-        $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
+        // The image and shop ids must be positive
+        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
             'shopImages' => [
-                ['imageId' => 0, 'shopIds' => [1]],
+                ['shopId' => 1, 'images' => [['imageId' => 0]]],
+                ['shopId' => 0, 'images' => [['imageId' => 1]]],
             ],
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, self::shopContext());
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'shopImages[0][images][0][imageId]',
+                'message' => 'This value should be positive.',
+            ],
+            [
+                'propertyPath' => 'shopImages[1][shopId]',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrorsResponse);
 
-        // A zero shop id fails the domain constraint
-        $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
+        // Each association group must hold a shop id and its images, the per-image shape is not accepted
+        $validationErrorsResponse = $this->updateItem(sprintf('/products/%d/shop-images', $productId), [
             'shopImages' => [
-                ['imageId' => 1, 'shopIds' => [0]],
+                ['imageId' => 1, 'shopIds' => [1]],
             ],
         ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, self::shopContext());
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'shopImages[0][shopId]',
+                'message' => 'This field is missing.',
+            ],
+            [
+                'propertyPath' => 'shopImages[0][images]',
+                'message' => 'This field is missing.',
+            ],
+            [
+                'propertyPath' => 'shopImages[0][imageId]',
+                'message' => 'This field was not expected.',
+            ],
+            [
+                'propertyPath' => 'shopImages[0][shopIds]',
+                'message' => 'This field was not expected.',
+            ],
+        ], $validationErrorsResponse);
     }
 
     /**

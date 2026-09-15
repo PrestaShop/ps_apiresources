@@ -30,17 +30,29 @@ use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
  * SetProductImagesForAllShopCommand collects its ProductImageSetting value objects through
  * the addProductSetting() adder, which the generic serializer cannot drive from a JSON
  * body, so the command is built manually here (same approach as GenerateCombinationsSerializer).
+ *
+ * The payload uses the same shape as the GET response, grouped by shop ([{shopId, images: [{imageId, cover}]}]),
+ * while the command expects one setting per image with the list of its shops, so the groups are inverted here.
+ * The cover flag is read-only and ignored.
  */
 class SetProductImagesForAllShopSerializer implements DenormalizerInterface
 {
     public function denormalize(mixed $data, string $type, ?string $format = null, array $context = [])
     {
+        $shopIdsByImageId = [];
+        foreach ($data['shopImages'] ?? [] as $shopImages) {
+            $shopId = (int) ($shopImages['shopId'] ?? 0);
+            foreach ($shopImages['images'] ?? [] as $image) {
+                $imageId = (int) ($image['imageId'] ?? 0);
+                if (!in_array($shopId, $shopIdsByImageId[$imageId] ?? [], true)) {
+                    $shopIdsByImageId[$imageId][] = $shopId;
+                }
+            }
+        }
+
         $command = new SetProductImagesForAllShopCommand((int) $data['productId']);
-        foreach ($data['shopImages'] as $productImageSetting) {
-            $command->addProductSetting(new ProductImageSetting(
-                (int) $productImageSetting['imageId'],
-                array_map('intval', $productImageSetting['shopIds'])
-            ));
+        foreach ($shopIdsByImageId as $imageId => $shopIds) {
+            $command->addProductSetting(new ProductImageSetting($imageId, $shopIds));
         }
 
         return $command;
