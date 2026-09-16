@@ -113,21 +113,33 @@ class ProductSuppliers
     public int $defaultSupplierId;
 
     /**
-     * Supplier ids associated with the product.
+     * Supplier ids associated with the product. They are always returned, whatever the product type.
      *
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1]])]
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => ['type' => 'integer'],
+        'description' => 'Ids of the suppliers associated with the product. Always returned, whatever the product type.',
+        'example' => [1],
+    ])]
     #[Assert\NotBlank(groups: ['SetSuppliers'])]
     #[Assert\All([new Assert\Positive()], groups: ['SetSuppliers'])]
     public array $supplierIds;
 
     /**
-     * Product supplier associations. Returned by every operation; the PATCH operation
-     * accepts the writable subset of these fields per association.
+     * Product supplier associations, with their reference and cost price. Returned by every operation;
+     * the PATCH operation accepts the writable subset of these fields per association.
+     *
+     * This list is empty for a product with combinations, by design: each combination has its own
+     * reference and cost price per supplier, so there is no product-level value to return. Only the
+     * supplier ids are then relevant, and they are exposed by supplierIds.
      */
     #[ApiProperty(openapiContext: [
         'type' => 'array',
+        'description' => 'Supplier associations of the product, with the reference and cost price of each one. '
+            . 'Empty for a product with combinations: each combination holds its own reference and cost price per '
+            . 'supplier, so no single value is relevant at the product level, and only supplierIds is filled.',
         'items' => [
             'type' => 'object',
             'properties' => [
