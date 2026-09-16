@@ -38,6 +38,9 @@ use Symfony\Component\HttpFoundation\Response;
             extraProperties: [
                 'minVersion' => '9.2.0',
             ],
+            // The number of matches is capped by the limit parameter, so the page parameter ApiPlatform
+            // documents by default on every collection operation would be misleading
+            paginationEnabled: false,
             CQRSQuery: SearchProductsForFreeGift::class,
             scopes: ['product_read'],
             CQRSQueryMapping: [

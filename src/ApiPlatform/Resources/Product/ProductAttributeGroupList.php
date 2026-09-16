@@ -32,6 +32,9 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/products/{productId}/attribute-groups',
+            // The whole list is returned by the CQRS query at once, so the page parameter ApiPlatform
+            // documents by default on every collection operation would be misleading
+            paginationEnabled: false,
             CQRSQuery: GetProductAttributeGroups::class,
             scopes: [
                 'product_read',

@@ -38,6 +38,9 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/products/{productId}/stock-movements',
+            // The pagination of this endpoint relies on its own offset and limit parameters, so the page
+            // parameter ApiPlatform documents by default on every collection operation would be misleading
+            paginationEnabled: false,
             CQRSQuery: GetProductStockMovements::class,
             scopes: ['product_read'],
             openapi: new OpenApiOperation(
