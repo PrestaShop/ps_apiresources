@@ -558,4 +558,25 @@ class AttributeGroupEndpointTest extends ApiTestCase
             $this->assertValidationErrors($updateData['expectedErrors'], $validationErrorsResponse);
         }
     }
+
+    /**
+     * The Admin API is stateless and OAuth-authenticated, so the IRIs it returns (here the
+     * Location header of a POST) must not carry the admin CSRF _token. See PrestaShop/PrestaShop#39496.
+     */
+    public function testCreateResponseLocationHeaderHasNoAdminToken(): void
+    {
+        $bearerToken = $this->getBearerToken(['attribute_group_write', 'attribute_group_read']);
+        $response = static::createClient()->request('POST', '/attributes/groups', [
+            'auth_bearer' => $bearerToken,
+            'json' => [
+                'names' => ['en-US' => 'name en', 'fr-FR' => 'name fr'],
+                'publicNames' => ['en-US' => 'public name en', 'fr-FR' => 'public name fr'],
+                'type' => 'select',
+                'shopIds' => [1],
+            ],
+        ]);
+        self::assertResponseStatusCodeSame(201);
+        $location = $response->getHeaders(false)['location'][0] ?? '';
+        $this->assertStringNotContainsString('_token', $location);
+    }
 }
