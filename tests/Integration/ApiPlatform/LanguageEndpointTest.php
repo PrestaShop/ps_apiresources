@@ -113,14 +113,30 @@ class LanguageEndpointTest extends ApiTestCase
     public function testCreateLanguage(): int
     {
         $language = $this->createLanguage('ts');
+        $this->assertArrayHasKey('languageId', $language);
+        $languageId = (int) $language['languageId'];
 
-        $this->assertSame('Test TS', $language['name']);
-        $this->assertSame('ts', $language['isoCode']);
-        $this->assertTrue($language['enabled']);
+        // Pin the whole payload, not just a couple of fields: a renamed, removed or unexpectedly
+        // added field would go through green otherwise. locale is derived by the core from the
+        // IETF tag, so it is read from the response instead of being hard-coded; the flag and
+        // no-picture image paths are write-only and never round-trip.
+        $expected = [
+            'languageId' => $languageId,
+            'name' => 'Test TS',
+            'isoCode' => 'ts',
+            'tagIETF' => 'ts-TS',
+            'locale' => $language['locale'],
+            'shortDateFormat' => 'Y-m-d',
+            'fullDateFormat' => 'Y-m-d H:i:s',
+            'rtl' => false,
+            'enabled' => true,
+            'shopIds' => [1],
+        ];
+        $this->assertEquals($expected, $language);
         // The create replays GetLanguageForEditing, so it answers exactly what the GET does
-        $this->assertEquals($this->getLanguage($language['languageId']), $language);
+        $this->assertEquals($expected, $this->getLanguage($languageId));
 
-        return (int) $language['languageId'];
+        return $languageId;
     }
 
     /**
