@@ -121,7 +121,15 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         'duplicate',
         'close',
         'send-password-reset-email',
+        'send-cart-by-email',
         'set-tax-rule-group',
+        // Sub-resource segments that name a single value of the parent, not a collection
+        'view',
+        'carrier',
+        'currency',
+        'language',
+        'quantity',
+        'price',
     ];
 
     public function __construct()

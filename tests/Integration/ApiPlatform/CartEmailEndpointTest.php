@@ -52,7 +52,7 @@ class CartEmailEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'send cart to customer endpoint' => ['PUT', '/carts/1/emails'];
+        yield 'send cart to customer endpoint' => ['PUT', '/carts/1/send-cart-by-email'];
     }
 
     public function testSendCartToCustomer(): void
@@ -61,7 +61,7 @@ class CartEmailEndpointTest extends ApiTestCase
 
         $this->requestApi(
             'PUT',
-            '/carts/' . $cartId . '/emails',
+            '/carts/' . $cartId . '/send-cart-by-email',
             null,
             ['cart_write'],
             Response::HTTP_NO_CONTENT
@@ -79,7 +79,7 @@ class CartEmailEndpointTest extends ApiTestCase
 
         $this->requestApi(
             'PUT',
-            '/carts/' . $unknownCartId . '/emails',
+            '/carts/' . $unknownCartId . '/send-cart-by-email',
             null,
             ['cart_write'],
             Response::HTTP_NOT_FOUND
