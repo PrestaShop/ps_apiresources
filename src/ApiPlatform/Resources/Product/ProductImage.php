@@ -88,6 +88,7 @@ class ProductImage
 
     public bool $cover;
 
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'description' => 'One based position among the images of the product, matching the value stored by PrestaShop.'])]
     public int $position;
 
     public array $shopIds;

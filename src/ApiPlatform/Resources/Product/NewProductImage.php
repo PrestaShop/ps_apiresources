@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\AddProductImageCommand;
@@ -68,6 +69,7 @@ class NewProductImage
 
     public bool $cover;
 
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'description' => 'One based position among the images of the product, matching the value stored by PrestaShop.'])]
     public int $position;
 
     public array $shopIds;
