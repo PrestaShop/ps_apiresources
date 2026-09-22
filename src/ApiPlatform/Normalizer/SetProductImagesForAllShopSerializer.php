@@ -67,8 +67,6 @@ class SetProductImagesForAllShopSerializer implements DenormalizerInterface
     {
         return [
             SetProductImagesForAllShopCommand::class => true,
-            'object' => null,
-            '*' => null,
         ];
     }
 }

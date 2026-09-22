@@ -57,8 +57,6 @@ class GetSearchTermAliasesQuerySerializer implements DenormalizerInterface
     {
         return [
             GetAliasesBySearchTermForEditing::class => true,
-            'object' => null,
-            '*' => null,
         ];
     }
 }
