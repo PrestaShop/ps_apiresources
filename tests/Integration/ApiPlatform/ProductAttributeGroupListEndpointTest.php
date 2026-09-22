@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\ProductResetter;
 
@@ -179,5 +180,14 @@ class ProductAttributeGroupListEndpointTest extends ApiTestCase
             [],
             $this->getItem('/products/99999999/attribute-groups', ['product_read'])
         );
+    }
+
+    public function testGetAttributeGroupsForInvalidProductId(): void
+    {
+        // A zero product id passes the URI requirements but fails the domain constraint
+        $this->getItem('/products/0/attribute-groups', ['product_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // A non numeric product id does not match the route requirements at all
+        $this->getItem('/products/invalid/attribute-groups', ['product_read'], Response::HTTP_NOT_FOUND);
     }
 }

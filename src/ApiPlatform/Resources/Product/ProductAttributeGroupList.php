@@ -25,13 +25,16 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\AttributeGroup\Query\GetProductAttributeGroups;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/products/{productId}/attribute-groups',
+            requirements: ['productId' => '\d+'],
             // The whole list is returned by the CQRS query at once, so the page parameter ApiPlatform
             // documents by default on every collection operation would be misleading
             paginationEnabled: false,
@@ -49,6 +52,11 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
                 '[groupType]' => '[type]',
             ],
         ),
+    ],
+    exceptionToStatus: [
+        // Thrown by the ProductId value object for an id the URI requirements let through, like 0.
+        // An unknown product is not an error here: the query returns an empty list.
+        ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ProductAttributeGroupList
