@@ -285,7 +285,8 @@ class Product
 
     /**
      * Virtual product file attached to the product (null for products without one).
-     * Managed via the /products/{productId}/virtual-files endpoints.
+     * Managed via /products/{productId}/virtual-files to add or update it, and
+     * /products/virtual-files/{virtualProductFileId} to delete it.
      */
     #[ApiProperty(openapiContext: [
         'type' => 'object',

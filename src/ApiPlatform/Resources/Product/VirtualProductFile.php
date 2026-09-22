@@ -50,7 +50,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSCreate(
-            uriTemplate: '/products/{productId}/virtual-file',
+            uriTemplate: '/products/{productId}/virtual-files',
             requirements: ['productId' => '\d+'],
             // The file is uploaded with the request, so the payload can only be sent as multipart form data.
             // Form data values are all strings, hence the disabled type enforcement.
@@ -86,7 +86,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             // The productId is required in the URI because the update command result is
             // empty, so only URI variables can feed the GetProductForEditing query that
             // builds the full-state response
-            uriTemplate: '/products/{productId}/virtual-file/{virtualProductFileId}',
+            uriTemplate: '/products/{productId}/virtual-files/{virtualProductFileId}',
             requirements: ['productId' => '\d+', 'virtualProductFileId' => '\d+'],
             inputFormats: self::INPUT_FORMATS,
             denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
@@ -112,16 +112,19 @@ use Symfony\Component\Validator\Constraints as Assert;
                     . 'the payload are modified, the other ones are left unchanged. The payload is sent as JSON to '
                     . 'keep the current file, or as multipart form data with a `file` part to replace it. This '
                     . 'operation relies on POST and not on PATCH because a file can only be uploaded through a POST '
-                    . 'request, but it never creates a file.',
+                    . 'request, but it never creates a file. The productId identifies the product whose state is '
+                    . 'returned, so it must be the one owning the file: the update itself is driven by the '
+                    . 'virtualProductFileId alone.',
             ),
         ),
         new CQRSDelete(
-            uriTemplate: '/products/virtual-file/{virtualProductFileId}',
+            uriTemplate: '/products/virtual-files/{virtualProductFileId}',
             requirements: ['virtualProductFileId' => '\d+'],
             CQRSCommand: DeleteVirtualProductFileCommand::class,
             scopes: ['product_write'],
         ),
     ],
+    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
         VirtualProductFileNotFoundException::class => Response::HTTP_NOT_FOUND,
@@ -140,12 +143,15 @@ class VirtualProductFile
     public int $virtualProductFileId;
 
     /**
-     * Write-only: the downloadable file, sent as the `file` part of a multipart request. It is
+     * Write-only: the downloadable file, sent as the `file` part of a multipart request. It is kept out
+     * of the documented schemas, which describe the stored file through fileName, and only appears as the
+     * binary part of the multipart request body. It is
      * required to add a file; an update sent as JSON keeps the current file, an update sent as
      * multipart form data replaces it. The file is stored in the protected download directory
      * under a generated name, exposed by the responses as fileName. The maximum size is the PHP
      * upload limit, like in the BO form.
      */
+    #[ApiProperty(readable: false, writable: false)]
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\File]
     public File $file;

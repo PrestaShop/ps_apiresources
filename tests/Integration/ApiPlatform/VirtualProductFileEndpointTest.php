@@ -46,19 +46,19 @@ class VirtualProductFileEndpointTest extends ApiTestCase
     {
         yield 'add virtual product file endpoint' => [
             'POST',
-            '/products/1/virtual-file',
+            '/products/1/virtual-files',
             'multipart/form-data',
         ];
 
         // The update is a POST so that the file can be replaced with it
         yield 'update virtual product file endpoint' => [
             'POST',
-            '/products/1/virtual-file/1',
+            '/products/1/virtual-files/1',
         ];
 
         yield 'delete virtual product file endpoint' => [
             'DELETE',
-            '/products/virtual-file/1',
+            '/products/virtual-files/1',
         ];
     }
 
@@ -75,7 +75,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
         $productId = $product['productId'];
 
         // The file is uploaded with the request, so the payload is sent as form data
-        $createdFile = $this->requestApi('POST', sprintf('/products/%d/virtual-file', $productId), null, ['product_write'], Response::HTTP_CREATED, [
+        $createdFile = $this->requestApi('POST', sprintf('/products/%d/virtual-files', $productId), null, ['product_write'], Response::HTTP_CREATED, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -139,7 +139,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
      */
     public function testUpdateVirtualProductFile(array $fixtures): array
     {
-        $updateUrl = sprintf('/products/%d/virtual-file/%d', $fixtures['productId'], $fixtures['virtualProductFileId']);
+        $updateUrl = sprintf('/products/%d/virtual-files/%d', $fixtures['productId'], $fixtures['virtualProductFileId']);
 
         // The fields can be updated with a JSON payload when the file itself is not replaced, the update is a POST
         // (and not a PATCH) so that the file can be uploaded with it, but it is still a partial update
@@ -215,7 +215,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
      */
     public function testDeleteVirtualProductFile(array $fixtures): void
     {
-        $this->deleteItem(sprintf('/products/virtual-file/%d', $fixtures['virtualProductFileId']), ['product_write']);
+        $this->deleteItem(sprintf('/products/virtual-files/%d', $fixtures['virtualProductFileId']), ['product_write']);
 
         // The product has no virtual file anymore
         $product = $this->getItem(sprintf('/products/%d', $fixtures['productId']), ['product_read']);
@@ -223,9 +223,48 @@ class VirtualProductFileEndpointTest extends ApiTestCase
 
         // The file cannot be deleted twice
         $this->deleteItem(
-            sprintf('/products/virtual-file/%d', $fixtures['virtualProductFileId']),
+            sprintf('/products/virtual-files/%d', $fixtures['virtualProductFileId']),
             ['product_write'],
             Response::HTTP_NOT_FOUND
+        );
+    }
+
+    public function testAddVirtualProductFileWithoutOptionalFields(): void
+    {
+        $product = $this->createItem('/products', [
+            'type' => ProductType::TYPE_VIRTUAL,
+            'names' => [
+                'en-US' => 'virtual product with a bare file',
+                'fr-FR' => 'produit virtuel avec un fichier minimal',
+            ],
+        ], ['product_write']);
+
+        $createdFile = $this->requestApi('POST', sprintf('/products/%d/virtual-files', $product['productId']), null, ['product_write'], Response::HTTP_CREATED, [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => [
+                    'displayName' => 'bare manual',
+                ],
+                'files' => [
+                    'file' => $this->prepareVirtualFile(),
+                ],
+            ],
+        ]);
+
+        // The optional fields are part of the contract: they are returned as null, not omitted
+        $this->assertEquals(
+            [
+                'productId' => $product['productId'],
+                'virtualProductFileId' => $createdFile['virtualProductFileId'] ?? null,
+                'fileName' => $createdFile['fileName'] ?? null,
+                'displayName' => 'bare manual',
+                'accessDays' => 0,
+                'downloadTimesLimit' => 0,
+                'expirationDate' => null,
+            ],
+            $createdFile
         );
     }
 
@@ -239,7 +278,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
             ],
         ], ['product_write']);
 
-        $this->requestApi('POST', sprintf('/products/%d/virtual-file', $product['productId']), null, ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
+        $this->requestApi('POST', sprintf('/products/%d/virtual-files', $product['productId']), null, ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
             'headers' => [
                 'content-type' => 'multipart/form-data',
             ],
@@ -263,7 +302,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
                 'fr-FR' => 'produit virtuel sans fichier',
             ],
         ], ['product_write']);
-        $createUrl = sprintf('/products/%d/virtual-file', $product['productId']);
+        $createUrl = sprintf('/products/%d/virtual-files', $product['productId']);
 
         // The file can only be uploaded as form data, a JSON payload is not supported
         $this->createItem($createUrl, [
