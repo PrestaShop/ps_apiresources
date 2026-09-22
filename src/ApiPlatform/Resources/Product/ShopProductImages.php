@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\SetProductImagesForAllShopCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Exception\CannotRemoveCoverException;
@@ -43,6 +44,12 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetShopProductImagesQuery::class,
             CQRSQueryMapping: ShopProductImages::QUERY_MAPPING,
             scopes: ['product_read'],
+            openapi: new OpenApiOperation(
+                summary: 'Get the image/shop associations of a product.',
+                description: 'Returns the images of the product grouped by shop. ' . self::ALL_SHOPS_DESCRIPTION
+                    . ' An unknown product returns an empty list with a 200, '
+                    . 'because the underlying query reads the associations without checking that the product exists.',
+            ),
         ),
         new CQRSUpdate(
             uriTemplate: '/products/{productId}/shop-images',
@@ -52,6 +59,13 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetShopProductImagesQuery::class,
             CQRSQueryMapping: ShopProductImages::QUERY_MAPPING,
             scopes: ['product_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Set the image/shop associations of a product.',
+                description: 'Replaces the image/shop associations of the product and returns them. '
+                    . self::ALL_SHOPS_DESCRIPTION . ' The payload defines the associations of every shop at once: an '
+                    . 'image missing from a shop is removed from it, and an image listed under no shop is removed '
+                    . 'from all of them. Removing an image from a shop where it is the cover is refused with a 422.',
+            ),
             // The input schema is generated from the command class, whose constructor only takes the product id
             // (the associations are added through an adder and built by SetProductImagesForAllShopSerializer), so
             // the request body is documented explicitly with the same shape as the response.
@@ -93,6 +107,7 @@ class ShopProductImages
 
     /**
      * Image/shop associations of the product, grouped by shop: [{shopId, images: [{imageId, cover}]}].
+     * Always covers every shop of the product, whatever the shop context of the request.
      * The PUT payload uses the same shape and defines the complete associations: an image listed
      * under no shop is removed from every shop (which fails with a 422 when it is the cover of
      * one of them), and a shop with an empty images list loses all its images. The cover flag is
@@ -129,6 +144,15 @@ class ShopProductImages
         '[@index][shopId]' => '[shopImages][@index][shopId]',
         '[@index][productImages]' => '[shopImages][@index][images]',
     ];
+
+    /**
+     * Both operations always work on every shop associated with the product: the underlying query and command
+     * take a product id and no shop constraint. The shop context parameters (shopId, shopGroupId, shopIds,
+     * allShops) are therefore accepted but do not restrict the scope of these operations.
+     */
+    public const ALL_SHOPS_DESCRIPTION = 'Covers every shop associated with the product. The shop context '
+        . 'parameters (shopId, shopGroupId, shopIds, allShops) do not restrict this endpoint: the underlying CQRS '
+        . 'query and command take a product id and no shop constraint, so they always work on all the shops.';
 
     /**
      * OpenAPI schema of the shopImages property, shared by the resource schema and the PUT request body.
