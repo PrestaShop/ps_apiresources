@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read   #   to clone the repos and get release assets (shivammathur/setup-php)
     name: Integration tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: workflow_matrix_generator
     strategy:
       matrix:
@@ -34,12 +34,12 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout Module
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           path: ps_apiresources
 
       - name: Checkout PrestaShop repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           repository: PrestaShop/PrestaShop

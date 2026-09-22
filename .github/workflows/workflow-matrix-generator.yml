@@ -9,7 +9,7 @@ on:
 jobs:
   workflow_matrix_generator:
     name: Build workflow matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # First detect if we want the whole matrix or the default minimalist ones
       # So far the cases when we want the whole matrix are:
