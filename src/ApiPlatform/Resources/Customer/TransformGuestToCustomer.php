@@ -22,7 +22,6 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\TransformGuestToCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
@@ -48,6 +47,5 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class TransformGuestToCustomer
 {
-    #[ApiProperty(identifier: true)]
     public int $customerId;
 }

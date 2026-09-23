@@ -40,6 +40,7 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/customers/{customerId}/orders',
+            requirements: ['customerId' => '\d+'],
             CQRSQuery: GetCustomerOrders::class,
             scopes: ['customer_read'],
         ),
@@ -62,5 +63,8 @@ class CustomerOrder
 
     public int $orderProductsCount;
 
+    /**
+     * Amount actually received (total_paid_real), not the order total.
+     */
     public string $totalPaid;
 }

@@ -35,11 +35,16 @@ use Symfony\Component\HttpFoundation\Response;
  * QueryResultSerializerTrait only wraps a query result behind "_queryResult" when it is a
  * scalar, so the ['[_queryResult]' => '[carts]'] mapping the source PR used could never fill
  * anything and the response came back with the identifier alone.
+ *
+ * Only the carts that were never turned into an order are listed: the core calls
+ * Cart::getCustomerCarts($customerId, false), so a customer whose carts all became orders
+ * gets an empty list.
  */
 #[ApiResource(
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/customers/{customerId}/carts',
+            requirements: ['customerId' => '\d+'],
             CQRSQuery: GetCustomerCarts::class,
             scopes: ['customer_read'],
         ),

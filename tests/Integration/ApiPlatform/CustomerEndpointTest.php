@@ -558,6 +558,37 @@ class CustomerEndpointTest extends ApiTestCase
     /**
      * @depends testAddCustomer
      */
+    public function testInvalidCustomerPrivateNote(int $customerId): void
+    {
+        $expectedErrors = [
+            [
+                'propertyPath' => 'privateNote',
+                'message' => 'This value should not be null.',
+            ],
+        ];
+
+        // Omitting the field and sending an explicit null must both end up in the same 422. The
+        // empty object is sent as a raw body: an empty $data array would send no body at all.
+        $invalidBodies = [
+            'omitted privateNote' => '{}',
+            'null privateNote' => '{"privateNote":null}',
+        ];
+        foreach ($invalidBodies as $invalidBody) {
+            $validationErrorsResponse = $this->partialUpdateItem(
+                '/customers/' . $customerId . '/private-notes',
+                null,
+                ['customer_write'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                ['body' => $invalidBody]
+            );
+            $this->assertIsArray($validationErrorsResponse);
+            $this->assertValidationErrors($expectedErrors, $validationErrorsResponse);
+        }
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
     public function testGetCustomerOrders(int $customerId): void
     {
         $response = $this->getItem('/customers/' . $customerId . '/orders', ['customer_read']);
@@ -575,7 +606,9 @@ class CustomerEndpointTest extends ApiTestCase
         $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
 
         // The query returns a list, so the endpoint is a collection: a freshly created customer
-        // has no carts yet, hence an empty list
+        // has no carts yet, hence an empty list. Only the empty case can be covered here: the core
+        // excludes the carts already turned into an order, and there is no API endpoint to create
+        // a cart that stays unordered for a given customer.
         $this->assertSame([], $response);
     }
 
