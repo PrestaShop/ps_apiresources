@@ -38,9 +38,11 @@ use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\Canno
 use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\CannotUpdateVirtualProductFileException;
 use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\VirtualProductFileConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Exception\VirtualProductFileNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\Query\GetVirtualProductFileForEditing;
 use PrestaShop\PrestaShop\Core\Domain\Product\VirtualProductFile\VirtualProductFileSettings;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Response;
@@ -66,6 +68,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSCommand: AddVirtualProductFileCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            // GetVirtualProductFileForEditing would be cheaper here, the command returns the created
+            // VirtualProductFileId and the whole product would not be fetched, but that query only exists since
+            // PrestaShop 9.3. The product query keeps this operation available on the older supported cores, where
+            // it is the only way to attach a file since the update is filtered out. Once the module requires 9.3
+            // the query can be switched, the response contract is identical either way.
             CQRSQuery: GetProductForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             validationContext: ['groups' => ['Default', 'Create']],
@@ -79,32 +86,41 @@ use Symfony\Component\Validator\Constraints as Assert;
                     . 'be sent as multipart form data.',
             ),
         ),
+        new CQRSGet(
+            uriTemplate: '/products/virtual-files/{virtualProductFileId}',
+            requirements: ['virtualProductFileId' => '\d+'],
+            // Reading a file on its own requires GetVirtualProductFileForEditing, which only exists since
+            // PrestaShop 9.3: on older cores this operation is filtered out of the API, and the file of a product
+            // is read from the virtualProductFile property of the product itself.
+            extraProperties: [
+                'minVersion' => '9.3.0',
+            ],
+            CQRSQuery: GetVirtualProductFileForEditing::class,
+            CQRSQueryMapping: self::FILE_QUERY_MAPPING,
+            scopes: ['product_read'],
+        ),
         // The update is a POST and not a PATCH because a file can only be uploaded through a POST request: PHP fills
         // the uploaded files of the request for that method only. It still updates the provided fields only.
         new CQRSUpdate(
             method: CQRSUpdate::METHOD_POST,
-            // The productId is required in the URI because the update command result is
-            // empty, so only URI variables can feed the GetProductForEditing query that
-            // builds the full-state response
-            uriTemplate: '/products/{productId}/virtual-files/{virtualProductFileId}',
-            requirements: ['productId' => '\d+', 'virtualProductFileId' => '\d+'],
+            uriTemplate: '/products/virtual-files/{virtualProductFileId}',
+            requirements: ['virtualProductFileId' => '\d+'],
             inputFormats: self::INPUT_FORMATS,
             denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
             status: Response::HTTP_OK,
             read: false,
-            uriVariables: [
-                'productId' => new Link(
-                    identifiers: ['productId'],
-                ),
-                'virtualProductFileId' => new Link(
-                    identifiers: ['virtualProductFileId'],
-                ),
+            // The update command returns nothing, so the response is built by a query fed with the file id. Reading
+            // the file on its own requires GetVirtualProductFileForEditing, which only exists since PrestaShop 9.3:
+            // on older cores this operation is filtered out of the API, and a file is replaced by deleting and
+            // adding it again.
+            extraProperties: [
+                'minVersion' => '9.3.0',
             ],
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: UpdateVirtualProductFileCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
-            CQRSQuery: GetProductForEditing::class,
-            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSQuery: GetVirtualProductFileForEditing::class,
+            CQRSQueryMapping: self::FILE_QUERY_MAPPING,
             scopes: ['product_write'],
             openapi: new OpenApiOperation(
                 summary: 'Update a virtual product file.',
@@ -112,9 +128,8 @@ use Symfony\Component\Validator\Constraints as Assert;
                     . 'the payload are modified, the other ones are left unchanged. The payload is sent as JSON to '
                     . 'keep the current file, or as multipart form data with a `file` part to replace it. This '
                     . 'operation relies on POST and not on PATCH because a file can only be uploaded through a POST '
-                    . 'request, but it never creates a file. The productId identifies the product whose state is '
-                    . 'returned, so it must be the one owning the file: the update itself is driven by the '
-                    . 'virtualProductFileId alone.',
+                    . 'request, but it never creates a file. It requires PrestaShop 9.3: on older cores it is '
+                    . 'filtered out of the API, and a file is replaced by deleting it and adding a new one.',
             ),
         ),
         new CQRSDelete(
@@ -187,6 +202,14 @@ class VirtualProductFile
         '[virtualProductFile][accessDays]' => '[accessDays]',
         '[virtualProductFile][downloadTimesLimit]' => '[downloadTimesLimit]',
         '[virtualProductFile][expirationDate]' => '[expirationDate]',
+    ];
+
+    /**
+     * The get and update operations read the file on its own, so the query result is already the file: only its id
+     * has to be renamed, every other field matches the resource property names.
+     */
+    public const FILE_QUERY_MAPPING = [
+        '[id]' => '[virtualProductFileId]',
     ];
 
     /**

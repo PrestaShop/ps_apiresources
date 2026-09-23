@@ -298,6 +298,7 @@ class Product
             'accessDays' => ['type' => 'integer'],
             'downloadTimesLimit' => ['type' => 'integer'],
             'expirationDate' => ['type' => 'string', 'format' => 'date-time', 'nullable' => true],
+            'productId' => ['type' => 'integer'],
         ],
     ])]
     public ?array $virtualProductFile = null;

@@ -43,3 +43,9 @@ parameters:
             identifier: class.notFound
             count: 1
             path: ../../src/ApiPlatform/Resources/Product/*
+        # GetVirtualProductFileForEditing only exists since PrestaShop 9.3, the get and update operations
+        # declare minVersion 9.3.0 so they are filtered out of the API on this core version.
+        -
+            message: "#Class .*VirtualProductFile\\\\Query\\\\GetVirtualProductFileForEditing not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Product/VirtualProductFile.php

@@ -50,11 +50,20 @@ class VirtualProductFileEndpointTest extends ApiTestCase
             'multipart/form-data',
         ];
 
-        // The update is a POST so that the file can be replaced with it
-        yield 'update virtual product file endpoint' => [
-            'POST',
-            '/products/1/virtual-files/1',
-        ];
+        // Reading and updating a file on its own relies on a query that only exists since PrestaShop 9.3,
+        // so both operations are absent from the API on older cores and answer 404 instead of 401
+        if (self::isVersionAtLeast('9.3.0')) {
+            yield 'get virtual product file endpoint' => [
+                'GET',
+                '/products/virtual-files/1',
+            ];
+
+            // The update is a POST so that the file can be replaced with it
+            yield 'update virtual product file endpoint' => [
+                'POST',
+                '/products/virtual-files/1',
+            ];
+        }
 
         yield 'delete virtual product file endpoint' => [
             'DELETE',
@@ -123,6 +132,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
                 'accessDays' => 5,
                 'downloadTimesLimit' => 10,
                 'expirationDate' => '2035-01-15 00:00:00',
+                'productId' => $productId,
             ],
             $product['virtualProductFile']
         );
@@ -139,7 +149,11 @@ class VirtualProductFileEndpointTest extends ApiTestCase
      */
     public function testUpdateVirtualProductFile(array $fixtures): array
     {
-        $updateUrl = sprintf('/products/%d/virtual-files/%d', $fixtures['productId'], $fixtures['virtualProductFileId']);
+        // The update reads the file through a query that only exists since PrestaShop 9.3, so the operation
+        // is filtered out of the API on older cores
+        $this->markTestSkippedByMinVersion('9.3.0');
+
+        $updateUrl = sprintf('/products/virtual-files/%d', $fixtures['virtualProductFileId']);
 
         // The fields can be updated with a JSON payload when the file itself is not replaced, the update is a POST
         // (and not a PATCH) so that the file can be uploaded with it, but it is still a partial update
@@ -171,6 +185,7 @@ class VirtualProductFileEndpointTest extends ApiTestCase
                 'accessDays' => 30,
                 'downloadTimesLimit' => 10,
                 'expirationDate' => '2035-01-15 00:00:00',
+                'productId' => $fixtures['productId'],
             ],
             $product['virtualProductFile']
         );
@@ -212,6 +227,41 @@ class VirtualProductFileEndpointTest extends ApiTestCase
 
     /**
      * @depends testUpdateVirtualProductFile
+     */
+    public function testGetVirtualProductFile(array $fixtures): void
+    {
+        // Reading a file on its own relies on a query that only exists since PrestaShop 9.3
+        $this->markTestSkippedByMinVersion('9.3.0');
+
+        $file = $this->getItem(sprintf('/products/virtual-files/%d', $fixtures['virtualProductFileId']), ['product_read']);
+
+        // The read format is the one the write operations return
+        $this->assertEquals(
+            [
+                'productId' => $fixtures['productId'],
+                'virtualProductFileId' => $fixtures['virtualProductFileId'],
+                'fileName' => $fixtures['fileName'],
+                'displayName' => 'updated manual',
+                'accessDays' => 30,
+                'downloadTimesLimit' => 20,
+                'expirationDate' => '2035-01-15 00:00:00',
+            ],
+            $file
+        );
+    }
+
+    public function testGetUnknownVirtualProductFile(): void
+    {
+        $this->markTestSkippedByMinVersion('9.3.0');
+
+        $this->getItem('/products/virtual-files/99999999', ['product_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * Depends on the creation and not on the update, which is skipped on the cores where the update
+     * endpoint does not exist: the deletion is available on all of them.
+     *
+     * @depends testAddVirtualProductFile
      */
     public function testDeleteVirtualProductFile(array $fixtures): void
     {
