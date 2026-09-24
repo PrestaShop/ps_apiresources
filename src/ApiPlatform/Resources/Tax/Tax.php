@@ -29,6 +29,7 @@ use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Command\AddTaxCommand;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Command\DeleteTaxCommand;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Command\EditTaxCommand;
+use PrestaShop\PrestaShop\Core\Domain\Tax\Command\ToggleTaxStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Exception\TaxNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Tax\Query\GetTaxForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -71,6 +72,18 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetTaxForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['tax_write'],
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/taxes/{taxId}/set-status',
+            requirements: ['taxId' => '\d+'],
+            output: false,
+            read: false,
+            CQRSCommand: ToggleTaxStatusCommand::class,
+            scopes: ['tax_write'],
+            // No output 204 code
+            CQRSCommandMapping: [
+                '[enabled]' => '[expectedStatus]',
+            ],
         ),
     ],
     normalizationContext: ['skip_null_values' => false],

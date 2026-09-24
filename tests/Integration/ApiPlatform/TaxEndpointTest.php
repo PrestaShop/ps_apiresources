@@ -82,6 +82,11 @@ class TaxEndpointTest extends ApiTestCase
             'PUT',
             '/taxes/bulk-set-status',
         ];
+
+        yield 'set status endpoint' => [
+            'PATCH',
+            '/taxes/1/set-status',
+        ];
     }
 
     public function testAddTax(): int
@@ -225,6 +230,58 @@ class TaxEndpointTest extends ApiTestCase
         );
 
         return $taxId;
+    }
+
+    /**
+     * @depends testGetUpdatedTax
+     *
+     * @param int $taxId
+     */
+    public function testSetStatusTax(int $taxId): void
+    {
+        $response = $this->partialUpdateItem(
+            '/taxes/' . $taxId . '/set-status',
+            ['enabled' => false],
+            ['tax_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        $this->assertNull($response);
+
+        $tax = $this->getItem('/taxes/' . $taxId, ['tax_read']);
+        $this->assertEquals(
+            [
+                'taxId' => $taxId,
+                'names' => [
+                    'en-US' => 'My Tax Updated EN',
+                    'fr-FR' => 'My Tax Updated FR',
+                ],
+                'enabled' => false,
+                'rate' => 9.87,
+            ],
+            $tax
+        );
+
+        $response = $this->partialUpdateItem(
+            '/taxes/' . $taxId . '/set-status',
+            ['enabled' => true],
+            ['tax_write'],
+            Response::HTTP_NO_CONTENT
+        );
+        $this->assertNull($response);
+
+        $tax = $this->getItem('/taxes/' . $taxId, ['tax_read']);
+        $this->assertEquals(
+            [
+                'taxId' => $taxId,
+                'names' => [
+                    'en-US' => 'My Tax Updated EN',
+                    'fr-FR' => 'My Tax Updated FR',
+                ],
+                'enabled' => true,
+                'rate' => 9.87,
+            ],
+            $tax
+        );
     }
 
     /**
