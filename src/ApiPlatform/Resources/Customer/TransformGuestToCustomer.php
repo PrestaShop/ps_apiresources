@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\TransformGuestToCustomerCommand;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerTransformationException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
@@ -32,16 +33,18 @@ use Symfony\Component\HttpFoundation\Response;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/customers/{customerId}/transform-to-customers',
+            uriTemplate: '/customers/{customerId}/transform-to-customer',
             requirements: ['customerId' => '\d+'],
             output: false,
             allowEmptyBody: true,
             CQRSCommand: TransformGuestToCustomerCommand::class,
             scopes: ['customer_write'],
+            validationContext: ['groups' => ['Default', 'Update']],
         ),
     ],
     exceptionToStatus: [
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CustomerConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CustomerTransformationException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]

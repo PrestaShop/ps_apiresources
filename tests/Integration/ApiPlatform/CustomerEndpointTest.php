@@ -31,15 +31,15 @@ class CustomerEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['customer', 'customer_group']);
+        DatabaseDump::restoreTables(['cart', 'customer', 'customer_group']);
         self::createApiClient(['customer_write', 'customer_read']);
     }
 
-    public static function tearDownBeforeClass(): void
+    public static function tearDownAfterClass(): void
     {
-        parent::tearDownBeforeClass();
+        parent::tearDownAfterClass();
         // Reset DB as it was before this test
-        DatabaseDump::restoreTables(['customer', 'customer_group']);
+        DatabaseDump::restoreTables(['cart', 'customer', 'customer_group']);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -584,6 +584,16 @@ class CustomerEndpointTest extends ApiTestCase
             $this->assertIsArray($validationErrorsResponse);
             $this->assertValidationErrors($expectedErrors, $validationErrorsResponse);
         }
+
+        // Same CleanHtml rule as the note form of the back office
+        $validationErrorsResponse = $this->partialUpdateItem(
+            '/customers/' . $customerId . '/private-notes',
+            ['privateNote' => '<script>alert(1)</script>'],
+            ['customer_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([['propertyPath' => 'privateNote']], $validationErrorsResponse);
     }
 
     /**
@@ -603,13 +613,32 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testGetCustomerCarts(int $customerId): void
     {
-        $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
-
         // The query returns a list, so the endpoint is a collection: a freshly created customer
-        // has no carts yet, hence an empty list. Only the empty case can be covered here: the core
-        // excludes the carts already turned into an order, and there is no API endpoint to create
-        // a cart that stays unordered for a given customer.
-        $this->assertSame([], $response);
+        // has no carts yet, hence an empty list
+        $this->assertSame([], $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']));
+
+        // There is no API endpoint to create a cart for a given customer, so it is created here.
+        // It never becomes an order, so the query lists it (carts turned into orders are excluded).
+        $cart = new \Cart();
+        $cart->id_customer = $customerId;
+        $cart->id_currency = (int) \Configuration::get('PS_CURRENCY_DEFAULT');
+        $cart->id_lang = (int) \Configuration::get('PS_LANG_DEFAULT');
+        $cart->id_shop = (int) \Configuration::get('PS_SHOP_DEFAULT');
+        $cart->save();
+
+        $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
+        $this->assertCount(1, $response);
+        $this->assertSame($customerId, $response[0]['customerId']);
+        $this->assertSame((int) $cart->id, $response[0]['cartId']);
+        $this->assertIsString($response[0]['creationDate']);
+        $this->assertIsString($response[0]['totalPrice']);
+    }
+
+    public function testGetCustomerOrdersAndCartsInvalidCustomerId(): void
+    {
+        // 0 matches the \d+ requirement but is rejected by the CustomerId value object
+        $this->getItem('/customers/0/orders', ['customer_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->getItem('/customers/0/carts', ['customer_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     /**

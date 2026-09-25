@@ -23,6 +23,7 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerOrders;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
@@ -47,6 +48,7 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CustomerConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CustomerOrder

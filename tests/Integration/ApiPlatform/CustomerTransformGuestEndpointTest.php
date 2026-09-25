@@ -50,7 +50,7 @@ class CustomerTransformGuestEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'transform endpoint' => ['PUT', '/customers/1/transform-to-customers'];
+        yield 'transform endpoint' => ['PUT', '/customers/1/transform-to-customer'];
     }
 
     private function createGuest(): int
@@ -77,7 +77,7 @@ class CustomerTransformGuestEndpointTest extends ApiTestCase
         $customerId = $this->createGuest();
 
         $this->updateItem(
-            '/customers/' . $customerId . '/transform-to-customers',
+            '/customers/' . $customerId . '/transform-to-customer',
             [],
             ['customer_write'],
             Response::HTTP_NO_CONTENT
@@ -97,7 +97,28 @@ class CustomerTransformGuestEndpointTest extends ApiTestCase
     {
         // Transforming a customer that is no longer a guest is rejected
         $this->updateItem(
-            '/customers/' . $customerId . '/transform-to-customers',
+            '/customers/' . $customerId . '/transform-to-customer',
+            [],
+            ['customer_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+    }
+
+    public function testTransformUnknownCustomerNotFound(): void
+    {
+        $this->updateItem(
+            '/customers/999999/transform-to-customer',
+            [],
+            ['customer_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
+    public function testTransformInvalidCustomerId(): void
+    {
+        // 0 matches the \d+ requirement but is rejected by the CustomerId value object
+        $this->updateItem(
+            '/customers/0/transform-to-customer',
             [],
             ['customer_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY

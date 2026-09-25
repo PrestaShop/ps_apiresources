@@ -126,6 +126,7 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         // intentional, the plural would wrongly suggest a collection
         'default-supplier',
         'stock',
+        'transform-to-customer',
     ];
 
     public function __construct()
