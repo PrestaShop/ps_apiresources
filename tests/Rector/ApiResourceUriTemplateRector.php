@@ -111,6 +111,7 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         'install',
         'delete',
         'cover',
+        'preview',
         'disable',
         'enable',
         'search',
