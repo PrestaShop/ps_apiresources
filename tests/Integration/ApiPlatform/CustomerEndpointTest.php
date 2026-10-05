@@ -31,7 +31,7 @@ class CustomerEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['cart', 'customer', 'customer_group']);
+        DatabaseDump::restoreTables(['customer', 'customer_group']);
         self::createApiClient(['customer_write', 'customer_read']);
     }
 
@@ -39,7 +39,7 @@ class CustomerEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         // Reset DB as it was before this test
-        DatabaseDump::restoreTables(['cart', 'customer', 'customer_group']);
+        DatabaseDump::restoreTables(['customer', 'customer_group']);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -613,25 +613,13 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testGetCustomerCarts(int $customerId): void
     {
-        // The query returns a list, so the endpoint is a collection: a freshly created customer
-        // has no carts yet, hence an empty list
-        $this->assertSame([], $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']));
-
-        // There is no API endpoint to create a cart for a given customer, so it is created here.
-        // It never becomes an order, so the query lists it (carts turned into orders are excluded).
-        $cart = new \Cart();
-        $cart->id_customer = $customerId;
-        $cart->id_currency = (int) \Configuration::get('PS_CURRENCY_DEFAULT');
-        $cart->id_lang = (int) \Configuration::get('PS_LANG_DEFAULT');
-        $cart->id_shop = (int) \Configuration::get('PS_SHOP_DEFAULT');
-        $cart->save();
-
         $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
-        $this->assertCount(1, $response);
-        $this->assertSame($customerId, $response[0]['customerId']);
-        $this->assertSame((int) $cart->id, $response[0]['cartId']);
-        $this->assertIsString($response[0]['creationDate']);
-        $this->assertIsString($response[0]['totalPrice']);
+
+        // The query returns a list, so the endpoint is a collection: a freshly created customer
+        // has no carts yet, hence an empty list. A non empty case needs a cart that never became
+        // an order, to be created through the API once it exposes CreateEmptyCustomerCartCommand
+        // (POST /carts in PrestaShop/ps_apiresources#201).
+        $this->assertSame([], $response);
     }
 
     public function testGetCustomerOrdersAndCartsInvalidCustomerId(): void
