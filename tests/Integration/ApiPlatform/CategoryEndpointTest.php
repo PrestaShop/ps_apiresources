@@ -99,6 +99,16 @@ class CategoryEndpointTest extends ApiTestCase
             'DELETE',
             '/categories/bulk-delete/associate_and_disable',
         ];
+
+        yield 'create root endpoint' => [
+            'POST',
+            '/categories/roots',
+        ];
+
+        yield 'patch root endpoint' => [
+            'PATCH',
+            '/categories/roots/2',
+        ];
     }
 
     public function testAddCategory(): int
@@ -281,6 +291,115 @@ class CategoryEndpointTest extends ApiTestCase
         foreach ($bulkCategories as $categoryId) {
             $this->getItem('/categories/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
         }
+    }
+
+    public function testAddRootCategory(): int
+    {
+        $postData = [
+            'names' => [
+                'en-US' => 'Root Category EN',
+                'fr-FR' => 'Catégorie racine FR',
+            ],
+            'linkRewrites' => [
+                'en-US' => 'root-category-en',
+                'fr-FR' => 'categorie-racine-fr',
+            ],
+            'enabled' => true,
+            'shopIds' => [1],
+        ];
+
+        $rootCategory = $this->createItem('/categories/roots', $postData, ['category_write']);
+
+        $this->assertArrayHasKey('categoryId', $rootCategory);
+        $this->assertSame($postData['names'], $rootCategory['names']);
+        $this->assertSame($postData['linkRewrites'], $rootCategory['linkRewrites']);
+        $this->assertTrue($rootCategory['enabled']);
+
+        return $rootCategory['categoryId'];
+    }
+
+    /**
+     * @depends testAddRootCategory
+     */
+    public function testEditRootCategory(int $categoryId): int
+    {
+        $patchData = [
+            'names' => [
+                'en-US' => 'Root Category EN edited',
+                'fr-FR' => 'Catégorie racine FR modifiée',
+            ],
+        ];
+
+        $updated = $this->partialUpdateItem('/categories/roots/' . $categoryId, $patchData, ['category_write']);
+        $this->assertSame($patchData['names'], $updated['names']);
+
+        // Verify the GET reflects the change too
+        $fetched = $this->getItem('/categories/' . $categoryId, ['category_read']);
+        $this->assertSame($patchData['names'], $fetched['names']);
+
+        return $categoryId;
+    }
+
+    public function testEditUnknownRootCategoryReturnsNotFound(): void
+    {
+        $unknownCategoryId = 1 + (int) \Db::getInstance()->getValue(
+            'SELECT MAX(`id_category`) FROM `' . _DB_PREFIX_ . 'category`'
+        );
+
+        $this->partialUpdateItem(
+            '/categories/roots/' . $unknownCategoryId,
+            ['names' => ['en-US' => 'Does not matter']],
+            ['category_write'],
+            Response::HTTP_NOT_FOUND
+        );
+    }
+
+    public function testInvalidAddRootCategory(): void
+    {
+        $invalidData = [
+            'names' => [
+                'en-US' => 'Root Category EN',
+                // < character is forbidden
+                'fr-FR' => 'Catégorie racine fr<',
+            ],
+            'linkRewrites' => [
+                'en-US' => 'root-category-en',
+                'fr-FR' => 'categorie-racine-fr',
+            ],
+            'enabled' => true,
+            'shopIds' => [1],
+        ];
+
+        // Creating with invalid data returns constraint messages and an http code 422
+        $validationErrors = $this->createItem('/categories/roots', $invalidData, ['category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'names[fr-FR]',
+                'message' => '"Catégorie racine fr<" is invalid',
+            ],
+        ], $validationErrors);
+    }
+
+    /**
+     * @depends testAddRootCategory
+     */
+    public function testInvalidPatchRootCategory(int $categoryId): void
+    {
+        // Patching with an invalid (forbidden character) localized name returns a 422
+        $validationErrors = $this->partialUpdateItem(
+            '/categories/roots/' . $categoryId,
+            ['names' => ['en-US' => 'Root name<']],
+            ['category_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'names[en-US]',
+                'message' => '"Root name<" is invalid',
+            ],
+        ], $validationErrors);
     }
 
     /**
