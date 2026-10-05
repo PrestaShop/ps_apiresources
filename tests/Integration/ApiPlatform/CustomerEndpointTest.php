@@ -616,9 +616,7 @@ class CustomerEndpointTest extends ApiTestCase
         $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
 
         // The query returns a list, so the endpoint is a collection: a freshly created customer
-        // has no carts yet, hence an empty list. A non empty case needs a cart that never became
-        // an order, to be created through the API once it exposes CreateEmptyCustomerCartCommand
-        // (POST /carts in PrestaShop/ps_apiresources#201).
+        // has no carts yet, hence an empty list. The non empty case is CustomerCartsEndpointTest.
         $this->assertSame([], $response);
     }
 
