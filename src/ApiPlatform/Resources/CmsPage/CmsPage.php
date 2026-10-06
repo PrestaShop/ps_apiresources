@@ -63,6 +63,7 @@ use Symfony\Component\HttpFoundation\Response;
         new CQRSPartialUpdate(
             uriTemplate: '/cms-pages/{cmsPageId}',
             requirements: ['cmsPageId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditCmsPageCommand::class,
             CQRSQuery: GetCmsPageForEditing::class,
             scopes: [

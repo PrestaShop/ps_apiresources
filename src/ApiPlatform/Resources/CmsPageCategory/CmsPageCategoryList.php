@@ -50,7 +50,15 @@ class CmsPageCategoryList
 
     public string $description;
 
+    public int $parentId;
+
+    public bool $displayed;
+
+    public int $position;
+
     public const MAPPING = [
         '[id_cms_category]' => '[cmsPageCategoryId]',
+        '[id_parent]' => '[parentId]',
+        '[active]' => '[displayed]',
     ];
 }

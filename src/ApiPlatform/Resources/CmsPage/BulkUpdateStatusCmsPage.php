@@ -24,6 +24,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDisableCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkEnableCmsPageCommand;
+use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -50,6 +51,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         CmsPageNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // CmsPageId throws the base exception on an invalid id, the CmsPage domain has no constraint exception
+        CmsPageException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkUpdateStatusCmsPage
