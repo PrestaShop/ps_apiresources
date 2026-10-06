@@ -36,3 +36,10 @@ parameters:
             message: "#Class .*ExtraProperty.* not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/ExtraPropertyDefinition/*
+        # ToggleCountryStatusCommand, BulkToggleCountriesStatusCommand, BulkUpdateCountryZoneCommand
+        # and BulkDeleteCountriesCommand were introduced by the Countries grid migration in 9.2.0.
+        # The operations declare minVersion 9.2.0, so they are expected to be absent here.
+        -
+            message: "#Class .*Country\\\\Command.* not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Country/*
