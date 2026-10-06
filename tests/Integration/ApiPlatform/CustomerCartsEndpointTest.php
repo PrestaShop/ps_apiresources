@@ -26,23 +26,16 @@ use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 /**
- * GET /customers/{customerId}/carts on a customer who really has a cart. The cart is created through
- * POST /carts (CreateEmptyCustomerCartCommand), so this class depends on the Cart resource and shares
- * its version gate.
+ * The carts of a customer: GET /customers/{customerId}/carts lists the carts that never became an order,
+ * POST /customers/{customerId}/carts creates one (CreateEmptyCustomerCartCommand).
  */
 class CustomerCartsEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
-        if (self::isVersionUnder('9.2.0')) {
-            static::markTestSkipped('POST /carts requires PrestaShop >= 9.2.0, see Cart::VERSION_GATE');
-
-            return;
-        }
-
         parent::setUpBeforeClass();
         self::resetTables();
-        self::createApiClient(['cart_write', 'customer_read', 'customer_write']);
+        self::createApiClient(['customer_read', 'customer_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -63,9 +56,10 @@ class CustomerCartsEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'get customer carts endpoint' => ['GET', '/customers/1/carts'];
+        yield 'create customer cart endpoint' => ['POST', '/customers/1/carts'];
     }
 
-    public function testCustomerCartsListTheCartsNeverOrdered(): void
+    public function testCreateCustomerCart(): void
     {
         $customer = $this->createItem('/customers', [
             'firstName' => 'Jane',
@@ -81,7 +75,13 @@ class CustomerCartsEndpointTest extends ApiTestCase
 
         $this->assertSame([], $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']));
 
-        $cart = $this->createItem('/carts', ['customerId' => $customerId], ['cart_write']);
+        $cart = $this->createItem('/customers/' . $customerId . '/carts', null, ['customer_write']);
+        $this->assertSame($customerId, $cart['customerId']);
+        $this->assertIsInt($cart['cartId']);
+
+        // The core reuses the last empty cart of the customer instead of creating another one
+        $sameCart = $this->createItem('/customers/' . $customerId . '/carts', null, ['customer_write']);
+        $this->assertSame($cart['cartId'], $sameCart['cartId']);
 
         // The cart never became an order, so the query lists it
         $carts = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
@@ -90,6 +90,12 @@ class CustomerCartsEndpointTest extends ApiTestCase
         $this->assertSame($cart['cartId'], $carts[0]['cartId']);
         $this->assertIsString($carts[0]['creationDate']);
         $this->assertIsString($carts[0]['totalPrice']);
+    }
+
+    public function testCreateCustomerCartInvalidCustomerId(): void
+    {
+        // 0 matches the \d+ requirement but is rejected by the CustomerId value object
+        $this->createItem('/customers/0/carts', null, ['customer_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testCustomerCartsUnknownCustomerNotFound(): void
