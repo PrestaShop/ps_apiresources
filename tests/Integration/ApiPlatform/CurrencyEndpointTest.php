@@ -56,6 +56,35 @@ class CurrencyEndpointTest extends ApiTestCase
 
     private array $lastCreatedCurrency = [];
 
+    /**
+     * Pins the whole CAD currency created by testAddCurrency. The localized fields hold one entry per
+     * language the currency was saved with, and the edit fills every installed language, which other
+     * test classes may have added: their key set is checked against $locales and only en-US is pinned.
+     */
+    private function assertCadCurrency(int $currencyId, array $actual, array $overrides = [], ?array $locales = null): void
+    {
+        $localizedFields = ['names', 'symbols', 'transformations'];
+        $this->assertEquals(
+            $overrides + [
+                'currencyId' => $currencyId,
+                'isoCode' => 'CAD',
+                'exchangeRate' => 1.3,
+                'enabled' => true,
+                'precision' => 2,
+                'unofficial' => false,
+                'shopIds' => [1],
+            ],
+            array_diff_key($actual, array_flip($localizedFields))
+        );
+
+        $this->assertSame('Canadian Dollar', $actual['names']['en-US']);
+        $this->assertSame('$', $actual['symbols']['en-US']);
+        $this->assertSame('', $actual['transformations']['en-US']);
+        foreach ($localizedFields as $field) {
+            $this->assertEqualsCanonicalizing($locales ?? ['en-US'], array_keys($actual[$field]));
+        }
+    }
+
     private function createCurrency(string $isoCode): int
     {
         $currency = $this->createItem('/currencies', [
@@ -88,11 +117,8 @@ class CurrencyEndpointTest extends ApiTestCase
         // CAD is a valid ISO currency that is not the default one in the fixtures
         $currencyId = $this->createCurrency('CAD');
 
-        // The create replays GetCurrencyForEditing, so it must answer exactly what the GET does
-        $this->assertEquals(
-            $this->getItem('/currencies/' . $currencyId, ['currency_read']),
-            $this->lastCreatedCurrency
-        );
+        // The create replays GetCurrencyForEditing and answers the full resource
+        $this->assertCadCurrency($currencyId, $this->lastCreatedCurrency);
 
         return $currencyId;
     }
@@ -102,14 +128,7 @@ class CurrencyEndpointTest extends ApiTestCase
      */
     public function testGetCurrency(int $currencyId): int
     {
-        $currency = $this->getItem('/currencies/' . $currencyId, ['currency_read']);
-
-        $this->assertSame($currencyId, $currency['currencyId']);
-        $this->assertTrue($currency['enabled']);
-        $this->assertSame('CAD', strtoupper((string) $currency['isoCode']));
-        $this->assertArrayHasKey('exchangeRate', $currency);
-        $this->assertIsArray($currency['names']);
-        $this->assertIsArray($currency['symbols']);
+        $this->assertCadCurrency($currencyId, $this->getItem('/currencies/' . $currencyId, ['currency_read']));
 
         return $currencyId;
     }
@@ -119,28 +138,76 @@ class CurrencyEndpointTest extends ApiTestCase
      */
     public function testEditCurrency(int $currencyId): int
     {
-        $this->partialUpdateItem('/currencies/' . $currencyId, [
+        $updated = $this->partialUpdateItem('/currencies/' . $currencyId, [
             'exchangeRate' => 2.5,
+            'enabled' => true,
         ], ['currency_write']);
 
-        $currency = $this->getItem('/currencies/' . $currencyId, ['currency_read']);
-        $this->assertEquals(2.5, (float) $currency['exchangeRate']);
+        $locales = array_column(\Language::getLanguages(false), 'locale');
+        $this->assertCadCurrency($currencyId, $updated, ['exchangeRate' => 2.5], $locales);
+        $this->assertEquals($updated, $this->getItem('/currencies/' . $currencyId, ['currency_read']));
 
         return $currencyId;
     }
 
     /**
+     * The core applies isEnabled() on every edit, so a PATCH without it would disable the currency.
+     *
      * @depends testEditCurrency
+     */
+    public function testEditCurrencyRequiresEnabled(int $currencyId): int
+    {
+        $response = $this->partialUpdateItem('/currencies/' . $currencyId, [
+            'exchangeRate' => 3.0,
+        ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertValidationErrors([
+            ['propertyPath' => 'enabled', 'message' => 'This value is required on every update, omitting it would disable the currency.'],
+        ], $response);
+        $this->assertTrue($this->getItem('/currencies/' . $currencyId, ['currency_read'])['enabled']);
+
+        return $currencyId;
+    }
+
+    /**
+     * EditCurrencyCommand cannot change the ISO code of an official currency, so the field is
+     * rejected rather than accepted and silently dropped.
+     *
+     * @depends testEditCurrencyRequiresEnabled
+     */
+    public function testEditCurrencyRejectsIsoCode(int $currencyId): int
+    {
+        $before = $this->getItem('/currencies/' . $currencyId, ['currency_read']);
+
+        foreach (['CHF', ''] as $isoCode) {
+            $response = $this->partialUpdateItem('/currencies/' . $currencyId, [
+                'isoCode' => $isoCode,
+                'enabled' => true,
+            ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+            $this->assertValidationErrors([
+                ['propertyPath' => 'isoCode', 'message' => 'The ISO code of an official currency cannot be changed.'],
+            ], $response);
+        }
+
+        $this->assertEquals($before, $this->getItem('/currencies/' . $currencyId, ['currency_read']));
+
+        return $currencyId;
+    }
+
+    /**
+     * @depends testEditCurrencyRejectsIsoCode
      */
     public function testToggleCurrencyStatus(int $currencyId): int
     {
-        // The toggle replays the query of the GET, so it answers with the currency it flipped.
-        // The status itself is asserted through the explicit bulk-toggle below: per-shop
-        // currency status makes the single toggle unreliable to read back from the editing query.
-        $toggled = $this->updateItem('/currencies/' . $currencyId . '/toggle-status', [], ['currency_write']);
+        // The toggle takes no body and flips the status, so two calls bring it back
+        $this->assertTrue($this->getItem('/currencies/' . $currencyId, ['currency_read'])['enabled']);
 
-        $this->assertSame($currencyId, $toggled['currencyId']);
-        $this->assertEquals($this->getItem('/currencies/' . $currencyId, ['currency_read']), $toggled);
+        $this->assertNull($this->updateItem('/currencies/' . $currencyId . '/toggle-status', null, ['currency_write'], Response::HTTP_NO_CONTENT));
+        $this->assertFalse($this->getItem('/currencies/' . $currencyId, ['currency_read'])['enabled']);
+
+        $this->assertNull($this->updateItem('/currencies/' . $currencyId . '/toggle-status', null, ['currency_write'], Response::HTTP_NO_CONTENT));
+        $this->assertTrue($this->getItem('/currencies/' . $currencyId, ['currency_read'])['enabled']);
 
         return $currencyId;
     }
@@ -174,6 +241,23 @@ class CurrencyEndpointTest extends ApiTestCase
         $this->bulkDeleteItems('/currencies/bulk-delete', [
             'currencyIds' => [$firstId, $secondId],
         ], ['currency_write'], Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Both bulk handlers collect the ids they could not process and throw once for the batch.
+     * Disabling an unknown id is the exception: the core skips any currency whose status already
+     * matches the expected one, and an unknown currency has no status, so there is nothing to fail.
+     */
+    public function testBulkActionsWithUnknownIdAnswerUnprocessable(): void
+    {
+        $this->bulkDeleteItems('/currencies/bulk-delete', [
+            'currencyIds' => [999999],
+        ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->updateItem('/currencies/bulk-toggle-status', [
+            'currencyIds' => [999999],
+            'enabled' => true,
+        ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testInvalidCurrency(): void
