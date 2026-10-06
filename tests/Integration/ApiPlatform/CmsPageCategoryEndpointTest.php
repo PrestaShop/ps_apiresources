@@ -125,6 +125,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $this->assertArrayHasKey('names', $cmsPageCategory);
         $this->assertArrayHasKey('linkRewrites', $cmsPageCategory);
         $this->assertEquals(1, $cmsPageCategory['parentId']);
+        $this->assertSame([1], $cmsPageCategory['shopIds']);
 
         return $cmsPageCategoryId;
     }
@@ -181,7 +182,17 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $this->assertEquals('cmsPageCategoryId', $paginatedCmsPageCategories['orderBy']);
 
         $firstCmsPageCategory = $paginatedCmsPageCategories['items'][0];
-        $this->assertEquals($cmsPageCategoryId, $firstCmsPageCategory['cmsPageCategoryId']);
+        $this->assertEquals(
+            [
+                'cmsPageCategoryId' => $cmsPageCategoryId,
+                'name' => 'Updated category EN',
+                'description' => 'Description EN',
+                'parentId' => 1,
+                'displayed' => true,
+                'position' => 0,
+            ],
+            $firstCmsPageCategory
+        );
 
         return $cmsPageCategoryId;
     }
@@ -236,6 +247,23 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
 
         foreach ($bulkIds as $id) {
             $this->getItem('/cms-page-categories/' . $id, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    /**
+     * CmsPageCategoryId rejects 0 with a CmsPageCategoryConstraintException, which extends the base
+     * exception and not the not-found one: it must answer 422, not 404.
+     */
+    public function testBulkActionsWithInvalidCmsPageCategoryId(): void
+    {
+        $this->bulkDeleteItems('/cms-page-categories/bulk-delete', [
+            'cmsPageCategoryIds' => [0],
+        ], ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        foreach (['bulk-enable', 'bulk-disable'] as $action) {
+            $this->updateItem('/cms-page-categories/' . $action, [
+                'cmsPageCategoryIds' => [0],
+            ], ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
 

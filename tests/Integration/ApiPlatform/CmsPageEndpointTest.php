@@ -215,7 +215,19 @@ class CmsPageEndpointTest extends ApiTestCase
         $this->assertEquals('cmsPageId', $paginatedCmsPages['orderBy']);
 
         $firstCmsPage = $paginatedCmsPages['items'][0];
-        $this->assertEquals($cmsPageId, $firstCmsPage['cmsPageId']);
+        // The position depends on the pages the fixtures ship, the rest is the page this class created
+        $this->assertIsInt($firstCmsPage['position']);
+        $this->assertEquals(
+            [
+                'cmsPageId' => $cmsPageId,
+                'title' => 'Updated page EN',
+                'linkRewrite' => 'page-en',
+                'metaTitle' => 'Meta title EN',
+                'cmsPageCategoryId' => 1,
+                'displayed' => true,
+            ],
+            array_diff_key($firstCmsPage, ['position' => true])
+        );
 
         return $cmsPageId;
     }
@@ -270,6 +282,20 @@ class CmsPageEndpointTest extends ApiTestCase
 
         foreach ($bulkIds as $id) {
             $this->getItem('/cms-pages/' . $id, ['cms_page_read'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    public function testBulkActionsWithInvalidCmsPageId(): void
+    {
+        // CmsPageId rejects 0 in the command constructor
+        $this->bulkDeleteItems('/cms-pages/bulk-delete', [
+            'cmsPageIds' => [0],
+        ], ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        foreach (['bulk-enable', 'bulk-disable'] as $action) {
+            $this->updateItem('/cms-pages/' . $action, [
+                'cmsPageIds' => [0],
+            ], ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
 

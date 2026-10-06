@@ -46,13 +46,26 @@ class CmsPageList
     #[ApiProperty(identifier: true)]
     public int $cmsPageId;
 
-    public string $metaTitle;
+    // Named like the CmsPage resource: the meta_title column is the page title (titles there), the
+    // head_seo_title column is the meta title (metaTitles there)
+    public string $title;
 
     public string $linkRewrite;
 
+    public string $metaTitle;
+
+    public int $cmsPageCategoryId;
+
+    public bool $displayed;
+
+    public int $position;
+
     public const MAPPING = [
         '[id_cms]' => '[cmsPageId]',
-        '[meta_title]' => '[metaTitle]',
+        '[meta_title]' => '[title]',
         '[link_rewrite]' => '[linkRewrite]',
+        '[head_seo_title]' => '[metaTitle]',
+        '[id_cms_category]' => '[cmsPageCategoryId]',
+        '[active]' => '[displayed]',
     ];
 }

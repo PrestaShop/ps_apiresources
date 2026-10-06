@@ -25,6 +25,7 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\BulkDisableCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\BulkEnableCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryException;
+use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -49,7 +50,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     exceptionToStatus: [
-        CmsPageCategoryException::class => Response::HTTP_NOT_FOUND,
+        CmsPageCategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // The constraint and Cannot* exceptions extend the base exception, not the not-found one
+        CmsPageCategoryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkUpdateStatusCmsPageCategory
