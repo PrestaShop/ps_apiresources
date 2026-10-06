@@ -26,3 +26,9 @@ parameters:
             message: "#Class .*ExtraProperty.* not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/ExtraPropertyDefinition/*
+        # The mail template read and edit CQRS classes only exist since PrestaShop 9.2. The
+        # operations declare minVersion 9.2.0, so they are expected to be absent here.
+        -
+            message: "#Class .*MailTemplate\\\\(Command|Exception|Query).* not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/MailTemplate/*
