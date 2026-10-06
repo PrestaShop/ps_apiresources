@@ -243,9 +243,7 @@ class CategoryEndpointTest extends ApiTestCase
             Response::HTTP_OK
         );
 
-        $status = $this->getItem('/categories/3/status', ['category_read']);
-        $this->assertEquals(3, $status['categoryId']);
-        $this->assertFalse($status['enabled']);
+        $this->assertEquals(['categoryId' => 3, 'enabled' => false], $this->getItem('/categories/3/status', ['category_read']));
 
         // Re-enable and assert the status endpoint reflects the change
         $this->requestApi(
@@ -256,9 +254,7 @@ class CategoryEndpointTest extends ApiTestCase
             Response::HTTP_OK
         );
 
-        $status = $this->getItem('/categories/3/status', ['category_read']);
-        $this->assertEquals(3, $status['categoryId']);
-        $this->assertTrue($status['enabled']);
+        $this->assertEquals(['categoryId' => 3, 'enabled' => true], $this->getItem('/categories/3/status', ['category_read']));
     }
 
     public function testDeleteCategoryThumbnail(): void
@@ -440,26 +436,33 @@ class CategoryEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ], ['category_write'])['categoryId'];
 
-        $tree = $this->getItem('/categories/trees', ['category_read']);
-        $this->assertNotEmpty($tree);
+        $node = static fn (int $id, string $name, array $children = []): array => [
+            'categoryId' => $id,
+            'enabled' => true,
+            'name' => $name,
+            'displayName' => $name,
+            'children' => $children,
+        ];
+
+        // The whole tree, so a field lost or left unmapped at any depth fails the test
         $this->assertEquals(
-            ['categoryId', 'enabled', 'name', 'displayName', 'children'],
-            array_keys($tree[0])
+            [
+                $node(2, 'Home', [
+                    $node(3, 'Clothes', [
+                        $node(4, 'Men'),
+                        $node(5, 'Women'),
+                    ]),
+                    $node(6, 'Accessories', [
+                        $node(7, 'Stationery'),
+                        $node(8, 'Home Accessories'),
+                    ]),
+                    $node(9, 'Art'),
+                    $node($categoryId, 'Tree probe EN'),
+                ]),
+            ],
+            $this->getItem('/categories/trees', ['category_read'])
         );
 
-        $this->assertContains($categoryId, $this->flattenTreeIds($tree));
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $tree
-     *
-     * @return int[]
-     */
-    private function flattenTreeIds(array $tree): array
-    {
-        return array_map(
-            static fn (array $node): int => (int) $node['categoryId'],
-            $this->flattenTree($tree)
-        );
+        $this->deleteItem('/categories/' . $categoryId . '/associate_and_disable', ['category_write']);
     }
 }

@@ -37,9 +37,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                 '[_context][langId]' => '[languageId]',
                 '[_context][shopId]' => '[shopId]',
             ],
-            ApiResourceMapping: [
-                '[active]' => '[enabled]',
-            ],
         ),
     ],
 )]
@@ -58,4 +55,31 @@ class CategoryTree
      * Nested children categories, each with the same shape as this resource.
      */
     public array $children;
+
+    // CategoryForTree exposes isActive(), normalized as "active" at every level of the tree. An
+    // ApiResourceMapping only renames the first level, so the two setters rename it on each node.
+    public function setActive(bool $active): self
+    {
+        $this->enabled = $active;
+
+        return $this;
+    }
+
+    public function setChildren(array $children): self
+    {
+        $this->children = self::normalizeNodes($children);
+
+        return $this;
+    }
+
+    private static function normalizeNodes(array $nodes): array
+    {
+        return array_map(static fn (array $node): array => [
+            'categoryId' => $node['categoryId'],
+            'enabled' => $node['active'],
+            'name' => $node['name'],
+            'displayName' => $node['displayName'],
+            'children' => self::normalizeNodes($node['children'] ?? []),
+        ], $nodes);
+    }
 }
