@@ -33,6 +33,7 @@ use PrestaShop\PrestaShop\Core\Domain\Category\Command\SetCategoryIsEnabledComma
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Query\GetCategoryForEditing;
+use PrestaShop\PrestaShop\Core\Domain\Category\Query\GetCategoryIsEnabled;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -45,6 +46,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSGet(
             uriTemplate: '/categories/{categoryId}',
+            requirements: ['categoryId' => '\d+'],
             CQRSQuery: GetCategoryForEditing::class,
             scopes: [
                 'category_read',
@@ -83,6 +85,17 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: [
                 '[enabled]' => '[isEnabled]',
+            ],
+        ),
+        new CQRSGet(
+            uriTemplate: '/categories/{categoryId}/status',
+            requirements: ['categoryId' => '\d+'],
+            CQRSQuery: GetCategoryIsEnabled::class,
+            scopes: [
+                'category_read',
+            ],
+            CQRSQueryMapping: [
+                '[_queryResult]' => '[enabled]',
             ],
         ),
         new CQRSDelete(
@@ -171,8 +184,6 @@ class Category
     #[DefaultLanguage(groups: ['Create'], fieldName: 'metaDescriptions')]
     #[DefaultLanguage(groups: ['Update'], fieldName: 'metaDescriptions', allowNull: true)]
     public array $metaDescriptions;
-
-    public int $position;
 
     public int $parentCategoryId;
 
