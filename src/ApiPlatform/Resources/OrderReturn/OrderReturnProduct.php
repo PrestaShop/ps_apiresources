@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
@@ -65,8 +66,10 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class OrderReturnProduct
 {
+    #[ApiProperty(identifier: true)]
     public int $orderReturnId;
 
+    #[ApiProperty(identifier: true)]
     public int $orderDetailId;
 
     public int $customizationId = 0;

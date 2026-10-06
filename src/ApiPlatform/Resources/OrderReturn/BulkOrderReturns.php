@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\BulkDeleteOrderReturnsCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,6 +44,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         OrderReturnNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // Thrown by the command constructor on an invalid id
+        OrderReturnConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkOrderReturns
