@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Query\GetOrderReturnProducts;
@@ -56,4 +57,19 @@ class OrderReturnProductList
     public int $quantity;
 
     public bool $customization;
+
+    /**
+     * Customer-provided data of a customized line (file thumbnails, text inputs), empty for a classic line.
+     */
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'type' => ['type' => 'integer'],
+                'value' => ['type' => 'string'],
+            ],
+        ],
+    ])]
+    public array $customizationFields;
 }

@@ -120,10 +120,29 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
 
         $products = $this->getItem('/order-returns/' . $orderReturnId . '/products', ['order_return_read']);
 
-        $this->assertNotEmpty($products);
+        // The seed returns one unit of each line of the first fixture order
         $this->assertEquals(
-            ['orderDetailId', 'customizationId', 'reference', 'productName', 'quantity', 'customization'],
-            array_keys($products[0])
+            [
+                [
+                    'orderDetailId' => 1,
+                    'customizationId' => 0,
+                    'reference' => 'demo_1',
+                    'productName' => 'Hummingbird printed t-shirt - Color : White, Size : S',
+                    'quantity' => 1,
+                    'customization' => false,
+                    'customizationFields' => [],
+                ],
+                [
+                    'orderDetailId' => 2,
+                    'customizationId' => 0,
+                    'reference' => 'demo_3',
+                    'productName' => 'Hummingbird printed sweater - Color : White, Size : S',
+                    'quantity' => 1,
+                    'customization' => false,
+                    'customizationFields' => [],
+                ],
+            ],
+            $products
         );
         $this->assertSame($orderDetailIds, $this->listProductIds($orderReturnId));
     }
@@ -219,6 +238,18 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
 
         // Asserted through the API instead of SELECT COUNT(*) FROM ps_order_return
         $this->getItem('/order-returns/' . $orderReturnId, ['order_return_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testBulkDeleteOrderReturnsWithInvalidId(): void
+    {
+        // OrderReturnId rejects 0 in the command constructor with an OrderReturnConstraintException
+        $this->requestApi(
+            'DELETE',
+            '/order-returns/bulk-delete',
+            ['orderReturnIds' => [0]],
+            ['order_return_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
     }
 
     public function testBulkDeleteOrderReturns(): void
