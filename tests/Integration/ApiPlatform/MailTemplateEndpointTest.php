@@ -114,11 +114,65 @@ class MailTemplateEndpointTest extends ApiTestCase
      */
     public function testEditMailTemplate(array $template): void
     {
-        $htmlContent = '<p>Edited by the Admin API integration test</p>';
-        $txtContent = 'Edited by the Admin API integration test';
+        $original = $this->getMailTemplate($template['templateName']);
 
+        try {
+            $this->editMailTemplate(
+                $template['templateName'],
+                '<p>Edited by the Admin API integration test</p>',
+                'Edited by the Admin API integration test'
+            );
+
+            // The edit is observed through the get endpoint
+            $this->assertEquals(
+                [
+                    'templateName' => $template['templateName'],
+                    'htmlContent' => '<p>Edited by the Admin API integration test</p>',
+                    'txtContent' => 'Edited by the Admin API integration test',
+                ] + $original,
+                $this->getMailTemplate($template['templateName'])
+            );
+        } finally {
+            // The edit writes the template files of the core on disk: put the original content back
+            $this->editMailTemplate($template['templateName'], $original['htmlContent'], $original['txtContent']);
+        }
+
+        $this->assertEquals($original, $this->getMailTemplate($template['templateName']));
+    }
+
+    public function testEditMailTemplateWithInvalidData(): void
+    {
+        $this->markTestSkippedByMinVersion(self::READ_EDIT_MIN_VERSION);
+
+        $response = $this->partialUpdateItem('/mail-templates/order_conf', [
+            'htmlContent' => '<p>Never written</p>',
+        ], ['mail_template_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'locale', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'source', 'message' => 'This value should not be blank.'],
+        ], $response);
+
+        $response = $this->partialUpdateItem('/mail-templates/order_conf', [
+            'locale' => self::LOCALE,
+            'source' => 'theme',
+        ], ['mail_template_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'source', 'message' => 'The value you selected is not a valid choice.'],
+        ], $response);
+    }
+
+    private function getMailTemplate(string $templateName): array
+    {
+        return $this->getItem(
+            sprintf('/mail-templates/%s?locale=%s&source=core', $templateName, self::LOCALE),
+            ['mail_template_read']
+        );
+    }
+
+    private function editMailTemplate(string $templateName, string $htmlContent, string $txtContent): void
+    {
         $this->partialUpdateItem(
-            '/mail-templates/' . $template['templateName'],
+            '/mail-templates/' . $templateName,
             [
                 'locale' => self::LOCALE,
                 'source' => 'core',
@@ -134,16 +188,6 @@ class MailTemplateEndpointTest extends ApiTestCase
             // result, which is void here. See the resource for the details.
             Response::HTTP_NO_CONTENT
         );
-
-        // The edit is observed through the get endpoint, which is what #370 and #373 could not
-        // do while they lived in separate PRs
-        $mailTemplate = $this->getItem(
-            sprintf('/mail-templates/%s?locale=%s&source=core', $template['templateName'], self::LOCALE),
-            ['mail_template_read']
-        );
-
-        $this->assertSame($htmlContent, $mailTemplate['htmlContent']);
-        $this->assertSame($txtContent, $mailTemplate['txtContent']);
     }
 
     public function testGenerateThemeMailTemplates(): void
@@ -161,5 +205,27 @@ class MailTemplateEndpointTest extends ApiTestCase
 
         // This endpoint returns an empty response and a 204 HTTP code
         $this->assertNull($return);
+    }
+
+    public function testGenerateThemeMailTemplatesWithInvalidData(): void
+    {
+        $response = $this->updateItem('/mail-templates', [
+            'themeName' => '',
+            'language' => '',
+        ], ['mail_template_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'themeName', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'language', 'message' => 'This value should not be blank.'],
+        ], $response);
+
+        // Unknown theme and unknown language are rejected by the core, not by the resource
+        $this->updateItem('/mail-templates', [
+            'themeName' => 'not_a_theme',
+            'language' => 'en',
+        ], ['mail_template_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->updateItem('/mail-templates', [
+            'themeName' => 'classic',
+            'language' => 'zz',
+        ], ['mail_template_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }

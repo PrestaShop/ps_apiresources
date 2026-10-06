@@ -47,11 +47,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
                     description: 'Language ISO code, the mails/<iso> directory to list (e.g. en, fr)'
                 ),
             ]),
-            openapiContext: [
-                'parameters' => [
-                    ['name' => 'locale', 'in' => 'query', 'required' => true, 'schema' => ['type' => 'string']],
-                ],
-            ],
         ),
     ],
 )]

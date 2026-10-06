@@ -24,7 +24,9 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\MailTemplate;
 
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\MailTemplate\Command\GenerateThemeMailTemplatesCommand;
+use PrestaShop\PrestaShop\Core\Exception\InvalidArgumentException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -35,6 +37,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: GenerateThemeMailTemplatesCommand::class,
             scopes: ['mail_template_write'],
         ),
+    ],
+    exceptionToStatus: [
+        // Thrown by the handler for an unknown language, and by the theme catalog for an unknown theme
+        InvalidArgumentException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class GenerateThemeMailTemplates

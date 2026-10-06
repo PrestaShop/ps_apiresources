@@ -64,6 +64,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             // so locale and source, which only ever exist in the request body, cannot reach
             // GetEmailBodyTemplateForEditing. The edit therefore answers an empty 204.
             output: false,
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditEmailBodyTemplateCommand::class,
             scopes: ['mail_template_write'],
         ),
@@ -78,11 +79,14 @@ class MailTemplate
     #[ApiProperty(identifier: true)]
     public string $templateName;
 
-    #[Assert\NotBlank(groups: ['Create'])]
+    // Required by EditEmailBodyTemplateCommand, which has no default for them: validated on the
+    // edit so a missing value answers 422 instead of a raw denormalization error
+    #[Assert\NotBlank(groups: ['Update'])]
     public string $locale;
 
     /** 'core' or 'module' */
-    #[Assert\Choice(choices: ['core', 'module'], groups: ['Create'])]
+    #[Assert\NotBlank(groups: ['Update'])]
+    #[Assert\Choice(choices: ['core', 'module'], groups: ['Update'])]
     public string $source;
 
     /**
