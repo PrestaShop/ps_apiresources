@@ -72,7 +72,10 @@ class ImageTypeEndpointTest extends ApiTestCase
 
         $this->assertArrayHasKey('imageTypeId', $imageType);
         $imageTypeId = $imageType['imageTypeId'];
-        $this->assertEquals(['imageTypeId' => $imageTypeId], $imageType);
+        $this->assertEquals(
+            ['imageTypeId' => $imageTypeId] + $this->createPayload('my_custom_type'),
+            $imageType
+        );
 
         return $imageTypeId;
     }
@@ -111,15 +114,59 @@ class ImageTypeEndpointTest extends ApiTestCase
             'categories' => true,
         ], ['image_type_write']);
 
-        $this->assertSame(200, $updated['width']);
-        $this->assertTrue($updated['categories']);
-        $this->assertSame(90, $updated['height']);
+        $this->assertEquals(
+            [
+                'imageTypeId' => $imageTypeId,
+                'name' => 'my_custom_type',
+                'width' => 200,
+                'height' => 90,
+                'products' => true,
+                'categories' => true,
+                'manufacturers' => false,
+                'suppliers' => false,
+                'stores' => false,
+            ],
+            $updated
+        );
 
         return $imageTypeId;
     }
 
     /**
      * @depends testEditImageType
+     */
+    public function testPartialUpdateInvalidImageType(int $imageTypeId): int
+    {
+        $before = $this->getItem('/image-types/' . $imageTypeId, ['image_type_read']);
+
+        $validationErrors = $this->partialUpdateItem('/image-types/' . $imageTypeId, ['name' => ''], ['image_type_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'name', 'message' => 'This value should not be blank.'],
+        ], $validationErrors);
+
+        $validationErrors = $this->partialUpdateItem('/image-types/' . $imageTypeId, ['width' => 0, 'height' => -5], ['image_type_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'width', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'height', 'message' => 'This value should be positive.'],
+        ], $validationErrors);
+
+        // Nothing was persisted by the rejected calls
+        $this->assertEquals($before, $this->getItem('/image-types/' . $imageTypeId, ['image_type_read']));
+
+        return $imageTypeId;
+    }
+
+    public function testInvalidImageType(): void
+    {
+        $validationErrors = $this->createItem('/image-types', ['width' => -5] + $this->createPayload(''), ['image_type_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'name', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'width', 'message' => 'This value should be positive.'],
+        ], $validationErrors);
+    }
+
+    /**
+     * @depends testPartialUpdateInvalidImageType
      */
     public function testDeleteImageType(int $imageTypeId): void
     {
@@ -178,5 +225,22 @@ class ImageTypeEndpointTest extends ApiTestCase
             ['image_type_write'],
             Response::HTTP_NO_CONTENT
         );
+    }
+
+    public function testRegenerateThumbnailsWithUnknownDomain(): void
+    {
+        $validationErrors = $this->updateItem(
+            '/image-types/regenerate-thumbnails',
+            [
+                'image' => 'not_a_domain',
+                'imageTypeId' => 0,
+                'erasePreviousImages' => false,
+            ],
+            ['image_type_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertValidationErrors([
+            ['propertyPath' => 'image', 'message' => 'The value you selected is not a valid choice.'],
+        ], $validationErrors);
     }
 }

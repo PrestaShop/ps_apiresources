@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\ImageType;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Command\BulkDeleteImageTypeCommand;
+use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Exception\ImageTypeException;
 use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Exception\ImageTypeNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,6 +44,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         ImageTypeNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ImageTypeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkDeleteImageTypes

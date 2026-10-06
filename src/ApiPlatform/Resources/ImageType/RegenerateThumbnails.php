@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\ImageType;
 
 use ApiPlatform\Metadata\ApiResource;
@@ -26,6 +28,7 @@ use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Exception\ImageTypeNotFoundE
 use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Exception\RegenerateThumbnailsException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -47,8 +50,10 @@ use Symfony\Component\HttpFoundation\Response;
 class RegenerateThumbnails
 {
     /**
-     * Image domain to regenerate: all, categories, manufacturers, suppliers, products, stores.
+     * Image domain to regenerate. The values are those of Core\Domain\ImageSettings\ImageDomain, listed
+     * literally because that enum does not exist in 9.0.x; the handler throws a ValueError on any other value.
      */
+    #[Assert\Choice(choices: ['all', 'categories', 'manufacturers', 'suppliers', 'products', 'stores'])]
     public string $image;
 
     /**

@@ -43,6 +43,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/image-types',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddImageTypeCommand::class,
+            CQRSQuery: GetImageTypeForEditing::class,
             scopes: ['image_type_write'],
         ),
         new CQRSDelete(
@@ -62,6 +63,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/image-types/{imageTypeId}',
             requirements: ['imageTypeId' => '\d+'],
             read: false,
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditImageTypeCommand::class,
             CQRSQuery: GetImageTypeForEditing::class,
             scopes: ['image_type_write'],
@@ -78,15 +80,17 @@ class ImageType
     #[ApiProperty(identifier: true)]
     public int $imageTypeId;
 
-    #[Assert\NotBlank(groups: ['Create'])]
+    // Required on create only, so a PATCH can omit them; the ungrouped constraints hold whenever a value is sent.
+    #[Assert\NotNull(groups: ['Create'])]
+    #[Assert\NotBlank(allowNull: true)]
     public string $name;
 
     #[Assert\NotNull(groups: ['Create'])]
-    #[Assert\Positive(groups: ['Create'])]
+    #[Assert\Positive]
     public int $width;
 
     #[Assert\NotNull(groups: ['Create'])]
-    #[Assert\Positive(groups: ['Create'])]
+    #[Assert\Positive]
     public int $height;
 
     #[Assert\NotNull(groups: ['Create'])]
