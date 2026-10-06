@@ -50,11 +50,15 @@ class ShopEndpointTest extends ApiTestCase
      */
     public function testSearchShopsReturnsAShopRow(): void
     {
+        // The shop name is install data ("PrestaShop" locally, "test_shop" on CI), and
+        // PS_SHOP_NAME is empty in the test env, so read it from the shop row itself.
+        $shopName = (new \Shop(1))->name;
+
         $this->assertEquals(
             [[
                 'id' => 1,
                 'color' => '',
-                'name' => 'PrestaShop',
+                'name' => $shopName,
                 'groupId' => 1,
                 'groupName' => 'Default',
                 'groupColor' => '',
