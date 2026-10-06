@@ -24,39 +24,35 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Currency;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Currency\Command\BulkToggleCurrenciesStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\BulkToggleCurrenciesException;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Command\ToggleCurrencyStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyException;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * ToggleCurrencyStatusCommand only takes the id and flips the status, so this resource carries
+ * nothing else: hosted on Currency, the operation advertised the whole Currency schema as its
+ * input and silently discarded it. To set an explicit status, use PATCH /currencies/{currencyId}.
+ */
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/currencies/bulk-toggle-status',
+            uriTemplate: '/currencies/{currencyId}/toggle-status',
+            requirements: ['currencyId' => '\d+'],
             output: false,
-            CQRSCommand: BulkToggleCurrenciesStatusCommand::class,
-            CQRSCommandMapping: [
-                '[enabled]' => '[expectedStatus]',
-            ],
-            scopes: [
-                'currency_write',
-            ],
+            allowEmptyBody: true,
+            CQRSCommand: ToggleCurrencyStatusCommand::class,
+            scopes: ['currency_write'],
         ),
     ],
     exceptionToStatus: [
-        // Raised once for the whole batch, listing the ids that failed (unknown, default currency...)
-        BulkToggleCurrenciesException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CurrencyNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CurrencyException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class BulkToggleCurrenciesStatus
+class ToggleCurrencyStatus
 {
-    /**
-     * @var int[]
-     */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
-    #[Assert\NotBlank]
-    public array $currencyIds;
-
-    public bool $enabled;
+    #[ApiProperty(identifier: true)]
+    public int $currencyId;
 }

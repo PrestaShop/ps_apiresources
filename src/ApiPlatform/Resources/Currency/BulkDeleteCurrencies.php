@@ -25,7 +25,9 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Currency;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\BulkDeleteCurrenciesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\BulkDeleteCurrenciesException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
@@ -38,6 +40,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             allowEmptyBody: false,
         ),
+    ],
+    exceptionToStatus: [
+        // Raised once for the whole batch, listing the ids that failed (unknown, default currency...)
+        BulkDeleteCurrenciesException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkDeleteCurrencies

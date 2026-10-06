@@ -30,7 +30,6 @@ use PrestaShop\PrestaShop\Core\Domain\Currency\Command\AddUnofficialCurrencyComm
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\DeleteCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\EditCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\EditUnofficialCurrencyCommand;
-use PrestaShop\PrestaShop\Core\Domain\Currency\Command\ToggleCurrencyStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CannotUpdateCurrencyException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyException;
@@ -40,7 +39,6 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -74,6 +72,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/currencies/{currencyId}',
             requirements: ['currencyId' => '\d+'],
             read: false,
+            validationContext: ['groups' => ['Default', 'Update', 'UpdateOfficial']],
             CQRSCommand: EditCurrencyCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             CQRSQuery: GetCurrencyForEditing::class,
@@ -95,18 +94,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/currencies/unofficials/{currencyId}',
             requirements: ['currencyId' => '\d+'],
             read: false,
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditUnofficialCurrencyCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
-            CQRSQuery: GetCurrencyForEditing::class,
-            CQRSQueryMapping: self::QUERY_MAPPING,
-            scopes: ['currency_write'],
-        ),
-        new CQRSUpdate(
-            uriTemplate: '/currencies/{currencyId}/toggle-status',
-            requirements: ['currencyId' => '\d+'],
-            allowEmptyBody: true,
-            CQRSCommand: ToggleCurrencyStatusCommand::class,
-            // Replays the query of the GET, so the toggle answers with the currency it flipped
             CQRSQuery: GetCurrencyForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['currency_write'],
@@ -125,13 +115,21 @@ class Currency
     #[ApiProperty(identifier: true)]
     public int $currencyId;
 
+    // EditCurrencyCommand has no setIsoCode(): only an unofficial currency can change its ISO code,
+    // so the official PATCH rejects the field instead of answering 200 and dropping it.
     #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\IsNull(groups: ['UpdateOfficial'], message: 'The ISO code of an official currency cannot be changed.')]
     public string $isoCode;
 
+    // Only a JSON number is accepted on input, a numeric string answers 400
+    #[ApiProperty(openapiContext: ['type' => 'number', 'example' => 1.5])]
     #[Assert\NotNull(groups: ['Create'])]
     public DecimalNumber $exchangeRate;
 
+    // The core edit handlers apply isEnabled() on every edit and the command defaults it to false,
+    // so a PATCH omitting it would disable the currency: it is required on update as well.
     #[Assert\NotNull(groups: ['Create'])]
+    #[Assert\NotNull(groups: ['Update'], message: 'This value is required on every update, omitting it would disable the currency.')]
     public bool $enabled;
 
     public ?int $precision;
