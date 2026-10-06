@@ -561,4 +561,79 @@ class CountryEndpointTest extends ApiTestCase
             'shopIds' => [1],
         ];
     }
+
+    public function testToggleCountryStatusWithInvalidId(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        // 0 passes the \d+ requirement, CountryId rejects it with a CountryConstraintException
+        $this->updateItem('/countries/0/toggle-status', null, ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->updateItem('/countries/999999/toggle-status', null, ['country_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * The bulk handlers catch the failure of each id and throw one BulkCountryException for the
+     * batch, which the core answers as a 207 listing the error of each failed id.
+     */
+    private function assertBulkCountryNotFound(array $response, string $message): void
+    {
+        $this->assertEquals([
+            'type' => 'PrestaShop\\PrestaShop\\Core\\Domain\\Country\\Exception\\BulkCountryException',
+            'status' => Response::HTTP_MULTI_STATUS,
+            'message' => $message,
+            'errors' => [[
+                'type' => 'PrestaShop\\PrestaShop\\Core\\Domain\\Country\\Exception\\CountryNotFoundException',
+                'status' => Response::HTTP_NOT_FOUND,
+                'message' => 'Country #999999 was not found',
+            ]],
+        ], $response);
+    }
+
+    public function testBulkDeleteCountriesWithInvalidIds(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $response = $this->bulkDeleteItems('/countries/bulk-delete', ['countryIds' => []], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'countryIds', 'message' => 'This value should not be blank.'],
+        ], $response);
+
+        $this->bulkDeleteItems('/countries/bulk-delete', ['countryIds' => [0]], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertBulkCountryNotFound(
+            $this->bulkDeleteItems('/countries/bulk-delete', ['countryIds' => [999999]], ['country_write'], Response::HTTP_MULTI_STATUS),
+            'Errors occurred during country bulk delete action'
+        );
+    }
+
+    public function testBulkToggleCountriesStatusWithInvalidIds(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $response = $this->updateItem('/countries/bulk-toggle-status', ['countryIds' => [], 'enabled' => false], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'countryIds', 'message' => 'This value should not be blank.'],
+        ], $response);
+
+        $this->updateItem('/countries/bulk-toggle-status', ['countryIds' => [0], 'enabled' => false], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertBulkCountryNotFound(
+            $this->updateItem('/countries/bulk-toggle-status', ['countryIds' => [999999], 'enabled' => false], ['country_write'], Response::HTTP_MULTI_STATUS),
+            'Errors occurred during country bulk change status action'
+        );
+    }
+
+    public function testBulkUpdateCountriesZoneWithInvalidData(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $response = $this->updateItem('/countries/bulk-update-zone', ['countryIds' => [], 'newZoneId' => 0], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'countryIds', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'newZoneId', 'message' => 'This value should be greater than 0.'],
+        ], $response);
+
+        $this->assertBulkCountryNotFound(
+            $this->updateItem('/countries/bulk-update-zone', ['countryIds' => [999999], 'newZoneId' => 1], ['country_write'], Response::HTTP_MULTI_STATUS),
+            'Errors occurred during country bulk update zone action'
+        );
+    }
 }

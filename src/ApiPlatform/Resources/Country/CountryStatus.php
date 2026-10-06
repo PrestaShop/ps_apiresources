@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Country;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Country\Command\ToggleCountryStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -47,6 +48,8 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         CountryNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // CountryConstraintException on an invalid id, CannotToggleCountryStatusException
+        CountryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CountryStatus
