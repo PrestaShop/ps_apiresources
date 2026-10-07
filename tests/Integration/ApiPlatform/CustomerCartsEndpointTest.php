@@ -98,6 +98,14 @@ class CustomerCartsEndpointTest extends ApiTestCase
         $this->createItem('/customers/0/carts', null, ['customer_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
+    public function testCreateCustomerCartUnknownCustomerNotFound(): void
+    {
+        // Older cores create a cart with no customer and answer 201, fixed by PrestaShop/PrestaShop#43116
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $this->createItem('/customers/999999/carts', null, ['customer_write'], Response::HTTP_NOT_FOUND);
+    }
+
     public function testCustomerCartsUnknownCustomerNotFound(): void
     {
         $this->getItem('/customers/999999/carts', ['customer_read'], Response::HTTP_NOT_FOUND);
