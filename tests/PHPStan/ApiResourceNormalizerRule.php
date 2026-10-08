@@ -88,6 +88,12 @@ final class ApiResourceNormalizerRule implements Rule
         // "@index" placeholder at a time, so this normalizer flattens the query result to keep a
         // single format on both the read and write operations of the CarrierRanges resource.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\CarrierRangesCollectionNormalizer',
+        // Valid: SetProductImagesForAllShopCommand collects its ProductImageSetting value
+        // objects through an addProductSetting() adder that the generic serializer cannot
+        // drive from a JSON body, the GetShopProductImages {imageId, cover} pairs are exposed
+        // as imageIds and coverImageId per shop, which CQRSQueryMapping cannot compute, and the
+        // request body and response are a top-level list instead of the resource object.
+        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\ShopProductImagesSerializer',
     ];
 
     public function getNodeType(): string

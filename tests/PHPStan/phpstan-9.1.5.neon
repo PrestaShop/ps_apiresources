@@ -26,3 +26,16 @@ parameters:
             message: "#Class .*ExtraProperty.* not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/ExtraPropertyDefinition/*
+        # SearchProductsForFreeGift only exists since PrestaShop 9.2, the operation is gated
+        # with the minVersion extra property so it is expected to be absent on 9.1.5.
+        -
+            message: "#Class .*Product\\\\Query\\\\SearchProductsForFreeGift not found.#"
+            identifier: class.notFound
+            count: 1
+            path: ../../src/ApiPlatform/Resources/Product/*
+        # GetVirtualProductFileForEditing only exists since PrestaShop 9.3, the get and update operations
+        # declare minVersion 9.3.0 so they are filtered out of the API on this core version.
+        -
+            message: "#Class .*VirtualProductFile\\\\Query\\\\GetVirtualProductFileForEditing not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Product/VirtualProductFile.php

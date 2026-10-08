@@ -57,8 +57,6 @@ class GenerateCombinationsSerializer implements DenormalizerInterface
     {
         return [
             GenerateProductCombinationsCommand::class => true,
-            'object' => null,
-            '*' => null,
         ];
     }
 }
