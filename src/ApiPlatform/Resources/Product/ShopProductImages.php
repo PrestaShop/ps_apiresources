@@ -25,6 +25,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use ApiPlatform\OpenApi\Model\RequestBody;
+use ApiPlatform\OpenApi\Model\Response as OpenApiResponse;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Command\SetProductImagesForAllShopCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\Exception\CannotRemoveCoverException;
@@ -42,13 +44,18 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/products/{productId}/shop-images',
             requirements: ['productId' => '\d+'],
             CQRSQuery: GetShopProductImagesQuery::class,
-            CQRSQueryMapping: ShopProductImages::QUERY_MAPPING,
             scopes: ['product_read'],
+            experimentalOperation: true,
             openapi: new OpenApiOperation(
                 summary: 'Get the image/shop associations of a product.',
-                description: 'Returns the images of the product grouped by shop. ' . self::ALL_SHOPS_DESCRIPTION
+                description: 'Returns the image ids of the product and its cover image id, grouped by shop. '
+                    . self::MULTISHOP_DESCRIPTION
                     . ' An unknown product returns an empty list with a 200, '
                     . 'because the underlying query reads the associations without checking that the product exists.',
+                responses: [
+                    // The response is the list of associations itself (see ShopProductImagesSerializer), not the resource object
+                    '200' => new OpenApiResponse('The image/shop associations of the product.', new \ArrayObject(self::OUTPUT_CONTENT)),
+                ],
             ),
         ),
         new CQRSUpdate(
@@ -57,38 +64,38 @@ use Symfony\Component\Validator\Constraints as Assert;
             read: false,
             CQRSCommand: SetProductImagesForAllShopCommand::class,
             CQRSQuery: GetShopProductImagesQuery::class,
-            CQRSQueryMapping: ShopProductImages::QUERY_MAPPING,
             scopes: ['product_write'],
+            experimentalOperation: true,
             openapi: new OpenApiOperation(
                 summary: 'Set the image/shop associations of a product.',
                 description: 'Replaces the image/shop associations of the product and returns them. '
-                    . self::ALL_SHOPS_DESCRIPTION . ' The payload defines the associations of every shop at once: an '
-                    . 'image missing from a shop is removed from it, and an image listed under no shop is removed '
-                    . 'from all of them. Removing an image from a shop where it is the cover is refused with a 422.',
-            ),
-            // The input schema is generated from the command class, whose constructor only takes the product id
-            // (the associations are added through an adder and built by SetProductImagesForAllShopSerializer), so
-            // the request body is documented explicitly with the same shape as the response.
-            openapiContext: [
-                'requestBody' => [
-                    'required' => true,
-                    'description' => 'The complete image/shop associations of the product, in the same shape as the response.',
-                    'content' => [
-                        'application/json' => [
-                            'schema' => [
-                                'type' => 'object',
-                                'required' => ['shopImages'],
-                                'properties' => [
-                                    'shopImages' => self::SHOP_IMAGES_SCHEMA,
-                                ],
-                            ],
-                            'example' => [
-                                'shopImages' => self::SHOP_IMAGES_EXAMPLE,
-                            ],
-                        ],
-                    ],
+                    . self::MULTISHOP_DESCRIPTION
+                    . ' The payload defines the associations of every shop at once: an image missing from a shop is '
+                    . 'removed from it, and an image listed under no shop is not associated with any shop anymore so '
+                    . 'it is completely deleted. Therefore an image that is the cover of at least one shop cannot be '
+                    . 'removed from all the shops, and an image cannot be removed from a shop where it is the cover: '
+                    . 'change the cover of that shop first. Both cases are refused with a 422. The cover is not part '
+                    . 'of the payload, it is not changed by this operation.',
+                responses: [
+                    '200' => new OpenApiResponse('The updated image/shop associations of the product.', new \ArrayObject(self::OUTPUT_CONTENT)),
+                    '400' => new OpenApiResponse('Invalid input'),
+                    '404' => new OpenApiResponse('Product not found'),
+                    '422' => new OpenApiResponse('Unprocessable entity'),
                 ],
-            ],
+                // The input schema would be generated from the command class, whose constructor only takes the product
+                // id (the associations are built by ShopProductImagesSerializer), and the body is a list (see
+                // ShopProductImagesSerializer), so it is documented explicitly.
+                requestBody: new RequestBody(
+                    'The complete image/shop associations of the product.',
+                    new \ArrayObject([
+                        'application/json' => [
+                            'schema' => self::INPUT_SCHEMA,
+                            'example' => self::INPUT_EXAMPLE,
+                        ],
+                    ]),
+                    true,
+                ),
+            ),
         ),
     ],
     exceptionToStatus: [
@@ -106,94 +113,76 @@ class ShopProductImages
     public int $productId;
 
     /**
-     * Image/shop associations of the product, grouped by shop: [{shopId, images: [{imageId, cover}]}].
-     * Always covers every shop of the product, whatever the shop context of the request.
-     * The PUT payload uses the same shape and defines the complete associations: an image listed
-     * under no shop is removed from every shop (which fails with a 422 when it is the cover of
-     * one of them), and a shop with an empty images list loses all its images. The cover flag is
-     * read-only here (it is managed per shop by the product image update operation) and ignored
-     * in the payload, so a response can be sent back as is.
+     * Image/shop associations of the product, grouped by shop. Read as [{shopId, imageIds, coverImageId}]
+     * (see ShopProductImagesSerializer) and written as [{shopId, imageIds}], coverImageId being ignored. Both the request
+     * body and the response are this list itself, see ShopProductImagesSerializer.
      */
-    #[ApiProperty(openapiContext: self::SHOP_IMAGES_SCHEMA)]
     #[Assert\NotBlank]
     #[Assert\All([
         new Assert\Collection(
             fields: [
-                'shopId' => [new Assert\NotBlank(), new Assert\Positive()],
-                'images' => [
+                'shopId' => [new Assert\NotBlank(), new Assert\Type('integer'), new Assert\Positive()],
+                'imageIds' => [
                     new Assert\Type('array'),
-                    new Assert\All([
-                        new Assert\Collection(
-                            fields: [
-                                'imageId' => [new Assert\NotBlank(), new Assert\Positive()],
-                                'cover' => new Assert\Optional([new Assert\Type('bool')]),
-                            ],
-                        ),
-                    ]),
+                    new Assert\All([new Assert\NotBlank(), new Assert\Type('integer'), new Assert\Positive()]),
                 ],
+                // Accepted so a response can be sent back as is, but ignored and left out of the input schema
+                'coverImageId' => new Assert\Optional(),
             ],
         ),
     ])]
     public array $shopImages = [];
 
     /**
-     * The core query returns a collection of per-shop associations, hoisted as a whole
-     * into the shopImages property so both operations return the same single resource.
+     * The underlying query and command take a product id and no shop constraint, so the shop context
+     * parameters are accepted but do not restrict the scope of these operations.
      */
-    public const QUERY_MAPPING = [
-        '[@index][shopId]' => '[shopImages][@index][shopId]',
-        '[@index][productImages]' => '[shopImages][@index][images]',
-    ];
+    public const MULTISHOP_DESCRIPTION = 'This endpoint is only useful when multistore is enabled. It covers every '
+        . 'shop associated with the product: the shop context parameters (shopId, shopGroupId, shopIds, allShops) '
+        . 'do not restrict it.';
 
-    /**
-     * Both operations always work on every shop associated with the product: the underlying query and command
-     * take a product id and no shop constraint. The shop context parameters (shopId, shopGroupId, shopIds,
-     * allShops) are therefore accepted but do not restrict the scope of these operations.
-     */
-    public const ALL_SHOPS_DESCRIPTION = 'Covers every shop associated with the product. The shop context '
-        . 'parameters (shopId, shopGroupId, shopIds, allShops) do not restrict this endpoint: the underlying CQRS '
-        . 'query and command take a product id and no shop constraint, so they always work on all the shops.';
-
-    /**
-     * OpenAPI schema of the shopImages property, shared by the resource schema and the PUT request body.
-     */
-    public const SHOP_IMAGES_SCHEMA = [
+    public const INPUT_SCHEMA = [
         'type' => 'array',
-        'description' => 'Image/shop associations grouped by shop. In a PUT payload the cover flag is ignored.',
         'items' => [
             'type' => 'object',
-            'required' => ['shopId', 'images'],
+            'required' => ['shopId', 'imageIds'],
             'properties' => [
                 'shopId' => ['type' => 'integer'],
-                'images' => [
-                    'type' => 'array',
-                    'items' => [
-                        'type' => 'object',
-                        'required' => ['imageId'],
-                        'properties' => [
-                            'imageId' => ['type' => 'integer'],
-                            'cover' => ['type' => 'boolean', 'description' => 'Read-only, ignored in a PUT payload.'],
-                        ],
-                    ],
+                'imageIds' => ['type' => 'array', 'items' => ['type' => 'integer']],
+            ],
+        ],
+    ];
+
+    public const OUTPUT_SCHEMA = [
+        'type' => 'array',
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'shopId' => ['type' => 'integer'],
+                'imageIds' => ['type' => 'array', 'items' => ['type' => 'integer']],
+                'coverImageId' => [
+                    'type' => 'integer',
+                    'nullable' => true,
+                    'description' => 'Null when the shop has no image.',
                 ],
             ],
         ],
-        'example' => self::SHOP_IMAGES_EXAMPLE,
     ];
 
-    public const SHOP_IMAGES_EXAMPLE = [
-        [
-            'shopId' => 1,
-            'images' => [
-                ['imageId' => 1, 'cover' => true],
-                ['imageId' => 2, 'cover' => false],
-            ],
-        ],
-        [
-            'shopId' => 2,
-            'images' => [
-                ['imageId' => 1, 'cover' => true],
-            ],
+    public const INPUT_EXAMPLE = [
+        ['shopId' => 1, 'imageIds' => [1, 2]],
+        ['shopId' => 2, 'imageIds' => [3, 4]],
+    ];
+
+    public const OUTPUT_EXAMPLE = [
+        ['shopId' => 1, 'imageIds' => [1, 2], 'coverImageId' => 1],
+        ['shopId' => 2, 'imageIds' => [3, 4], 'coverImageId' => 4],
+    ];
+
+    public const OUTPUT_CONTENT = [
+        'application/json' => [
+            'schema' => self::OUTPUT_SCHEMA,
+            'example' => self::OUTPUT_EXAMPLE,
         ],
     ];
 }

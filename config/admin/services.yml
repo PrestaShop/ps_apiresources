@@ -58,8 +58,8 @@ services:
     autoconfigure: true
     public: false
 
-  # See class docblock: builds SetProductImagesForAllShopCommand through its addProductSetting() adder
-  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\SetProductImagesForAllShopSerializer:
+  # See class docblock: read and write formats of the ShopProductImages resource
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\ShopProductImagesSerializer:
     autowire: true
     autoconfigure: true
     public: false
