@@ -390,6 +390,9 @@ class Product
         '[categoriesInformation][categoriesInformation][@index][name]' => '[categories][@index][name]',
         '[categoriesInformation][categoriesInformation][@index][displayName]' => '[categories][@index][displayName]',
         '[categoriesInformation][defaultCategoryId]' => '[defaultCategoryId]',
+        // The virtual file query result only holds its product id since PrestaShop 9.3, the mapping is
+        // skipped when the product has no virtual file (a null target is not writable)
+        '[productId]' => '[virtualProductFile][productId]',
     ];
 
     public const CREATE_MAPPING = [
