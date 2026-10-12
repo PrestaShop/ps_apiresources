@@ -26,6 +26,7 @@ use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\AddCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\DeleteCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\EditCustomerCommand;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Command\TransformGuestToCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
@@ -36,6 +37,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -67,6 +69,18 @@ use Symfony\Component\Validator\Constraints as Assert;
             read: false,
             CQRSCommand: EditCustomerCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            CQRSQuery: GetCustomerForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: [
+                'customer_write',
+            ],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/customers/{customerId}/transform-to-customer',
+            requirements: ['customerId' => '\d+'],
+            read: false,
+            allowEmptyBody: true,
+            CQRSCommand: TransformGuestToCustomerCommand::class,
             CQRSQuery: GetCustomerForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: [

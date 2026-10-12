@@ -22,10 +22,15 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\CleanHtml;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Command\SetPrivateNoteAboutCustomerCommand;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerForViewing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -38,9 +43,20 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/customers/{customerId}/private-notes',
+            requirements: ['customerId' => '\d+'],
+            // No read, so that an omitted privateNote reaches the NotNull constraint
+            read: false,
+            CQRSCommand: SetPrivateNoteAboutCustomerCommand::class,
+            CQRSQuery: GetCustomerForViewing::class,
+            scopes: ['customer_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+        ),
     ],
     exceptionToStatus: [
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CustomerConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CustomerDetails
@@ -70,7 +86,17 @@ class CustomerDetails
 
     public array $generalInformation;
 
+    /**
+     * Copy of generalInformation.privateNote, so the field written by PATCH /private-notes is read back
+     * under the same name. Nullable so that an explicit null reaches the NotNull constraint and gets the
+     * same 422 as an omitted field, instead of a 400 from the denormalizer.
+     */
+    #[Assert\NotNull]
+    #[CleanHtml]
+    public ?string $privateNote;
+
     public const QUERY_MAPPING = [
         '[customerId]' => '[customerId]',
+        '[generalInformation][privateNote]' => '[privateNote]',
     ];
 }

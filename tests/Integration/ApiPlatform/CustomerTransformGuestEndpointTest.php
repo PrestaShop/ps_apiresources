@@ -76,16 +76,17 @@ class CustomerTransformGuestEndpointTest extends ApiTestCase
     {
         $customerId = $this->createGuest();
 
-        $this->updateItem(
+        // The response is the customer, now registered
+        $transformedCustomer = $this->updateItem(
             '/customers/' . $customerId . '/transform-to-customer',
             [],
-            ['customer_write'],
-            Response::HTTP_NO_CONTENT
+            ['customer_write']
         );
+        $this->assertSame($customerId, $transformedCustomer['customerId']);
+        $this->assertFalse($transformedCustomer['guest']);
 
-        // The guest is now a registered customer
         $customer = $this->getItem('/customers/' . $customerId, ['customer_read']);
-        $this->assertFalse($customer['guest']);
+        $this->assertSame($transformedCustomer, $customer);
 
         return $customerId;
     }

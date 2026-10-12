@@ -23,11 +23,15 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\PrestaShop\Core\Domain\Cart\Command\CreateEmptyCustomerCartCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerCarts;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 /**
  * One cart of a customer, as summarized by GetCustomerCarts.
@@ -40,6 +44,10 @@ use Symfony\Component\HttpFoundation\Response;
  * Only the carts that were never turned into an order are listed: the core calls
  * Cart::getCustomerCarts($customerId, false), so a customer whose carts all became orders
  * gets an empty list.
+ *
+ * The create operation adds an empty cart, the way the back office does when an order is created for
+ * the customer. The core reuses the last empty cart of the customer when there is one, so two
+ * consecutive calls can answer the same cartId. Its response only holds the identifiers.
  */
 #[ApiResource(
     operations: [
@@ -49,6 +57,19 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQuery: GetCustomerCarts::class,
             scopes: ['customer_read'],
         ),
+        new CQRSCreate(
+            uriTemplate: '/customers/{customerId}/carts',
+            requirements: ['customerId' => '\d+'],
+            allowEmptyBody: true,
+            CQRSCommand: CreateEmptyCustomerCartCommand::class,
+            scopes: ['customer_write'],
+            normalizationContext: ['groups' => ['Create']],
+            openapi: new OpenApiOperation(
+                summary: 'Create an empty cart for a customer.',
+                description: 'Creates an empty cart for the customer and returns its identifier. No body is expected. '
+                    . 'When the customer already has an empty cart, that cart is returned instead of a new one.',
+            ),
+        ),
     ],
     exceptionToStatus: [
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
@@ -57,8 +78,10 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class CustomerCart
 {
+    #[Groups(['Default', 'Create'])]
     public int $customerId;
 
+    #[Groups(['Default', 'Create'])]
     public int $cartId;
 
     public string $creationDate;
