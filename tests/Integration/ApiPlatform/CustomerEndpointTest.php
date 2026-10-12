@@ -64,11 +64,6 @@ class CustomerEndpointTest extends ApiTestCase
             '/customers/1/orders',
         ];
 
-        yield 'get customer carts endpoint' => [
-            'GET',
-            '/customers/1/carts',
-        ];
-
         yield 'update customer endpoint' => [
             'PATCH',
             '/customers/1',
@@ -624,23 +619,10 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertSame([], $response);
     }
 
-    /**
-     * @depends testAddCustomer
-     */
-    public function testGetCustomerCarts(int $customerId): void
-    {
-        $response = $this->getItem('/customers/' . $customerId . '/carts', ['customer_read']);
-
-        // The query returns a list, so the endpoint is a collection: a freshly created customer
-        // has no carts yet, hence an empty list. The non empty case is CustomerCartsEndpointTest.
-        $this->assertSame([], $response);
-    }
-
-    public function testGetCustomerOrdersAndCartsInvalidCustomerId(): void
+    public function testGetCustomerOrdersInvalidCustomerId(): void
     {
         // 0 matches the \d+ requirement but is rejected by the CustomerId value object
         $this->getItem('/customers/0/orders', ['customer_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        $this->getItem('/customers/0/carts', ['customer_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     /**

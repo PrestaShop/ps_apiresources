@@ -49,6 +49,10 @@ use Symfony\Component\Serializer\Attribute\Groups;
  * the customer. The core reuses the last empty cart of the customer when there is one, so two
  * consecutive calls can answer the same cartId. Its response only holds the identifiers until the cart
  * endpoints exist to return the created cart, hence the experimental flag.
+ *
+ * The list needs PrestaShop 9.2.1 (PrestaShop/PrestaShop#43116): older cores answer 500 on a cart holding products,
+ * as the total was computed without a context cart. The creation works on older cores, except for an unknown
+ * customer which gets an orphan cart and 201 instead of 404.
  */
 #[ApiResource(
     operations: [
@@ -57,6 +61,15 @@ use Symfony\Component\Serializer\Attribute\Groups;
             requirements: ['customerId' => '\d+'],
             CQRSQuery: GetCustomerCarts::class,
             scopes: ['customer_read'],
+            extraProperties: [
+                'minVersion' => '9.2.1',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'List the pending carts of a customer.',
+                description: 'Lists the carts of the customer that have not been turned into an order yet, most recent '
+                    . 'first. A cart that became an order is no longer listed, see GET /customers/{customerId}/orders. '
+                    . 'totalPrice is formatted in the currency of the cart, for display.',
+            ),
         ),
         new CQRSCreate(
             uriTemplate: '/customers/{customerId}/carts',
