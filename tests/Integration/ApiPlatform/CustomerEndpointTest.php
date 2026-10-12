@@ -999,22 +999,28 @@ class CustomerEndpointTest extends ApiTestCase
 
         $this->assertIsArray($searchResults);
         $this->assertNotEmpty($searchResults);
+        // Older cores keep the query result indexed by customer id
+        if (self::isVersionAtLeast('9.2.1')) {
+            $this->assertTrue(array_is_list($searchResults));
+        }
 
         // Find our customer in the results
         $foundCustomer = null;
         foreach ($searchResults as $result) {
-            if ($result['idCustomer'] === $customerId) {
+            if ($result['customerId'] === $customerId) {
                 $foundCustomer = $result;
                 break;
             }
         }
 
         $this->assertNotNull($foundCustomer, 'Created customer should be found in search results');
-        $this->assertEquals('Search', $foundCustomer['firstname']);
-        $this->assertEquals('Test', $foundCustomer['lastname']);
+        $this->assertEquals('Search', $foundCustomer['firstName']);
+        $this->assertEquals('Test', $foundCustomer['lastName']);
+        $this->assertTrue($foundCustomer['enabled']);
         $this->assertEquals('search.test@example.com', $foundCustomer['email']);
         $this->assertArrayHasKey('fullnameAndEmail', $foundCustomer);
-        $this->assertArrayHasKey('groups', $foundCustomer);
+        $this->assertSame(3, $foundCustomer['defaultGroupId']);
+        $this->assertSame([['groupId' => 3, 'name' => 'Customer', 'default' => true]], $foundCustomer['groups']);
     }
 
     public function testSearchCustomersByEmail(): void
@@ -1041,7 +1047,7 @@ class CustomerEndpointTest extends ApiTestCase
 
         $foundCustomer = null;
         foreach ($searchResults as $result) {
-            if ($result['idCustomer'] === $customerId) {
+            if ($result['customerId'] === $customerId) {
                 $foundCustomer = $result;
                 break;
             }
@@ -1090,7 +1096,7 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertNotEmpty($searchResults);
 
         // Both customers should be found (they both match "Multi")
-        $foundIds = array_column($searchResults, 'idCustomer');
+        $foundIds = array_column($searchResults, 'customerId');
         $this->assertContains($customer1['customerId'], $foundIds);
         $this->assertContains($customer2['customerId'], $foundIds);
     }
