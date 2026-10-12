@@ -92,6 +92,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'customer_write',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Transform a guest into a registered customer.',
+                description: 'Turns the guest account into a registered customer account and returns the customer. No body '
+                    . 'is expected. A customer that is already registered answers 422.',
+            ),
         ),
         new CQRSDelete(
             uriTemplate: '/customers/{customerId}',
@@ -154,6 +159,7 @@ class Customer
     public string $email;
 
     #[Assert\NotBlank(groups: ['Create'])]
+    #[ApiProperty(readable: false)]
     public string $password;
 
     #[Assert\NotBlank(groups: ['Create'])]
@@ -186,7 +192,7 @@ class Customer
 
     public ?string $website;
 
-    #[ApiProperty(openapiContext: ['type' => 'string', 'example' => '1000.50'])]
+    #[ApiProperty(openapiContext: ['type' => 'number', 'example' => 1000.5])]
     public ?DecimalNumber $allowedOutstandingAmount;
 
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 30])]
@@ -198,6 +204,10 @@ class Customer
     #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => false])]
     public bool $guest;
 
+    /**
+     * Input of the DELETE operation only.
+     */
+    #[ApiProperty(readable: false)]
     public ?string $deleteMethod;
 
     public const QUERY_MAPPING = [

@@ -41,6 +41,8 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'customer_write',
             ],
             openapiContext: [
+                'summary' => 'Disable several customers.',
+                'description' => 'Disables the listed customers, the response has no content.',
                 'requestBody' => [
                     'required' => true,
                     'content' => [
@@ -72,6 +74,8 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'customer_write',
             ],
             openapiContext: [
+                'summary' => 'Enable several customers.',
+                'description' => 'Enables the listed customers, the response has no content.',
                 'requestBody' => [
                     'required' => true,
                     'content' => [

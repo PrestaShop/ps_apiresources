@@ -23,13 +23,14 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerOrders;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
+/*
  * One order of a customer, as summarized by GetCustomerOrders.
  *
  * The query returns a list, so this is a collection operation, declared like ProductImageList:
@@ -44,6 +45,11 @@ use Symfony\Component\HttpFoundation\Response;
             requirements: ['customerId' => '\d+'],
             CQRSQuery: GetCustomerOrders::class,
             scopes: ['customer_read'],
+            openapi: new OpenApiOperation(
+                summary: 'List the orders of a customer.',
+                description: 'Lists every order of the customer, not paginated. totalPaid is formatted in the currency of the '
+                    . 'order and orderStatus is the status name in the context language, both for display.',
+            ),
         ),
     ],
     exceptionToStatus: [

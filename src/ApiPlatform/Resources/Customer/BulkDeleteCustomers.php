@@ -40,6 +40,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             allowEmptyBody: false,
             openapiContext: [
+                'summary' => 'Delete several customers.',
+                'description' => 'Deletes the listed customers with the given delete method, the response has no content.',
                 'requestBody' => [
                     'required' => true,
                     'content' => [
