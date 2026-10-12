@@ -33,7 +33,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Serializer\Attribute\Groups;
 
-/**
+/*
  * One cart of a customer, as summarized by GetCustomerCarts.
  *
  * The query returns a list, so this is a collection operation, declared like ProductImageList:

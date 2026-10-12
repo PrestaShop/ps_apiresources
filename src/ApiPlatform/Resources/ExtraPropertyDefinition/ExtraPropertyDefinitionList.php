@@ -27,7 +27,7 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Search\Filters\ExtraPropertyDefinitionFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
-/**
+/*
  * Backed by the back office registry grid. The grid follows the request's shop context: with a
  * single shop or shop group context only the definitions available on those shops are listed.
  */
