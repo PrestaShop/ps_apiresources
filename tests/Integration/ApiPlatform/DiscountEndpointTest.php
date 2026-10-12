@@ -656,13 +656,9 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testBulkDeleteWithMissingParameter(): void
     {
-        $bearerToken = $this->getBearerToken(['discount_write']);
-        static::createClient()->request('DELETE', '/discounts/bulk-delete', [
-            'auth_bearer' => $bearerToken,
+        $this->requestApi('DELETE', '/discounts/bulk-delete', null, ['discount_write'], Response::HTTP_UNPROCESSABLE_ENTITY, [
             'json' => [],
         ]);
-
-        self::assertResponseStatusCodeSame(422);
     }
 
     /**

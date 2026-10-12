@@ -195,10 +195,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
                 'content-type' => 'application/x-www-form-urlencoded',
             ],
         ];
-        $response = static::createClient()->request('POST', '/access_token', $options);
-        self::assertResponseStatusCodeSame(200);
-
-        $bearerToken = json_decode($response->getContent())->access_token;
+        $bearerToken = $this->requestApi('POST', '/access_token', null, [], Response::HTTP_OK, $options)['access_token'];
 
         // Cache the bearer token with associated scopes
         static::$bearerTokens[] = [
@@ -370,19 +367,14 @@ abstract class ApiTestCase extends SymfonyApiTestCase
      */
     protected function listItems(string $listUrl, array $scopes = [], array $filters = []): array
     {
-        $bearerToken = $this->getBearerToken($scopes);
-        $response = static::createClient()->request('GET', $listUrl, [
-            'auth_bearer' => $bearerToken,
+        $decodedResponse = $this->requestApi('GET', $listUrl, null, [], Response::HTTP_OK, [
+            'auth_bearer' => $this->getBearerToken($scopes),
             'extra' => [
                 'parameters' => [
                     'filters' => $filters,
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(200);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
         $this->assertArrayHasKey('totalItems', $decodedResponse);
         $this->assertArrayHasKey('sortOrder', $decodedResponse);
         $this->assertArrayHasKey('limit', $decodedResponse);
