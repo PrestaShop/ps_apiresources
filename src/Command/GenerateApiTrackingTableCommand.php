@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\Command;
 
+use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\GridDefinitionFactoryInterface;
+use PrestaShop\PrestaShop\Core\Grid\GridFactoryInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,6 +33,7 @@ use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Yaml\Yaml;
 
 class GenerateApiTrackingTableCommand extends Command
 {
@@ -66,8 +69,65 @@ class GenerateApiTrackingTableCommand extends Command
         'GetQuickAccessForEditing' => self::REASON_BACK_OFFICE_UI,
     ];
 
+    private const GRID_DEFINITION_NAMESPACE = 'PrestaShop\\PrestaShop\\Core\\Grid\\Definition\\Factory\\';
+    private const REASON_STOCK_MONITORING = 'Back office monitoring view, data already reachable through the product and category lists';
+    private const REASON_CUSTOMER_TAB = 'Tab of the customer page, covered by filtering the main lists';
+
+    /**
+     * Same purpose as self::EXCLUDED_CQRS_CLASSES for the listing grids, keyed by the grid
+     * definition factory class relative to self::GRID_DEFINITION_NAMESPACE.
+     */
+    private const EXCLUDED_GRIDS = [
+        'BackupDefinitionFactory' => self::REASON_BACK_OFFICE_UI,
+        'EmailBodyTemplateDefinitionFactory' => self::REASON_BACK_OFFICE_UI,
+        'EmailLogsDefinitionFactory' => self::REASON_BACK_OFFICE_UI,
+        'LogGridDefinitionFactory' => self::REASON_BACK_OFFICE_UI,
+        // GET /products already covers the light and per-shop product lists
+        'ProductLightGridDefinitionFactory' => self::USELESS_DUPLICATE,
+        'ProductShopsGridDefinitionFactory' => self::USELESS_DUPLICATE,
+        'QuickAccessGridDefinitionFactory' => self::REASON_BACK_OFFICE_UI,
+        'RequestSqlGridDefinitionFactory' => self::REASON_BACK_OFFICE_UI,
+        'Security\\Session\\CustomerGridDefinitionFactory' => self::REASON_BACK_OFFICE_UI,
+        'Security\\Session\\EmployeeGridDefinitionFactory' => self::REASON_BACK_OFFICE_UI,
+        'Monitoring\\DisabledProductGridDefinitionFactory' => self::REASON_STOCK_MONITORING,
+        'Monitoring\\EmptyCategoryGridDefinitionFactory' => self::REASON_STOCK_MONITORING,
+        'Monitoring\\NoQtyProductWithCombinationGridDefinitionFactory' => self::REASON_STOCK_MONITORING,
+        'Monitoring\\NoQtyProductWithoutCombinationGridDefinitionFactory' => self::REASON_STOCK_MONITORING,
+        'Monitoring\\ProductWithoutDescriptionGridDefinitionFactory' => self::REASON_STOCK_MONITORING,
+        'Monitoring\\ProductWithoutImageGridDefinitionFactory' => self::REASON_STOCK_MONITORING,
+        'Monitoring\\ProductWithoutPriceGridDefinitionFactory' => self::REASON_STOCK_MONITORING,
+        'CustomerAddressGridDefinitionFactory' => self::REASON_CUSTOMER_TAB,
+        'CustomerBoughtProductGridDefinitionFactory' => self::REASON_CUSTOMER_TAB,
+        'CustomerCartGridDefinitionFactory' => self::REASON_CUSTOMER_TAB,
+        'CustomerDiscountGridDefinitionFactory' => self::REASON_CUSTOMER_TAB,
+        'CustomerOrderGridDefinitionFactory' => self::REASON_CUSTOMER_TAB,
+        'CustomerViewedProductGridDefinitionFactory' => self::REASON_CUSTOMER_TAB,
+    ];
+
+    /**
+     * Grids whose domain can't be guessed from their name (the longest CQRS domain prefixing it).
+     */
+    private const GRID_DOMAINS = [
+        'AttributeGridDefinitionFactory' => 'AttributeGroup',
+        'CustomerThreadGridDefinitionFactory' => 'CustomerService',
+        'EmailBodyTemplateDefinitionFactory' => 'MailTemplate',
+        'ImageTypeGridDefinitionFactory' => 'ImageSettings',
+        'Monitoring\\DisabledProductGridDefinitionFactory' => 'Product',
+        'Monitoring\\EmptyCategoryGridDefinitionFactory' => 'Category',
+        'Monitoring\\NoQtyProductWithCombinationGridDefinitionFactory' => 'Product',
+        'Monitoring\\NoQtyProductWithoutCombinationGridDefinitionFactory' => 'Product',
+        'OutstandingGridDefinitionFactory' => 'Order',
+        'RequestSqlGridDefinitionFactory' => 'SqlManagement',
+        'TaxRuleGridDefinitionFactory' => 'TaxRulesGroup',
+    ];
+
+    private const TYPE_ORDER = ['Command' => 0, 'Query' => 1, 'List' => 2];
+
     private array $cqrsEndpoints = [];
     private array $cqrsLookup = [];
+    private ?array $gridEndpoints = null;
+    private ?array $serviceDefinitions = null;
+    private array $serviceParameters = [];
 
     protected function configure(): void
     {
@@ -94,12 +154,17 @@ class GenerateApiTrackingTableCommand extends Command
             $cqrsEndpoints = $this->getAllCqrsEndpoints();
             $io->info(sprintf('Found %d CQRS endpoints', count($cqrsEndpoints)));
 
-            // Step 1bis: Discard the commands/queries that are not meant to become API endpoints
+            $io->section('🔍 Scanning listing grids from the core...');
+            $gridEndpoints = $this->getAllGridEndpoints();
+            $io->info(sprintf('Found %d listing grids', count($gridEndpoints)));
+            $cqrsEndpoints = array_merge($cqrsEndpoints, array_values($gridEndpoints));
+
+            // Step 1bis: Discard the commands/queries/grids that are not meant to become API endpoints
             $excludedEndpoints = [];
             if (!$input->getOption('include-excluded')) {
                 [$cqrsEndpoints, $excludedEndpoints] = $this->splitExcludedEndpoints($cqrsEndpoints);
                 $io->info(sprintf(
-                    'Excluded %d CQRS endpoints not relevant for the Admin API (%d remaining)',
+                    'Excluded %d endpoints not relevant for the Admin API (%d remaining)',
                     count($excludedEndpoints),
                     count($cqrsEndpoints)
                 ));
@@ -108,7 +173,19 @@ class GenerateApiTrackingTableCommand extends Command
             // Step 2: Scan API Platform resources directly
             $io->section('📄 Scanning API Platform resources...');
             $apiEndpoints = $this->scanApiPlatformResources();
-            $io->info(sprintf('Found %d API endpoints with CQRS mappings', count($apiEndpoints)));
+            $io->info(sprintf('Found %d API endpoints with CQRS or grid mappings', count($apiEndpoints)));
+
+            // Listings without a core grid (data factory declared by the module) are tracked on their own
+            foreach ($apiEndpoints as $key => $apiEndpoint) {
+                if (isset($apiEndpoint['resource'])) {
+                    $cqrsEndpoints[] = [
+                        'class' => $key,
+                        'type' => 'List',
+                        'domain' => $this->guessGridDomain($apiEndpoint['resource']),
+                        'action' => $apiEndpoint['resource'],
+                    ];
+                }
+            }
 
             // Step 3: Analyze GitHub PRs for status detection (if enabled)
             $prStatusMap = [];
@@ -124,7 +201,7 @@ class GenerateApiTrackingTableCommand extends Command
             $matchedEndpoints = $this->compareCqrsWithApi($cqrsEndpoints, $apiEndpoints, $prStatusMap);
 
             $apiCount = count(array_filter($matchedEndpoints, fn ($e) => $e['has_api']));
-            $io->info(sprintf('Matched %d CQRS endpoints with API implementations', $apiCount));
+            $io->info(sprintf('Matched %d CQRS endpoints and grids with API implementations', $apiCount));
 
             // Step 4: Generate markdown table
             $io->section('📝 Generating markdown table...');
@@ -227,22 +304,293 @@ class GenerateApiTrackingTableCommand extends Command
     private function scanApiPlatformResources(): array
     {
         $endpoints = [];
-        $resourcesPath = _PS_MODULE_DIR_ . 'ps_apiresources/src/ApiPlatform/Resources';
+        // Core ships a few native resources (e.g. /languages), module ones come last so they take precedence
+        $resourcesPaths = [
+            _PS_ROOT_DIR_ . '/src/PrestaShopBundle/ApiPlatform/Resources',
+            _PS_MODULE_DIR_ . 'ps_apiresources/src/ApiPlatform/Resources',
+        ];
 
-        if (!is_dir($resourcesPath)) {
-            return $endpoints;
-        }
+        foreach (array_filter($resourcesPaths, 'is_dir') as $resourcesPath) {
+            $finder = new Finder();
+            $finder->files()->name('*.php')->in($resourcesPath);
 
-        $finder = new Finder();
-        $finder->files()->name('*.php')->in($resourcesPath);
-
-        foreach ($finder as $file) {
-            $content = file_get_contents($file->getRealPath());
-            $mappings = $this->extractCqrsMappingsFromResourceFile($content);
-            $endpoints = array_merge($endpoints, $mappings);
+            foreach ($finder as $file) {
+                $content = file_get_contents($file->getRealPath());
+                $mappings = $this->extractCqrsMappingsFromResourceFile($content);
+                $endpoints = array_merge($endpoints, $mappings, $this->extractGridMappingsFromResourceFile($content));
+            }
         }
 
         return $endpoints;
+    }
+
+    /**
+     * Listing operations are not CQRS based, they are matched to a core grid through their gridDataFactory,
+     * or keyed by that data factory along with the resource name when no core grid uses it.
+     */
+    private function extractGridMappingsFromResourceFile(string $content): array
+    {
+        $mappings = [];
+
+        preg_match_all('/new\s+\w+\s*(\((?:[^()]++|(?1))*\))/', $content, $matches);
+        foreach ($matches[1] as $operationContent) {
+            if (!preg_match('/uriTemplate:\s*[\'"]([^\'"]+)[\'"]/', $operationContent, $uriMatch)) {
+                continue;
+            }
+
+            $dataFactory = $this->extractGridDataFactory($operationContent, $content);
+            if (null === $dataFactory) {
+                continue;
+            }
+
+            $gridKey = $this->findGridForDataFactory($dataFactory);
+            if (isset($mappings[$gridKey ?? $dataFactory])) {
+                continue;
+            }
+
+            $mappings[$gridKey ?? $dataFactory] = [
+                'uri' => $uriMatch[1],
+                'method' => 'GET',
+                'grid_data_factory' => $dataFactory,
+            ];
+            if (null === $gridKey && preg_match('/^(?:final\s+)?class\s+(\w+)/m', $content, $classMatch)) {
+                $mappings[$dataFactory]['resource'] = $classMatch[1];
+            }
+        }
+
+        return $mappings;
+    }
+
+    /**
+     * Return the service ID of the gridDataFactory used in the code, `X::class` references being
+     * resolved through the `use` statements of $fileContent.
+     */
+    private function extractGridDataFactory(string $code, string $fileContent): ?string
+    {
+        if (!preg_match('/gridDataFactory:\s*(?:[\'"]([^\'"]+)[\'"]|([\\\\\w]+)::class)/', $code, $match)) {
+            return null;
+        }
+
+        if (!empty($match[1])) {
+            return $match[1];
+        }
+
+        $class = ltrim($match[2], '\\');
+        if (preg_match('/^[+ ]?use\s+([\\\\\w]+\\\\' . preg_quote($class, '/') . ');/m', $fileContent, $useMatch)) {
+            return $useMatch[1];
+        }
+
+        // A PR patch may not contain the use statement, the service ID is then guessed from the short name
+        foreach (array_keys($this->getServiceDefinitions()) as $serviceId) {
+            if (str_ends_with($serviceId, '\\' . $class)) {
+                return $serviceId;
+            }
+        }
+
+        return $class;
+    }
+
+    /**
+     * One resource matches one grid, even when decorators are involved, best match first:
+     * the BO grid data factory itself, then a decorator of it, then a service it decorates.
+     */
+    private function findGridForDataFactory(string $dataFactory): ?string
+    {
+        $grids = $this->getAllGridEndpoints();
+
+        foreach ($grids as $key => $grid) {
+            if ($grid['data_factory'] === $dataFactory) {
+                return $key;
+            }
+        }
+
+        $dataFactoryChain = $this->getServiceChain($dataFactory);
+        foreach ($grids as $key => $grid) {
+            if (in_array($grid['data_factory'], $dataFactoryChain, true)) {
+                return $key;
+            }
+        }
+
+        foreach ($grids as $key => $grid) {
+            if (in_array($dataFactory, $this->getServiceChain($grid['data_factory']), true)) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Core grids, keyed by their grid factory service ID, read from the core service definitions
+     * since the compiled container no longer exposes the services arguments.
+     */
+    private function getAllGridEndpoints(): array
+    {
+        if (null !== $this->gridEndpoints) {
+            return $this->gridEndpoints;
+        }
+
+        $this->gridEndpoints = [];
+        $definitionFactories = [];
+        foreach ($this->getServiceDefinitions(true) as $serviceId => $definition) {
+            if (!is_a($this->resolveServiceClass($serviceId), GridFactoryInterface::class, true)) {
+                continue;
+            }
+
+            $arguments = $definition['arguments'] ?? [];
+            $definitionFactory = $this->getServiceReference($arguments[0] ?? $arguments['$definitionFactory'] ?? null);
+            $dataFactory = $this->getServiceReference($arguments[1] ?? $arguments['$dataFactory'] ?? null);
+            if (null === $definitionFactory || null === $dataFactory) {
+                continue;
+            }
+
+            // Grid factory decorators wrap another grid factory instead of a definition factory
+            $definitionClass = $this->resolveServiceClass($definitionFactory);
+            if (!is_a($definitionClass, GridDefinitionFactoryInterface::class, true) || isset($definitionFactories[$definitionClass])) {
+                continue;
+            }
+            $definitionFactories[$definitionClass] = true;
+
+            $gridName = str_starts_with($definitionClass, self::GRID_DEFINITION_NAMESPACE)
+                ? substr($definitionClass, strlen(self::GRID_DEFINITION_NAMESPACE))
+                : $definitionClass;
+
+            $this->gridEndpoints[$serviceId] = [
+                'class' => $serviceId,
+                'type' => 'List',
+                'domain' => $this->guessGridDomain($gridName),
+                'action' => $gridName,
+                'data_factory' => $dataFactory,
+            ];
+        }
+
+        return $this->gridEndpoints;
+    }
+
+    private function guessGridDomain(string $gridName): string
+    {
+        if (isset(self::GRID_DOMAINS[$gridName])) {
+            return self::GRID_DOMAINS[$gridName];
+        }
+
+        $domains = array_unique(array_filter(array_column($this->getAllCqrsEndpoints(), 'domain')));
+        usort($domains, fn ($a, $b) => strlen($b) <=> strlen($a));
+
+        $baseName = preg_replace('/(Grid)?DefinitionFactory$/', '', basename(str_replace('\\', '/', $gridName)));
+        foreach ($domains as $domain) {
+            if (str_starts_with($baseName, $domain)) {
+                return $domain;
+            }
+        }
+
+        return 'Unknown';
+    }
+
+    /**
+     * Service definitions from the core config, plus the module config (for the data factories
+     * it declares itself) unless $coreOnly.
+     */
+    private function getServiceDefinitions(bool $coreOnly = false): array
+    {
+        if (null === $this->serviceDefinitions) {
+            $this->serviceDefinitions = [
+                'core' => $this->parseServiceDefinitions(_PS_ROOT_DIR_ . '/src/PrestaShopBundle/Resources/config/services'),
+                'module' => $this->parseServiceDefinitions(_PS_MODULE_DIR_ . 'ps_apiresources/config'),
+            ];
+        }
+
+        return $coreOnly ? $this->serviceDefinitions['core'] : $this->serviceDefinitions['core'] + $this->serviceDefinitions['module'];
+    }
+
+    private function parseServiceDefinitions(string $path): array
+    {
+        $services = [];
+        if (!is_dir($path)) {
+            return $services;
+        }
+
+        $finder = new Finder();
+        $finder->files()->name('*.yml')->in($path);
+        foreach ($finder as $file) {
+            $config = Yaml::parseFile($file->getRealPath(), Yaml::PARSE_CUSTOM_TAGS);
+            $this->serviceParameters += $config['parameters'] ?? [];
+
+            foreach ($config['services'] ?? [] as $serviceId => $definition) {
+                // Skip _defaults, _instanceof and resource prototypes
+                if (str_starts_with($serviceId, '_') || str_ends_with($serviceId, '\\')) {
+                    continue;
+                }
+                if (is_string($definition)) {
+                    $definition = ['alias' => $definition];
+                }
+                $services[$serviceId] = is_array($definition) ? $definition : [];
+            }
+        }
+
+        return $services;
+    }
+
+    private function resolveServiceClass(string $serviceId): string
+    {
+        $services = $this->getServiceDefinitions();
+        $seen = [];
+        while (isset($services[$serviceId]['alias']) && !isset($seen[$serviceId])) {
+            $seen[$serviceId] = true;
+            $serviceId = $this->getServiceReference($services[$serviceId]['alias']) ?? $serviceId;
+        }
+
+        $class = $services[$serviceId]['class'] ?? $serviceId;
+        if (is_string($class) && preg_match('/^%(.+)%$/', $class, $parameter)) {
+            $class = $this->serviceParameters[$parameter[1]] ?? $class;
+        }
+
+        return is_string($class) ? ltrim($class, '\\') : $serviceId;
+    }
+
+    /**
+     * Turn a YAML reference ('@id', '@?id', alias target) into a service ID.
+     */
+    private function getServiceReference(mixed $value): ?string
+    {
+        if (!is_string($value) || '' === $value || str_starts_with($value, '@=')) {
+            return null;
+        }
+
+        return ltrim($value, '@?');
+    }
+
+    /**
+     * The service and every service it references directly or not (decorated factories included).
+     */
+    private function getServiceChain(string $serviceId): array
+    {
+        $services = $this->getServiceDefinitions();
+        $chain = [];
+        $queue = [$serviceId];
+
+        while (null !== ($currentId = array_shift($queue))) {
+            if (isset($chain[$currentId])) {
+                continue;
+            }
+            $chain[$currentId] = true;
+
+            $definition = $services[$currentId] ?? [];
+            $references = [$definition['alias'] ?? null, $definition['decorates'] ?? null];
+            $arguments = $definition['arguments'] ?? [];
+            array_walk_recursive($arguments, function ($argument) use (&$references) {
+                if (is_string($argument) && str_starts_with($argument, '@')) {
+                    $references[] = $argument;
+                }
+            });
+
+            foreach ($references as $reference) {
+                if (null !== ($referencedId = $this->getServiceReference($reference))) {
+                    $queue[] = $referencedId;
+                }
+            }
+        }
+
+        return array_keys($chain);
     }
 
     private function extractCqrsMappingsFromResourceFile(string $content): array
@@ -329,9 +677,9 @@ class GenerateApiTrackingTableCommand extends Command
     }
 
     /**
-     * Split the CQRS endpoints into the ones that are trackable as Admin API endpoints and the
-     * ones flagged in self::EXCLUDED_CQRS_CLASSES. Excluded endpoints keep their exclusion reason
-     * so it can be reported in the generated markdown.
+     * Split the CQRS endpoints and grids into the ones that are trackable as Admin API endpoints and
+     * the ones flagged in self::EXCLUDED_CQRS_CLASSES or self::EXCLUDED_GRIDS. Excluded endpoints keep
+     * their exclusion reason so it can be reported in the generated markdown.
      *
      * @return array{0: array, 1: array} [$trackable, $excluded]
      */
@@ -341,7 +689,9 @@ class GenerateApiTrackingTableCommand extends Command
         $excluded = [];
 
         foreach ($cqrsEndpoints as $endpoint) {
-            $reason = $this->getExclusionReason($endpoint['class']);
+            $reason = 'List' === $endpoint['type']
+                ? self::EXCLUDED_GRIDS[$endpoint['action']] ?? null
+                : $this->getExclusionReason($endpoint['class']);
 
             if (null === $reason) {
                 $trackable[] = $endpoint;
@@ -386,6 +736,8 @@ class GenerateApiTrackingTableCommand extends Command
                 'api' => $hasApi ? $apiInfo['method'] . ' ' . $apiInfo['uri'] : '',
                 'api_info' => $apiInfo,
                 'pr_status' => $prStatus,
+                // The grid data factory to integrate, the one the API actually uses once implemented
+                'service' => $apiInfo['grid_data_factory'] ?? $cqrs['data_factory'] ?? '',
             ];
         }
 
@@ -451,6 +803,7 @@ class GenerateApiTrackingTableCommand extends Command
             $domainGroups[$domain][] = [
                 'action' => $endpoint['action'] ?: basename(str_replace('\\', '/', $endpoint['class'])),
                 'type' => $endpoint['type'],
+                'service' => $endpoint['service'],
                 'hasApi' => $hasApi,
                 'api' => $endpoint['api'],
                 'status' => $finalStatus,
@@ -464,7 +817,7 @@ class GenerateApiTrackingTableCommand extends Command
         foreach ($domainGroups as $domain => &$endpoints) {
             usort($endpoints, function ($a, $b) {
                 if ($a['type'] !== $b['type']) {
-                    return 'Command' === $a['type'] ? -1 : 1;
+                    return (self::TYPE_ORDER[$a['type']] ?? 3) <=> (self::TYPE_ORDER[$b['type']] ?? 3);
                 }
 
                 return strcasecmp($a['action'], $b['action']);
@@ -525,7 +878,7 @@ class GenerateApiTrackingTableCommand extends Command
         $projectedPercentage = $totalEndpoints > 0 ? round((($implementedCount + $inProgressCount) / $totalEndpoints) * 100, 1) : 0;
 
         $markdown = "# PrestaShop API Endpoints - Tracking\n\n";
-        $markdown .= "This table tracks the progress of API endpoint implementations for PrestaShop CQRS commands and queries.\n\n";
+        $markdown .= "This table tracks the progress of API endpoint implementations for PrestaShop CQRS commands and queries, and for the listing grids.\n\n";
         $markdown .= "## 📊 Overall Progress\n\n";
         $markdown .= "- **Total Endpoints**: $totalEndpoints\n";
         $markdown .= "- **Implemented**: $implementedCount ✅\n";
@@ -552,6 +905,9 @@ class GenerateApiTrackingTableCommand extends Command
 
             foreach ($endpoints as $endpoint) {
                 $action = '`' . $endpoint['action'] . '`';
+                if (!empty($endpoint['service'])) {
+                    $action .= '<br>`' . $endpoint['service'] . '`';
+                }
                 $type = $endpoint['type'];
                 // Keep only the emoji in the table, the legend explains it.
                 $status = $this->statusEmoji($endpoint['status']);
@@ -578,14 +934,14 @@ class GenerateApiTrackingTableCommand extends Command
         $markdown .= "- ✅ **Implemented**: API endpoint is available and working\n";
         $markdown .= "- 🚧 **In Progress**: Someone is actively working on this endpoint (PR open)\n";
         $markdown .= "- ❌ **Missing**: API endpoint needs to be implemented\n";
-        $markdown .= "- 🚫 **Excluded**: Command / query intentionally not exposed through the Admin API\n\n";
+        $markdown .= "- 🚫 **Excluded**: Command / query / grid intentionally not exposed through the Admin API\n\n";
         $markdown .= '*Last updated: ' . date('Y-m-d H:i:s') . "*\n";
 
         file_put_contents($outputFile, $markdown);
     }
 
     /**
-     * Render the informative table of the commands/queries deliberately kept out of the Admin API.
+     * Render the informative table of the commands/queries/grids deliberately kept out of the Admin API.
      * They are listed for transparency only and are not part of any metric above.
      */
     private function renderExcludedSection(array $excludedEndpoints): string
@@ -603,7 +959,7 @@ class GenerateApiTrackingTableCommand extends Command
         });
 
         $markdown = "## 🚫 Excluded from tracking\n\n";
-        $markdown .= "These CQRS commands and queries are intentionally **not** exposed through the Admin API.\n";
+        $markdown .= "These CQRS commands, queries and listing grids are intentionally **not** exposed through the Admin API.\n";
         $markdown .= "(totals, percentages and per-domain progress).\n\n";
         $markdown .= "| Action | Type | Domain | Reason |\n";
         $markdown .= "|--------|------|--------|--------|\n";
@@ -728,6 +1084,16 @@ class GenerateApiTrackingTableCommand extends Command
             $fullClassName = $this->findFullCqrsClassName($shortClassName);
             if ($fullClassName) {
                 $endpoints[] = $fullClassName;
+            }
+        }
+
+        // Listing operations, matched to their grid
+        preg_match_all('/^\+.*gridDataFactory:.*$/m', $patch, $gridMatches);
+        foreach ($gridMatches[0] as $line) {
+            $dataFactory = $this->extractGridDataFactory($line, $patch);
+            $gridKey = $dataFactory ? $this->findGridForDataFactory($dataFactory) : null;
+            if ($gridKey) {
+                $endpoints[] = $gridKey;
             }
         }
 
