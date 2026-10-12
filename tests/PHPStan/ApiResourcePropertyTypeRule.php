@@ -84,7 +84,11 @@ final class ApiResourcePropertyTypeRule implements Rule
         'double' => 'DecimalNumber',
     ];
 
-    private const ALLOWED_TYPES_DESCRIPTION = 'Only scalar types (bool, int, string, array), DecimalNumber, DateTimeImmutable, and File are allowed.';
+    // Plain DTOs describing a sub object of a resource (ApiPlatform\Resources\{Domain}\Dto), they follow the same
+    // property rules as the resources
+    private const DTO_NAMESPACE_PATTERN = '/\\\\ApiPlatform\\\\Resources\\\\[^\\\\]+\\\\Dto\\\\/';
+
+    private const ALLOWED_TYPES_DESCRIPTION = 'Only scalar types (bool, int, string, array), DecimalNumber, DateTimeImmutable, File, and DTOs of a Resources\\{Domain}\\Dto namespace are allowed.';
 
     public function getNodeType(): string
     {
@@ -102,12 +106,14 @@ final class ApiResourcePropertyTypeRule implements Rule
         if ($node->namespacedName === null) {
             return [];
         }
-        if (!str_contains($node->namespacedName->toString(), 'ApiPlatform\\Resources\\')) {
+        $className = $node->namespacedName->toString();
+        $isDto = 1 === preg_match(self::DTO_NAMESPACE_PATTERN, $className);
+        if (!$isDto && !str_contains($className, 'ApiPlatform\\Resources\\')) {
             return [];
         }
 
-        // Only process classes decorated with #[ApiResource].
-        if (!$this->hasApiResourceAttribute($node)) {
+        // Only process DTOs and classes decorated with #[ApiResource].
+        if (!$isDto && !$this->hasApiResourceAttribute($node)) {
             return [];
         }
 
@@ -234,7 +240,7 @@ final class ApiResourcePropertyTypeRule implements Rule
         $fqcn = $typeNode->toString();
         $shortName = $typeNode->getLast();
 
-        if (in_array($fqcn, self::ALLOWED_CLASS_FQCNS, true)) {
+        if (in_array($fqcn, self::ALLOWED_CLASS_FQCNS, true) || 1 === preg_match(self::DTO_NAMESPACE_PATTERN, $fqcn)) {
             return [];
         }
 

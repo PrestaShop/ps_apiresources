@@ -78,7 +78,7 @@ final class ApiResourcePropertyTypeRuleTest extends RuleTestCase
             [__DIR__ . '/Fixture/missing_type.php'],
             [
                 [
-                    'ApiResource property $name has no type declaration. Only scalar types (bool, int, string, array), DecimalNumber, DateTimeImmutable, and File are allowed.',
+                    'ApiResource property $name has no type declaration. Only scalar types (bool, int, string, array), DecimalNumber, DateTimeImmutable, File, and DTOs of a Resources\\{Domain}\\Dto namespace are allowed.',
                     31,
                 ],
             ]
@@ -94,8 +94,32 @@ final class ApiResourcePropertyTypeRuleTest extends RuleTestCase
             [__DIR__ . '/Fixture/invalid_object_type.php'],
             [
                 [
-                    'ApiResource property $something has unsupported class type "Some\Forbidden\ValueObject". Only scalar types (bool, int, string, array), DecimalNumber, DateTimeImmutable, and File are allowed.',
+                    'ApiResource property $something has unsupported class type "Some\Forbidden\ValueObject". Only scalar types (bool, int, string, array), DecimalNumber, DateTimeImmutable, File, and DTOs of a Resources\\{Domain}\\Dto namespace are allowed.',
                     39,
+                ],
+            ]
+        );
+    }
+
+    /**
+     * A resource property typed with a DTO of a Resources\{Domain}\Dto namespace is allowed.
+     */
+    public function testDtoType(): void
+    {
+        $this->analyse([__DIR__ . '/Fixture/dto_type.php'], []);
+    }
+
+    /**
+     * The DTO classes follow the same property rules as the resources.
+     */
+    public function testDtoWithFloatType(): void
+    {
+        $this->analyse(
+            [__DIR__ . '/Fixture/dto_float_type.php'],
+            [
+                [
+                    'ApiResource property $amount uses banned type "float". Use DecimalNumber instead.',
+                    28,
                 ],
             ]
         );
