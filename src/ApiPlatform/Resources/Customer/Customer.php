@@ -22,6 +22,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\AddCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\DeleteCustomerCommand;
@@ -53,6 +54,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             validationContext: ['groups' => ['Default', 'Create']],
+            openapi: new OpenApiOperation(
+                summary: 'Create a customer.',
+                description: 'Creates a customer and returns it. newsletterSubscribed is applied from PrestaShop 9.2.1, '
+                    . 'older versions ignore it on creation: set it with a partial update instead.',
+            ),
         ),
         new CQRSGet(
             uriTemplate: '/customers/{customerId}',
@@ -201,6 +207,7 @@ class Customer
     public const COMMAND_MAPPING = [
         '[_context][shopId]' => '[shopId]',
         '[partnerOffersSubscribed]' => '[isPartnerOffersSubscribed]',
+        '[newsletterSubscribed]' => '[isNewsletterSubscribed]',
         '[guest]' => '[isGuest]',
         '[enabled]' => '[isEnabled]',
     ];

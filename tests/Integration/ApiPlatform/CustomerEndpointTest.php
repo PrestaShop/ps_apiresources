@@ -152,6 +152,22 @@ class CustomerEndpointTest extends ApiTestCase
         return $customerId;
     }
 
+    public function testAddCustomerSubscribedToNewsletter(): void
+    {
+        $customer = $this->createItem('/customers', [
+            'firstName' => 'Jane',
+            'lastName' => 'Newsletter',
+            'email' => 'jane.newsletter@example.com',
+            'password' => 'TestPassword123!',
+            'defaultGroupId' => 3,
+            'groupIds' => [3],
+            'newsletterSubscribed' => true,
+        ], ['customer_write']);
+
+        // Older cores have no newsletter in AddCustomerCommand and ignore the field, fixed by PrestaShop/PrestaShop#43116
+        $this->assertSame(self::isVersionAtLeast('9.2.1'), $customer['newsletterSubscribed']);
+    }
+
     public function testAddCustomerWithB2bFields(): int
     {
         $postData = [
