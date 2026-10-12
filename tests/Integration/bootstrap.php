@@ -23,7 +23,8 @@ if (!defined('_PS_ROOT_DIR_')) {
 define('_PS_IN_TEST_', true);
 define('_PS_MODULE_DIR_', _PS_ROOT_DIR_ . '/tests/Resources/modules/');
 require_once _PS_ROOT_DIR_ . '/vendor/smarty/smarty/libs/functions.php';
-require_once _PS_ROOT_DIR_ . '/admin-dev/bootstrap.php';
+// Like admin-api/index.php, without _PS_ADMIN_DIR_ which would put an employee in the legacy context
+require_once _PS_ROOT_DIR_ . '/config/config.inc.php';
 
 /*
  * Following code makes tests run under phpstorm

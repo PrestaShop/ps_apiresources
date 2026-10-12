@@ -210,6 +210,27 @@ abstract class ApiTestCase extends SymfonyApiTestCase
     }
 
     /**
+     * A real API request starts in a new PHP process, the tests send all of them from this one.
+     */
+    protected static function resetLegacyStaticCaches(): void
+    {
+        \Product::flushPriceCache();
+        \SpecificPrice::flushCache();
+        \Configuration::resetStaticCache();
+        \Cache::clear();
+        \Cart::resetStaticCache();
+        \Carrier::resetStaticCache();
+        \CartRule::resetStaticCache();
+        \Currency::resetStaticCache();
+        \Pack::resetStaticCache();
+        \Customer::resetAddressCache();
+        \Address::resetStaticCache();
+        \ObjectModel::resetStaticCache();
+        \Tools::resetStaticCache();
+        \Cache::clean('*');
+    }
+
+    /**
      * @param string $httpMethod HTTP method to use (GET, POST, PATCH, PUT, DELETE)
      * @param string $endPointUrl HTTP url for the requested endpoint
      * @param array|null $data Flatten array data that will be sent as JSON (null if no JSON is sent)
@@ -237,7 +258,19 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             $options = array_merge($options, $requestOptions);
         }
 
-        $response = static::createClient()->request($httpMethod, $endPointUrl, $options);
+        // Same legacy context as a real API request: no employee nor cart, which test fixtures may have set
+        self::resetLegacyStaticCaches();
+        $legacyContext = \Context::getContext();
+        $testEmployee = $legacyContext->employee;
+        $testCart = $legacyContext->cart;
+        $legacyContext->employee = null;
+        $legacyContext->cart = null;
+        try {
+            $response = static::createClient()->request($httpMethod, $endPointUrl, $options);
+        } finally {
+            $legacyContext->employee = $testEmployee;
+            $legacyContext->cart = $testCart;
+        }
 
         // Unless you mean to test a specific code (for invalid requests mostly) the expected code can be deduced from the
         // HTTP method by convention
