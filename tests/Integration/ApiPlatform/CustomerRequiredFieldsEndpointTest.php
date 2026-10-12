@@ -30,6 +30,12 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
+        if (self::isVersionUnder('9.2.0')) {
+            static::markTestSkipped('These endpoints require PrestaShop 9.2.0');
+
+            return;
+        }
+
         parent::setUpBeforeClass();
         DatabaseDump::restoreTables(['required_field']);
         self::createApiClient(['customer_read', 'customer_write']);
@@ -43,13 +49,10 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        // GET endpoint only works for 9.2+
-        if (self::isVersionAtLeast('9.2.0')) {
-            yield 'get required fields endpoint' => [
-                'GET',
-                '/customers/required-fields',
-            ];
-        }
+        yield 'get required fields endpoint' => [
+            'GET',
+            '/customers/required-fields',
+        ];
 
         yield 'set required fields endpoint' => [
             'PUT',
@@ -59,7 +62,6 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
 
     public function testGetCustomerRequiredFields(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.0');
         $requiredFields = $this->getItem('/customers/required-fields', ['customer_read']);
         // By default, there is no required filed
         $this->assertEquals([], $requiredFields['requiredFields']);
@@ -67,26 +69,15 @@ class CustomerRequiredFieldsEndpointTest extends ApiTestCase
 
     public function testSetCustomerRequiredFields(): void
     {
-        $this->updateItem(
+        // The response is the updated list
+        $updatedRequiredFields = $this->updateItem(
             '/customers/required-fields',
             ['requiredFields' => ['newsletter']],
-            ['customer_write'],
-            Response::HTTP_NO_CONTENT
+            ['customer_write']
         );
+        $this->assertEquals(['requiredFields' => ['newsletter']], $updatedRequiredFields);
 
-        // GET endpoint only works for 9.2+
-        if (self::isVersionAtLeast('9.2.0')) {
-            $requiredFields = $this->getItem('/customers/required-fields', ['customer_read']);
-            $this->assertEquals(['newsletter'], $requiredFields['requiredFields']);
-        } else {
-            // Test manually from the DB
-            $storedFields = \Db::getInstance()->executeS(
-                'SELECT `field_name` FROM `' . _DB_PREFIX_ . "required_field` WHERE `object_name` = 'Customer'"
-            );
-            $fieldNames = array_column($storedFields ?: [], 'field_name');
-
-            $this->assertContains('newsletter', $fieldNames);
-        }
+        $this->assertEquals($updatedRequiredFields, $this->getItem('/customers/required-fields', ['customer_read']));
     }
 
     public function testSetInvalidCustomerRequiredFieldIsRejected(): void
