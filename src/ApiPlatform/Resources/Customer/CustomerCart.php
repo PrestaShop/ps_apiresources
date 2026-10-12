@@ -47,7 +47,8 @@ use Symfony\Component\Serializer\Attribute\Groups;
  *
  * The create operation adds an empty cart, the way the back office does when an order is created for
  * the customer. The core reuses the last empty cart of the customer when there is one, so two
- * consecutive calls can answer the same cartId. Its response only holds the identifiers.
+ * consecutive calls can answer the same cartId. Its response only holds the identifiers until the cart
+ * endpoints exist to return the created cart, hence the experimental flag.
  */
 #[ApiResource(
     operations: [
@@ -64,10 +65,14 @@ use Symfony\Component\Serializer\Attribute\Groups;
             CQRSCommand: CreateEmptyCustomerCartCommand::class,
             scopes: ['customer_write'],
             normalizationContext: ['groups' => ['Create']],
+            experimentalOperation: true,
             openapi: new OpenApiOperation(
                 summary: 'Create an empty cart for a customer.',
                 description: 'Creates an empty cart for the customer and returns its identifier. No body is expected. '
-                    . 'When the customer already has an empty cart, that cart is returned instead of a new one.',
+                    . 'When the customer already has an empty cart, that cart is returned instead of a new one. '
+                    . 'An unknown customer answers 404 from PrestaShop 9.2.1, older versions create a cart that '
+                    . 'belongs to no customer and answer 201. Experimental: the response should be the created cart, '
+                    . 'which needs the cart endpoints that are not available yet.',
             ),
         ),
     ],

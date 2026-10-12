@@ -101,9 +101,9 @@ class CustomerCartsEndpointTest extends ApiTestCase
     public function testCreateCustomerCartUnknownCustomerNotFound(): void
     {
         // Older cores create a cart with no customer and answer 201, fixed by PrestaShop/PrestaShop#43116
-        $this->markTestSkippedByMinVersion('9.2.0');
+        $expectedHttpCode = self::isVersionAtLeast('9.2.1') ? Response::HTTP_NOT_FOUND : Response::HTTP_CREATED;
 
-        $this->createItem('/customers/999999/carts', null, ['customer_write'], Response::HTTP_NOT_FOUND);
+        $this->createItem('/customers/999999/carts', null, ['customer_write'], $expectedHttpCode);
     }
 
     public function testCustomerCartsUnknownCustomerNotFound(): void

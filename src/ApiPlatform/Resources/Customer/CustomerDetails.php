@@ -44,7 +44,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/customers/{customerId}/private-notes',
+            uriTemplate: '/customers/{customerId}/set-private-note',
             requirements: ['customerId' => '\d+'],
             // No read, so that an omitted privateNote reaches the NotNull constraint
             read: false,
@@ -52,6 +52,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetCustomerForViewing::class,
             scopes: ['customer_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
+            validationContext: ['groups' => ['Default', 'Update']],
         ),
     ],
     exceptionToStatus: [
@@ -87,16 +88,16 @@ class CustomerDetails
     public array $generalInformation;
 
     /**
-     * Copy of generalInformation.privateNote, so the field written by PATCH /private-notes is read back
-     * under the same name. Nullable so that an explicit null reaches the NotNull constraint and gets the
-     * same 422 as an omitted field, instead of a 400 from the denormalizer.
+     * Input of PATCH /set-private-note only, the note is read back in generalInformation. Nullable so that an
+     * explicit null reaches the NotNull constraint and gets the same 422 as an omitted field, instead of a 400
+     * from the denormalizer.
      */
+    #[ApiProperty(readable: false)]
     #[Assert\NotNull]
     #[CleanHtml]
     public ?string $privateNote;
 
     public const QUERY_MAPPING = [
         '[customerId]' => '[customerId]',
-        '[generalInformation][privateNote]' => '[privateNote]',
     ];
 }

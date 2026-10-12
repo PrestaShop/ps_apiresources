@@ -76,7 +76,7 @@ class CustomerEndpointTest extends ApiTestCase
 
         yield 'set private note endpoint' => [
             'PATCH',
-            '/customers/1/private-notes',
+            '/customers/1/set-private-note',
         ];
 
         yield 'delete customer endpoint' => [
@@ -542,13 +542,14 @@ class CustomerEndpointTest extends ApiTestCase
 
         // The response is the customer details, read back after the update
         $updatedDetails = $this->partialUpdateItem(
-            '/customers/' . $customerId . '/private-notes',
+            '/customers/' . $customerId . '/set-private-note',
             ['privateNote' => $privateNote],
             ['customer_write']
         );
         $this->assertSame($customerId, $updatedDetails['customerId']);
-        $this->assertSame($privateNote, $updatedDetails['privateNote']);
         $this->assertSame($privateNote, $updatedDetails['generalInformation']['privateNote']);
+        // The input field is not part of the output, the note is only read back in generalInformation
+        $this->assertArrayNotHasKey('privateNote', $updatedDetails);
 
         $details = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
         $this->assertSame($updatedDetails, $details);
@@ -574,7 +575,7 @@ class CustomerEndpointTest extends ApiTestCase
         ];
         foreach ($invalidBodies as $invalidBody) {
             $validationErrorsResponse = $this->partialUpdateItem(
-                '/customers/' . $customerId . '/private-notes',
+                '/customers/' . $customerId . '/set-private-note',
                 null,
                 ['customer_write'],
                 Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -586,7 +587,7 @@ class CustomerEndpointTest extends ApiTestCase
 
         // Same CleanHtml rule as the note form of the back office
         $validationErrorsResponse = $this->partialUpdateItem(
-            '/customers/' . $customerId . '/private-notes',
+            '/customers/' . $customerId . '/set-private-note',
             ['privateNote' => '<script>alert(1)</script>'],
             ['customer_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
