@@ -24,7 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto;
 
 class CustomerGeneralInformation
 {
-    public string $privateNote;
+    public ?string $privateNote;
 
     public bool $customerBySameEmailExists;
 }

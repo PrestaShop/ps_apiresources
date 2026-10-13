@@ -23,16 +23,12 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
-use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerAddressInformation;
-use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerCartInformation;
-use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerDiscountInformation;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerGeneralInformation;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerGroupInformation;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerLastConnection;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerMessageInformation;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerOrdersInformation;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerPersonalInformation;
-use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerProductsInformation;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\CustomerSentEmail;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\CleanHtml;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\SetPrivateNoteAboutCustomerCommand;
@@ -57,8 +53,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             openapi: new OpenApiOperation(
                 summary: 'Get the details of a customer.',
                 description: 'Returns the information displayed on the customer page of the back office. Dates, birthday and '
-                    . 'amounts are formatted for display. The carts, products, discounts and addresses lists are not filled '
-                    . 'by the core query yet and are always empty.',
+                    . 'amounts are formatted for display.',
             ),
         ),
         new CQRSPartialUpdate(
@@ -94,21 +89,9 @@ class CustomerDetails
     public CustomerOrdersInformation $ordersInformation;
 
     /**
-     * @var CustomerCartInformation[]
-     */
-    public array $cartsInformation;
-
-    public CustomerProductsInformation $productsInformation;
-
-    /**
      * @var CustomerMessageInformation[]
      */
     public array $messagesInformation;
-
-    /**
-     * @var CustomerDiscountInformation[]
-     */
-    public array $discountsInformation;
 
     /**
      * @var CustomerSentEmail[]
@@ -125,11 +108,6 @@ class CustomerDetails
      */
     public array $groupsInformation;
 
-    /**
-     * @var CustomerAddressInformation[]
-     */
-    public array $addressesInformation;
-
     public CustomerGeneralInformation $generalInformation;
 
     /**
@@ -145,7 +123,6 @@ class CustomerDetails
     public const QUERY_MAPPING = [
         '[customerId]' => '[customerId]',
         '[personalInformation][active]' => '[personalInformation][enabled]',
-        '[discountsInformation][@index][active]' => '[discountsInformation][@index][enabled]',
         // The orders are raw database rows in the query result
         '[ordersInformation][validOrders][@index][id_order]' => '[ordersInformation][validOrders][@index][orderId]',
         '[ordersInformation][validOrders][@index][total_paid_tax_incl]' => '[ordersInformation][validOrders][@index][totalPaidTaxIncl]',

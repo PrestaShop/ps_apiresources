@@ -664,15 +664,7 @@ class CustomerEndpointTest extends ApiTestCase
                 'invalidOrders' => [],
                 'totalSpent' => '$0.00',
             ],
-            // Not filled by the core query
-            'cartsInformation' => [],
-            'productsInformation' => [
-                'boughtProductsInformation' => [],
-                'viewedProductsInformation' => [],
-            ],
             'messagesInformation' => [],
-            // Not filled by the core query
-            'discountsInformation' => [],
             'sentEmailsInformation' => [],
             'lastConnectionsInformation' => [],
             'groupsInformation' => [
@@ -682,14 +674,96 @@ class CustomerEndpointTest extends ApiTestCase
                     'default' => true,
                 ],
             ],
-            // Not filled by the core query
-            'addressesInformation' => [],
             'generalInformation' => [
                 'privateNote' => 'A private note about this customer',
                 // The customer itself is found by its email
                 'customerBySameEmailExists' => true,
             ],
         ], $customer);
+    }
+
+    /**
+     * @depends testAddCustomerWithMinimalData
+     */
+    public function testGetMinimalCustomerDetails(int $customerId): void
+    {
+        $customer = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
+
+        // Dates are formatted for display and depend on when the test runs
+        $personalInformation = $customer['personalInformation'];
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$#', $personalInformation['registrationDate']);
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$#', $personalInformation['lastUpdateDate']);
+
+        $this->assertEquals([
+            'customerId' => $customerId,
+            'personalInformation' => [
+                'firstName' => 'Minimal',
+                'lastName' => 'Customer',
+                'email' => 'minimal.customer@example.com',
+                'guest' => false,
+                'socialTitle' => 'Unknown',
+                'birthday' => 'Unknown',
+                'registrationDate' => $personalInformation['registrationDate'],
+                'lastUpdateDate' => $personalInformation['lastUpdateDate'],
+                'lastVisitDate' => 'Never',
+                'rankBySales' => null,
+                'shopName' => 'test_shop',
+                'languageName' => 'English (English)',
+                'subscriptions' => [
+                    'newsletterSubscribed' => false,
+                    'partnerOffersSubscribed' => false,
+                ],
+                'enabled' => true,
+            ],
+            'ordersInformation' => [
+                'validOrders' => [],
+                'invalidOrders' => [],
+                'totalSpent' => '$0.00',
+            ],
+            'messagesInformation' => [],
+            'sentEmailsInformation' => [],
+            'lastConnectionsInformation' => [],
+            'groupsInformation' => [
+                [
+                    'groupId' => 3,
+                    'name' => 'Customer',
+                    'default' => true,
+                ],
+            ],
+            'generalInformation' => [
+                // No private note set yet
+                'privateNote' => null,
+                'customerBySameEmailExists' => true,
+            ],
+        ], $customer);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testCustomerDetailsTotalSpentInDefaultCurrency(int $customerId): void
+    {
+        // Formatted with the context currency before PrestaShop 9.2.1
+        $this->markTestSkippedByMinVersion('9.2.1');
+
+        // @todo: create the currency with the API once a currency endpoint exists
+        $currency = new \Currency();
+        $currency->iso_code = 'EUR';
+        $currency->numeric_iso_code = '978';
+        $currency->precision = 2;
+        $currency->conversion_rate = 0.9;
+        $currency->name = [1 => 'Euro'];
+        $currency->symbol = [1 => '€'];
+        $currency->active = true;
+        $currency->add();
+
+        try {
+            $customer = $this->getItem('/customers/' . $customerId . '/details?currencyId=' . $currency->id, ['customer_read']);
+            // The orders total is converted to the default currency, whatever the context currency is
+            $this->assertEquals('$0.00', $customer['ordersInformation']['totalSpent']);
+        } finally {
+            DatabaseDump::restoreTables(['currency', 'currency_lang', 'currency_shop']);
+        }
     }
 
     public function testGetCustomerNotFound(): void
