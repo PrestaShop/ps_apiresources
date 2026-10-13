@@ -53,5 +53,5 @@ class CustomerPersonalInformation
 
     public CustomerSubscriptions $subscriptions;
 
-    public bool $active;
+    public bool $enabled;
 }

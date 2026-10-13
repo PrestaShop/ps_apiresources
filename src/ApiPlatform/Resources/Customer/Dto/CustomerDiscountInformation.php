@@ -30,7 +30,7 @@ class CustomerDiscountInformation
 
     public string $name;
 
-    public bool $active;
+    public bool $enabled;
 
     public int $availableQuantity;
 }

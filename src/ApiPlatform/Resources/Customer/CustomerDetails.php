@@ -144,6 +144,8 @@ class CustomerDetails
 
     public const QUERY_MAPPING = [
         '[customerId]' => '[customerId]',
+        '[personalInformation][active]' => '[personalInformation][enabled]',
+        '[discountsInformation][@index][active]' => '[discountsInformation][@index][enabled]',
         // The orders are raw database rows in the query result
         '[ordersInformation][validOrders][@index][id_order]' => '[ordersInformation][validOrders][@index][orderId]',
         '[ordersInformation][validOrders][@index][total_paid_tax_incl]' => '[ordersInformation][validOrders][@index][totalPaidTaxIncl]',

@@ -116,6 +116,8 @@ class CustomerGroupEndpointTest extends ApiTestCase
             'reductionPercent' => 150,
             'displayPriceTaxExcluded' => false,
             'showPrice' => true,
+            // Required before PrestaShop 9.2.0
+            'shopIds' => [1],
         ], ['customer_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
@@ -239,7 +241,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
     {
         $customerGroups = $this->listItems('/customers/groups', ['customer_group_read']);
         // It should be at least four (3 in the fixtures, and at least one created by the tests)
-        $this->assertGreaterThan(4, $customerGroups['totalItems']);
+        $this->assertGreaterThanOrEqual(4, $customerGroups['totalItems']);
 
         $testCustomerGroup = null;
         foreach ($customerGroups['items'] as $customerGroup) {

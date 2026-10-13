@@ -632,22 +632,64 @@ class CustomerEndpointTest extends ApiTestCase
     {
         $customer = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
 
-        // Verify basic structure of ViewableCustomer response
-        $this->assertArrayHasKey('customerId', $customer);
-        $this->assertEquals($customerId, $customer['customerId']);
+        // Dates and age are formatted for display and depend on when the test runs
+        $personalInformation = $customer['personalInformation'];
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$#', $personalInformation['registrationDate']);
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$#', $personalInformation['lastUpdateDate']);
+        $this->assertMatchesRegularExpression('#^\d+ years old \(birth date: 01/15/1990\)$#', $personalInformation['birthday']);
 
-        // ViewableCustomer should have personalInformation, ordersInformation, etc.
-        $this->assertArrayHasKey('personalInformation', $customer);
-        $this->assertArrayHasKey('ordersInformation', $customer);
-        $this->assertArrayHasKey('groupsInformation', $customer);
-        $this->assertArrayHasKey('generalInformation', $customer);
-
-        // Verify personalInformation structure
-        $personalInfo = $customer['personalInformation'];
-        $this->assertIsArray($personalInfo);
-        $this->assertArrayHasKey('firstName', $personalInfo);
-        $this->assertArrayHasKey('lastName', $personalInfo);
-        $this->assertArrayHasKey('email', $personalInfo);
+        $this->assertEquals([
+            'customerId' => $customerId,
+            'personalInformation' => [
+                'firstName' => 'Jane',
+                'lastName' => 'Doe',
+                'email' => 'jane.doe@example.com',
+                'guest' => false,
+                'socialTitle' => 'Mr.',
+                'birthday' => $personalInformation['birthday'],
+                'registrationDate' => $personalInformation['registrationDate'],
+                'lastUpdateDate' => $personalInformation['lastUpdateDate'],
+                'lastVisitDate' => 'Never',
+                'rankBySales' => null,
+                'shopName' => 'test_shop',
+                'languageName' => 'English (English)',
+                'subscriptions' => [
+                    'newsletterSubscribed' => false,
+                    'partnerOffersSubscribed' => true,
+                ],
+                'enabled' => true,
+            ],
+            'ordersInformation' => [
+                'validOrders' => [],
+                'invalidOrders' => [],
+                'totalSpent' => '$0.00',
+            ],
+            // Not filled by the core query
+            'cartsInformation' => [],
+            'productsInformation' => [
+                'boughtProductsInformation' => [],
+                'viewedProductsInformation' => [],
+            ],
+            'messagesInformation' => [],
+            // Not filled by the core query
+            'discountsInformation' => [],
+            'sentEmailsInformation' => [],
+            'lastConnectionsInformation' => [],
+            'groupsInformation' => [
+                [
+                    'groupId' => 3,
+                    'name' => 'Customer',
+                    'default' => true,
+                ],
+            ],
+            // Not filled by the core query
+            'addressesInformation' => [],
+            'generalInformation' => [
+                'privateNote' => 'A private note about this customer',
+                // The customer itself is found by its email
+                'customerBySameEmailExists' => true,
+            ],
+        ], $customer);
     }
 
     public function testGetCustomerNotFound(): void
