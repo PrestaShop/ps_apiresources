@@ -29,7 +29,7 @@ use PrestaShop\PrestaShop\Core\Search\Filters\CustomerFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
 
-/*
+/**
  * Built on the data factory of the customer grid without its decorator, which formats the total spent
  * as a localized price and replaces empty values with "--" for display.
  */

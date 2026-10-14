@@ -40,7 +40,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'summary' => 'Delete a categories using a specific mode',
                 'parameters' => [
                     [
-                        'name' => 'mode',
+                        'name' => 'deleteMode',
                         'in' => 'path',
                         'required' => true,
                         'schema' => [

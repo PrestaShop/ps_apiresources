@@ -57,7 +57,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         CarrierConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-/*
+/**
  * Delivery ranges of a carrier, read and written in one shared format.
  *
  * These operations always apply to every shop: the ranges are stored globally by the Core, which
