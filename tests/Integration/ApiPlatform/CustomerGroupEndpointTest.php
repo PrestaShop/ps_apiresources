@@ -57,7 +57,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
         ];
 
         yield 'update endpoint' => [
-            'PUT',
+            'PATCH',
             '/customers/groups/1',
         ];
 
@@ -69,8 +69,11 @@ class CustomerGroupEndpointTest extends ApiTestCase
 
     public function testAddCustomerGroupWithoutShopIds(): void
     {
+        // The shops of the context are the default value of shopIds from PrestaShop 9.2.0
+        $this->markTestSkippedByMinVersion('9.2.0');
+
         $postData = [
-            'localizedNames' => [
+            'names' => [
                 'en-US' => 'test1',
                 'fr-FR' => 'test1 FR',
             ],
@@ -84,12 +87,46 @@ class CustomerGroupEndpointTest extends ApiTestCase
         $this->assertEquals(['customerGroupId' => $customerGroupId, 'shopIds' => [1]] + $postData, $customerGroup);
     }
 
+    public function testInvalidCustomerGroup(): void
+    {
+        // The command requires both flags, without them the creation failed with a 500
+        $validationErrorsResponse = $this->createItem('/customers/groups', [
+            'names' => [
+                'en-US' => 'test invalid',
+            ],
+            'reductionPercent' => 10,
+        ], ['customer_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'displayPriceTaxExcluded',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'showPrice',
+                'message' => 'This value should not be null.',
+            ],
+        ], $validationErrorsResponse);
+
+        // The reduction is checked by the core command
+        $this->createItem('/customers/groups', [
+            'names' => [
+                'en-US' => 'test invalid',
+            ],
+            'reductionPercent' => 150,
+            'displayPriceTaxExcluded' => false,
+            'showPrice' => true,
+            // Required before PrestaShop 9.2.0
+            'shopIds' => [1],
+        ], ['customer_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
     public function testAddCustomerGroup(): int
     {
         $itemsCount = $this->countItems('/customers/groups', ['customer_group_read']);
 
         $postData = [
-            'localizedNames' => [
+            'names' => [
                 'en-US' => 'test1',
                 'fr-FR' => 'test1 FR',
             ],
@@ -120,8 +157,8 @@ class CustomerGroupEndpointTest extends ApiTestCase
     {
         $itemsCount = $this->countItems('/customers/groups', ['customer_group_read']);
 
-        $updatedCustomerGroup = $this->updateItem('/customers/groups/' . $customerGroupId, [
-            'localizedNames' => [
+        $updatedCustomerGroup = $this->partialUpdateItem('/customers/groups/' . $customerGroupId, [
+            'names' => [
                 'en-US' => 'new_test1',
                 'fr-FR' => 'new_test1 FR',
             ],
@@ -133,7 +170,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
         $this->assertEquals(
             [
                 'customerGroupId' => $customerGroupId,
-                'localizedNames' => [
+                'names' => [
                     'en-US' => 'new_test1',
                     'fr-FR' => 'new_test1 FR',
                 ],
@@ -143,6 +180,22 @@ class CustomerGroupEndpointTest extends ApiTestCase
                 'shopIds' => [1],
             ],
             $updatedCustomerGroup
+        );
+
+        // Only the sent field is updated
+        $this->assertEquals(
+            [
+                'customerGroupId' => $customerGroupId,
+                'names' => [
+                    'en-US' => 'new_test1',
+                    'fr-FR' => 'new_test1 FR',
+                ],
+                'reductionPercent' => 5.5,
+                'displayPriceTaxExcluded' => false,
+                'showPrice' => true,
+                'shopIds' => [1],
+            ],
+            $this->partialUpdateItem('/customers/groups/' . $customerGroupId, ['reductionPercent' => 5.5], ['customer_group_write'])
         );
 
         // No new group
@@ -166,11 +219,11 @@ class CustomerGroupEndpointTest extends ApiTestCase
         $this->assertEquals(
             [
                 'customerGroupId' => $customerGroupId,
-                'localizedNames' => [
+                'names' => [
                     'en-US' => 'new_test1',
                     'fr-FR' => 'new_test1 FR',
                 ],
-                'reductionPercent' => 10.3,
+                'reductionPercent' => 5.5,
                 'displayPriceTaxExcluded' => false,
                 'showPrice' => true,
                 'shopIds' => [1],
@@ -188,7 +241,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
     {
         $customerGroups = $this->listItems('/customers/groups', ['customer_group_read']);
         // It should be at least four (3 in the fixtures, and at least one created by the tests)
-        $this->assertGreaterThan(4, $customerGroups['totalItems']);
+        $this->assertGreaterThanOrEqual(4, $customerGroups['totalItems']);
 
         $testCustomerGroup = null;
         foreach ($customerGroups['items'] as $customerGroup) {
@@ -201,7 +254,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
         $this->assertEquals([
             'customerGroupId' => $customerGroupId,
             'name' => 'new_test1',
-            'reductionPercent' => 10.3,
+            'reductionPercent' => 5.5,
             'customers' => 0,
             'showPrice' => true,
         ], $testCustomerGroup);

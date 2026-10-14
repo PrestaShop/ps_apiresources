@@ -22,10 +22,12 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\AddCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\DeleteCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\EditCustomerCommand;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Command\TransformGuestToCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
@@ -36,6 +38,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -51,6 +54,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             validationContext: ['groups' => ['Default', 'Create']],
+            openapi: new OpenApiOperation(
+                summary: 'Create a customer.',
+                description: 'Creates a customer and returns it. newsletterSubscribed is applied from PrestaShop 9.2.1, '
+                    . 'older versions ignore it on creation: set it with a partial update instead.',
+            ),
         ),
         new CQRSGet(
             uriTemplate: '/customers/{customerId}',
@@ -72,6 +80,23 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'customer_write',
             ],
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/customers/{customerId}/transform-to-customer',
+            requirements: ['customerId' => '\d+'],
+            read: false,
+            allowEmptyBody: true,
+            CQRSCommand: TransformGuestToCustomerCommand::class,
+            CQRSQuery: GetCustomerForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: [
+                'customer_write',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Transform a guest into a registered customer.',
+                description: 'Turns the guest account into a registered customer account and returns the customer. No body '
+                    . 'is expected. A customer that is already registered answers 422.',
+            ),
         ),
         new CQRSDelete(
             uriTemplate: '/customers/{customerId}',
@@ -134,6 +159,7 @@ class Customer
     public string $email;
 
     #[Assert\NotBlank(groups: ['Create'])]
+    #[ApiProperty(readable: false)]
     public string $password;
 
     #[Assert\NotBlank(groups: ['Create'])]
@@ -166,7 +192,7 @@ class Customer
 
     public ?string $website;
 
-    #[ApiProperty(openapiContext: ['type' => 'string', 'example' => '1000.50'])]
+    #[ApiProperty(openapiContext: ['type' => 'number', 'example' => 1000.5])]
     public ?DecimalNumber $allowedOutstandingAmount;
 
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 30])]
@@ -178,6 +204,10 @@ class Customer
     #[ApiProperty(openapiContext: ['type' => 'boolean', 'example' => false])]
     public bool $guest;
 
+    /**
+     * Input of the DELETE operation only.
+     */
+    #[ApiProperty(readable: false)]
     public ?string $deleteMethod;
 
     public const QUERY_MAPPING = [
@@ -187,6 +217,7 @@ class Customer
     public const COMMAND_MAPPING = [
         '[_context][shopId]' => '[shopId]',
         '[partnerOffersSubscribed]' => '[isPartnerOffersSubscribed]',
+        '[newsletterSubscribed]' => '[isNewsletterSubscribed]',
         '[guest]' => '[isGuest]',
         '[enabled]' => '[isEnabled]',
     ];

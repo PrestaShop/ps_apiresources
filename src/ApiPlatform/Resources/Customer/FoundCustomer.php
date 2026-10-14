@@ -24,6 +24,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto\FoundCustomerGroup;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Query\SearchCustomers;
 use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\InvalidShopConstraintException;
@@ -40,6 +41,10 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQuery: SearchCustomers::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             ApiResourceMapping: self::API_RESOURCE_MAPPING,
+            extraProperties: [
+                // The query result is indexed by customer id, the response is a list from PrestaShop 9.2.1
+                'collectionAsList' => true,
+            ],
             parameters: new Parameters([
                 new QueryParameter(
                     key: 'phrases',
@@ -48,6 +53,8 @@ use Symfony\Component\HttpFoundation\Response;
                 ),
             ]),
             openapiContext: [
+                'summary' => 'Search customers.',
+                'description' => 'Returns the list of customers matching the phrases (before PrestaShop 9.2.1 the list is an object indexed by customer id).',
                 'parameters' => [
                     [
                         'name' => 'phrases',
@@ -75,25 +82,26 @@ use Symfony\Component\HttpFoundation\Response;
 class FoundCustomer
 {
     #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
-    public int $idCustomer;
+    public int $customerId;
 
-    public string $firstname;
+    public string $firstName;
 
-    public string $lastname;
+    public string $lastName;
 
     public string $email;
 
     public string $fullnameAndEmail;
 
-    #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
-    public int $active;
+    public bool $enabled;
 
-    public ?string $company;
+    public ?string $companyName;
 
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 3])]
-    public int $idDefaultGroup;
+    public int $defaultGroupId;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    /**
+     * @var FoundCustomerGroup[]
+     */
     public array $groups;
 
     public const QUERY_MAPPING = [
@@ -102,8 +110,12 @@ class FoundCustomer
     ];
 
     public const API_RESOURCE_MAPPING = [
-        '[id_customer]' => '[idCustomer]',
+        '[id_customer]' => '[customerId]',
+        '[firstname]' => '[firstName]',
+        '[lastname]' => '[lastName]',
         '[fullname_and_email]' => '[fullnameAndEmail]',
-        '[id_default_group]' => '[idDefaultGroup]',
+        '[active]' => '[enabled]',
+        '[company]' => '[companyName]',
+        '[id_default_group]' => '[defaultGroupId]',
     ];
 }

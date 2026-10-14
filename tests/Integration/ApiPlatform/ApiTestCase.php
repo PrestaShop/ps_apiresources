@@ -195,10 +195,7 @@ abstract class ApiTestCase extends SymfonyApiTestCase
                 'content-type' => 'application/x-www-form-urlencoded',
             ],
         ];
-        $response = static::createClient()->request('POST', '/access_token', $options);
-        self::assertResponseStatusCodeSame(200);
-
-        $bearerToken = json_decode($response->getContent())->access_token;
+        $bearerToken = $this->requestApi('POST', '/access_token', null, [], Response::HTTP_OK, $options)['access_token'];
 
         // Cache the bearer token with associated scopes
         static::$bearerTokens[] = [
@@ -207,6 +204,27 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         ];
 
         return $bearerToken;
+    }
+
+    /**
+     * A real API request starts in a new PHP process, the tests send all of them from this one.
+     */
+    protected static function resetLegacyStaticCaches(): void
+    {
+        \Product::flushPriceCache();
+        \SpecificPrice::flushCache();
+        \Configuration::resetStaticCache();
+        \Cache::clear();
+        \Cart::resetStaticCache();
+        \Carrier::resetStaticCache();
+        \CartRule::resetStaticCache();
+        \Currency::resetStaticCache();
+        \Pack::resetStaticCache();
+        \Customer::resetAddressCache();
+        \Address::resetStaticCache();
+        \ObjectModel::resetStaticCache();
+        \Tools::resetStaticCache();
+        \Cache::clean('*');
     }
 
     /**
@@ -237,7 +255,19 @@ abstract class ApiTestCase extends SymfonyApiTestCase
             $options = array_merge($options, $requestOptions);
         }
 
-        $response = static::createClient()->request($httpMethod, $endPointUrl, $options);
+        // Same legacy context as a real API request: no employee nor cart, which test fixtures may have set
+        self::resetLegacyStaticCaches();
+        $legacyContext = \Context::getContext();
+        $testEmployee = $legacyContext->employee;
+        $testCart = $legacyContext->cart;
+        $legacyContext->employee = null;
+        $legacyContext->cart = null;
+        try {
+            $response = static::createClient()->request($httpMethod, $endPointUrl, $options);
+        } finally {
+            $legacyContext->employee = $testEmployee;
+            $legacyContext->cart = $testCart;
+        }
 
         // Unless you mean to test a specific code (for invalid requests mostly) the expected code can be deduced from the
         // HTTP method by convention
@@ -337,19 +367,14 @@ abstract class ApiTestCase extends SymfonyApiTestCase
      */
     protected function listItems(string $listUrl, array $scopes = [], array $filters = []): array
     {
-        $bearerToken = $this->getBearerToken($scopes);
-        $response = static::createClient()->request('GET', $listUrl, [
-            'auth_bearer' => $bearerToken,
+        $decodedResponse = $this->requestApi('GET', $listUrl, null, [], Response::HTTP_OK, [
+            'auth_bearer' => $this->getBearerToken($scopes),
             'extra' => [
                 'parameters' => [
                     'filters' => $filters,
                 ],
             ],
         ]);
-        self::assertResponseStatusCodeSame(200);
-
-        $decodedResponse = json_decode($response->getContent(), true);
-        $this->assertNotFalse($decodedResponse);
         $this->assertArrayHasKey('totalItems', $decodedResponse);
         $this->assertArrayHasKey('sortOrder', $decodedResponse);
         $this->assertArrayHasKey('limit', $decodedResponse);

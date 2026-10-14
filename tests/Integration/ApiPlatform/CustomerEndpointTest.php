@@ -35,9 +35,9 @@ class CustomerEndpointTest extends ApiTestCase
         self::createApiClient(['customer_write', 'customer_read']);
     }
 
-    public static function tearDownBeforeClass(): void
+    public static function tearDownAfterClass(): void
     {
-        parent::tearDownBeforeClass();
+        parent::tearDownAfterClass();
         // Reset DB as it was before this test
         DatabaseDump::restoreTables(['customer', 'customer_group']);
     }
@@ -59,9 +59,19 @@ class CustomerEndpointTest extends ApiTestCase
             '/customers/1/details',
         ];
 
+        yield 'get customer orders endpoint' => [
+            'GET',
+            '/customers/1/orders',
+        ];
+
         yield 'update customer endpoint' => [
             'PATCH',
             '/customers/1',
+        ];
+
+        yield 'set private note endpoint' => [
+            'PATCH',
+            '/customers/1/set-private-note',
         ];
 
         yield 'delete customer endpoint' => [
@@ -135,6 +145,22 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertEquals($expectedData, $customer);
 
         return $customerId;
+    }
+
+    public function testAddCustomerSubscribedToNewsletter(): void
+    {
+        $customer = $this->createItem('/customers', [
+            'firstName' => 'Jane',
+            'lastName' => 'Newsletter',
+            'email' => 'jane.newsletter@example.com',
+            'password' => 'TestPassword123!',
+            'defaultGroupId' => 3,
+            'groupIds' => [3],
+            'newsletterSubscribed' => true,
+        ], ['customer_write']);
+
+        // Older cores have no newsletter in AddCustomerCommand and ignore the field, fixed by PrestaShop/PrestaShop#43116
+        $this->assertSame(self::isVersionAtLeast('9.2.1'), $customer['newsletterSubscribed']);
     }
 
     public function testAddCustomerWithB2bFields(): int
@@ -521,26 +547,223 @@ class CustomerEndpointTest extends ApiTestCase
     /**
      * @depends testAddCustomer
      */
+    public function testSetCustomerPrivateNote(int $customerId): void
+    {
+        $privateNote = 'A private note about this customer';
+
+        // The response is the customer details, read back after the update
+        $updatedDetails = $this->partialUpdateItem(
+            '/customers/' . $customerId . '/set-private-note',
+            ['privateNote' => $privateNote],
+            ['customer_write']
+        );
+        $this->assertSame($customerId, $updatedDetails['customerId']);
+        $this->assertSame($privateNote, $updatedDetails['generalInformation']['privateNote']);
+        // The input field is not part of the output, the note is only read back in generalInformation
+        $this->assertArrayNotHasKey('privateNote', $updatedDetails);
+
+        $details = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
+        $this->assertSame($updatedDetails, $details);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testInvalidCustomerPrivateNote(int $customerId): void
+    {
+        $expectedErrors = [
+            [
+                'propertyPath' => 'privateNote',
+                'message' => 'This value should not be null.',
+            ],
+        ];
+
+        // Omitting the field and sending an explicit null must both end up in the same 422. The
+        // empty object is sent as a raw body: an empty $data array would send no body at all.
+        $invalidBodies = [
+            'omitted privateNote' => '{}',
+            'null privateNote' => '{"privateNote":null}',
+        ];
+        foreach ($invalidBodies as $invalidBody) {
+            $validationErrorsResponse = $this->partialUpdateItem(
+                '/customers/' . $customerId . '/set-private-note',
+                null,
+                ['customer_write'],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                ['body' => $invalidBody]
+            );
+            $this->assertIsArray($validationErrorsResponse);
+            $this->assertValidationErrors($expectedErrors, $validationErrorsResponse);
+        }
+
+        // Same CleanHtml rule as the note form of the back office
+        $validationErrorsResponse = $this->partialUpdateItem(
+            '/customers/' . $customerId . '/set-private-note',
+            ['privateNote' => '<script>alert(1)</script>'],
+            ['customer_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([['propertyPath' => 'privateNote']], $validationErrorsResponse);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testGetCustomerOrders(int $customerId): void
+    {
+        $response = $this->getItem('/customers/' . $customerId . '/orders', ['customer_read']);
+
+        // The query returns a list, so the endpoint is a collection: a freshly created customer
+        // has no orders yet, hence an empty list
+        $this->assertSame([], $response);
+    }
+
+    public function testGetCustomerOrdersInvalidCustomerId(): void
+    {
+        // 0 matches the \d+ requirement but is rejected by the CustomerId value object
+        $this->getItem('/customers/0/orders', ['customer_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
     public function testGetCustomerDetails(int $customerId): void
     {
         $customer = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
 
-        // Verify basic structure of ViewableCustomer response
-        $this->assertArrayHasKey('customerId', $customer);
-        $this->assertEquals($customerId, $customer['customerId']);
+        // Dates and age are formatted for display and depend on when the test runs
+        $personalInformation = $customer['personalInformation'];
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$#', $personalInformation['registrationDate']);
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$#', $personalInformation['lastUpdateDate']);
+        $this->assertMatchesRegularExpression('#^\d+ years old \(birth date: 01/15/1990\)$#', $personalInformation['birthday']);
 
-        // ViewableCustomer should have personalInformation, ordersInformation, etc.
-        $this->assertArrayHasKey('personalInformation', $customer);
-        $this->assertArrayHasKey('ordersInformation', $customer);
-        $this->assertArrayHasKey('groupsInformation', $customer);
-        $this->assertArrayHasKey('generalInformation', $customer);
+        $this->assertEquals([
+            'customerId' => $customerId,
+            'personalInformation' => [
+                'firstName' => 'Jane',
+                'lastName' => 'Doe',
+                'email' => 'jane.doe@example.com',
+                'guest' => false,
+                'socialTitle' => 'Mr.',
+                'birthday' => $personalInformation['birthday'],
+                'registrationDate' => $personalInformation['registrationDate'],
+                'lastUpdateDate' => $personalInformation['lastUpdateDate'],
+                'lastVisitDate' => 'Never',
+                'rankBySales' => null,
+                'shopName' => 'test_shop',
+                'languageName' => 'English (English)',
+                'subscriptions' => [
+                    'newsletterSubscribed' => false,
+                    'partnerOffersSubscribed' => true,
+                ],
+                'enabled' => true,
+            ],
+            'ordersInformation' => [
+                'validOrders' => [],
+                'invalidOrders' => [],
+                'totalSpent' => '$0.00',
+            ],
+            'messagesInformation' => [],
+            'sentEmailsInformation' => [],
+            'lastConnectionsInformation' => [],
+            'groupsInformation' => [
+                [
+                    'groupId' => 3,
+                    'name' => 'Customer',
+                    'default' => true,
+                ],
+            ],
+            'generalInformation' => [
+                'privateNote' => 'A private note about this customer',
+                // The customer itself is found by its email
+                'customerBySameEmailExists' => true,
+            ],
+        ], $customer);
+    }
 
-        // Verify personalInformation structure
-        $personalInfo = $customer['personalInformation'];
-        $this->assertIsArray($personalInfo);
-        $this->assertArrayHasKey('firstName', $personalInfo);
-        $this->assertArrayHasKey('lastName', $personalInfo);
-        $this->assertArrayHasKey('email', $personalInfo);
+    /**
+     * @depends testAddCustomerWithMinimalData
+     */
+    public function testGetMinimalCustomerDetails(int $customerId): void
+    {
+        $customer = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
+
+        // Dates are formatted for display and depend on when the test runs
+        $personalInformation = $customer['personalInformation'];
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$#', $personalInformation['registrationDate']);
+        $this->assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$#', $personalInformation['lastUpdateDate']);
+
+        $this->assertEquals([
+            'customerId' => $customerId,
+            'personalInformation' => [
+                'firstName' => 'Minimal',
+                'lastName' => 'Customer',
+                'email' => 'minimal.customer@example.com',
+                'guest' => false,
+                'socialTitle' => 'Unknown',
+                'birthday' => 'Unknown',
+                'registrationDate' => $personalInformation['registrationDate'],
+                'lastUpdateDate' => $personalInformation['lastUpdateDate'],
+                'lastVisitDate' => 'Never',
+                'rankBySales' => null,
+                'shopName' => 'test_shop',
+                'languageName' => 'English (English)',
+                'subscriptions' => [
+                    'newsletterSubscribed' => false,
+                    'partnerOffersSubscribed' => false,
+                ],
+                'enabled' => true,
+            ],
+            'ordersInformation' => [
+                'validOrders' => [],
+                'invalidOrders' => [],
+                'totalSpent' => '$0.00',
+            ],
+            'messagesInformation' => [],
+            'sentEmailsInformation' => [],
+            'lastConnectionsInformation' => [],
+            'groupsInformation' => [
+                [
+                    'groupId' => 3,
+                    'name' => 'Customer',
+                    'default' => true,
+                ],
+            ],
+            'generalInformation' => [
+                // No private note set yet
+                'privateNote' => null,
+                'customerBySameEmailExists' => true,
+            ],
+        ], $customer);
+    }
+
+    /**
+     * @depends testAddCustomer
+     */
+    public function testCustomerDetailsTotalSpentInDefaultCurrency(int $customerId): void
+    {
+        // Formatted with the context currency before PrestaShop 9.2.1
+        $this->markTestSkippedByMinVersion('9.2.1');
+
+        // @todo: create the currency with the API once a currency endpoint exists
+        $currency = new \Currency();
+        $currency->iso_code = 'EUR';
+        $currency->numeric_iso_code = '978';
+        $currency->precision = 2;
+        $currency->conversion_rate = 0.9;
+        $currency->name = [1 => 'Euro'];
+        $currency->symbol = [1 => '€'];
+        $currency->active = true;
+        $currency->add();
+
+        try {
+            $customer = $this->getItem('/customers/' . $customerId . '/details?currencyId=' . $currency->id, ['customer_read']);
+            // The orders total is converted to the default currency, whatever the context currency is
+            $this->assertEquals('$0.00', $customer['ordersInformation']['totalSpent']);
+        } finally {
+            DatabaseDump::restoreTables(['currency', 'currency_lang', 'currency_shop']);
+        }
     }
 
     public function testGetCustomerNotFound(): void
@@ -892,22 +1115,28 @@ class CustomerEndpointTest extends ApiTestCase
 
         $this->assertIsArray($searchResults);
         $this->assertNotEmpty($searchResults);
+        // Older cores keep the query result indexed by customer id
+        if (self::isVersionAtLeast('9.2.1')) {
+            $this->assertTrue(array_is_list($searchResults));
+        }
 
         // Find our customer in the results
         $foundCustomer = null;
         foreach ($searchResults as $result) {
-            if ($result['idCustomer'] === $customerId) {
+            if ($result['customerId'] === $customerId) {
                 $foundCustomer = $result;
                 break;
             }
         }
 
         $this->assertNotNull($foundCustomer, 'Created customer should be found in search results');
-        $this->assertEquals('Search', $foundCustomer['firstname']);
-        $this->assertEquals('Test', $foundCustomer['lastname']);
+        $this->assertEquals('Search', $foundCustomer['firstName']);
+        $this->assertEquals('Test', $foundCustomer['lastName']);
+        $this->assertTrue($foundCustomer['enabled']);
         $this->assertEquals('search.test@example.com', $foundCustomer['email']);
         $this->assertArrayHasKey('fullnameAndEmail', $foundCustomer);
-        $this->assertArrayHasKey('groups', $foundCustomer);
+        $this->assertSame(3, $foundCustomer['defaultGroupId']);
+        $this->assertSame([['groupId' => 3, 'name' => 'Customer', 'default' => true]], $foundCustomer['groups']);
     }
 
     public function testSearchCustomersByEmail(): void
@@ -934,7 +1163,7 @@ class CustomerEndpointTest extends ApiTestCase
 
         $foundCustomer = null;
         foreach ($searchResults as $result) {
-            if ($result['idCustomer'] === $customerId) {
+            if ($result['customerId'] === $customerId) {
                 $foundCustomer = $result;
                 break;
             }
@@ -983,7 +1212,7 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertNotEmpty($searchResults);
 
         // Both customers should be found (they both match "Multi")
-        $foundIds = array_column($searchResults, 'idCustomer');
+        $foundIds = array_column($searchResults, 'customerId');
         $this->assertContains($customer1['customerId'], $foundIds);
         $this->assertContains($customer2['customerId'], $foundIds);
     }

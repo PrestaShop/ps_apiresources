@@ -70,6 +70,11 @@ services:
     autoconfigure: true
     public: false
 
+  # See class docblock: lists the groups of the /customers/search results, indexed by group id in the query result
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\FoundCustomerDenormalizer:
+    autoconfigure: true
+    public: false
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'

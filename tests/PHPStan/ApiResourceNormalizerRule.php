@@ -74,6 +74,9 @@ final class ApiResourceNormalizerRule implements Rule
      * @var list<string>
      */
     private const ALLOWED_CLASSES = [
+        // Valid: the SearchCustomers result indexes the groups by group id with database names, which the mapping
+        // can't turn into a list (@index targets positions), so the groups are reshaped before the denormalization.
+        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\FoundCustomerDenormalizer',
         // Valid: complex denormalization of product-combination generation input.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GenerateCombinationsSerializer',
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GetSearchTermAliasesQuerySerializer',

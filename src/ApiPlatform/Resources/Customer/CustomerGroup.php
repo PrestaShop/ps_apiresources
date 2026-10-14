@@ -29,13 +29,16 @@ use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\AddCustomerGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\DeleteCustomerGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\EditCustomerGroupCommand;
+use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Exception\GroupConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Exception\GroupNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Query\GetCustomerGroupForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -45,13 +48,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             scopes: [
                 'customer_group_read',
             ],
-            // QueryResult format doesn't match with ApiResource, so we can specify a mapping so that it is normalized with extra fields adapted for the ApiResource DTO
-            CQRSQueryMapping: [
-                // EditableCustomerGroup::$id is normalized as [customerGroupId]
-                '[id]' => '[customerGroupId]',
-                // EditableCustomerGroup::$reduction is normalized as [reductionPercent]
-                '[reduction]' => '[reductionPercent]',
-            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
             uriTemplate: '/customers/groups',
@@ -60,29 +57,31 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             scopes: [
                 'customer_group_write',
             ],
-            // Here, we use query mapping to adapt normalized query result for the ApiPlatform DTO
-            CQRSQueryMapping: [
-                '[id]' => '[customerGroupId]',
-                '[reduction]' => '[reductionPercent]',
-            ],
-            // Here, we use command mapping to adapt the normalized command result for the CQRS query
+            CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: [
-                '[_context][shopIds]' => '[shopIds]',
                 '[groupId]' => '[customerGroupId]',
+                '[names]' => '[localizedNames]',
             ],
+            extraProperties: [
+                // The shops of the context are used only when the payload has no shopIds (PrestaShop 9.2.0 and later,
+                // shopIds is required on older versions)
+                'defaultValues' => ['shopIds' => '[_context][shopIds]'],
+            ],
+            validationContext: ['groups' => ['Default', 'Create']],
         ),
-        new CQRSUpdate(
+        new CQRSPartialUpdate(
             uriTemplate: '/customers/groups/{customerGroupId}',
+            read: false,
             CQRSCommand: EditCustomerGroupCommand::class,
             CQRSQuery: GetCustomerGroupForEditing::class,
             scopes: [
                 'customer_group_write',
             ],
-            // Here we use the ApiResource DTO mapping to transform the normalized query result
-            ApiResourceMapping: [
-                '[id]' => '[customerGroupId]',
-                '[reduction]' => '[reductionPercent]',
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: [
+                '[names]' => '[localizedNames]',
             ],
+            validationContext: ['groups' => ['Default', 'Update']],
         ),
         new CQRSDelete(
             uriTemplate: '/customers/groups/{customerGroupId}',
@@ -96,7 +95,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
             ],
         ),
     ],
-    exceptionToStatus: [GroupNotFoundException::class => 404],
+    exceptionToStatus: [
+        GroupConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        GroupNotFoundException::class => Response::HTTP_NOT_FOUND,
+    ],
 )]
 class CustomerGroup
 {
@@ -104,14 +106,27 @@ class CustomerGroup
     public int $customerGroupId;
 
     #[LocalizedValue]
-    public array $localizedNames;
+    public array $names;
 
     public DecimalNumber $reductionPercent;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $displayPriceTaxExcluded;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $showPrice;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
+    #[ApiProperty(openapiContext: [
+        'type' => 'array',
+        'items' => ['type' => 'integer'],
+        'description' => 'Shops associated with the group. On creation, optional from PrestaShop 9.2.0 where it defaults '
+            . 'to the shops of the context. Required on older versions, where omitting it results in a 500 error.',
+    ])]
     public array $shopIds;
+
+    public const QUERY_MAPPING = [
+        '[id]' => '[customerGroupId]',
+        '[localizedNames]' => '[names]',
+        '[reduction]' => '[reductionPercent]',
+    ];
 }

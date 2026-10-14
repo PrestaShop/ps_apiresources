@@ -31,7 +31,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
+/*
  * Deletes several definitions at once. A definition that cannot be deleted (unknown id,
  * module-owned) does not stop the others: the response is a 207 listing the per-item failures.
  */

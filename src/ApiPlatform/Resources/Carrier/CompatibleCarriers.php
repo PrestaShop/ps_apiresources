@@ -90,7 +90,7 @@ use Symfony\Component\HttpFoundation\Response;
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
-/**
+/*
  * Carriers compatible with a delivery context: a list of products with their quantities and a
  * delivery address. Restricted search, meant to be used when building a cart or an order rather
  * than to browse the carriers of the shop (see the Carrier resource for that).

@@ -270,10 +270,9 @@ class ApiClientEndpointTest extends ApiTestCase
         $this->assertEquals('No Authorization header provided', $errorMessage);
 
         // Delete API client with invalid token
-        static::createClient()->request('DELETE', '/api-clients/' . $apiClientId, [
+        $this->requestApi('DELETE', '/api-clients/' . $apiClientId, null, [], Response::HTTP_UNAUTHORIZED, [
             'auth_bearer' => 'toto',
         ]);
-        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
 
         // Try to delete with a token with only read scope is forbidden (403)
         $this->deleteItem('/api-clients/' . $apiClientId, ['api_client_read'], Response::HTTP_FORBIDDEN);
