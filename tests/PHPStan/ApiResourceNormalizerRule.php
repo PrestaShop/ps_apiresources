@@ -77,9 +77,6 @@ final class ApiResourceNormalizerRule implements Rule
         // Valid: the SearchCustomers result indexes the groups by group id with database names, which the mapping
         // can't turn into a list (@index targets positions), so the groups are reshaped before the denormalization.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\FoundCustomerDenormalizer',
-        // Valid: the customer details order rows are raw database rows, their valid flag is a tiny integer the
-        // serializer can't turn into the bool of the DTO.
-        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\CustomerOrderRowDenormalizer',
         // Valid: complex denormalization of product-combination generation input.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GenerateCombinationsSerializer',
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\GetSearchTermAliasesQuerySerializer',

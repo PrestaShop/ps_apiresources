@@ -23,8 +23,7 @@ declare(strict_types=1);
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto;
 
 /**
- * Orders of a customer split by validity, totalSpent is formatted in the default currency for display
- * (context currency before PrestaShop 9.2.1).
+ * Orders of a customer split by validity, totalSpent is formatted in the default currency for display.
  */
 class CustomerOrdersInformation
 {

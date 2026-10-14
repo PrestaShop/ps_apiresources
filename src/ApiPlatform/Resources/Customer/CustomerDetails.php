@@ -50,6 +50,10 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'customer_read',
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
+            extraProperties: [
+                // The query result booleans of the sub objects are cast from 9.2.1
+                'minVersion' => '9.2.1',
+            ],
             openapi: new OpenApiOperation(
                 summary: 'Get the details of a customer.',
                 description: 'Returns the information displayed on the customer page of the back office. Dates, birthday and '
@@ -65,6 +69,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetCustomerForViewing::class,
             scopes: ['customer_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
+            extraProperties: [
+                // Returns the customer details
+                'minVersion' => '9.2.1',
+            ],
             validationContext: ['groups' => ['Default', 'Update']],
             openapi: new OpenApiOperation(
                 summary: 'Set the private note about a customer.',

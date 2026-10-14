@@ -54,11 +54,6 @@ class CustomerEndpointTest extends ApiTestCase
             '/customers/1',
         ];
 
-        yield 'get customer details endpoint' => [
-            'GET',
-            '/customers/1/details',
-        ];
-
         yield 'get customer orders endpoint' => [
             'GET',
             '/customers/1/orders',
@@ -67,11 +62,6 @@ class CustomerEndpointTest extends ApiTestCase
         yield 'update customer endpoint' => [
             'PATCH',
             '/customers/1',
-        ];
-
-        yield 'set private note endpoint' => [
-            'PATCH',
-            '/customers/1/set-private-note',
         ];
 
         yield 'delete customer endpoint' => [
@@ -98,6 +88,19 @@ class CustomerEndpointTest extends ApiTestCase
             'GET',
             '/customers/search?phrases[]=test',
         ];
+
+        // The customer details operations require PrestaShop 9.2.1
+        if (self::isVersionAtLeast('9.2.1')) {
+            yield 'get customer details endpoint' => [
+                'GET',
+                '/customers/1/details',
+            ];
+
+            yield 'set private note endpoint' => [
+                'PATCH',
+                '/customers/1/set-private-note',
+            ];
+        }
     }
 
     public function testAddCustomer(): int
@@ -549,6 +552,8 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testSetCustomerPrivateNote(int $customerId): int
     {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
         $privateNote = 'A private note about this customer';
 
         // The response is the customer details, read back after the update
@@ -570,6 +575,8 @@ class CustomerEndpointTest extends ApiTestCase
 
     public function testSetCustomerPrivateNoteNotFound(): void
     {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
         $this->partialUpdateItem('/customers/99999/set-private-note', ['privateNote' => 'A note'], ['customer_write'], Response::HTTP_NOT_FOUND);
     }
 
@@ -578,6 +585,8 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testInvalidCustomerPrivateNote(int $customerId): void
     {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
         $expectedErrors = [
             [
                 'propertyPath' => 'privateNote',
@@ -699,6 +708,8 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testGetMinimalCustomerDetails(int $customerId): void
     {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
         $customer = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
 
         // Dates are formatted for display and depend on when the test runs
@@ -755,7 +766,6 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testCustomerDetailsTotalSpentInDefaultCurrency(int $customerId): void
     {
-        // Formatted with the context currency before PrestaShop 9.2.1
         $this->markTestSkippedByMinVersion('9.2.1');
 
         // @todo: create the currency with the API once a currency endpoint exists
@@ -780,6 +790,8 @@ class CustomerEndpointTest extends ApiTestCase
 
     public function testGetCustomerDetailsOrders(): void
     {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
         // The fixture customer has orders, none of them is valid
         $customer = $this->getItem('/customers/1/details', ['customer_read']);
         $this->assertEquals([
@@ -803,6 +815,8 @@ class CustomerEndpointTest extends ApiTestCase
 
     public function testGetCustomerDetailsNotFound(): void
     {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
         // Try to get a non-existent customer details
         $this->requestApi('GET', '/customers/99999/details', null, ['customer_read'], Response::HTTP_NOT_FOUND);
     }
