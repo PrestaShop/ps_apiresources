@@ -123,6 +123,9 @@ class GenerateApiTrackingTableCommand extends Command
 
     private const TYPE_ORDER = ['Command' => 0, 'Query' => 1, 'List' => 2];
 
+    // The table is pasted in https://github.com/PrestaShop/PrestaShop/issues/39630
+    private const GITHUB_ISSUE_BODY_LIMIT = 65536;
+
     private array $cqrsEndpoints = [];
     private array $cqrsLookup = [];
     private ?array $gridEndpoints = null;
@@ -193,6 +196,9 @@ class GenerateApiTrackingTableCommand extends Command
                 $io->section('🐙 Analyzing GitHub PRs for status detection...');
                 $githubToken = $input->getOption('github-token');
                 $prStatusMap = $this->analyzeGitHubPullRequests($githubToken, $io);
+                if (null === $prStatusMap) {
+                    return Command::FAILURE;
+                }
                 $io->info(sprintf('Found status information for %d endpoints from GitHub PRs', count($prStatusMap)));
             }
 
@@ -206,7 +212,20 @@ class GenerateApiTrackingTableCommand extends Command
             // Step 4: Generate markdown table
             $io->section('📝 Generating markdown table...');
             $domainGroups = $this->processDomainGroups($matchedEndpoints);
-            $this->generateMarkdownTable($domainGroups, $excludedEndpoints, $outputFile);
+            $markdown = $this->generateMarkdownTable($domainGroups, $excludedEndpoints);
+            file_put_contents($outputFile, $markdown);
+
+            $markdownLength = mb_strlen($markdown);
+            if ($markdownLength > self::GITHUB_ISSUE_BODY_LIMIT) {
+                $io->error(sprintf(
+                    'The generated table is %d characters long, over the %d characters limit of a GitHub issue body, so it cannot be published in the tracking issue anymore. The output format needs to be refactored to make it shorter (or split it). File saved anyway to: %s',
+                    $markdownLength,
+                    self::GITHUB_ISSUE_BODY_LIMIT,
+                    $outputFile
+                ));
+
+                return Command::FAILURE;
+            }
 
             $totalEndpoints = count($matchedEndpoints);
             $implementedCount = $this->countImplementedEndpoints($domainGroups);
@@ -216,7 +235,7 @@ class GenerateApiTrackingTableCommand extends Command
 
             $summary = [
                 'API tracking table generated successfully!',
-                sprintf('📁 Saved to: %s', $outputFile),
+                sprintf('📁 Saved to: %s (%d/%d characters)', $outputFile, $markdownLength, self::GITHUB_ISSUE_BODY_LIMIT),
                 sprintf(
                     '📊 Summary: %d implemented, %d in progress, %d missing (%s%% complete)',
                     $implementedCount,
@@ -744,7 +763,10 @@ class GenerateApiTrackingTableCommand extends Command
         return $matched;
     }
 
-    private function analyzeGitHubPullRequests(?string $githubToken, SymfonyStyle $io): array
+    /**
+     * Returns null when the analysis failed, a table without the PR status would show every in progress endpoint as missing.
+     */
+    private function analyzeGitHubPullRequests(?string $githubToken, SymfonyStyle $io): ?array
     {
         $statusMap = [];
         $repoOwner = 'PrestaShop';
@@ -758,19 +780,27 @@ class GenerateApiTrackingTableCommand extends Command
 
             // Analyze open PRs for "In Progress" status
             foreach ($openPRs as $pr) {
-                $changedEndpoints = $this->analyzePRChanges($pr, $githubToken);
+                $changedEndpoints = $this->analyzePRChanges($pr, $githubToken, $io);
+                if (null === $changedEndpoints) {
+                    return null;
+                }
                 foreach ($changedEndpoints as $endpoint) {
                     $statusMap[$endpoint] = [
                         'status' => '🚧 In Progress',
                         'pr_url' => $pr['html_url'],
+                        'pr_number' => $pr['number'],
                         'pr_title' => $pr['title'],
                         'author' => $pr['user']['login'] ?? 'Unknown',
                     ];
                 }
             }
         } catch (\Exception $e) {
-            $io->warning('GitHub API analysis failed: ' . $e->getMessage());
-            $io->text('Continuing without PR status detection...');
+            $io->error([
+                'GitHub API analysis failed: ' . $e->getMessage(),
+                'Use --skip-github to generate the table without the PR status.',
+            ]);
+
+            return null;
         }
 
         return $statusMap;
@@ -868,8 +898,13 @@ class GenerateApiTrackingTableCommand extends Command
         return '❌';
     }
 
-    private function generateMarkdownTable(array $domainGroups, array $excludedEndpoints, string $outputFile): void
+    /**
+     * Rows are rendered without cell padding and PR links as reference links (defined once at the end)
+     * to stay under self::GITHUB_ISSUE_BODY_LIMIT.
+     */
+    private function generateMarkdownTable(array $domainGroups, array $excludedEndpoints): string
     {
+        $prLinks = [];
         $totalEndpoints = array_sum(array_map('count', $domainGroups));
         $implementedCount = $this->countImplementedEndpoints($domainGroups);
         $inProgressCount = $this->countInProgressEndpoints($domainGroups);
@@ -900,8 +935,8 @@ class GenerateApiTrackingTableCommand extends Command
 
             $markdown .= "## 🏷️ $domain\n\n";
             $markdown .= "$domainImplemented/$domainTotal ($domainPercentage%)\n\n";
-            $markdown .= "| Action | Type | Status | API Endpoint | Author / PR |\n";
-            $markdown .= "|--------|------|--------|--------------|-------------|\n";
+            $markdown .= "|Action|Type|Status|API Endpoint|Author / PR|\n";
+            $markdown .= "|-|-|-|-|-|\n";
 
             foreach ($endpoints as $endpoint) {
                 $action = '`' . $endpoint['action'] . '`';
@@ -918,11 +953,13 @@ class GenerateApiTrackingTableCommand extends Command
                 if (!empty($endpoint['author'])) {
                     $authorInfo = $endpoint['author'];
                     if ($endpoint['pr_info'] && !empty($endpoint['pr_info']['pr_url'])) {
-                        $authorInfo = "{$endpoint['author']} / [PR]({$endpoint['pr_info']['pr_url']})";
+                        $prNumber = $endpoint['pr_info']['pr_number'];
+                        $prLinks[$prNumber] = $endpoint['pr_info']['pr_url'];
+                        $authorInfo = "{$endpoint['author']} [#$prNumber]";
                     }
                 }
 
-                $markdown .= "| $action | $type | $status | $api | $authorInfo |\n";
+                $markdown .= "|$action|$type|$status|$api|$authorInfo|\n";
             }
 
             $markdown .= "\n";
@@ -937,11 +974,19 @@ class GenerateApiTrackingTableCommand extends Command
         $markdown .= "- 🚫 **Excluded**: Command / query / grid intentionally not exposed through the Admin API\n\n";
         $markdown .= '*Last updated: ' . date('Y-m-d H:i:s') . "*\n";
 
-        file_put_contents($outputFile, $markdown);
+        if (!empty($prLinks)) {
+            ksort($prLinks);
+            $markdown .= "\n";
+            foreach ($prLinks as $prNumber => $prUrl) {
+                $markdown .= "[#$prNumber]: $prUrl\n";
+            }
+        }
+
+        return $markdown;
     }
 
     /**
-     * Render the informative table of the commands/queries/grids deliberately kept out of the Admin API.
+     * List the commands/queries/grids deliberately kept out of the Admin API, grouped by reason.
      * They are listed for transparency only and are not part of any metric above.
      */
     private function renderExcludedSection(array $excludedEndpoints): string
@@ -950,25 +995,18 @@ class GenerateApiTrackingTableCommand extends Command
             return '';
         }
 
-        usort($excludedEndpoints, function ($a, $b) {
-            if ($a['domain'] !== $b['domain']) {
-                return strcasecmp($a['domain'], $b['domain']);
-            }
-
-            return strcasecmp($a['action'], $b['action']);
-        });
+        $actionsByReason = [];
+        foreach ($excludedEndpoints as $endpoint) {
+            $actionsByReason[$endpoint['exclusion_reason']][] = $endpoint['action'] ?: basename(str_replace('\\', '/', $endpoint['class']));
+        }
+        ksort($actionsByReason);
 
         $markdown = "## 🚫 Excluded from tracking\n\n";
-        $markdown .= "These CQRS commands, queries and listing grids are intentionally **not** exposed through the Admin API.\n";
-        $markdown .= "(totals, percentages and per-domain progress).\n\n";
-        $markdown .= "| Action | Type | Domain | Reason |\n";
-        $markdown .= "|--------|------|--------|--------|\n";
+        $markdown .= "These CQRS commands, queries and listing grids are intentionally **not** exposed through the Admin API, and not counted in any metric.\n\n";
 
-        foreach ($excludedEndpoints as $endpoint) {
-            $action = $endpoint['action'] ?: basename(str_replace('\\', '/', $endpoint['class']));
-            $domain = $endpoint['domain'] ?: 'Unknown';
-
-            $markdown .= sprintf("| `%s` | %s | %s | %s |\n", $action, $endpoint['type'], $domain, $endpoint['exclusion_reason']);
+        foreach ($actionsByReason as $reason => $actions) {
+            sort($actions, SORT_STRING | SORT_FLAG_CASE);
+            $markdown .= "- **$reason**: `" . implode('`, `', $actions) . "`\n";
         }
 
         return $markdown . "\n";
@@ -1019,7 +1057,7 @@ class GenerateApiTrackingTableCommand extends Command
         return array_slice($prs, 0, $limit);
     }
 
-    private function analyzePRChanges(array $pr, ?string $token): array
+    private function analyzePRChanges(array $pr, ?string $token, SymfonyStyle $io): ?array
     {
         $endpoints = [];
 
@@ -1044,7 +1082,7 @@ class GenerateApiTrackingTableCommand extends Command
 
             $response = file_get_contents($url, false, $context);
             if (false === $response) {
-                return $endpoints;
+                throw new \RuntimeException('Failed to fetch the PR files from GitHub API');
             }
 
             $files = json_decode($response, true);
@@ -1061,7 +1099,9 @@ class GenerateApiTrackingTableCommand extends Command
                 }
             }
         } catch (\Exception $e) {
-            // Silently continue if we can't analyze PR changes
+            $io->error(sprintf('Failed to analyze the changes of PR #%d: %s', $pr['number'], $e->getMessage()));
+
+            return null;
         }
 
         return array_unique($endpoints);

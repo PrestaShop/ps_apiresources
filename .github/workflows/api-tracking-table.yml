@@ -1,0 +1,104 @@
+name: API tracking table
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      update_issue:
+        description: 'Update the tracking issue (uncheck to only build the table as an artifact)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  TRACKING_ISSUE_REPOSITORY: PrestaShop/PrestaShop
+  TRACKING_ISSUE_NUMBER: 39630
+
+jobs:
+  tracking-table:
+    name: Update the API tracking table
+    if: github.repository == 'PrestaShop/ps_apiresources'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, intl, gd, xml, dom, json, fileinfo, curl, zip, iconv
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup MySQL
+        uses: shogo82148/actions-setup-mysql@v1
+        with:
+          mysql-version: '8.0'
+          root-password: 'password'
+
+      - name: Checkout PrestaShop develop
+        uses: actions/checkout@v4
+        with:
+          repository: PrestaShop/PrestaShop
+          ref: develop
+          path: prestashop
+
+      - name: PrestaShop configuration
+        working-directory: prestashop
+        run: |
+          cp .github/workflows/phpunit/parameters.yml app/config/parameters.yml
+          cp .github/workflows/phpunit/parameters.php app/config/parameters.php
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer directory
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('prestashop/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Composer install
+        working-directory: prestashop
+        run: COMPOSER_PROCESS_TIMEOUT=600 composer install --ansi --prefer-dist --no-interaction --no-progress
+
+      # Replace the module version required by the core with the latest dev branch
+      - name: Remove the module installed by Composer
+        run: rm -rf prestashop/modules/ps_apiresources
+
+      - name: Checkout ps_apiresources dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: prestashop/modules/ps_apiresources
+
+      - name: Install the shop
+        working-directory: prestashop
+        run: |
+          composer dump-autoload --working-dir=modules/ps_apiresources
+          composer create-test-db
+
+      - name: Generate the tracking table
+        working-directory: prestashop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: php bin/console prestashop:api:generate-tracking-table --env=test --output="$RUNNER_TEMP/api-endpoints-tracking.md" --github-token="$GITHUB_TOKEN"
+
+      - name: Upload the tracking table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-endpoints-tracking
+          path: ${{ runner.temp }}/api-endpoints-tracking.md
+          if-no-files-found: ignore
+
+      - name: Update the tracking issue
+        if: github.event_name == 'schedule' || inputs.update_issue
+        env:
+          GH_TOKEN: ${{ secrets.JARVIS_TOKEN }}
+        run: gh issue edit "$TRACKING_ISSUE_NUMBER" --repo "$TRACKING_ISSUE_REPOSITORY" --body-file "$RUNNER_TEMP/api-endpoints-tracking.md"
