@@ -22,6 +22,8 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer\Dto;
 
+use PrestaShop\Decimal\DecimalNumber;
+
 /**
  * Order row of the customer details, the core query returns it as a raw database row renamed by the resource mapping.
  */
@@ -29,9 +31,9 @@ class CustomerOrderRow
 {
     public int $orderId;
 
-    public int $valid;
+    public bool $valid;
 
-    public string $totalPaidTaxIncl;
+    public DecimalNumber $totalPaidTaxIncl;
 
-    public string $conversionRate;
+    public DecimalNumber $conversionRate;
 }

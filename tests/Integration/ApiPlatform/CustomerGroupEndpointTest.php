@@ -74,9 +74,6 @@ class CustomerGroupEndpointTest extends ApiTestCase
 
     public function testAddCustomerGroupWithoutShopIds(): void
     {
-        // The shops of the context are the default value of shopIds from PrestaShop 9.2.0
-        $this->markTestSkippedByMinVersion('9.2.0');
-
         $postData = [
             'names' => [
                 'en-US' => 'test1',
@@ -86,6 +83,21 @@ class CustomerGroupEndpointTest extends ApiTestCase
             'displayPriceTaxExcluded' => true,
             'showPrice' => true,
         ];
+
+        // The shops of the context are the default value of shopIds from PrestaShop 9.2.0, it is required before
+        if (!self::isVersionAtLeast('9.2.0')) {
+            $validationErrorsResponse = $this->createItem('/customers/groups', $postData, ['customer_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $this->assertIsArray($validationErrorsResponse);
+            $this->assertValidationErrors([
+                [
+                    'propertyPath' => 'shopIds',
+                    'message' => 'This value should not be null.',
+                ],
+            ], $validationErrorsResponse);
+
+            return;
+        }
+
         $customerGroup = $this->createItem('/customers/groups', $postData, ['customer_group_write']);
         $this->assertArrayHasKey('customerGroupId', $customerGroup);
         $customerGroupId = $customerGroup['customerGroupId'];
@@ -124,6 +136,30 @@ class CustomerGroupEndpointTest extends ApiTestCase
             // Required before PrestaShop 9.2.0
             'shopIds' => [1],
         ], ['customer_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testAddCustomerGroupWithInvalidShops(): void
+    {
+        $postData = [
+            'names' => [
+                'en-US' => 'test invalid shops',
+            ],
+            'reductionPercent' => 10,
+            'displayPriceTaxExcluded' => false,
+            'showPrice' => true,
+        ];
+        $this->createItem('/customers/groups', ['shopIds' => [999]] + $postData, ['customer_group_write'], Response::HTTP_NOT_FOUND);
+        $this->createItem('/customers/groups', ['shopIds' => [0]] + $postData, ['customer_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testPartialUpdateCustomerGroupNotFound(): void
+    {
+        $this->partialUpdateItem('/customers/groups/99999', ['reductionPercent' => 10], ['customer_group_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testDeleteCustomerGroupNotFound(): void
+    {
+        $this->deleteItem('/customers/groups/99999', ['customer_group_write'], Response::HTTP_NOT_FOUND);
     }
 
     public function testAddCustomerGroup(): int

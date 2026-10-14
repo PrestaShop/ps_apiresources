@@ -75,6 +75,11 @@ services:
     autoconfigure: true
     public: false
 
+  # See class docblock: casts the valid flag of the customer details order rows
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\CustomerOrderRowDenormalizer:
+    autoconfigure: true
+    public: false
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'

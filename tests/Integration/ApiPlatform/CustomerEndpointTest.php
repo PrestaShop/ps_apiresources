@@ -547,7 +547,7 @@ class CustomerEndpointTest extends ApiTestCase
     /**
      * @depends testAddCustomer
      */
-    public function testSetCustomerPrivateNote(int $customerId): void
+    public function testSetCustomerPrivateNote(int $customerId): int
     {
         $privateNote = 'A private note about this customer';
 
@@ -564,6 +564,13 @@ class CustomerEndpointTest extends ApiTestCase
 
         $details = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
         $this->assertSame($updatedDetails, $details);
+
+        return $customerId;
+    }
+
+    public function testSetCustomerPrivateNoteNotFound(): void
+    {
+        $this->partialUpdateItem('/customers/99999/set-private-note', ['privateNote' => 'A note'], ['customer_write'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -619,6 +626,11 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertSame([], $response);
     }
 
+    public function testGetCustomerOrdersNotFound(): void
+    {
+        $this->getItem('/customers/99999/orders', ['customer_read'], Response::HTTP_NOT_FOUND);
+    }
+
     public function testGetCustomerOrdersInvalidCustomerId(): void
     {
         // 0 matches the \d+ requirement but is rejected by the CustomerId value object
@@ -626,7 +638,7 @@ class CustomerEndpointTest extends ApiTestCase
     }
 
     /**
-     * @depends testAddCustomer
+     * @depends testSetCustomerPrivateNote
      */
     public function testGetCustomerDetails(int $customerId): void
     {
@@ -764,6 +776,23 @@ class CustomerEndpointTest extends ApiTestCase
         } finally {
             DatabaseDump::restoreTables(['currency', 'currency_lang', 'currency_shop']);
         }
+    }
+
+    public function testGetCustomerDetailsOrders(): void
+    {
+        // The fixture customer has orders, none of them is valid
+        $customer = $this->getItem('/customers/1/details', ['customer_read']);
+        $this->assertEquals([
+            'validOrders' => [],
+            'invalidOrders' => [
+                ['orderId' => 1, 'valid' => false, 'totalPaidTaxIncl' => 68.2, 'conversionRate' => 1],
+                ['orderId' => 2, 'valid' => false, 'totalPaidTaxIncl' => 169.9, 'conversionRate' => 1],
+                ['orderId' => 3, 'valid' => false, 'totalPaidTaxIncl' => 21.3, 'conversionRate' => 1],
+                ['orderId' => 4, 'valid' => false, 'totalPaidTaxIncl' => 21.3, 'conversionRate' => 1],
+                ['orderId' => 5, 'valid' => false, 'totalPaidTaxIncl' => 27.3, 'conversionRate' => 1],
+            ],
+            'totalSpent' => '$0.00',
+        ], $customer['ordersInformation']);
     }
 
     public function testGetCustomerNotFound(): void
