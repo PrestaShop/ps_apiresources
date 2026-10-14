@@ -29,6 +29,8 @@ use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 
 /**
  * Casts the valid flag of the customer details order rows, the database returns it as a tiny integer.
+ *
+ * @todo remove once the minimum core version casts the booleans of the query results
  */
 class CustomerOrderRowDenormalizer implements DenormalizerInterface, DenormalizerAwareInterface
 {
