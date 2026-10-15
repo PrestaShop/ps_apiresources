@@ -114,7 +114,7 @@ class CustomerGroupEndpointTest extends ApiTestCase
             'reductionPercent' => 10,
         ], ['customer_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
-        $this->assertValidationErrors([
+        $expectedErrors = [
             [
                 'propertyPath' => 'displayPriceTaxExcluded',
                 'message' => 'This value should not be null.',
@@ -123,7 +123,15 @@ class CustomerGroupEndpointTest extends ApiTestCase
                 'propertyPath' => 'showPrice',
                 'message' => 'This value should not be null.',
             ],
-        ], $validationErrorsResponse);
+        ];
+        // Before PrestaShop 9.2.0 the shops of the context are not a default value
+        if (!self::isVersionAtLeast('9.2.0')) {
+            $expectedErrors[] = [
+                'propertyPath' => 'shopIds',
+                'message' => 'This value should not be null.',
+            ];
+        }
+        $this->assertValidationErrors($expectedErrors, $validationErrorsResponse);
 
         // The reduction is checked by the core command
         $this->createItem('/customers/groups', [
