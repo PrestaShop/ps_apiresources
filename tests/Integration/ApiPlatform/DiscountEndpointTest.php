@@ -701,4 +701,25 @@ class DiscountEndpointTest extends ApiTestCase
         // New code has been created
         $this->assertNotEquals($originalDiscount['code'], $newDiscount['code']);
     }
+
+    /**
+     * @depends testCreateDiscountForUpdateTests
+     */
+    public function testInvalidCurrency(array $discount): void
+    {
+        $this->partialUpdateItem('/discounts/' . $discount['discountId'], [
+            'minimumAmount' => [
+                'amount' => 50,
+                'currencyId' => 0,
+            ],
+        ], ['discount_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->partialUpdateItem('/discounts/' . $discount['discountId'], [
+            'reductionAmount' => [
+                'amount' => 5,
+                'currencyId' => 0,
+                'taxIncluded' => true,
+            ],
+        ], ['discount_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
 }

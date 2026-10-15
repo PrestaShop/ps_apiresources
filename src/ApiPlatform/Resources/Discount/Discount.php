@@ -24,6 +24,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DeleteDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DuplicateDiscountCommand;
@@ -96,6 +97,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     exceptionToStatus: [
         DiscountNotFoundException::class => Response::HTTP_NOT_FOUND,
         DiscountConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CurrencyConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Discount
@@ -115,7 +117,7 @@ class Discount
     public ?DecimalNumber $reductionPercent;
     #[ApiProperty(
         openapiContext: [
-            'type' => 'object',
+            'type' => ['object', 'null'],
             'description' => 'Fixed reduction amount',
             'properties' => [
                 'amount' => [
@@ -131,6 +133,7 @@ class Discount
                     'description' => 'Whether reduction amount is tax included',
                 ],
             ],
+            'required' => ['amount', 'currencyId', 'taxIncluded'],
         ]
     )]
     public ?array $reductionAmount;
@@ -201,7 +204,7 @@ class Discount
 
     #[ApiProperty(
         openapiContext: [
-            'type' => 'object',
+            'type' => ['object', 'null'],
             'description' => 'Minimum amount required',
             'properties' => [
                 'amount' => [
@@ -221,6 +224,7 @@ class Discount
                     'description' => 'Whether minimum amount includes shipping',
                 ],
             ],
+            'required' => ['amount', 'currencyId'],
         ]
     )]
     public ?array $minimumAmount;
