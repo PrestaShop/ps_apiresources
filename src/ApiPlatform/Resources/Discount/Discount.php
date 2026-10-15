@@ -128,7 +128,7 @@ class Discount
                 ],
                 'taxIncluded' => [
                     'type' => 'boolean',
-                    'Whether reduction amount is tax included',
+                    'description' => 'Whether reduction amount is tax included',
                 ],
             ],
         ]
@@ -170,8 +170,8 @@ class Discount
                                     'type' => 'array',
                                     'items' => ['type' => 'integer'],
                                 ],
-                                'required' => ['type', 'itemIds'],
                             ],
+                            'required' => ['type', 'itemIds'],
                         ],
                     ],
                     'type' => [
@@ -183,8 +183,8 @@ class Discount
                             'at_least_one_product_rule',
                         ],
                     ],
-                    'required' => ['quantity', 'rules'],
                 ],
+                'required' => ['quantity', 'rules'],
             ],
         ]
     )]
@@ -214,7 +214,7 @@ class Discount
                 ],
                 'taxIncluded' => [
                     'type' => 'boolean',
-                    'Whether minimum amount is tax included',
+                    'description' => 'Whether minimum amount is tax included',
                 ],
                 'shippingIncluded' => [
                     'type' => 'boolean',
