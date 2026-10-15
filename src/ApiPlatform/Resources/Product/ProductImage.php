@@ -68,6 +68,9 @@ use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
             uriTemplate: '/products/images/{imageId}',
             requirements: ['imageId' => '\d+'],
             CQRSCommand: DeleteProductImageCommand::class,
+            scopes: [
+                'product_write',
+            ],
         ),
     ],
     exceptionToStatus: [
