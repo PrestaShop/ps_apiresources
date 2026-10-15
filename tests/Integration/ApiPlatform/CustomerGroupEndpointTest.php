@@ -300,6 +300,17 @@ class CustomerGroupEndpointTest extends ApiTestCase
             'showPrice' => true,
         ], $testCustomerGroup);
 
+        // Sorting and filters use the API field names
+        $sortedGroups = $this->listItems('/customers/groups?orderBy=customerGroupId&sortOrder=desc', ['customer_group_read']);
+        $this->assertEquals('customerGroupId', $sortedGroups['orderBy']);
+        $this->assertEquals('desc', $sortedGroups['sortOrder']);
+        $this->assertEquals($customerGroupId, $sortedGroups['items'][0]['customerGroupId']);
+
+        $filteredGroups = $this->listItems('/customers/groups', ['customer_group_read'], ['customerGroupId' => $customerGroupId]);
+        $this->assertEquals(['customerGroupId' => (string) $customerGroupId], $filteredGroups['filters']);
+        $this->assertContains($customerGroupId, array_column($filteredGroups['items'], 'customerGroupId'));
+        $this->assertLessThan($customerGroups['totalItems'], $filteredGroups['totalItems']);
+
         return $customerGroupId;
     }
 

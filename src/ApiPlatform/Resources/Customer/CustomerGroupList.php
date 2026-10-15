@@ -26,6 +26,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Exception\GroupNotFoundException;
+use PrestaShop\PrestaShop\Core\Search\Filters\CustomerGroupsFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
 #[ApiResource(
@@ -39,6 +40,13 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
                 '[reduction]' => '[reductionPercent]',
                 '[show_prices]' => '[showPrice]',
                 '[members]' => '[customers]',
+            ],
+            filtersClass: CustomerGroupsFilters::class,
+            filtersMapping: [
+                '[customerGroupId]' => '[id_group]',
+                '[reductionPercent]' => '[reduction]',
+                '[showPrice]' => '[show_prices]',
+                '[customers]' => '[members]',
             ],
         ),
     ],
