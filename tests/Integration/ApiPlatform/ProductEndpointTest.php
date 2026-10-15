@@ -193,6 +193,11 @@ class ProductEndpointTest extends ApiTestCase
             'multipart/form-data',
         ];
 
+        yield 'delete image endpoint' => [
+            'DELETE',
+            '/products/images/1',
+        ];
+
         yield 'list images endpoint' => [
             'GET',
             '/products/1/images',

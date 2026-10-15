@@ -32,6 +32,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
     operations: [
         new PaginatedList(
             uriTemplate: '/customers/groups',
+            scopes: ['customer_group_read'],
             gridDataFactory: 'prestashop.core.grid.data.factory.customer_groups',
             ApiResourceMapping: [
                 '[id_group]' => '[customerGroupId]',

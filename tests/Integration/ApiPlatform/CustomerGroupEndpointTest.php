@@ -65,6 +65,11 @@ class CustomerGroupEndpointTest extends ApiTestCase
             'DELETE',
             '/customers/groups/1',
         ];
+
+        yield 'list endpoint' => [
+            'GET',
+            '/customers/groups',
+        ];
     }
 
     public function testAddCustomerGroupWithoutShopIds(): void
