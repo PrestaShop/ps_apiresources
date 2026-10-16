@@ -59,6 +59,11 @@ class SupplierEndpointTest extends ApiTestCase
             '/suppliers/1',
         ];
 
+        yield 'get details endpoint' => [
+            'GET',
+            '/suppliers/1/details',
+        ];
+
         yield 'update endpoint' => [
             'PATCH',
             '/suppliers/1',
@@ -184,6 +189,24 @@ class SupplierEndpointTest extends ApiTestCase
         );
 
         return $supplierId;
+    }
+
+    /**
+     * @depends testGetSupplier
+     *
+     * @param int $supplierId
+     */
+    public function testGetSupplierDetails(int $supplierId): void
+    {
+        $supplierDetails = $this->getItem('/suppliers/' . $supplierId . '/details', ['supplier_read']);
+        $this->assertEquals(
+            [
+                'supplierId' => $supplierId,
+                'name' => 'My Supplier',
+                'supplierProducts' => [],
+            ],
+            $supplierDetails
+        );
     }
 
     /**
