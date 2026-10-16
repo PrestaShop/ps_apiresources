@@ -1,0 +1,180 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit configuration of ps_apiresources.
+# The standards live in .ai/CONTEXT.md (conventions, with the on-demand .ai/*.md contexts: TESTING, OPENAPI, LISTS, MULTISHOP, ERRORS, VERSIONS) and .ai/REVIEW.md (review checklist): this file only tells
+# CodeRabbit where to find them, how to prioritise per path, and which pre-merge checks to run.
+# Reference: https://docs.coderabbit.ai/reference/configuration
+
+language: en-US
+tone_instructions: >-
+  Direct, specific, no praise. Cite the CONTEXT.md or REVIEW.md rule you apply and the core class you
+  checked. One finding per comment, with the fix.
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_instructions: >-
+    List the endpoints added or changed as "METHOD /uri → Resource (CQRS class)", the related core PR when
+    the description names one, the minVersion gates, the exception mappings added, and the BC breaks on
+    already released endpoints. Skip the narrative.
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: true
+  path_filters:
+    - "!vendor/**"
+    - "!**/*.lock"
+    - "!tests/Integration/clover.xml"
+  path_instructions:
+    - path: "src/ApiPlatform/Resources/**/*.php"
+      instructions: |
+        Apply .ai/REVIEW.md in full on these files, in this order: contract with the core (B), OpenAPI
+        documentation (C), errors (D), tests (E). Before any remark on a mapping, a nullable type, a
+        missing field or an exception, open the core class named in the attribute (command constructor and
+        setters, query result getters, handler, value objects) on the core branch the PR targets, or on the
+        related core PR branch when the description names one. A mapping is resolved by name
+        (`getX()`/`isX()` → `x`, constructor parameter names): do not flag a "missing mapping" for a field
+        whose name already matches, nor a `filtersMapping` entry the grid does not filter on (it serves
+        `orderBy`), nor a `[_context]` shop entry on a query that takes no shop argument. Compare the
+        documented schema (property types, nullability, `required`, `description`, `openapiContext`) with
+        the payload the code really produces or accepts; a mismatch is a finding even when the code works.
+        Every exception the command constructor, its value objects and the handler can throw is mapped
+        in `exceptionToStatus` (`*NotFoundException` → 404, constraint / value object exceptions → 422,
+        subclass before parent); check the real class hierarchy in the core before reporting one as
+        unmapped.
+    - path: "src/ApiPlatform/Resources/**/Dto/*.php"
+      instructions: |
+        A DTO sub object: public typed properties only (scalars, DecimalNumber, DateTimeImmutable, nested
+        DTO, `@var Foo[]` lists), no attributes needed for the schema, PHPDoc allowed. Check that every
+        property exists in the query result or command the parent resource maps, with the same nullability,
+        and that a list or a boolean filled from a query result is only used on operations gated with
+        `minVersion` 9.2.1 or on cores where the cast is verified by a test.
+    - path: "src/ApiPlatform/Normalizer/**"
+      instructions: |
+        A new normalizer is a hard finding unless it meets the three conditions of .ai/CONTEXT.md → "When
+        mapping cannot express the format" (one query result or resource class, registered in
+        config/admin/services.yml, allow-listed with a justification in tests/PHPStan/ApiResourceNormalizerRule).
+        Ask for the mapping alternative first.
+    - path: "tests/Integration/ApiPlatform/**/*.php"
+      instructions: |
+        Apply .ai/REVIEW.md §1 E and .ai/TESTING.md. The whole response is asserted with one assertEquals on the full
+        expected array (partial checks are a finding); fixtures are created through the API; every operation
+        is in getProtectedEndpoints(); a 404 test exists for each mapped NotFoundException and a 422 test
+        for each constraint; version-gated behaviour uses isVersionAtLeast()/markTestSkippedByMinVersion().
+        Do not ask for assertValidationErrors() on a 422 produced by a mapped CQRS exception: the response
+        has no field list.
+    - path: "tests/PHPStan/**"
+      instructions: |
+        CI rules of the module. Any relaxation (new allowed class, new allowed type, new ignored error) must
+        be justified in a comment and in the PR description; check the justification against .ai/CONTEXT.md.
+    - path: "tests/Rector/**"
+      instructions: |
+        ApiResourceUriTemplateRector enforces plural URI segments; a new SKIPPED_KEYWORDS entry must be an
+        action verb used by an operation of the PR, consistent with the existing wording (set-status,
+        bulk-delete, search…).
+    - path: "config/**"
+      instructions: |
+        Services of the module. A new service must be autowired, private, and justified by .ai/CONTEXT.md
+        (grid data factory of a list endpoint, allow-listed normalizer, validator). Business logic here is a
+        finding: it belongs to the core.
+    - path: ".github/workflows/**"
+      instructions: |
+        The CI matrix runs the module against 9.0.3, 9.1.5, 9.2.x and develop. A red job on a branch that
+        lacks a related core PR (named in the description) is expected; a change that drops a core version
+        from the matrix needs a maintainer decision.
+    - path: "**/*.md"
+      instructions: |
+        .ai/CONTEXT.md, the .ai/*.md contexts, .ai/REVIEW.md and the skills must stay consistent with each other and with the code: a new
+        convention stated in one must appear in the others; a rule contradicted by a resource of the PR is a
+        finding on the resource or on the rule, say which.
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_title_keywords:
+      - "Release v"
+      - "Bump "
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: off
+    title:
+      mode: warning
+      requirements: >-
+        Imperative sentence naming the domain or endpoint concerned (e.g. "Add the customer group
+        endpoints", "Fix the discount amount documentation"), no ticket number alone.
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+    custom_checks:
+      - name: "Integration test for every operation"
+        mode: warning
+        instructions: >-
+          Fail when an operation added or changed in src/ApiPlatform/Resources has no test in
+          tests/Integration/ApiPlatform exercising it (including the invalid and not-found cases of its
+          exceptionToStatus map), or when a fix in the PR has no test that would fail without the fix.
+          Pass when every operation is covered or the description explains why a test is impossible.
+      - name: "OpenAPI documentation matches the behaviour"
+        mode: warning
+        instructions: >-
+          Fail when a resource of the PR documents a type, a nullability, a required field, a default or a
+          description that disagrees with the core command/query it maps (constructor and setter
+          parameters, query result getters), or when a non-obvious behaviour (version gate, display
+          formatted values, side effects, input-only fields) has no description. Pass otherwise.
+      - name: "Related core PR declared"
+        mode: warning
+        instructions: >-
+          Fail when the module code relies on a core change (new CQRS class, new setter, new exception,
+          new extra property) that does not exist on the targeted core branches and the PR description
+          names no related core PR (PrestaShop/PrestaShop#...). Pass when no core change is needed or
+          the related PR is listed.
+  tools:
+    phpstan:
+      # The module rules need a PrestaShop checkout (_PS_ROOT_DIR_): the module CI runs them.
+      enabled: false
+
+chat:
+  art: false
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      # Conventions (always), review checklist, and the on-demand contexts (tests, OpenAPI, multishop, versions, lists)
+      - ".ai/*.md"
+      # Core side of the Admin API (providers, normalizers, OpenAPI adapters, features per version)
+      - "PrestaShop/PrestaShop:.ai/Component/AdminAPI/CONTEXT.md"
+  learnings:
+    scope: auto
+  pull_requests:
+    scope: auto
+  issues:
+    scope: auto
+  linked_repositories:
+    - repository: "PrestaShop/PrestaShop"
+      instructions: >-
+        The core the module plugs into. CQRS commands, queries, query results, handlers, exceptions and value
+        objects live in src/Core/Domain/{Domain} and src/Adapter/{Domain}; the API Platform infrastructure in
+        src/PrestaShopBundle/ApiPlatform. Read the exact class a resource names before commenting on a
+        mapping, a type, a nullability or an exception. Reference branch: the related core PR branch when
+        the module PR description names one; otherwise the most recent maintained stable branch of the
+        core (the highest X.Y.x branch, 9.2.x today) — develop only adds the evolutions too big for a
+        patch release. The module also runs on older cores (9.0.3, 9.1.5): a guard or cast younger than
+        those tags is absent there.

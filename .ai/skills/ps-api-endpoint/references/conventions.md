@@ -35,8 +35,23 @@ Format: `{entity_snake_case}_{action}`
 | Localized fields — no "localized" prefix | `$names` | `$localizedNames` |
 | Boolean — no "is" prefix | `$enabled`, `$ready` | `$isEnabled`, `$isReady` |
 | Status — use "enabled" not "active/status" | `$enabled` | `$active`, `$status` |
-| All fields strictly typed | `public int $id` | `public $id` |
+| All fields strictly typed | `public int $contactId` | `public $contactId` |
 | ID field — domain name + "Id" | `$contactId` | `$id` |
+| API names, not database columns | `$firstName`, `$companyName` | `$firstname`, `$company` |
+| Decimals — `DecimalNumber`, never `float` | `public DecimalNumber $price` | `public float $price` |
+| Flags — real booleans | `public bool $enabled` | `public int $active` |
+
+## Sub objects
+
+A structured value is a typed DTO class under `src/ApiPlatform/Resources/{Entity}/Dto/`, typed on the
+property (`public CustomerOrdersInformation $ordersInformation;`) or as a list with a docblock
+(`/** @var CustomerOrderRow[] */ public array $validOrders;`). The OpenAPI schema is generated from it.
+Never document an object with a hand-written `openapiContext` (`'type' => 'object', 'properties' => [...]`);
+`openapiContext` is only for lists of scalars (`'items' => ['type' => 'integer']`). A DTO holding a list or
+a boolean filled from a query result needs `minVersion: 9.2.1` (nested boolean cast and `@var Foo[]` item
+types). A sub object fed to a multi-parameter setter of the command is nullable when the setter accepts
+`null`, with every setter parameter `required` once the object is sent. Full rule: `CONTEXT.md` →
+"Sub objects: typed DTOs".
 
 ## Multilanguage fields
 
@@ -110,11 +125,35 @@ exceptionToStatus: [
 ]
 ```
 
-Add `Response::HTTP_NOT_FOUND` for any custom "not found" exceptions (e.g. parent entity missing).
+Then read the command constructor, its value objects and the handler, and map every exception they can
+raise: the value objects of the ids in the URI and in the body (`/x/0` passes `\d+` and must answer 422),
+the referenced entities (`ShopException` 422, `ShopNotFoundException` 404, `ZoneNotFoundException` 404,
+`CurrencyConstraintException` 422…). Any identifier checked for existence answers 404 when unknown, in
+the URI or in the body: every `*NotFoundException` → 404. A subclass mapped to a different status than
+its parent is listed first (API Platform takes the first matching class). Never map to 400.
+
+## OpenAPI documentation
+
+- `openapi: new OpenApiOperation(summary: ..., description: ...)` on command-style operations and on
+  operations whose HTTP method does not say what they do (an upload forced to POST: both operations).
+- A description for every non-obvious behaviour: version gates, display-formatted values, always-empty
+  fields, side effects, what a "set" replaces, multishop coverage.
+- `#[ApiProperty(description:, example:)]` when a property name is not self-explanatory; identifiers with
+  `openapiContext: ['type' => 'integer', 'example' => 1]`; localized examples keyed by locale.
+- Class comments are PHPDoc, not published: public text goes in `description` only.
+- Check with `bin/console api:openapi:export --yaml` in the core, before/after, and a real call.
+
+## Scopes and version
+
+- Every operation declares `scopes` (PHPStan rule).
+- `extraProperties: ['minVersion' => 'X.Y.Z']` when the CQRS class or behaviour does not exist on an older
+  supported core (9.0.3, 9.1.5, 9.2.x, develop are tested), never to hide a 500; pass recent named
+  arguments (`defaultValues`, `minVersion`…) through `extraProperties`.
 
 ## File placement
 
 | File type | Path |
 |-----------|------|
 | ApiResource class | `src/ApiPlatform/Resources/{Entity}/{Entity}.php` |
+| DTO sub objects | `src/ApiPlatform/Resources/{Entity}/Dto/{Name}.php` |
 | Integration test | `tests/Integration/ApiPlatform/{Entity}EndpointTest.php` |

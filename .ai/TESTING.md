@@ -1,0 +1,208 @@
+# Testing expectations
+
+Read when writing or reviewing an integration test
+(`tests/Integration/ApiPlatform/`). The conventions of the module are in
+[`CONTEXT.md`](./CONTEXT.md).
+
+Every new endpoint requires an integration test. The test class lives at
+`tests/Integration/ApiPlatform/{Entity}EndpointTest.php` and extends
+`ApiTestCase` (same directory). Tests should focus on **API behaviour,
+contract, and response format** — authentication and OAuth token setup
+are handled automatically by the base class.
+
+## Always use the `ApiTestCase` helper methods
+
+Do not call `static::createClient()->request(...)` directly. Use the
+helpers below — they build the request, request a Bearer token for the
+given scopes (auto-creating an API client that holds them, cached
+across tests), and assert the expected HTTP status code.
+
+| Helper                    | HTTP   | Purpose                                       |
+|---------------------------|--------|-----------------------------------------------|
+| `getItem($url, $scopes)`  | GET    | Fetch a single item                           |
+| `createItem($url, $data, $scopes)` | POST | Create an item                         |
+| `partialUpdateItem($url, $data, $scopes)` | PATCH | Partial update                   |
+| `updateItem($url, $data, $scopes)` | PUT | Full update                               |
+| `deleteItem($url, $scopes)` | DELETE | Delete a single item                       |
+| `bulkDeleteItems($url, $data, $scopes)` | DELETE | Bulk delete with a payload      |
+| `bulkCommandItemsWithExpectedErrors(...)` | any | Bulk command answering 207 (422 on cores before 9.1.2), asserts `errors` |
+| `listItems($url, $scopes, $filters)` | GET | Paginated list (asserts envelope)      |
+| `countItems($url, $scopes, $filters)` | GET | Paginated list → totalItems only     |
+| `requestApi(...)`         | any    | Last resort for cases the others don't fit    |
+
+Each helper also accepts an `$expectedHttpCode` parameter when asserting
+a specific status (e.g. `HTTP_UNPROCESSABLE_ENTITY` on invalid payloads,
+`HTTP_NOT_FOUND` after a delete).
+
+## Default test environment
+
+`ApiTestCase::setUpBeforeClass()` already:
+
+- Forces `PS_ADMIN_API_FORCE_DEBUG_SECURED = 0`
+- Resets API clients and languages
+- **Installs `fr-FR` as a second language** so every endpoint is tested
+  against a multi-language environment
+
+The suite boots like `admin-api/index.php`: **no employee in the legacy
+context** (no `_PS_ADMIN_DIR_`), and `requestApi()` resets the legacy
+static caches and clears the employee / cart of the context before each
+request. An endpoint that only works with an employee in the context is
+broken for real API clients; a test must not add one.
+
+Because of this, test data for localized fields should include both
+`en-US` and `fr-FR` values — otherwise the test won't exercise the
+multi-language behaviour the module is expected to handle.
+
+Static helpers available for additional setup (call from
+`setUpBeforeClass` when needed):
+
+- `addLanguageByLocale($locale)` — install another language
+- `addShopGroup($name, $color?)` / `addShop($name, $groupId, $color?)`
+  — build a multi-shop fixture
+- `updateConfiguration($key, $value, $shopConstraint?)` — override a
+  configuration value for the test
+- `createApiClient([...])` — called from `setUpBeforeClass` with every
+  scope the class uses (the convention of the existing suites, it
+  pre-warms the token); `getBearerToken` would create one on the fly
+  otherwise
+
+## Test structure
+
+- Implement `getProtectedEndpoints()` listing every operation that
+  requires authentication so the base class can verify scope
+  enforcement via `testProtectedEndpoints`.
+- Chain CRUD test methods with `@depends` so each step builds on the
+  previous one's created entity; identifiers come from the responses,
+  never a hard-coded `1` unless it is a known fixture.
+- **Assert the whole response**: one `assertEquals` of the full expected
+  array against the response (every field, nested objects, list items,
+  the `totalItems` / `orderBy` / `filters` of a list). Key-presence or
+  field-by-field assertions are rejected: they miss removed fields and
+  hide unexpected new ones — a new field must show up as a test change.
+  The expected payload of a fixture is built by one private helper
+  (`expectedXxx(int $id, array $overrides = [])` with `array_replace`)
+  reused by every step of the `@depends` chain, instead of duplicated
+  literal arrays. The whole envelope is asserted on a list the test
+  fully controls (an exact filter on its own fixture); a list other test
+  methods contribute to gets a shape assertion and `assertContains`,
+  never a hard-coded count. Dynamic values (dates, display amounts) get a
+  format assertion, then are copied into the expected array. GET after
+  every write; a partial update leaves the other fields untouched.
+- Fixtures are created **through the API** (the endpoints under test or
+  of the same domain), not with `ObjectModel` or SQL. When the endpoint
+  that would create the fixture is missing, add it in the same domain
+  PR, or leave a `@todo` naming it.
+- Error cases: a 404 test for every mapped `*NotFoundException` on every
+  operation (GET included, `testGetNonExistent{Entity}` with `99999`),
+  plus GET after delete; `/x/0` → 422; a `testInvalid…` method with
+  `$this->assertValidationErrors([...], $response)` for the 422 produced
+  by the **constraints** (the response carries the list of invalid
+  fields), with one case per nullable field, per partial-update
+  combination, empty values and an empty bulk list; when a 422 path is
+  unreachable, a one-line comment says why. A 422 produced by a mapped
+  CQRS exception (an invalid value object such as
+  `OrderReturnStateException`) has no field list: assert the status, not
+  `assertValidationErrors`.
+- Bulk operations: one 207 test per bulk command with an unknown id in
+  the batch, through `bulkCommandItemsWithExpectedErrors()` (it asserts
+  `errors` and expects 422 on cores before 9.1.2), or a whole-envelope
+  `assertEquals` when the type or the message matter; one 422 test with a
+  non-integer element (`["3abc"]` → `propertyPath` `countryIds[0]`).
+- A bug fix comes with a test that fails without the fix (revert it to
+  check).
+- A write test verifies the effect, not only the status: the entity is
+  read back, the side effect the command promises is checked (restocked
+  quantity, position shift), a cumulative action is called twice with
+  different values. Test data has a known state: a dedicated fixture with
+  expected content rather than a demo-data snapshot, values checked
+  against the core constants.
+- Lists: `listItems()` with `filters[...]` and `orderBy` using the API
+  field names, asserting the filtered items and the envelope.
+- Shop association: both behaviours when `shopIds` exists (no `shopIds`
+  → context shops, explicit list kept), an unknown shop → 404, an
+  invalid one → 422.
+- Tests are started from an existing `*EndpointTest.php`: remove the
+  copy-paste residue (labels, comments, setup blocks of the other
+  domain), name the methods after the endpoint's own actions.
+- Include `LanguageResetter` only if the entity has localized fields.
+- `declare(strict_types=1)` must be present in the test file.
+- Restore relevant DB tables via `DatabaseDump::restoreTables([...])`
+  in `setUpBeforeClass` / `tearDownAfterClass` (include `_lang` table
+  if localized, `_shop` table if shop-associated), never with manual
+  SQL — it also runs after a failure; `ResourceResetter` for module
+  files; no per-domain `*Resetter` class.
+
+## Version-dependent endpoints
+
+`ApiTestCase` provides helpers for endpoints that declare a
+`minVersion` (see [`VERSIONS.md`](./VERSIONS.md)) — always use them, never
+recode `version_compare` checks in test classes:
+
+- `markTestSkippedByMinVersion('9.2.0')` — call at the start of a test
+  method to skip it on older cores
+- `isVersionAtLeast('9.2.0')` / `isVersionUnder('9.2.0')` — boolean
+  checks for conditional logic (data providers, assertions)
+
+Two patterns, depending on the scope of the constraint:
+
+- **Every operation of the class is version-constrained** → skip the
+  whole class from `setUpBeforeClass()`, *before* calling
+  `parent::setUpBeforeClass()` (so no fixture setup runs either):
+
+  ```php
+  public static function setUpBeforeClass(): void
+  {
+      if (self::isVersionUnder('9.2.0')) {
+          static::markTestSkipped('This endpoint requires PrestaShop 9.2.0');
+
+          return;
+      }
+
+      parent::setUpBeforeClass();
+      // ...
+  }
+  ```
+
+  `getProtectedEndpoints()` must still yield its data sets
+  **unconditionally**: data providers are resolved when PHPUnit builds
+  the test suite, before `setUpBeforeClass()` gets a chance to skip the
+  class, and an empty provider is reported as an error. The yielded
+  data sets are never executed on old cores since the class is skipped.
+  Examples: `TaxRuleEndpointTest`, `EmployeePasswordResetEndpointTest`,
+  `ProductStockEndpointTest`.
+
+- **Only part of the class is version-dependent** (the endpoint exists
+  on all supported cores but some behaviour doesn't) → call
+  `$this->markTestSkippedByMinVersion('9.2.0')` at the start of the
+  affected tests (tests that `@depends` on them are skipped
+  automatically), and guard conditional yields or assertions with
+  `isVersionAtLeast()`. A conditional yield in `getProtectedEndpoints()`
+  is fine here as long as at least one data set is always yielded.
+  Examples: `CustomerRequiredFieldsEndpointTest`,
+  `ProductStockMovementsEndpointTest`.
+
+A test whose expected value depends on a core fix that is not released
+yet is gated with `isVersionAtLeast()` on the version that will carry
+the fix (`git tag --contains <sha>` gives the first tag of a merged
+commit), and the module PR names the core PR: the CI job of that
+version is red until the core PR is merged (see `CONTEXT.md` → "Working
+with the core"). The assertion is not weakened to make the job green. In
+a class that mixes gated and ungated operations, the gated entries of
+`getProtectedEndpoints()` are yielded only with `isVersionAtLeast()`: an
+older core answers 404, not 401, for a filtered operation. When a PR
+removes a workaround, the test cases the workaround had disabled come
+back.
+
+## Running the suite
+
+```bash
+composer setup-local-tests   # first time only
+composer run-module-tests
+```
+
+From the core checkout (the module symlinked in `modules/`):
+`composer api-module-tests-local` (full setup) then
+`composer run-api-module-tests-local`, or one class with
+`_PS_ROOT_DIR_=$(pwd) php -d date.timezone=UTC ./vendor/phpunit/phpunit/phpunit -c modules/ps_apiresources/tests/Integration/phpunit-local.xml --filter=ClassName`.
+The core API suite and the module suite share `var/cache/test`: clear it
+when switching from one to the other.
