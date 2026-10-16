@@ -40,7 +40,9 @@ use PHPStan\Rules\RuleErrorBuilder;
  * Allowed types: bool, int, string, array (and their nullable variants),
  * PrestaShop\Decimal\DecimalNumber, DateTimeImmutable,
  * PrestaShop\PrestaShop\Core\Util\DateTime\DateImmutable (date-only fields),
- * and Symfony\Component\HttpFoundation\File\File (file-upload resources).
+ * Symfony\Component\HttpFoundation\File\File (file-upload resources),
+ * and the DTO classes of a Resources\{Domain}\Dto namespace (sub objects, which
+ * follow the same property rules).
  *
  * - `float` is explicitly banned: use DecimalNumber instead.
  * - Every property must have a type declaration.
