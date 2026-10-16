@@ -1,10 +1,7 @@
 # Claude Code — ps_apiresources
 
-The conventions, architecture, and Do/Don't list for this repository
-live in **[`CONTEXT.md`](./CONTEXT.md)**. Read it before suggesting or
-generating any code.
+@.ai/CONTEXT.md
 
-When the user asks to add, expose, or wire up a new Admin API endpoint,
-invoke the [`ps-api-endpoint`](./.claude/skills/ps-api-endpoint/SKILL.md)
-skill — it generates the resource class and integration test in line
-with `CONTEXT.md`.
+The skills of this repository live in `.ai/skills/` (symlinked from `.claude/skills/`): `ps-api-endpoint`
+to add or rework an endpoint, `review-api-pr` to review a pull request or audit an endpoint with
+`.ai/REVIEW.md`.

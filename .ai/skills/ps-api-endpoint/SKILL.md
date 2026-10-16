@@ -1,7 +1,7 @@
 ---
 name: ps-api-endpoint
 description: >
-  Generates new PrestaShop Admin API endpoints (ApiResource PHP class + integration test) for the ps_apiresources module, following CQRS patterns and contribution guidelines. Invoke this skill whenever the user wants to add a new REST endpoint, expose a new entity via the Admin API, contribute a new resource to ps_apiresources, or asks how to wire up a CQRS command/query to an API endpoint in PrestaShop 9. Use it even when the user just says "I want to add X to the API" or "how do I create an endpoint for Y".
+  Generates or reworks PrestaShop Admin API endpoints (ApiResource PHP class, DTO sub objects, integration test) in the ps_apiresources module, following the CQRS patterns and the module conventions. Invoke it whenever the user wants to add a REST endpoint, expose an entity via the Admin API, contribute a resource to ps_apiresources, fix or modify an existing resource (fields, mappings, errors, OpenAPI documentation, DTO migration), or asks how to wire a CQRS command/query to an endpoint in PrestaShop 9. Use it even when the user just says "I want to add X to the API", "how do I create an endpoint for Y" or "fix the Z endpoint".
 ---
 
 # PrestaShop Admin API Endpoint Generator
@@ -34,9 +34,11 @@ Search the PS core for the entity's domain classes. The standard layout is:
   Exception/{Entity}ConstraintException.php
 ```
 
-Use Glob/Grep to find these files. Then **read the QueryResult class** (e.g. `{Entity}ForEditing.php`) — its constructor arguments and getters reveal the exact field names returned by the query. This is the ground truth for `QUERY_MAPPING`.
+Use Glob/Grep to find these files. Then **read the QueryResult class** (e.g. `{Entity}ForEditing.php`) — its constructor arguments and getters reveal the exact field names returned by the query. This is the ground truth for `QUERY_MAPPING`. Read the query handler too: it tells what really fills each field (a `0`/`1` tiny int, a formatted amount, an always-empty array) and which exceptions it throws.
 
-Also read the Command constructors to learn the parameter names needed for `CQRSCommandMapping`.
+Also read the Command constructors and setters (multi-parameter setters become one sub object) to learn the parameter names needed for `CQRSCommandMapping`, and the value objects they build (`{Entity}Id`, `ShopId`…): their exceptions must be mapped in `exceptionToStatus`. Finally read the handler of each command for the exceptions of the referenced entities (`ZoneNotFoundException`, `ShopNotFoundException`…).
+
+When the core lacks something the endpoint needs (a guard, a setter, a typed query result), the fix goes to the core in a related PR (`CONTEXT.md` → "Working with the core"), never in the module.
 
 If some of these classes don't exist (e.g. no Add command), note it — only include operations that have backing CQRS classes.
 
@@ -44,6 +46,7 @@ If some of these classes don't exist (e.g. no Add command), note it — only inc
 
 After reading the QueryResult, confirm with the user:
 - Which fields should be exposed in the API (not all internal fields need to be public)
+- Which fields are **structured** (an object, a list of objects) → a typed DTO class in `src/ApiPlatform/Resources/{Entity}/Dto/`, typed on the property or declared with `@var {Dto}[]` (`CONTEXT.md` → "Sub objects: typed DTOs"); a DTO holding a list or a boolean filled from a query result needs `minVersion: 9.2.1`
 - Which fields are **localized** (arrays keyed by locale like `'en-US' => 'value'`) → need `#[LocalizedValue]`
 - Which localized fields are required in the default language on create → need `#[DefaultLanguage(groups: ['Create'], fieldName: '...')]`
 - Which localized fields are optional on update → `#[DefaultLanguage(groups: ['Update'], fieldName: '...', allowNull: true)]`
@@ -97,6 +100,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSGet(
             uriTemplate: '/{entities}/{entityId}',
+            requirements: ['{entityId}' => '\d+'],
             CQRSQuery: Get{Entity}ForEditing::class,
             scopes: ['{entity}_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
@@ -112,6 +116,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/{entities}/{entityId}',
+            requirements: ['{entityId}' => '\d+'],
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: Edit{Entity}Command::class,
             CQRSQuery: Get{Entity}ForEditing::class,
@@ -127,16 +132,21 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     exceptionToStatus: [
+        // Every exception the commands, their value objects and the handlers can raise:
+        // *NotFoundException => 404 (ids of the URI and of the body), constraint / value object exceptions => 422.
+        // A subclass mapped to a different status than its parent is listed first.
         {Entity}ConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         {Entity}NotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class {Entity}
 {
-    #[ApiProperty(identifier: true)]
+    #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
     public int ${entityId};
 
-    // Add other properties here with appropriate types and constraints
+    // Add other properties here with appropriate types and constraints.
+    // Structured values are typed DTOs of Resources/{Entity}/Dto/ (or `@var {Dto}[]` lists), never
+    // `array` + a hand-written openapiContext object schema.
 
     public const QUERY_MAPPING = [
         // '[sourceFieldFromQueryResult]' => '[apiFieldName]',
@@ -165,13 +175,15 @@ See `references/conventions.md` for the full ruleset. The most important ones:
 - **BO form parity**: constraints must reproduce the rules of the entity's BO form type, including the ones the CQRS command doesn't enforce (non-empty collections, ranges, URL formats, PS constraints like `CleanHtml`). Default values applied by the form when fields are untouched are declared with the `defaultValues` extra property on the create operation (PS ≥ 9.2 — never as resource property defaults, they don't reach the command; never on updates). Full rule: `CONTEXT.md` → "Do" list.
 - **Command-style operations**: name the action in the URI, verb first (`/carriers/{carrierId}/set-tax-rule-group`), add the segment to `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` or Rector CI will pluralize it, host it in the resource it modifies, and return the updated entity via a `CQRSQuery` rather than a `204`.
 - **Explicit OpenAPI summary when the method lies**: the generated summary is derived from the HTTP method (POST ⇒ "Creates a … resource"), so any operation whose method doesn't match its semantics (e.g. an update forced to POST because it uploads a file) must declare `openapi: new OpenApiOperation(summary: …, description: …)` on **both** operations sharing the method, so the doc doesn't show two identical create entries.
-- **Forbidden**: no custom normalizers, no custom processors, no Value Objects as properties (only scalar types and arrays).
+- **Errors**: map every exception the operations can raise, `*NotFoundException` → 404 for any id checked for existence (URI or body), value object and constraint exceptions → 422, subclass before parent; a documented payload must never answer 500 (`NotNull` / `NotBlank` on required command parameters, `Assert\All` + `Collection` on nested arrays). Full rule: `CONTEXT.md` → "Do" list.
+- **OpenAPI**: `openapi: new OpenApiOperation(summary:, description:)` on command-style operations and whenever the HTTP method does not say what the operation does; a description for every non-obvious behaviour (version gate, formatted values, side effects); class comments are PHPDoc, not published. Full rule: `CONTEXT.md` → "OpenAPI documentation". Verify with `bin/console api:openapi:export --yaml` in the core.
+- **Forbidden**: no custom normalizers, no custom processors, no Value Objects as properties (scalars, arrays, `DecimalNumber`, `DateTimeImmutable`, `File`, DTOs of `Resources\{Entity}\Dto`).
 - **Strict typing**: every property needs an explicit type.
-- **Version constraint**: if the endpoint requires a minimum core version, add `extraProperties: ['minVersion' => 'X.Y.Z']` to the operation — it is then filtered out (404) on older cores. Full details in `CONTEXT.md` → "Core version constraints".
+- **Version constraint**: if the endpoint requires a minimum core version, add `extraProperties: ['minVersion' => 'X.Y.Z']` to the operation — it is then filtered out (404) on older cores. Never to hide a 500 on an older core. Full details in `CONTEXT.md` → "Core version constraints".
 
 ### List endpoints (PaginatedList)
 
-List operations live in a **separate class file** named `{Entity}List.php` next to the main resource (e.g. `src/ApiPlatform/Resources/Contact/ContactList.php`, `src/ApiPlatform/Resources/Attribute/AttributeGroupList.php`). Use `PaginatedList` with the Grid's data factory service and a `filtersClass`. The URI is the plural base path (e.g. `/contacts`) without an ID. Field mapping is done via `ApiResourceMapping`.
+List operations live in a **separate class file** named `{Entity}List.php` next to the main resource (e.g. `src/ApiPlatform/Resources/Contact/ContactList.php`, `src/ApiPlatform/Resources/Attribute/AttributeGroupList.php`). Use `PaginatedList` with the Grid's data factory service, its `filtersClass` **and** a `filtersMapping` (API field → grid field, for `orderBy` and `filters[...]`): without them `orderBy` answers 500 and the filters are ignored. The URI is the plural base path (e.g. `/contacts`) without an ID. Field mapping is done via `ApiResourceMapping`; every DTO property must match a `SELECT` column of the grid query builder, and only the filters the query builder supports may be mapped. Example: `src/ApiPlatform/Resources/Customer/CustomerGroupList.php`.
 
 ### Bulk operations
 
@@ -181,7 +193,7 @@ Bulk operations also live in a **separate class file** named `Bulk{Entities}.php
 - `src/ApiPlatform/Resources/Category/BulkDeleteCategories.php`
 - `src/ApiPlatform/Resources/Category/BulkUpdateStatusCategories.php`
 
-URI uses `bulk-` prefix + plural: `/tax-rules/bulk-delete`. The single public property is the array of IDs, named with the singular entity + "Ids" (e.g. `$taxRuleIds`, `$attributeGroupIds`), typed as `array`, and annotated with `#[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]` and `#[Assert\NotBlank]`.
+URI uses `bulk-` prefix + plural: `/tax-rules/bulk-delete`. The single public property is the array of IDs, named with the singular entity + "Ids" (e.g. `$taxRuleIds`, `$attributeGroupIds`), typed as `array` with a `@var int[]` docblock (the core documents the item type from it; add `#[ApiProperty(openapiContext: ['example' => [1, 3]])]` only for an example), and annotated with `#[Assert\NotBlank]` and `#[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]` (the command casts each element with `(int)`: without the element constraints `["3abc"]` silently acts on entity 3). A handler extending the core `AbstractBulkCommandHandler` answers 207 with one error per failed id (core ≥ 9.1.2): say it in the operation description and test it with `bulkCommandItemsWithExpectedErrors()`.
 
 ## Step 5: Generate the integration test
 
@@ -247,6 +259,10 @@ class {Entity}EndpointTest extends ApiTestCase
 
         $response = $this->createItem('/{entities}', $postData, ['{entity}_write']);
         $this->assertArrayHasKey('{entityId}', $response);
+        // The whole response is asserted, with the id read from it
+        $this->assertEquals(array_merge(['{entityId}' => $response['{entityId}']], $postData, [
+            // fields the API fills by default
+        ]), $response);
 
         return $response['{entityId}'];
     }
@@ -255,8 +271,10 @@ class {Entity}EndpointTest extends ApiTestCase
     public function testGet{Entity}(int ${entityId}): int
     {
         $response = $this->getItem('/{entities}/' . ${entityId}, ['{entity}_read']);
-        $this->assertEquals(${entityId}, $response['{entityId}']);
-        // assert all exposed fields are present and correct
+        $this->assertEquals([
+            '{entityId}' => ${entityId},
+            // every exposed field with its expected value, nested objects and lists included
+        ], $response);
 
         return ${entityId};
     }
@@ -269,11 +287,15 @@ class {Entity}EndpointTest extends ApiTestCase
         ];
 
         $updated = $this->partialUpdateItem('/{entities}/' . ${entityId}, $patchData, ['{entity}_write']);
-        // assert updated fields match
+        // The whole updated entity: the patched fields, and the others untouched
+        $this->assertEquals([
+            '{entityId}' => ${entityId},
+            // ...
+        ], $updated);
 
         // Verify the GET also reflects the changes
         $fetched = $this->getItem('/{entities}/' . ${entityId}, ['{entity}_read']);
-        // assert same fields
+        $this->assertEquals($updated, $fetched);
 
         return ${entityId};
     }
@@ -283,6 +305,16 @@ class {Entity}EndpointTest extends ApiTestCase
     {
         $this->deleteItem('/{entities}/' . ${entityId}, ['{entity}_write']);
         $this->getItem('/{entities}/' . ${entityId}, ['{entity}_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testNotFound{Entity}(): void
+    {
+        // Every operation with a mapped NotFoundException answers 404 on an unknown id
+        $this->getItem('/{entities}/99999', ['{entity}_read'], Response::HTTP_NOT_FOUND);
+        $this->partialUpdateItem('/{entities}/99999', [/* valid data */], ['{entity}_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/{entities}/99999', ['{entity}_write'], Response::HTTP_NOT_FOUND);
+        // An invalid id format is a 422 (value object exception), not a 500
+        $this->getItem('/{entities}/0', ['{entity}_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testInvalid{Entity}(): void
@@ -307,10 +339,12 @@ class {Entity}EndpointTest extends ApiTestCase
 
 ### Test rules
 
-- Tests must assert **complete response data** — all fields, not just the identifier.
-- Chain tests using `@depends` so each test builds on the created entity.
-- Always include a `testInvalid*` test that covers validation constraints.
-- Include `'skip_null_values' => false` in assertions when using `assertEquals` on the full response array.
+- Tests assert the **whole response** with one `assertEquals` of the full expected array — every field, nested objects, list items; never key-presence or field-by-field checks (they miss removed fields and hide new ones).
+- Chain tests using `@depends` so each test builds on the created entity; ids come from the responses.
+- Fixtures are created through the API (the endpoints under test or of the same domain), not with `ObjectModel` or SQL.
+- Always include a `testInvalid*` test that covers validation constraints (`assertValidationErrors` for the constraint 422; a 422 produced by a mapped CQRS exception has no field list, assert the status only), and a 404 test for every mapped `*NotFoundException` on every operation, plus `/x/0` → 422.
+- The resource declares `normalizationContext: ['skip_null_values' => false]` when it has nullable fields, so `null` values are returned and asserted.
+- A list test calls `listItems()` with `filters[...]` and `orderBy` on the API field names and asserts the filtered items and the envelope.
 - Drop `LanguageResetter::resetLanguages()` from setUp/tearDown if the entity has no localized fields.
 - **Version-dependent endpoints**: if the resource declares a `minVersion`, use the `ApiTestCase` helpers (`markTestSkippedByMinVersion`, `isVersionAtLeast`, `isVersionUnder`) instead of hand-rolled `version_compare` checks. When every operation is constrained, skip the whole class in `setUpBeforeClass()` before calling the parent, and keep `getProtectedEndpoints()` yielding unconditionally (an empty data provider is a PHPUnit error). The exact patterns and examples are in `CONTEXT.md` → "Version-dependent endpoints".
 
@@ -325,16 +359,19 @@ Create both files at their correct paths. Then tell the user:
    composer setup-local-tests  # first time only
    composer run-module-tests
    ```
-4. **What to double-check**: mappings between CQRS fields and API fields — these are the most common source of errors. Ask the user to run the endpoint manually via Swagger UI to verify.
+4. **What to double-check**: mappings between CQRS fields and API fields — these are the most common source of errors. Ask the user to run the endpoint manually via Swagger UI to verify, and to export the OpenAPI documentation (`bin/console api:openapi:export --yaml` in the core) to compare the generated schema with the real payloads (types, nullability, `required` list, descriptions).
+5. **Review it**: run the `review-api-pr` skill (`REVIEW.md`) on the new files before opening the PR.
 
 ## Common pitfalls to flag
 
 - If the `Add*Command` takes its ID from an `EntityId` value object in the result (not a raw int), the `CQRSCreate` block may need to fetch the result via a separate `CQRSQuery` after creation.
 - If a command and its edit counterpart share the same constructor signature, use one `COMMAND_MAPPING` constant.
-- For entities without shop association, omit `shopIds` and its mapping.
+- For entities without shop association, omit `shopIds` and its mapping. With one, the context shops are the **default** of `shopIds` on creation (`extraProperties: ['defaultValues' => ['shopIds' => '[_context][shopIds]']]`), never a `[_context]` command mapping that would overwrite an explicit value.
 - `#[DefaultLanguage]` needs the `fieldName` argument set to the **API field name** (e.g. `fieldName: 'names'`), not the internal query field name.
+- A write property that is not a constructor parameter or a setter of the command is silently dropped; a read property that no query-result getter fills is always `null`.
+- `exceptionToStatus` is evaluated in order with `instanceof`: a subclass mapped to 404 must precede its parent mapped to 422.
 
 ## Reference files
 
 - `references/conventions.md` — full naming and structural conventions
-- `../../../CONTEXT.md` (repo root) — module-wide AI context: purpose, architecture, Do/Don't, canonical examples. This skill must stay aligned with it.
+- `../../CONTEXT.md` (`.ai/CONTEXT.md`) — module-wide AI context: purpose, architecture, Do/Don't, canonical examples, and the on-demand `.ai/*.md` contexts (`TESTING.md`, `OPENAPI.md`, `LISTS.md`, `MULTISHOP.md`, `VERSIONS.md`). This skill must stay aligned with them.
