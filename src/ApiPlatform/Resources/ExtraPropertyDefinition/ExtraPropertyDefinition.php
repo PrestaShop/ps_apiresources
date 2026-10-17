@@ -41,7 +41,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/*
+/**
  * Registry of the "extra property" definitions: the typed fields a module (or the merchant, through
  * this API) adds to native entities. Definitions created here are core-owned (no moduleName);
  * module-owned definitions are readable but only their shop association can be modified.

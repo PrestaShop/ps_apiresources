@@ -126,6 +126,12 @@ class OrderReturnEndpointTest extends ApiTestCase
             '/order-returns/' . $orderReturnId,
             ['orderReturnStateId' => 999999],
             ['order_return_write'],
+            Response::HTTP_NOT_FOUND
+        );
+        $this->partialUpdateItem(
+            '/order-returns/' . $orderReturnId,
+            ['orderReturnStateId' => -1],
+            ['order_return_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
     }

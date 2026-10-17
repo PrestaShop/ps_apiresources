@@ -28,6 +28,7 @@ use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\UpdateOrderReturnState
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Query\GetOrderReturnForEditing;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturnState\Exception\OrderReturnStateException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturnState\Exception\OrderReturnStateNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
@@ -55,7 +56,9 @@ use Symfony\Component\Validator\Constraints as Assert;
     exceptionToStatus: [
         OrderReturnNotFoundException::class => Response::HTTP_NOT_FOUND,
         OrderReturnConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        OrderReturnStateNotFoundException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The first matching class wins
+        OrderReturnStateNotFoundException::class => Response::HTTP_NOT_FOUND,
+        OrderReturnStateException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class OrderReturn

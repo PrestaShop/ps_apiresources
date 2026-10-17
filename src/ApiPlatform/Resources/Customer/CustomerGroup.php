@@ -32,6 +32,8 @@ use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Command\EditCustomerGroupCo
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Exception\GroupConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Exception\GroupNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Group\Query\GetCustomerGroupForEditing;
+use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopException;
+use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -98,6 +100,9 @@ use Symfony\Component\Validator\Constraints as Assert;
     exceptionToStatus: [
         GroupConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         GroupNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // The first matching class wins: ShopNotFoundException extends ShopException (invalid shop id)
+        ShopNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ShopException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CustomerGroup
@@ -120,8 +125,10 @@ class CustomerGroup
         'type' => 'array',
         'items' => ['type' => 'integer'],
         'description' => 'Shops associated with the group. On creation, optional from PrestaShop 9.2.0 where it defaults '
-            . 'to the shops of the context. Required on older versions, where omitting it results in a 500 error.',
+            . 'to the shops of the context, required on older versions.',
     ])]
+    // Never fires from PrestaShop 9.2.0, the default value is set before the validation
+    #[Assert\NotNull(groups: ['Create'])]
     public array $shopIds;
 
     public const QUERY_MAPPING = [

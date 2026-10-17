@@ -30,7 +30,7 @@ use PrestaShop\PrestaShop\Core\Domain\Customer\Query\GetCustomerOrders;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
 
-/*
+/**
  * One order of a customer, as summarized by GetCustomerOrders.
  *
  * The query returns a list, so this is a collection operation, declared like ProductImageList:
