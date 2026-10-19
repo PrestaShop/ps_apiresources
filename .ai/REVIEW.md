@@ -102,8 +102,9 @@ restates a rule: when a line below and the section disagree, the section wins an
 - Section: [`TESTING.md`](./TESTING.md).
 - Evidence: the test class against the operations of the resource (every operation in
   `getProtectedEndpoints()`, every mapped exception with its error test, every write read back, every
-  touched table restored), the version gates against the first core tag carrying the fix
-  (`git tag --contains <sha>`).
+  touched table restored) and against the canonical tests `TESTING.md` names (structure, both
+  languages on every localized field, no setup the parent already does), the version gates against
+  the first core tag carrying the fix (`git tag --contains <sha>`).
 
 ### F. Hygiene and process
 
@@ -142,8 +143,10 @@ restates a rule: when a line below and the section disagree, the section wins an
   follow themselves (`example` on identifiers, a redundant `output: false` / `read: false` / `provider:`
   — `read: false` is repeated by 25 resources —, a 404 mapping on a list): on **existing** resources,
   report it once, as Minor, naming the reference, or propose a module-wide follow-up — not one comment
-  per occurrence; on the resources a PR adds, each occurrence is a Minor. A status endpoint next to a
-  PATCH exposing `enabled` is flagged on a new domain only; existing domains ship both.
+  per occurrence; on the resources a PR adds, each occurrence is a Minor. A behaviour keeps its §3
+  severity whatever the references do: a 500 or a request acting on another entity stays a Blocker
+  even when every sibling has the same gap. A status endpoint next to a PATCH exposing `enabled` is
+  flagged on a new domain only; existing domains ship both.
 - A hand-rolled whole-envelope assertion on a 207 response instead of `bulkCommandItemsWithExpectedErrors()`
   (which only asserts `errors`); a Rector `SKIPPED_KEYWORDS` "gap" while the Rector dry run is green.
 - The generator limits listed in `OPENAPI.md` (input / read schema difference, first-level-only array

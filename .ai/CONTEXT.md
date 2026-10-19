@@ -121,12 +121,19 @@ existing deviation is never a precedent.
   `/products/{productId}/combinations`,
   `/categories/{categoryId}/cover`. A segment is singular only for a
   one-to-one sub-resource (`/products/{productId}/stock`,
-  `/default-supplier`, `/virtual-file`), plural otherwise.
+  `/default-supplier`, `/virtual-file`), plural otherwise. A sub-entity
+  with its own global identifier lives under the domain root, not under
+  a parent id: `/products/combinations/{combinationId}`,
+  `/attributes/groups/{attributeGroupId}`,
+  `/customers/groups/{customerGroupId}` (the ADR example
+  `/attribute-groups` predates this grouping, ADR PR #45 updates it).
 - **No HTTP verb in a URI**: `DELETE /categories/{categoryId}/cover`, not
   `/delete-cover`; search endpoints are `/x/search` on a `Found{Entity}`
   resource.
 - **Identifiers in the URI** carry `requirements: ['entityId' => '\d+']`
-  (documented as integers, non-numeric values answer 404).
+  on every item operation (documented as integers, non-numeric values
+  answer 404); one unconstrained operation makes the others answer 405
+  on `/x/abc`, since its route matches.
 - **Bulk operations** use the `bulk-` prefix: `/contacts/bulk-delete`,
   `/attributes/groups/bulk-delete`. The bulk parameter name must be
   plural domain + `Ids` (e.g. `attributeGroupIds`). The method follows
@@ -166,8 +173,8 @@ and a new endpoint never copies them.
 | `PATCH /discounts/bulk-update-status` (`CQRSPartialUpdate`) | `PUT` + `CQRSUpdate` |
 | `PUT /taxes/bulk-set-status`; `PUT /customers/bulk-enable` + `bulk-disable`; `PUT /suppliers/bulk-enable` + `bulk-disable` | one `PUT /x/bulk-update-status`, the value in the body |
 | `PUT /modules/bulk-uninstall` | `POST` when no method fits |
-| `/attributes/groups`, `/attributes/attributes` (sub-entities grouped under the domain root) | example `/attribute-groups`, older than the grouping |
 | `PATCH /categories/{categoryId}/status`, `PUT /stores/{storeId}/toggle-status`, `PUT /zones/{zoneId}/toggle-status`, `PATCH /tax-rules-groups/{taxRulesGroupId}/set-status`, `/hooks/{hookId}/status` | example sub part `/hooks/{hookId}/status`; the `set-status` rule above comes from the reviews of 2026-03, the ADR is not amended yet |
+| `GET /attributes/groups-with-attributes`, `GET /products/{productId}/attribute-groups` (`CQRSGetCollection`s returning every language) | §Multilang: a list returns one language |
 
 ## Scopes
 
@@ -213,7 +220,10 @@ or `is` prefix, `enabled` for a status, the mappings instead of
 A nullable property is nullable only when the core can return `null`
 for it (check the handler, not just the query result signature). A
 resource with nullable fields returns them as `null` rather than
-omitting them: `normalizationContext: ['skip_null_values' => false]`.
+omitting them: `normalizationContext: ['skip_null_values' => false]`; a
+read property the core may leave absent (a key unset by the handler) is
+declared `= null`, otherwise the uninitialized property is skipped
+whatever the context says.
 
 Lists of scalars are typed with a docblock, `@var int[]` / `@var string[]`:
 the core reads the item type from it (from 9.2.1; older cores document
@@ -226,10 +236,10 @@ identifiers (`{entity}Id`, nested ids, `shopIds`).
 Localized properties must be marked with `#[LocalizedValue]` — this
 triggers automatic locale↔languageId conversion on both read and write.
 Single-entity endpoints return localized fields as locale-indexed arrays
-(e.g. `{"names": {"en-US": "Size", "fr-FR": "Taille"}}`); list endpoints
-return a single language string (default shop language, or via `langId`
-query param). Never return language IDs as keys — always locale strings
-like `en-US`.
+(e.g. `{"names": {"en-US": "Size", "fr-FR": "Taille"}}`); list endpoints,
+paginated or not, return a single language string (default shop
+language, or via the `langId` query parameter) — ADR 0023 §Multilang.
+Never return language IDs as keys — always locale strings like `en-US`.
 
 To require the default language on create / update, add
 `#[DefaultLanguage]` with the appropriate validation `groups`. Set the
@@ -566,7 +576,7 @@ for the patterns above:
 - **Lists** — see [`LISTS.md`](./LISTS.md) (`ContactList`,
   `CustomerGroupList`, `CombinationList`, `FoundCustomer`).
 - **Sub-resource** —
-  `src/ApiPlatform/Resources/Product/ProductCombination.php`.
+  `src/ApiPlatform/Resources/Product/Combination.php`.
 - **Bulk operation** —
   `src/ApiPlatform/Resources/Attribute/BulkAttributeGroups.php`
   (URI `/attributes/groups/bulk-delete`, `attributeGroupIds` input).
@@ -583,14 +593,14 @@ for the patterns above:
   `src/ApiPlatform/Resources/Customer/Dto/`.
 - **Nullable objects of multi-parameter setters** (`minimumAmount`,
   `reductionAmount` with their `required` lists) —
-  `src/ApiPlatform/Resources/Discount/Discount.php`.
+  `src/ApiPlatform/Resources/Discount/Discount.php`, the only resource
+  using the pattern; an experimental domain still evolving, copy the two
+  property blocks, not the resource.
 - **Exception mapping** — see [`ERRORS.md`](./ERRORS.md) (`OrderReturn`).
 - **Shop association** — see [`MULTISHOP.md`](./MULTISHOP.md)
   (`CustomerGroup`, `Product`, `CombinationList`).
-- **Matching tests** —
-  `tests/Integration/ApiPlatform/ContactEndpointTest.php`,
-  `tests/Integration/ApiPlatform/CustomerGroupEndpointTest.php`
-  (version-dependent expectations, 404 / 422 on body ids).
+- **Matching tests** — see [`TESTING.md`](./TESTING.md) → "Canonical
+  tests".
 
 ## Coding standards
 

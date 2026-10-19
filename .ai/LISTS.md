@@ -23,11 +23,16 @@ Read when an operation is a `PaginatedList`, a `CQRSPaginate` or a
 - To find the correct `gridDataFactory` service name: look at the
   entity's Symfony controller → Grid factory definition → Grid data
   factory service.
-- A grid-based list declares both `filtersClass` (the core `Filters`
-  subclass of the grid: default `orderBy`, default `limit`) and
-  `filtersMapping` (API field → grid field, used for `orderBy` and
-  `filters[...]`); without them `orderBy` on an API field name answers
-  500 and the filters are silently ignored.
+- A list declares both `filtersClass` (the core `Filters` subclass:
+  default `orderBy`, default `limit`) and `filtersMapping` (API field →
+  grid or query field, used for `orderBy` and `filters[...]`), for a
+  `PaginatedList` and a `CQRSPaginate` alike (both go through
+  `QueryListProvider`); without them `orderBy` on an API field name
+  answers 500 on a grid, is silently ignored on a CQRS query, and the
+  filters are silently ignored. A CQRS list query whose constructor
+  names the list parameters differently (`orderWay` for `sortOrder`)
+  maps them in `CQRSQueryMapping`, otherwise the sorting is echoed in the
+  envelope and never applied.
 - A `filtersMapping` entry also serves `orderBy`, so it stays even when
   the grid's query builder does not filter on that field; the core then
   ignores that filter silently, and the operation description says which
@@ -67,7 +72,9 @@ localized fields of a list (one language) is in `CONTEXT.md` →
 ## Envelope and documentation
 
 The paginated envelope is `{totalItems, orderBy, sortOrder, limit,
-offset, filters, items}` (`offset` an integer, `items` a JSON list). The
+offset, filters, items}` (`offset` an integer, `items` a JSON list;
+`orderBy` is absent when the request sends none and `filters` is `[]`
+when empty, a core behaviour the tests account for). The
 core documents the `limit` / `offset` / `orderBy` / `sortOrder` /
 `filters[...]` parameters and the envelope from 9.2.1, for both
 `PaginatedList` and `CQRSPaginate` (the detection is on the

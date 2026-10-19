@@ -34,7 +34,15 @@ to the same status as its parent is redundant; a base
 (narrowing it lets the others escape as 500) and is never mapped to
 404. Do not map exceptions the handler cannot throw nor classes absent
 from a supported core (`composer phpstan` on every version catches
-them). When the core query answers `[]` for an unknown id instead of
+them): when the reference core throws an exception the older cores do
+not have, the core derives it from the domain's `…ConstraintException`
+so the existing mapping covers it (paired core PR); a `class.notFound`
+ignore scoped to the resource directory in the older legs' PHPStan
+configuration is the fallback the PR has to justify, with what those
+cores do instead. An operation refused by a business rule (the default
+country, a group used by the configuration) answers 422 through a domain
+exception; a legacy `PrestaShopException` wrapped in `CoreException` is a
+core bug to fix, never a class to map. When the core query answers `[]` for an unknown id instead of
 throwing, either the core gets the guard or the `200 []` contract is
 documented and tested consistently across the domain. Never use
 `HTTP_BAD_REQUEST` (400) for constraint violations — always 422; 400 is
@@ -49,12 +57,18 @@ A payload that follows the documentation never produces a 500 or a 400:
 - `#[Assert\NotNull]` / `NotBlank` on every required non-nullable
   property: a missing constructor argument is otherwise a 400 from the
   serializer; a `Choice` alone leaves an uninitialized typed property and
-  a 500; a missing key and an explicit `null` must give the same 422.
+  a 500; a missing key and an explicit `null` must give the same 422
+  (`Choice`, `TypedRegex`, `Length`, `Positive` skip `null`: only
+  `NotNull` / `NotBlank` / `DefaultLanguage` catch it).
 - `Assert\All` + `Assert\Collection` (or a DTO) on nested arrays.
 - `Choice` built from the core constants (a literal list for backed
   enums, since a `\ValueError` cannot be mapped).
-- An exception thrown in the command constructor surfaces as a 500:
-  validate at the resource level.
+- The map also covers the exceptions thrown while the command or its
+  value objects are built (a `GroupConstraintException` from the
+  constructor answers 422 once mapped); what it cannot cover surfaces as
+  a 500 — a `\TypeError`, an `\InvalidArgumentException`, a generic
+  `DomainConstraintException` of a value object — so those cases are
+  prevented by a resource constraint, never left to the command.
 - Constraints only where they act: none on a GET-only resource, no
   `NotBlank` on a `DecimalNumber` (an object is never blank), no
   `openapiContext` bounds in place of a constraint.
@@ -81,8 +95,11 @@ A payload that follows the documentation never produces a 500 or a 400:
 - A bulk command whose handler extends the core
   `AbstractBulkCommandHandler` answers 207 on a partial failure from core
   9.1.2 (`BulkCommandExceptionNormalizer`): one error per failed id, with
-  the status of the operation's own `exceptionToStatus`; older cores
-  answer 422. The operation description says it ([`OPENAPI.md`](./OPENAPI.md)),
+  the status of the operation's own `exceptionToStatus` (the map stays
+  the single source: a child mapped to its parent's status is redundant
+  there too); older cores answer 422. An exception the handler does not
+  collect (a `CoreException` wrapping a legacy refusal) aborts the whole
+  bulk with a 500: a core guard is a prerequisite. The operation description says it ([`OPENAPI.md`](./OPENAPI.md)),
   the test covers it ([`TESTING.md`](./TESTING.md)).
 - A bulk delete sets `allowEmptyBody: false` (the `CQRSDelete` default is
   `true`): a required body is never declared optional.

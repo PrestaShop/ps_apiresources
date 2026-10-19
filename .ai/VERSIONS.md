@@ -56,10 +56,11 @@ A version-constrained endpoint needs matching test handling (see
   literal `Choice` list rather than an enum only the newer core has).
 
 The named operation arguments (`minVersion`, `maxVersion`,
-`experimentalOperation`, `defaultValues`…) are copied by the core into
-`extraProperties`, but a core that does not know an argument rejects
-it: pass the recent ones through `extraProperties: [...]` so the
-resource still loads on 9.0.3.
+`defaultValues`…) are copied by the core into `extraProperties`, but a
+core that does not know an argument rejects it: pass the ones younger
+than 9.0.3 through `extraProperties: [...]` so the resource still loads
+there (`experimentalOperation` is a named argument since 9.0.0 and
+needs no such care).
 
 ## Features per core version
 

@@ -54,7 +54,13 @@ legitimately differ; a typed `openapiContext` on an array documents its
 first level only; the request body of a bulk `DELETE` is not documented
 (Swagger offers no field — a core limitation, not a resource bug); the
 responses listed (400, 422 on writes, 404 on item routes) are API
-Platform's generic defaults, not derived from `exceptionToStatus` yet.
+Platform's generic defaults, not derived from `exceptionToStatus` yet;
+an id-only operation (`duplicate`, `toggle-status`, `reset`) is exported
+with a required, empty request body; a command whose accessors are named
+differently from its constructor parameters (`getImageWidth()` for
+`$imgWidth`) loses those parameters from the documented body; a
+write-only nullable property guarded by `NotNull` (`?string $privateNote`)
+is documented as nullable although `null` answers 422.
 
 Class and property comments are PHPDoc for developers: the core does not
 publish them (9.2.1 removed the factory that published class comments,

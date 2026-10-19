@@ -49,9 +49,18 @@ static caches and clears the employee / cart of the context before each
 request. An endpoint that only works with an employee in the context is
 broken for real API clients; a test must not add one.
 
-Because of this, test data for localized fields should include both
-`en-US` and `fr-FR` values — otherwise the test won't exercise the
-multi-language behaviour the module is expected to handle.
+A test class never repeats this setup: its `setUpBeforeClass()` calls
+the parent, restores its tables and pre-creates its API client, nothing
+else; its `tearDownAfterClass()` calls the parent and restores the
+tables. The `LanguageResetter::resetLanguages()` and
+`addLanguageByLocale('fr-FR')` calls still found in older classes are
+residue, not a precedent.
+
+Every endpoint handling localized fields is tested with both languages:
+each localized value of the fixtures and of the expected payloads
+carries `en-US` and `fr-FR`, in the writes and in the reads. A test that
+sends or asserts one language does not exercise the behaviour the module
+must handle and is a finding.
 
 Static helpers available for additional setup (call from
 `setUpBeforeClass` when needed):
@@ -121,16 +130,30 @@ Static helpers available for additional setup (call from
 - Shop association: both behaviours when `shopIds` exists (no `shopIds`
   → context shops, explicit list kept), an unknown shop → 404, an
   invalid one → 422.
-- Tests are started from an existing `*EndpointTest.php`: remove the
-  copy-paste residue (labels, comments, setup blocks of the other
-  domain), name the methods after the endpoint's own actions.
-- Include `LanguageResetter` only if the entity has localized fields.
 - `declare(strict_types=1)` must be present in the test file.
 - Restore relevant DB tables via `DatabaseDump::restoreTables([...])`
   in `setUpBeforeClass` / `tearDownAfterClass` (include `_lang` table
   if localized, `_shop` table if shop-associated), never with manual
   SQL — it also runs after a failure; `ResourceResetter` for module
   files; no per-domain `*Resetter` class.
+
+## Canonical tests
+
+Start from one of these, never from a blank file or an older test:
+
+- `tests/Integration/ApiPlatform/CustomerGroupEndpointTest.php` — the
+  structure: not-found tests per operation, invalid payload, 404 / 422
+  on ids in the body, the add → update → get → list → delete chain,
+  version gates, a shop association;
+- `tests/Integration/ApiPlatform/ContactEndpointTest.php` — the
+  localized fields of a plain CRUD with its list (it predates the
+  error-case rules: take its structure, not its coverage).
+
+Adapt: the tables of `resetTables()`, the scopes of `createApiClient()`,
+every operation in `getProtectedEndpoints()`, the method names after the
+endpoint's own actions, the fixtures and the expected payloads; remove
+the copy-paste residue (labels, comments, setup blocks of the other
+domain).
 
 ## Version-dependent endpoints
 

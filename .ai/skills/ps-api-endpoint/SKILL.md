@@ -6,9 +6,11 @@ description: >
 
 # PrestaShop Admin API Endpoint Generator
 
-This skill walks through creating a new endpoint in `ps_apiresources`, from discovery to generated code.
+This skill walks through creating a new endpoint in `ps_apiresources`, from discovery to the written files.
 The conventions are written once, in `.ai/CONTEXT.md` and its on-demand files; each step below names
-the section to read, and this skill never summarizes it.
+the section to read, and this skill never summarizes it. The files are started from the canonical
+resources and tests the context names, never from a blank template: a template drifts, a canonical file
+runs in CI.
 
 ## Step 1: Gather requirements
 
@@ -53,278 +55,33 @@ After reading the QueryResult, confirm with the user:
 - Which fields have a default on creation (`CONTEXT.md` → "Do", `defaultValues`)
 - Whether the entity has a shop association (`.ai/MULTISHOP.md`)
 
-## Step 4: Generate the ApiResource class
+## Step 4: Write the ApiResource class
 
 **File location:** `src/ApiPlatform/Resources/{Domain}/{Entity}.php`
 
-Use the template below. Adapt based on the selected operations: the method per operation and the
-options to set are in `CONTEXT.md` → "Choosing the operation", the URI and scope rules in
-"URI conventions" and "Scopes", the property rules in "Property naming", the mappings in
-"Field mapping", the exceptions and constraints in `.ai/ERRORS.md`, the summaries and
-descriptions in `.ai/OPENAPI.md`.
+Copy the canonical resource that matches the feature (`CONTEXT.md` → "Canonical examples": `Contact`
+for a CRUD on a localized entity, `CustomerGroup` for a shop association, `CustomerDetails` for DTO sub
+objects, the others for lists, bulk operations, command-style operations and uploads), then adapt it
+with the sections of the context: the operations and their method (`CONTEXT.md` → "Choosing the
+operation"), the URIs and scopes ("URI conventions", "Scopes"), the properties ("Property naming",
+"Sub objects: typed DTOs"), the mappings ("Field mapping"), the exceptions and constraints
+(`.ai/ERRORS.md`), the summaries and descriptions (`.ai/OPENAPI.md`). Remove what the copied resource
+has and the new one does not (operations, mappings, attributes, options): nothing is kept because the
+original has it.
 
-```php
-<?php
-/**
- * Copyright since 2007 PrestaShop SA and Contributors
- * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
- *
- * NOTICE OF LICENSE
- *
- * This source file is subject to the Academic Free License version 3.0
- * that is bundled with this package in the file LICENSE.md.
- * It is also available through the world-wide-web at this URL:
- * https://opensource.org/licenses/AFL-3.0
- * If you did not receive a copy of the license and are unable to
- * obtain it through the world-wide-web, please send an email
- * to license@prestashop.com so we can send you a copy immediately.
- *
- * @author    PrestaShop SA and Contributors <contact@prestashop.com>
- * @copyright Since 2007 PrestaShop SA and Contributors
- * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
- */
+A list lives in its own `{Entity}List.php` next to the resource (`.ai/LISTS.md`); a bulk operation in its
+own `Bulk{Entities}.php` (`BulkDelete{Entities}.php`, `BulkUpdateStatus{Entities}.php` when more
+specific), with the shape of `CONTEXT.md` → "URI conventions" and the constraints of `.ai/ERRORS.md`.
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\{Entity};
-
-use ApiPlatform\Metadata\ApiProperty;
-use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\{Entity}\Command\Add{Entity}Command;
-use PrestaShop\PrestaShop\Core\Domain\{Entity}\Command\Edit{Entity}Command;
-use PrestaShop\PrestaShop\Core\Domain\{Entity}\Command\Delete{Entity}Command;
-use PrestaShop\PrestaShop\Core\Domain\{Entity}\Exception\{Entity}ConstraintException;
-use PrestaShop\PrestaShop\Core\Domain\{Entity}\Exception\{Entity}NotFoundException;
-use PrestaShop\PrestaShop\Core\Domain\{Entity}\Query\Get{Entity}ForEditing;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
-use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Constraints as Assert;
-
-#[ApiResource(
-    operations: [
-        new CQRSGet(
-            uriTemplate: '/{entities}/{entityId}',
-            requirements: ['{entityId}' => '\d+'],
-            CQRSQuery: Get{Entity}ForEditing::class,
-            scopes: ['{entity}_read'],
-            CQRSQueryMapping: self::QUERY_MAPPING,
-        ),
-        new CQRSCreate(
-            uriTemplate: '/{entities}',
-            validationContext: ['groups' => ['Default', 'Create']],
-            CQRSCommand: Add{Entity}Command::class,
-            CQRSQuery: Get{Entity}ForEditing::class,
-            scopes: ['{entity}_write'],
-            CQRSQueryMapping: self::QUERY_MAPPING,
-            CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
-        ),
-        new CQRSPartialUpdate(
-            uriTemplate: '/{entities}/{entityId}',
-            requirements: ['{entityId}' => '\d+'],
-            validationContext: ['groups' => ['Default', 'Update']],
-            CQRSCommand: Edit{Entity}Command::class,
-            CQRSQuery: Get{Entity}ForEditing::class,
-            scopes: ['{entity}_write'],
-            CQRSQueryMapping: self::QUERY_MAPPING,
-            CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
-        ),
-        new CQRSDelete(
-            uriTemplate: '/{entities}/{entityId}',
-            requirements: ['{entityId}' => '\d+'],
-            CQRSCommand: Delete{Entity}Command::class,
-            scopes: ['{entity}_write'],
-        ),
-    ],
-    exceptionToStatus: [
-        // Every exception the commands, their value objects and the handlers can raise,
-        // in the order ERRORS.md prescribes.
-        {Entity}ConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        {Entity}NotFoundException::class => Response::HTTP_NOT_FOUND,
-    ],
-)]
-class {Entity}
-{
-    #[ApiProperty(identifier: true)]
-    public int ${entityId};
-
-    // Other properties: types, constraints and sub objects as CONTEXT.md prescribes.
-
-    public const QUERY_MAPPING = [
-        // '[sourceFieldFromQueryResult]' => '[apiFieldName]',
-    ];
-
-    public const CREATE_COMMAND_MAPPING = [
-        // '[apiFieldName]' => '[commandConstructorParam]',
-    ];
-
-    public const UPDATE_COMMAND_MAPPING = [
-        // '[apiFieldName]' => '[commandConstructorParam]',
-    ];
-}
-```
-
-### List endpoints
-
-A list lives in its own `{Entity}List.php` next to the resource. The operation to use, the
-`filtersClass` + `filtersMapping` pair, the field alignment with the grid or query and the examples:
-`.ai/LISTS.md`.
-
-### Bulk operations
-
-A bulk operation lives in its own `Bulk{Entities}.php` (`BulkDelete{Entities}.php`,
-`BulkUpdateStatus{Entities}.php` when more specific) next to the resource. The URI shape and the method
-per action: `CONTEXT.md` → "URI conventions"; the id list constraints, `allowEmptyBody` and the 207
-behaviour: `.ai/ERRORS.md`. Real examples: `src/ApiPlatform/Resources/Attribute/BulkAttributeGroups.php`,
-`src/ApiPlatform/Resources/Category/BulkDeleteCategories.php`,
-`src/ApiPlatform/Resources/Category/BulkUpdateStatusCategories.php`.
-
-## Step 5: Generate the integration test
+## Step 5: Write the integration test
 
 **File location:** `tests/Integration/ApiPlatform/{Entity}EndpointTest.php`
 
-What the test must cover (whole-response assertions, fixtures through the API, error cases, lists,
-version skips) and the helpers of `ApiTestCase` are in `.ai/TESTING.md`; the template only gives the
-structure.
-
-```php
-<?php
-/**
- * [AFL 3.0 license header — same as ApiResource file]
- */
-
-declare(strict_types=1);
-
-namespace PsApiResourcesTest\Integration\ApiPlatform;
-
-use Symfony\Component\HttpFoundation\Response;
-use Tests\Resources\DatabaseDump;
-use Tests\Resources\Resetter\LanguageResetter;
-
-class {Entity}EndpointTest extends ApiTestCase
-{
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-        LanguageResetter::resetLanguages();
-        self::addLanguageByLocale('fr-FR');
-        self::resetTables();
-        self::createApiClient(['{entity}_read', '{entity}_write']);
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        parent::tearDownAfterClass();
-        LanguageResetter::resetLanguages();
-        self::resetTables();
-    }
-
-    protected static function resetTables(): void
-    {
-        DatabaseDump::restoreTables([
-            '{db_table}',        // add all related tables
-            '{db_table}_lang',   // if entity has localized fields
-            '{db_table}_shop',   // if entity has shop association
-        ]);
-    }
-
-    public static function getProtectedEndpoints(): iterable
-    {
-        // List every endpoint that should require authentication
-        yield 'get endpoint' => ['GET', '/{entities}/1'];
-        yield 'create endpoint' => ['POST', '/{entities}'];
-        yield 'patch endpoint' => ['PATCH', '/{entities}/1'];
-        yield 'delete endpoint' => ['DELETE', '/{entities}/1'];
-        yield 'list endpoint' => ['GET', '/{entities}'];
-    }
-
-    public function testAdd{Entity}(): int
-    {
-        $postData = [
-            // all required fields with valid values
-            // for localized fields: ['en-US' => 'value', 'fr-FR' => 'valeur']
-        ];
-
-        $response = $this->createItem('/{entities}', $postData, ['{entity}_write']);
-        $this->assertArrayHasKey('{entityId}', $response);
-        // The whole response is asserted, with the id read from it
-        $this->assertEquals(array_merge(['{entityId}' => $response['{entityId}']], $postData, [
-            // fields the API fills by default
-        ]), $response);
-
-        return $response['{entityId}'];
-    }
-
-    /** @depends testAdd{Entity} */
-    public function testGet{Entity}(int ${entityId}): int
-    {
-        $response = $this->getItem('/{entities}/' . ${entityId}, ['{entity}_read']);
-        $this->assertEquals([
-            '{entityId}' => ${entityId},
-            // every exposed field with its expected value, nested objects and lists included
-        ], $response);
-
-        return ${entityId};
-    }
-
-    /** @depends testGet{Entity} */
-    public function testPartialUpdate{Entity}(int ${entityId}): int
-    {
-        $patchData = [
-            // fields to update
-        ];
-
-        $updated = $this->partialUpdateItem('/{entities}/' . ${entityId}, $patchData, ['{entity}_write']);
-        // The whole updated entity: the patched fields, and the others untouched
-        $this->assertEquals([
-            '{entityId}' => ${entityId},
-            // ...
-        ], $updated);
-
-        // Verify the GET also reflects the changes
-        $fetched = $this->getItem('/{entities}/' . ${entityId}, ['{entity}_read']);
-        $this->assertEquals($updated, $fetched);
-
-        return ${entityId};
-    }
-
-    /** @depends testPartialUpdate{Entity} */
-    public function testDelete{Entity}(int ${entityId}): void
-    {
-        $this->deleteItem('/{entities}/' . ${entityId}, ['{entity}_write']);
-        $this->getItem('/{entities}/' . ${entityId}, ['{entity}_read'], Response::HTTP_NOT_FOUND);
-    }
-
-    public function testNotFound{Entity}(): void
-    {
-        // Every operation with a mapped NotFoundException answers 404 on an unknown id
-        $this->getItem('/{entities}/99999', ['{entity}_read'], Response::HTTP_NOT_FOUND);
-        $this->partialUpdateItem('/{entities}/99999', [/* valid data */], ['{entity}_write'], Response::HTTP_NOT_FOUND);
-        $this->deleteItem('/{entities}/99999', ['{entity}_write'], Response::HTTP_NOT_FOUND);
-        // An invalid id format is a 422 (value object exception), not a 500
-        $this->getItem('/{entities}/0', ['{entity}_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
-    }
-
-    public function testInvalid{Entity}(): void
-    {
-        $invalidData = [
-            // invalid values to trigger validation errors
-        ];
-
-        $response = $this->createItem(
-            '/{entities}',
-            $invalidData,
-            ['{entity}_write'],
-            Response::HTTP_UNPROCESSABLE_ENTITY
-        );
-
-        $this->assertValidationErrors([
-            ['propertyPath' => 'fieldName', 'message' => 'expected error message'],
-        ], $response);
-    }
-}
-```
+Copy the canonical test `.ai/TESTING.md` → "Canonical tests" names and adapt it with the checklist of
+that section. What the test must cover (whole-response assertions, both languages on every localized
+field, fixtures through the API, the error cases, the lists, the version skips) and the helpers of
+`ApiTestCase` are in `.ai/TESTING.md`; the parent class already prepares the languages and the API
+clients, the test class never repeats that setup.
 
 ## Step 6: Write the files
 
