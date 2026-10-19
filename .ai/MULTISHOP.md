@@ -52,8 +52,8 @@ On creation, the shops of the request context are the **default** of
 (`'shopIds' => '[_context][shopIds]'`, PrestaShop ≥ 9.2.0; on older
 cores the field is required). Never express that default as a
 `[_context]` command mapping: it would overwrite an explicit `shopIds`
-sent by the client. The test covers both behaviours: no `shopIds` →
-context shops, explicit `shopIds` → kept. The `shopIds` association is
+sent by the client. Both behaviours are tested
+([`TESTING.md`](./TESTING.md)). The `shopIds` association is
 round-tripped: the write response contains what was sent. An unknown
 shop in `shopIds` answers 404 (`ShopNotFoundException`), an invalid one
 422 (`ShopException`) — both mapped in `exceptionToStatus`.

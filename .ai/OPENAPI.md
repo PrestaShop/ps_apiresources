@@ -24,8 +24,9 @@ gives the parameters of a collection. What the resource must add:
   bulk command. A description never promises what the command does not
   do.
 - `#[ApiProperty(description: ..., example: ...)]` on a property whose
-  name is not self-explanatory; localized examples keyed by locale;
-  `openapiContext: ['type' => 'integer', 'example' => 1]` on identifiers.
+  name is not self-explanatory; localized examples keyed by locale. An
+  identifier needs no `openapiContext`: its `int` type already documents
+  it as an integer, and the resources set no example on it.
 - Query parameters through `parameters: new Parameters([new QueryParameter(
   key:, required:, description:)])`, declared once, with a schema limited
   to `{type, default}` (the `default` typed like the `type`: `5`, not

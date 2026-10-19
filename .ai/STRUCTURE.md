@@ -33,6 +33,10 @@ Rules: `api-resources` (`src/ApiPlatform/**`, `config/**` → `OPENAPI.md`, `LIS
 
 ## Maintenance
 
+- One place per rule: `CONTEXT.md` holds what is always true, each on-demand file holds the rules of its
+  topic, and `CONTEXT.md` keeps only the trigger and one sentence for them. `REVIEW.md`, the skills, the
+  CodeRabbit path instructions and the root touch points point to the rule, they never restate it: a
+  rule written twice is maintained twice and drifts.
 - After any change to `rules/`: `bash .ai/bin/sync-rules.sh`.
 - The contexts quote classes, files and behaviours of the module and of the core: check them when a
   resource, a helper or a core feature changes; an outdated example propagates (a resource copied from

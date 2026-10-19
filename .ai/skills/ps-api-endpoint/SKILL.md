@@ -7,6 +7,9 @@ description: >
 # PrestaShop Admin API Endpoint Generator
 
 This skill walks through creating a new endpoint in `ps_apiresources`, from discovery to generated code.
+The conventions are written once, in `.ai/CONTEXT.md` and its on-demand files;
+`references/conventions.md` maps each step below to the section to read. This skill never summarizes
+them: read the section.
 
 ## Step 1: Gather requirements
 
@@ -15,7 +18,7 @@ Ask the user (all in one message if not already specified):
 1. **Entity name** — e.g. `TaxRule`, `Warehouse` (PascalCase, singular)
 2. **Operations needed** — GET single, POST (create), PATCH (partial update), PUT (full update), DELETE, GET list (paginated). Also ask about bulk operations (e.g. bulk delete) or custom sub-resource actions (e.g. status toggle).
 3. **PrestaShop core path** — absolute path to the PS root, e.g. `/home/user/prestashop-90x`. Needed to look up CQRS classes. Offer to skip this step if the user already knows the class names.
-4. **Minimum core version** — does the endpoint rely on CQRS classes or core behaviour only available (or only working) since a specific PrestaShop version? If so, the operations must declare `extraProperties: ['minVersion' => 'X.Y.Z']` and the test needs version-skip handling (see "Core version constraints" and "Version-dependent endpoints" in `CONTEXT.md`).
+4. **Minimum core version** — does the endpoint rely on CQRS classes or core behaviour only available (or only working) since a specific PrestaShop version? If so, the operations declare `minVersion` (`.ai/VERSIONS.md`) and the test skips accordingly (`.ai/TESTING.md` → "Version-dependent endpoints").
 
 ## Step 2: Discover CQRS classes
 
@@ -46,16 +49,20 @@ If some of these classes don't exist (e.g. no Add command), note it — only inc
 
 After reading the QueryResult, confirm with the user:
 - Which fields should be exposed in the API (not all internal fields need to be public)
-- Which fields are **structured** (an object, a list of objects) → a typed DTO class in `src/ApiPlatform/Resources/{Entity}/Dto/`, typed on the property or declared with `@var {Dto}[]` (`CONTEXT.md` → "Sub objects: typed DTOs"); a DTO holding a list or a boolean filled from a query result needs `minVersion: 9.2.1`
-- Which fields are **localized** (arrays keyed by locale like `'en-US' => 'value'`) → need `#[LocalizedValue]`
-- Which localized fields are required in the default language on create → need `#[DefaultLanguage(groups: ['Create'], fieldName: '...')]`
-- Which localized fields are optional on update → `#[DefaultLanguage(groups: ['Update'], fieldName: '...', allowNull: true)]`
+- Which fields are **structured** (an object, a list of objects) → a typed DTO class (`CONTEXT.md` → "Sub objects: typed DTOs")
+- Which fields are **localized**, and which of them are required in the default language on create or optional on update (`CONTEXT.md` → "Property naming", the `#[LocalizedValue]` and `#[DefaultLanguage]` paragraphs)
+- Which fields have a default on creation (`CONTEXT.md` → "Do", `defaultValues`)
+- Whether the entity has a shop association (`.ai/MULTISHOP.md`)
 
 ## Step 4: Generate the ApiResource class
 
-**File location:** `src/ApiPlatform/Resources/{Entity}/{Entity}.php`
+**File location:** `src/ApiPlatform/Resources/{Domain}/{Entity}.php`
 
-Use the template below. Adapt based on the selected operations.
+Use the template below. Adapt based on the selected operations: the method per operation and the
+options to set are in `CONTEXT.md` → "Choosing the operation", the URI and scope rules in
+"URI conventions" and "Scopes", the property rules in "Property naming", the mappings in
+"Field mapping", the exceptions and constraints in `.ai/ERRORS.md`, the summaries and
+descriptions in `.ai/OPENAPI.md`.
 
 ```php
 <?php
@@ -132,21 +139,18 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     exceptionToStatus: [
-        // Every exception the commands, their value objects and the handlers can raise:
-        // *NotFoundException => 404 (ids of the URI and of the body), constraint / value object exceptions => 422.
-        // A subclass mapped to a different status than its parent is listed first.
+        // Every exception the commands, their value objects and the handlers can raise,
+        // in the order ERRORS.md prescribes.
         {Entity}ConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         {Entity}NotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class {Entity}
 {
-    #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
+    #[ApiProperty(identifier: true)]
     public int ${entityId};
 
-    // Add other properties here with appropriate types and constraints.
-    // Structured values are typed DTOs of Resources/{Entity}/Dto/ (or `@var {Dto}[]` lists), never
-    // `array` + a hand-written openapiContext object schema.
+    // Other properties: types, constraints and sub objects as CONTEXT.md prescribes.
 
     public const QUERY_MAPPING = [
         // '[sourceFieldFromQueryResult]' => '[apiFieldName]',
@@ -162,42 +166,28 @@ class {Entity}
 }
 ```
 
-### Key rules while filling in the template
+### List endpoints
 
-See `references/conventions.md` for the full ruleset. The most important ones:
-
-- **URI**: plural, lowercase, kebab-case. `featureId` in URI, not `id`. E.g. `/tax-rules/{taxRuleId}`.
-- **Scopes**: `{entity_snake_case}_read` and `{entity_snake_case}_write`. Multi-word entities: `tax_rule_read`.
-- **Boolean properties**: no `is` prefix. Use `$enabled`, not `$isEnabled`.
-- **Localized properties**: no "localized" prefix. Use `$names`, not `$localizedNames`. Mark with `#[LocalizedValue]`.
-- **Mapping**: `QUERY_MAPPING` maps `[queryResultFieldName] => [apiFieldName]`. `CREATE_COMMAND_MAPPING` maps `[apiFieldName] => [commandParamName]`. When Create and Update commands share the same param names, use a single `COMMAND_MAPPING` constant.
-- **One format for read and write**: whatever a read operation returns for a piece of data, the write operation must accept in that exact shape — a response body must be copy-pasteable into the next request. Reconcile the command and query shapes with the mappings, never by exposing two properties for one concept. Beware the `@index` limit: mapping renames and moves fields but cannot flatten or nest. Full rule, the exception for delta-style writes, and the normalizer escape hatch: `CONTEXT.md` → "Read and write formats must match".
-- **BO form parity**: constraints must reproduce the rules of the entity's BO form type, including the ones the CQRS command doesn't enforce (non-empty collections, ranges, URL formats, PS constraints like `CleanHtml`). Default values applied by the form when fields are untouched are declared with the `defaultValues` extra property on the create operation (PS ≥ 9.2 — never as resource property defaults, they don't reach the command; never on updates). Full rule: `CONTEXT.md` → "Do" list.
-- **Command-style operations**: name the action in the URI, verb first (`/carriers/{carrierId}/set-tax-rule-group`), add the segment to `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` or Rector CI will pluralize it, host it in the resource it modifies, and return the updated entity via a `CQRSQuery` rather than a `204`.
-- **Explicit OpenAPI summary when the method lies**: the generated summary is derived from the HTTP method (POST ⇒ "Creates a … resource"), so any operation whose method doesn't match its semantics (e.g. an update forced to POST because it uploads a file) must declare `openapi: new OpenApiOperation(summary: …, description: …)` on **both** operations sharing the method, so the doc doesn't show two identical create entries.
-- **Errors**: map every exception the operations can raise, `*NotFoundException` → 404 for any id checked for existence (URI or body), value object and constraint exceptions → 422, subclass before parent; a documented payload must never answer 500 (`NotNull` / `NotBlank` on required command parameters, `Assert\All` + `Collection` on nested arrays). Full rule: `CONTEXT.md` → "Do" list.
-- **OpenAPI**: `openapi: new OpenApiOperation(summary:, description:)` on command-style operations and whenever the HTTP method does not say what the operation does; a description for every non-obvious behaviour (version gate, formatted values, side effects); class comments are PHPDoc, not published. Full rule: `CONTEXT.md` → "OpenAPI documentation". Verify with `bin/console api:openapi:export --yaml` in the core.
-- **Forbidden**: no custom normalizers, no custom processors, no Value Objects as properties (scalars, arrays, `DecimalNumber`, `DateTimeImmutable`, `File`, DTOs of `Resources\{Entity}\Dto`).
-- **Strict typing**: every property needs an explicit type.
-- **Version constraint**: if the endpoint requires a minimum core version, add `extraProperties: ['minVersion' => 'X.Y.Z']` to the operation — it is then filtered out (404) on older cores. Never to hide a 500 on an older core. Full details in `CONTEXT.md` → "Core version constraints".
-
-### List endpoints (PaginatedList)
-
-List operations live in a **separate class file** named `{Entity}List.php` next to the main resource (e.g. `src/ApiPlatform/Resources/Contact/ContactList.php`, `src/ApiPlatform/Resources/Attribute/AttributeGroupList.php`). Use `PaginatedList` with the Grid's data factory service, its `filtersClass` **and** a `filtersMapping` (API field → grid field, for `orderBy` and `filters[...]`): without them `orderBy` answers 500 and the filters are ignored. The URI is the plural base path (e.g. `/contacts`) without an ID. Field mapping is done via `ApiResourceMapping`; every DTO property must match a `SELECT` column of the grid query builder, and only the filters the query builder supports may be mapped. Example: `src/ApiPlatform/Resources/Customer/CustomerGroupList.php`.
+A list lives in its own `{Entity}List.php` next to the resource. The operation to use, the
+`filtersClass` + `filtersMapping` pair, the field alignment with the grid or query and the examples:
+`.ai/LISTS.md`.
 
 ### Bulk operations
 
-Bulk operations also live in a **separate class file** named `Bulk{Entities}.php` (or `BulkDelete{Entities}.php` / `BulkUpdateStatus{Entities}.php` when more specific) next to the main resource. Real examples in the repo:
-
-- `src/ApiPlatform/Resources/Attribute/BulkAttributeGroups.php`
-- `src/ApiPlatform/Resources/Category/BulkDeleteCategories.php`
-- `src/ApiPlatform/Resources/Category/BulkUpdateStatusCategories.php`
-
-URI uses `bulk-` prefix + plural: `/tax-rules/bulk-delete`. The single public property is the array of IDs, named with the singular entity + "Ids" (e.g. `$taxRuleIds`, `$attributeGroupIds`), typed as `array` with a `@var int[]` docblock (the core documents the item type from it; add `#[ApiProperty(openapiContext: ['example' => [1, 3]])]` only for an example), and annotated with `#[Assert\NotBlank]` and `#[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]` (the command casts each element with `(int)`: without the element constraints `["3abc"]` silently acts on entity 3). A handler extending the core `AbstractBulkCommandHandler` answers 207 with one error per failed id (core ≥ 9.1.2): say it in the operation description and test it with `bulkCommandItemsWithExpectedErrors()`.
+A bulk operation lives in its own `Bulk{Entities}.php` (`BulkDelete{Entities}.php`,
+`BulkUpdateStatus{Entities}.php` when more specific) next to the resource. The URI shape and the method
+per action: `CONTEXT.md` → "URI conventions"; the id list constraints, `allowEmptyBody` and the 207
+behaviour: `.ai/ERRORS.md`. Real examples: `src/ApiPlatform/Resources/Attribute/BulkAttributeGroups.php`,
+`src/ApiPlatform/Resources/Category/BulkDeleteCategories.php`,
+`src/ApiPlatform/Resources/Category/BulkUpdateStatusCategories.php`.
 
 ## Step 5: Generate the integration test
 
 **File location:** `tests/Integration/ApiPlatform/{Entity}EndpointTest.php`
+
+What the test must cover (whole-response assertions, fixtures through the API, error cases, lists,
+version skips) and the helpers of `ApiTestCase` are in `.ai/TESTING.md`; the template only gives the
+structure.
 
 ```php
 <?php
@@ -337,17 +327,6 @@ class {Entity}EndpointTest extends ApiTestCase
 }
 ```
 
-### Test rules
-
-- Tests assert the **whole response** with one `assertEquals` of the full expected array — every field, nested objects, list items; never key-presence or field-by-field checks (they miss removed fields and hide new ones).
-- Chain tests using `@depends` so each test builds on the created entity; ids come from the responses.
-- Fixtures are created through the API (the endpoints under test or of the same domain), not with `ObjectModel` or SQL.
-- Always include a `testInvalid*` test that covers validation constraints (`assertValidationErrors` for the constraint 422; a 422 produced by a mapped CQRS exception has no field list, assert the status only), and a 404 test for every mapped `*NotFoundException` on every operation, plus `/x/0` → 422.
-- The resource declares `normalizationContext: ['skip_null_values' => false]` when it has nullable fields, so `null` values are returned and asserted.
-- A list test calls `listItems()` with `filters[...]` and `orderBy` on the API field names and asserts the filtered items and the envelope.
-- Drop `LanguageResetter::resetLanguages()` from setUp/tearDown if the entity has no localized fields.
-- **Version-dependent endpoints**: if the resource declares a `minVersion`, use the `ApiTestCase` helpers (`markTestSkippedByMinVersion`, `isVersionAtLeast`, `isVersionUnder`) instead of hand-rolled `version_compare` checks. When every operation is constrained, skip the whole class in `setUpBeforeClass()` before calling the parent, and keep `getProtectedEndpoints()` yielding unconditionally (an empty data provider is a PHPUnit error). The exact patterns and examples are in `CONTEXT.md` → "Version-dependent endpoints".
-
 ## Step 6: Write the files
 
 Create both files at their correct paths. Then tell the user:
@@ -362,16 +341,7 @@ Create both files at their correct paths. Then tell the user:
 4. **What to double-check**: mappings between CQRS fields and API fields — these are the most common source of errors. Ask the user to run the endpoint manually via Swagger UI to verify, and to export the OpenAPI documentation (`bin/console api:openapi:export --yaml` in the core) to compare the generated schema with the real payloads (types, nullability, `required` list, descriptions).
 5. **Review it**: run the `review-api-pr` skill (`REVIEW.md`) on the new files before opening the PR.
 
-## Common pitfalls to flag
-
-- If the `Add*Command` takes its ID from an `EntityId` value object in the result (not a raw int), the `CQRSCreate` block may need to fetch the result via a separate `CQRSQuery` after creation.
-- If a command and its edit counterpart share the same constructor signature, use one `COMMAND_MAPPING` constant.
-- For entities without shop association, omit `shopIds` and its mapping. With one, the context shops are the **default** of `shopIds` on creation (`extraProperties: ['defaultValues' => ['shopIds' => '[_context][shopIds]']]`), never a `[_context]` command mapping that would overwrite an explicit value.
-- `#[DefaultLanguage]` needs the `fieldName` argument set to the **API field name** (e.g. `fieldName: 'names'`), not the internal query field name.
-- A write property that is not a constructor parameter or a setter of the command is silently dropped; a read property that no query-result getter fills is always `null`.
-- `exceptionToStatus` is evaluated in order with `instanceof`: a subclass mapped to 404 must precede its parent mapped to 422.
-
 ## Reference files
 
-- `references/conventions.md` — full naming and structural conventions
-- `../../CONTEXT.md` (`.ai/CONTEXT.md`) — module-wide AI context: purpose, architecture, Do/Don't, canonical examples, and the on-demand `.ai/*.md` contexts (`TESTING.md`, `OPENAPI.md`, `LISTS.md`, `MULTISHOP.md`, `VERSIONS.md`). This skill must stay aligned with them.
+- `references/conventions.md` — which section of the context each step needs, and where the files go
+- `../../CONTEXT.md` (`.ai/CONTEXT.md`) — the conventions, with the on-demand `.ai/*.md` contexts (`TESTING.md`, `OPENAPI.md`, `LISTS.md`, `ERRORS.md`, `MULTISHOP.md`, `VERSIONS.md`)

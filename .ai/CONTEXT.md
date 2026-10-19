@@ -95,19 +95,15 @@ not the other way round:
   covers part of the entity: `/carts/{cartId}/addresses` is a `PUT`
   because `UpdateCartAddressesCommand` requires both addresses.
 - `CQRSDelete` / `DELETE` for a deletion and for a destructive clear-all;
-  it answers 204. A bulk delete sets `allowEmptyBody: false` (the
-  `CQRSDelete` default is `true`): a required body is never declared
-  optional.
+  it answers 204 (the body of a bulk delete: [`ERRORS.md`](./ERRORS.md)).
 - Body-less actions answer 204 with `read: false`, `output: false` and
-  `allowEmptyBody: true`, only when there is nothing to read back; every
-  other write returns the updated state through a `CQRSQuery` (see the
-  Do list).
+  `allowEmptyBody: true`, only when there is nothing to read back (see
+  the Do list).
 - An operation receiving files forces `method: CQRSUpdate::METHOD_POST`
   (PHP only parses multipart on POST), with `status: Response::HTTP_OK`
   when it updates, and an explicit `openapi` summary; see `ProductImage`.
-- Collections: `PaginatedList` on a grid, `CQRSPaginate` on a CQRS list
-  query, `CQRSGetCollection` only for a plain array — see
-  [`LISTS.md`](./LISTS.md).
+- Collections: `PaginatedList`, `CQRSPaginate` or `CQRSGetCollection`,
+  chosen as described in [`LISTS.md`](./LISTS.md).
 
 ## URI conventions
 
@@ -190,14 +186,9 @@ OAuth2 scope naming (ADR 0023 §Scope names): `{entity_snake_case}_{action}`.
 ## Core versions
 
 The module runs on PrestaShop 9.0.3, 9.1.5, 9.2.x and develop. An
-endpoint relying on a CQRS class or a behaviour that only exists from a
-given core declares `extraProperties: ['minVersion' => 'X.Y.Z']`; the
-operation is then filtered out (404, absent from the documentation) on
-older cores. `minVersion` documents a real dependency, never hides a 500
-on an older core. The named operation arguments a core does not know
-(`minVersion`, `defaultValues`…) are passed through `extraProperties`.
-Details, limits and the features available per core version:
-[`VERSIONS.md`](./VERSIONS.md).
+operation relying on a newer core declares `minVersion`: how, its
+limits, the arguments to pass through `extraProperties` and the features
+available per core version: [`VERSIONS.md`](./VERSIONS.md).
 
 ## Property naming
 
@@ -337,9 +328,8 @@ with `src/ApiPlatform/Resources/Customer/Dto/`.
   `CQRSCommandMapping`, or `ApiResourceMapping`.
 - Nested fields use bracket notation:
   `'[basicInformation][localizedNames]' => '[names]'`.
-- The shop context (`[_context][shopId]`, `[_context][shopIds]`,
-  `[_context][shopConstraint]`) is mapped only when the CQRS class takes
-  that argument, with its exact type — see [`MULTISHOP.md`](./MULTISHOP.md).
+- The `[_context]` shop entries (`shopId`, `shopIds`, `shopConstraint`):
+  [`MULTISHOP.md`](./MULTISHOP.md).
 
 ## Read and write formats must match
 
@@ -406,36 +396,25 @@ manual cast, disabled test) goes away in that PR.
 
 ## OpenAPI documentation
 
-The documentation is generated from the resource (property types and
-attributes) and from the core command (request bodies); it is part of
-the contract. Class and property PHPDoc are never published: public text
-goes in `description` (`#[ApiProperty(description:)]`, `openapi: new
-OpenApiOperation(summary:, description:)`), required on every
-command-style operation and for every non-obvious behaviour. Rules,
-limits of the generator and the export command: [`OPENAPI.md`](./OPENAPI.md).
+The documentation is generated from the resource and from the core
+command, and it is part of the contract. What a resource must add
+(summaries, descriptions, examples), what it must not, the limits of
+the generator and the export command: [`OPENAPI.md`](./OPENAPI.md).
 
 ## Multi-shop
 
-Entities with a shop association expose `shopIds` (mapped both ways,
-defaulted from the request context through `defaultValues` on creation,
-never through a `[_context]` command mapping); the shop context is
-passed to the CQRS class only when it takes it. Feature flag, context
-parameters, mappings and examples: [`MULTISHOP.md`](./MULTISHOP.md).
+Entities with a shop association expose `shopIds`. Feature flag, context
+parameters, the default on creation, the `[_context]` mappings and the
+examples: [`MULTISHOP.md`](./MULTISHOP.md).
 
 ## Do / Don't
 
 ### Do
 
 - Map every exception the operations can raise in `exceptionToStatus`
-  (`…ConstraintException` → 422, `…NotFoundException` → 404, the value
-  object and referenced-entity exceptions included): **any identifier
-  checked for existence answers 404 when unknown, in the URI or in the
-  body**, an invalid identifier format answers 422, a documented payload
-  never answers 500 or 400. Validate at the resource level what the
-  command does not (`NotNull` / `NotBlank`, nested arrays, `Choice` from
-  the core constants, the BO form rules, bulk id lists typed and
-  positive). The complete rules, the mapping order, the bulk 207 and the
-  status code table: [`ERRORS.md`](./ERRORS.md).
+  and validate at the resource level what the command does not: the
+  rules, the mapping order, the bulk constraints and the status code
+  table are in [`ERRORS.md`](./ERRORS.md).
 - Use a `CQRSQuery` on `CQRSCreate` and `CQRSPartialUpdate` when the
   endpoint should return the full updated state, not just an identifier.
   This includes command-style operations: prefer returning the updated
@@ -443,24 +422,16 @@ parameters, mappings and examples: [`MULTISHOP.md`](./MULTISHOP.md).
   need a follow-up GET. When the operation only touches one association of a
   bigger entity, host it in that entity's resource class and return the whole
   entity — `Carrier::set-tax-rule-group` returns the carrier, not the
-  association alone.
-- Use `#[LocalizedValue]` for any field stored as `array<locale, value>`.
-- Split single / list / bulk operations into separate classes inside the
-  same domain folder.
-- Add an integration test for every new endpoint (see
-  [`TESTING.md`](./TESTING.md)).
-- Use `validationContext: ['groups' => ['Default', 'Create']]` on
-  `CQRSCreate` and `validationContext: ['groups' => ['Default', 'Update']]`
-  on `CQRSPartialUpdate`; constraints match the rules of the associated
-  BO form type, including the ones the CQRS command does not enforce
-  itself (see [`ERRORS.md`](./ERRORS.md) → "Validation").
+  association alone. An operation whose read side does not exist yet, or
+  whose domain is not settled, ships with `experimentalOperation: true`
+  (exposed only when the experimental endpoints feature flag is on) and
+  is graduated by removing it once the contract is complete.
 - Declare the default values a creation endpoint applies (matching the
   BO form's `default_empty_data` / untouched fields) with the
-  `defaultValues` extra property (PrestaShop ≥ 9.2.0 only — the API
-  injects them into the payload before validation and command
-  denormalization, drops them from the documented `required` list and
-  exposes them as `default` in the schema; older cores ignore the extra
-  property, so the fields simply stay required there):
+  `defaultValues` extra property (PrestaShop ≥ 9.2.0: the API injects
+  them into the payload before validation and command denormalization;
+  older cores ignore the extra property, so the fields stay required
+  there):
 
   ```php
   extraProperties: [
@@ -471,11 +442,10 @@ parameters, mappings and examples: [`MULTISHOP.md`](./MULTISHOP.md).
   Defaults **cannot** be declared as API resource property defaults
   (`public bool $free = false;`): the payload is denormalized into the
   CQRS command, never into the resource class, so such a default is
-  decorative. Use the extra property (not the `defaultValues` named
-  argument, which older cores would reject as an unknown parameter).
-  The values are copied from the command signature (nullability
-  included), never guessed. Never declare `defaultValues` on an update
-  operation — a partial update must only touch the provided fields.
+  decorative. The values are copied from the command signature
+  (nullability included), never guessed. Never declare `defaultValues`
+  on an update operation — a partial update must only touch the
+  provided fields.
 - Stay consistent with the reference resources (`Contact`, `Title`) and
   with the sibling resources of the same domain: same validation groups,
   same helpers, same wording.
@@ -522,7 +492,6 @@ parameters, mappings and examples: [`MULTISHOP.md`](./MULTISHOP.md).
   with the core").
 - Don't return raw command results. If the endpoint should return data,
   define proper DTO properties and wire a `CQRSQuery`.
-- Don't declare an operation without a scope.
 - Don't extend a core resource for the fields of a module, and don't add
   a module-specific property to a core entity endpoint: custom fields on
   core entities are the Extra Properties feature (core 9.2.0, component
@@ -536,12 +505,8 @@ parameters, mappings and examples: [`MULTISHOP.md`](./MULTISHOP.md).
 
 ## Testing
 
-Every endpoint has an integration test in
-`tests/Integration/ApiPlatform/{Entity}EndpointTest.php` extending
-`ApiTestCase`: whole-response assertions, fixtures created through the
-API, the error cases of every mapped exception, version gates with the
-`ApiTestCase` helpers. Helpers, environment, structure and patterns:
-[`TESTING.md`](./TESTING.md).
+Every endpoint has an integration test; the helpers, the environment,
+the structure and what it must cover: [`TESTING.md`](./TESTING.md).
 
 ## Working with the core
 
@@ -619,10 +584,9 @@ for the patterns above:
 - **Nullable objects of multi-parameter setters** (`minimumAmount`,
   `reductionAmount` with their `required` lists) —
   `src/ApiPlatform/Resources/Discount/Discount.php`.
-- **Exception mapping order, 404 for an id checked in the body** —
-  `src/ApiPlatform/Resources/OrderReturn/OrderReturn.php`.
-- **Shop association defaulting to the context shops** —
-  `src/ApiPlatform/Resources/Customer/CustomerGroup.php`.
+- **Exception mapping** — see [`ERRORS.md`](./ERRORS.md) (`OrderReturn`).
+- **Shop association** — see [`MULTISHOP.md`](./MULTISHOP.md)
+  (`CustomerGroup`, `Product`, `CombinationList`).
 - **Matching tests** —
   `tests/Integration/ApiPlatform/ContactEndpointTest.php`,
   `tests/Integration/ApiPlatform/CustomerGroupEndpointTest.php`

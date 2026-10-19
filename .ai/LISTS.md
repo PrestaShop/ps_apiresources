@@ -18,11 +18,6 @@ Read when an operation is a `PaginatedList`, a `CQRSPaginate` or a
 - `offset` / `limit` are exposed when the query supports them, never
   capped silently at a core default.
 
-A domain whose back office lists the entity through a grid ships its
-`{Entity}List` with the domain PR, or the description says why not. The
-list lives in its own class (`{Entity}List.php`) next to the single
-resource.
-
 ## Grid data factory and filters
 
 - To find the correct `gridDataFactory` service name: look at the
@@ -41,12 +36,11 @@ resource.
 
 ## Mapping the items
 
-`ApiResourceMapping` is applied when the normalized data is turned into
-the resource object: the items of a `PaginatedList` / `CQRSPaginate`
-(Grid data factory fields or CQRS query result fields → API fields). For
-`PaginatedList`, the source field names can often be read directly from
-the related query builder service wired via `gridDataFactory` — you only
-need to map the fields whose names don't already match the DTO.
+`ApiResourceMapping` ([`CONTEXT.md`](./CONTEXT.md) → "Field mapping")
+renames the item fields of a `PaginatedList` / `CQRSPaginate` (grid data
+factory fields or CQRS query result fields → API fields). For
+`PaginatedList`, the source field names come from the query builder
+service wired through `gridDataFactory`.
 
 **Field alignment** — the DTO properties must mirror the fields selected
 by the grid's underlying query builder. To verify alignment:
@@ -66,10 +60,9 @@ by the grid's underlying query builder. To verify alignment:
    runtime — this is almost certainly a bug.
 
 The same principle applies to `CQRSPaginate`: compare the CQRS query's
-result DTO fields against the ApiResource properties. List endpoints
-return localized fields as a single language string (default shop
-language, or via the `langId` query parameter), unlike single-entity
-endpoints.
+result DTO fields against the ApiResource properties. The format of the
+localized fields of a list (one language) is in `CONTEXT.md` →
+"Property naming".
 
 ## Envelope and documentation
 
@@ -84,10 +77,7 @@ repository) assert the exact keys of the envelope.
 
 ## Tests
 
-`listItems()` with `filters[...]` and `orderBy` using the API field
-names, asserting the filtered items and the envelope; the whole envelope
-is asserted only on a list the test fully controls (see
-[`TESTING.md`](./TESTING.md)).
+See [`TESTING.md`](./TESTING.md) → "Test structure" (lists).
 
 ## Examples
 

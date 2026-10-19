@@ -37,27 +37,19 @@ reviews:
   path_instructions:
     - path: "src/ApiPlatform/Resources/**/*.php"
       instructions: |
-        Apply .ai/REVIEW.md in full on these files, in this order: contract with the core (B), OpenAPI
-        documentation (C), errors (D), tests (E). Before any remark on a mapping, a nullable type, a
-        missing field or an exception, open the core class named in the attribute (command constructor and
-        setters, query result getters, handler, value objects) on the core branch the PR targets, or on the
-        related core PR branch when the description names one. A mapping is resolved by name
-        (`getX()`/`isX()` → `x`, constructor parameter names): do not flag a "missing mapping" for a field
-        whose name already matches, nor a `filtersMapping` entry the grid does not filter on (it serves
-        `orderBy`), nor a `[_context]` shop entry on a query that takes no shop argument. Compare the
-        documented schema (property types, nullability, `required`, `description`, `openapiContext`) with
-        the payload the code really produces or accepts; a mismatch is a finding even when the code works.
-        Every exception the command constructor, its value objects and the handler can throw is mapped
-        in `exceptionToStatus` (`*NotFoundException` → 404, constraint / value object exceptions → 422,
-        subclass before parent); check the real class hierarchy in the core before reporting one as
-        unmapped.
+        Apply .ai/REVIEW.md §1 in full on these files (A to F), reading the .ai/CONTEXT.md section or the
+        on-demand file each check names: the rules are there, not here. Before any remark on a mapping, a
+        nullable type, a missing field or an exception, open the core class named in the attribute
+        (command constructor and setters, query result getters, handler, value objects) on the core branch
+        the PR targets, or on the related core PR branch when the description names one, and check the
+        real class hierarchy of an exception before reporting it as unmapped. Compare the documented
+        schema with the payload the code really produces or accepts; a mismatch is a finding even when
+        the code works. Respect .ai/REVIEW.md §2 (what not to flag).
     - path: "src/ApiPlatform/Resources/**/Dto/*.php"
       instructions: |
-        A DTO sub object: public typed properties only (scalars, DecimalNumber, DateTimeImmutable, nested
-        DTO, `@var Foo[]` lists), no attributes needed for the schema, PHPDoc allowed. Check that every
-        property exists in the query result or command the parent resource maps, with the same nullability,
-        and that a list or a boolean filled from a query result is only used on operations gated with
-        `minVersion` 9.2.1 or on cores where the cast is verified by a test.
+        A DTO sub object: the rules are in .ai/CONTEXT.md → "Sub objects: typed DTOs". Check every property
+        against the query result or command the parent resource maps (existence, type, nullability) and
+        the version gate of the operations using it.
     - path: "src/ApiPlatform/Normalizer/**"
       instructions: |
         A new normalizer is a hard finding unless it meets the three conditions of .ai/CONTEXT.md → "When
@@ -66,12 +58,8 @@ reviews:
         Ask for the mapping alternative first.
     - path: "tests/Integration/ApiPlatform/**/*.php"
       instructions: |
-        Apply .ai/REVIEW.md §1 E and .ai/TESTING.md. The whole response is asserted with one assertEquals on the full
-        expected array (partial checks are a finding); fixtures are created through the API; every operation
-        is in getProtectedEndpoints(); a 404 test exists for each mapped NotFoundException and a 422 test
-        for each constraint; version-gated behaviour uses isVersionAtLeast()/markTestSkippedByMinVersion().
-        Do not ask for assertValidationErrors() on a 422 produced by a mapped CQRS exception: the response
-        has no field list.
+        Apply .ai/REVIEW.md §1 E with the rules of .ai/TESTING.md: compare the test class with the operations
+        and the exception map of the resource it covers, and respect .ai/REVIEW.md §2 (what not to flag).
     - path: "tests/PHPStan/**"
       instructions: |
         CI rules of the module. Any relaxation (new allowed class, new allowed type, new ignored error) must
@@ -93,9 +81,11 @@ reviews:
         from the matrix needs a maintainer decision.
     - path: "**/*.md"
       instructions: |
-        .ai/CONTEXT.md, the .ai/*.md contexts, .ai/REVIEW.md and the skills must stay consistent with each other and with the code: a new
-        convention stated in one must appear in the others; a rule contradicted by a resource of the PR is a
-        finding on the resource or on the rule, say which.
+        A convention is written once: in .ai/CONTEXT.md when it is always true, in the on-demand .ai/*.md
+        file of its topic otherwise; .ai/REVIEW.md, the skills, this file and the root touch points only
+        point to it. A rule restated in a second file, or a root statement that an on-demand file details,
+        is a finding (name the single place it belongs to); a rule contradicted by a resource of the PR is
+        a finding on the resource or on the rule, say which.
   auto_review:
     enabled: true
     drafts: false

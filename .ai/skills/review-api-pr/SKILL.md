@@ -45,17 +45,20 @@ Ask only for what is missing:
    <core> log --format='%h %ad' --date=short -- <file>`, `git blame`, `git tag --contains <sha>`): a commit
    younger than the lowest supported tag (9.0.3) means the older CI legs run without it.
 3. **Static checks**: go through .ai/REVIEW.md §1 sections A (design), B (contract with the core), C (OpenAPI),
-   D (errors), E (tests), F (hygiene). For every array property, write down its element constraints
-   before reading the command (bulk ids: `NotBlank` + `All([Type('integer'), Positive()])`). For every
-   candidate finding, write the evidence (core file and line, or the schema/payload) before keeping it;
-   drop it if section G says so; rate it with section H (a 500 reachable with a documented payload or
-   URI is a Blocker).
-4. **Runtime checks** when a shop is available (ask before running write operations on a shop that is
-   not a disposable test instance):
+   D (errors), E (tests), F (hygiene), reading the context section each one names. For every array
+   property, write down its element constraints before reading the command (the expected set is in
+   .ai/ERRORS.md → "Bulk operations"). For every candidate finding, write the evidence (core file and
+   line, or the schema/payload) before keeping it; drop it if §2 says so; rate it with §3.
+4. **Runtime checks**, only when the environment running the skill has a PrestaShop instance with the
+   module installed (a developer's shop, set up with the core skill `setup-apiresources-dev`); CodeRabbit
+   has no shop and stops at the static checks (.ai/REVIEW.md §1 C "without a shop"). Ask before running
+   write operations on a shop that is not a disposable test instance:
    - `php bin/console api:openapi:export --yaml -o <scratch>/after.yaml` in the core with the PR applied,
      the same on the base branch, diff the operations of the PR;
-   - call the endpoints with a token (the local instance credentials are printed by `ps-infos`): happy
-     path, unknown id, id `0`, empty body, invalid field; compare statuses and payloads with the schema;
+   - call the endpoints with a token of an API client of that shop (BO > Advanced Parameters > Admin API,
+     then `POST /admin-api/access_token` with `grant_type=client_credentials` and the scopes needed):
+     happy path, unknown id, id `0`, empty body, invalid field; compare statuses and payloads with the
+     schema;
    - run the test class: `_PS_ROOT_DIR_=<core> php -d date.timezone=UTC <core>/vendor/phpunit/phpunit/phpunit -c
      <module>/tests/Integration/phpunit-local.xml --filter=<Class>`; for a fix, revert it and check the
      test fails.

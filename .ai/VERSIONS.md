@@ -7,8 +7,8 @@ in `CONTEXT.md` → "Working with the core"; the test side (skips, version-
 dependent expectations) is in [`TESTING.md`](./TESTING.md) → "Version-dependent
 endpoints".
 
-The module runs on PrestaShop 9.0.3, 9.1.5, 9.2.x and develop (the CI
-matrix of `.github/workflows/integration.yml`). Some endpoints rely on
+The supported cores (`CONTEXT.md` → "Core versions") are the CI matrix
+of `.github/workflows/integration.yml`. Some endpoints rely on
 CQRS classes or core behaviour that only exist (or only work) from a
 given PrestaShop version. Declare that constraint on the operation with
 the `minVersion` / `maxVersion` extra properties:
@@ -50,11 +50,10 @@ A version-constrained endpoint needs matching test handling (see
   a newer version disappears from the older cores. Weigh the loss, keep
   the operations that work everywhere (e.g. `POST /customers/{customerId}/carts`
   kept for every core while `GET` needs 9.2.1), and list it as a BC break.
-- A core prerequisite that is not a bug fix lands in `develop` and gates
-  the endpoint on the next minor (`minVersion: 9.3.0`): when a
-  configuration-level solution works on every supported core, prefer it.
-  Prefer code that works on the oldest core (a literal `Choice` list
-  rather than an enum only the newer core has).
+- A prerequisite that lands in `develop` gates the endpoint on the next
+  minor (`CONTEXT.md` → "Working with the core"): when a solution works
+  on every supported core, prefer it (a configuration-level fix, a
+  literal `Choice` list rather than an enum only the newer core has).
 
 The named operation arguments (`minVersion`, `maxVersion`,
 `experimentalOperation`, `defaultValues`…) are copied by the core into

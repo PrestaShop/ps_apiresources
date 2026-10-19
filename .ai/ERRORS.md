@@ -82,8 +82,8 @@ A payload that follows the documentation never produces a 500 or a 400:
   `AbstractBulkCommandHandler` answers 207 on a partial failure from core
   9.1.2 (`BulkCommandExceptionNormalizer`): one error per failed id, with
   the status of the operation's own `exceptionToStatus`; older cores
-  answer 422. Say it in the operation description and test it with
-  `bulkCommandItemsWithExpectedErrors()`.
+  answer 422. The operation description says it ([`OPENAPI.md`](./OPENAPI.md)),
+  the test covers it ([`TESTING.md`](./TESTING.md)).
 - A bulk delete sets `allowEmptyBody: false` (the `CQRSDelete` default is
   `true`): a required body is never declared optional.
 
@@ -100,6 +100,5 @@ A payload that follows the documentation never produces a 500 or a 400:
 | 400 | malformed request only: invalid JSON, missing shop context |
 | 401 / 403 | missing token / missing scope |
 
-The responses listed in the OpenAPI output are API Platform's generic
-defaults, not derived from `exceptionToStatus` (see
-[`OPENAPI.md`](./OPENAPI.md)).
+The responses listed in the OpenAPI output are not derived from this
+mapping: see [`OPENAPI.md`](./OPENAPI.md).
