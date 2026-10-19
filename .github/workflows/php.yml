@@ -7,10 +7,10 @@ jobs:
     # Check there is no syntax errors in the project
     php-linter:
         name: PHP Syntax check
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: PHP syntax checker 8.1
               uses: prestashop/github-action-php-lint/8.1@master
@@ -30,7 +30,7 @@ jobs:
     # Check the PHP code follow the coding standards
     php-cs-fixer:
         name: PHP-CS-Fixer
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -38,10 +38,10 @@ jobs:
                 php-version: '8.1'
 
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
 
             - name: Cache dependencies
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               with:
                 path: vendor
                 key: php-${{ hashFiles('composer.lock') }}
@@ -54,7 +54,7 @@ jobs:
 
     license-headers:
       name: Check license headers
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       steps:
         - name: Setup PHP
           uses: shivammathur/setup-php@v2
@@ -62,10 +62,10 @@ jobs:
             php-version: '8.1'
 
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v5
 
         - name: Cache dependencies
-          uses: actions/cache@v3
+          uses: actions/cache@v4
           with:
             path: vendor
             key: php-${{ hashFiles('composer.lock') }}
@@ -78,7 +78,7 @@ jobs:
 
     phpunit:
       name: PHPUnit Tests
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       steps:
         - name: Setup PHP
           uses: shivammathur/setup-php@v2
@@ -86,10 +86,10 @@ jobs:
             php-version: '8.1'
 
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v5
 
         - name: Cache dependencies
-          uses: actions/cache@v3
+          uses: actions/cache@v4
           with:
             path: vendor
             key: php-${{ hashFiles('composer.lock') }}
@@ -102,7 +102,7 @@ jobs:
 
     rector:
       name: Rector Dry Run
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       steps:
         - name: Setup PHP
           uses: shivammathur/setup-php@v2
@@ -110,10 +110,10 @@ jobs:
             php-version: '8.1'
 
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v5
 
         - name: Cache dependencies
-          uses: actions/cache@v3
+          uses: actions/cache@v4
           with:
             path: vendor
             key: php-${{ hashFiles('composer.lock') }}
@@ -126,7 +126,7 @@ jobs:
 
     phpstan:
       name: PHPStan (${{ matrix.presta_version }})
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       strategy:
           matrix:
               presta_version: ['9.0.3', '9.1.5', 'develop', '9.2.x']
@@ -135,7 +135,7 @@ jobs:
           PHPRC: ${{ github.workspace }}/${{ github.event.repository.name }}/.phpstan-php-ini
       steps:
           - name: Checkout repository
-            uses: actions/checkout@v4
+            uses: actions/checkout@v5
             with:
                 path: ${{ github.event.repository.name }}
 
