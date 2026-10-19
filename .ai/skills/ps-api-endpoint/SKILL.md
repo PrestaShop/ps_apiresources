@@ -59,9 +59,10 @@ After reading the QueryResult, confirm with the user:
 
 **File location:** `src/ApiPlatform/Resources/{Domain}/{Entity}.php`
 
-Copy the canonical resource that matches the feature (`CONTEXT.md` → "Canonical examples": `Contact`
-for a CRUD on a localized entity, `CustomerGroup` for a shop association, `CustomerDetails` for DTO sub
-objects, the others for lists, bulk operations, command-style operations and uploads), then adapt it
+Copy the canonical resource that matches the feature (`CONTEXT.md` → "Canonical examples": the `Country`
+domain for a CRUD on a localized entity with a shop association, its grid list and its bulk operations,
+`CustomerDetails` for DTO sub objects, the others for `CQRSPaginate`, command-style operations and
+uploads), then adapt it
 with the sections of the context: the operations and their method (`CONTEXT.md` → "Choosing the
 operation"), the URIs and scopes ("URI conventions", "Scopes"), the properties ("Property naming",
 "Sub objects: typed DTOs"), the mappings ("Field mapping"), the exceptions and constraints

@@ -141,13 +141,14 @@ Static helpers available for additional setup (call from
 
 Start from one of these, never from a blank file or an older test:
 
+- `tests/Integration/ApiPlatform/CountryEndpointTest.php` — the
+  structure: the protected endpoints, the add → get → update → list →
+  delete chain with whole-payload assertions in both languages, the
+  invalid payloads field by field, 404 / 422 on ids, the business
+  refusals, the bulk operations and their 207 details, the version
+  gates, the shop association, the fixtures through the API;
 - `tests/Integration/ApiPlatform/CustomerGroupEndpointTest.php` — the
-  structure: not-found tests per operation, invalid payload, 404 / 422
-  on ids in the body, the add → update → get → list → delete chain,
-  version gates, a shop association;
-- `tests/Integration/ApiPlatform/ContactEndpointTest.php` — the
-  localized fields of a plain CRUD with its list (it predates the
-  error-case rules: take its structure, not its coverage).
+  404 on an unknown shop of `shopIds`, when the core handler checks it.
 
 Adapt: the tables of `resetTables()`, the scopes of `createApiClient()`,
 every operation in `getProtectedEndpoints()`, the method names after the

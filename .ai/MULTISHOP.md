@@ -60,7 +60,7 @@ shop in `shopIds` answers 404 (`ShopNotFoundException`), an invalid one
 needs a core handler that checks the shops exist (`CustomerGroup` does):
 the legacy `AbstractObjectModelHandler::associateWithShops()` inserts
 with `INSERT IGNORE` and never throws, a core prerequisite to name in
-the PR for the domains that use it (`Contact`…). An unsupported shop
+the PR for the domains that use it (`Contact`, `Country`…). An unsupported shop
 context (`InvalidShopConstraintException`, a `ShopException` subclass)
 answers 422 like any invalid shop value.
 

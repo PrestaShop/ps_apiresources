@@ -66,7 +66,7 @@ restates a rule: when a line below and the section disagree, the section wins an
   [Scopes](./CONTEXT.md#scopes), [Do / Don't](./CONTEXT.md#do--dont).
 - Evidence: the command (its setters and their nullability decide `PATCH` vs `PUT`, the read side decides
   the `CQRSQuery` of a write), the sibling resources of the domain and the reference resources
-  (`Contact`, `Title`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run.
+  (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run.
 - A new endpoint deviating from [ADR 0023](https://github.com/PrestaShop/ADR/blob/master/0023-cqrs-api-guidelines.md)
   is Major unless the description announces an ADR amendment; the listed deviations are neither flagged
   nor copied.
@@ -139,14 +139,15 @@ restates a rule: when a line below and the section disagree, the section wins an
 - `identifier: true` on a resource without an item GET: the convention is not settled, ask the maintainer
   instead of flagging.
 - A normalizer, processor or provider as the suggested fix: it is forbidden here.
-- A convention that the reference resources (`Contact`, `Title`) or every sibling of the same kind do not
+- A convention that the reference resources (`Country`) or every sibling of the same kind do not
   follow themselves (`example` on identifiers, a redundant `output: false` / `read: false` / `provider:`
   — `read: false` is repeated by 25 resources —, a 404 mapping on a list): on **existing** resources,
   report it once, as Minor, naming the reference, or propose a module-wide follow-up — not one comment
   per occurrence; on the resources a PR adds, each occurrence is a Minor. A behaviour keeps its §3
   severity whatever the references do: a 500 or a request acting on another entity stays a Blocker
-  even when every sibling has the same gap. A status endpoint next to a PATCH exposing `enabled` is
-  flagged on a new domain only; existing domains ship both.
+  even when every sibling has the same gap. A single-item `set-status` next to a PATCH exposing
+  `enabled` is flagged on a new domain only (a `toggle-status` is legitimate, `CONTEXT.md` → "URI
+  conventions"); existing domains ship both.
 - A hand-rolled whole-envelope assertion on a 207 response instead of `bulkCommandItemsWithExpectedErrors()`
   (which only asserts `errors`); a Rector `SKIPPED_KEYWORDS` "gap" while the Rector dry run is green.
 - The generator limits listed in `OPENAPI.md` (input / read schema difference, first-level-only array

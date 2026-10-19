@@ -88,10 +88,9 @@ See [`TESTING.md`](./TESTING.md) → "Test structure" (lists).
 
 ## Examples
 
-- Grid-sourced list: `src/ApiPlatform/Resources/Contact/ContactList.php`
-  (`PaginatedList`, `gridDataFactory`, `filtersClass`, `ApiResourceMapping`)
-  and `src/ApiPlatform/Resources/Customer/CustomerGroupList.php`
-  (`filtersClass` + `filtersMapping`).
+- Grid-sourced list: `src/ApiPlatform/Resources/Country/CountryList.php`
+  (`PaginatedList`, `gridDataFactory`, `filtersClass`, `filtersMapping`,
+  `ApiResourceMapping`, the filters in the operation description).
 - CQRS-sourced list: `src/ApiPlatform/Resources/Product/CombinationList.php`
   (`CQRSPaginate` with `CQRSQuery`, `CQRSQueryMapping`, `ApiResourceMapping`,
   `itemsField`, `countField`, `DecimalNumber` properties).

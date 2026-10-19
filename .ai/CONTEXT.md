@@ -64,14 +64,12 @@ Single-entity, list, and bulk operations are split across **separate
 classes** in the same domain folder. For example:
 
 ```
-src/ApiPlatform/Resources/Contact/
-├── Contact.php          ← CQRSGet / CQRSCreate / CQRSPartialUpdate / CQRSDelete
-└── ContactList.php      ← PaginatedList
-
-src/ApiPlatform/Resources/Attribute/
-├── AttributeGroup.php
-├── AttributeGroupList.php
-└── BulkAttributeGroups.php  ← bulk-delete operation
+src/ApiPlatform/Resources/Country/
+├── Country.php                    ← CQRSGet / CQRSCreate / CQRSPartialUpdate / CQRSDelete, CQRSUpdate toggle-status
+├── CountryList.php                ← PaginatedList
+├── BulkDeleteCountries.php        ← DELETE /countries/bulk-delete
+├── BulkUpdateStatusCountries.php  ← PUT /countries/bulk-update-status
+└── BulkUpdateZoneCountries.php    ← PUT /countries/bulk-update-zone
 ```
 
 A domain whose back office lists the entity through a grid ships its
@@ -148,9 +146,12 @@ existing deviation is never a precedent.
   `/employees/send-password-reset-email`. Prefer a name that says what the
   operation does for its caller over a bare noun (`search-compatible-carriers`
   over `available`). The same kind of action uses the same word in every
-  domain (`set-status`, never `status` / `is-enabled` / `active`),
-  `toggle-…` only when no value is sent, and a status endpoint is not
-  added when `PATCH` already covers `enabled`. Any such segment must be
+  domain (`set-status`, never `status` / `is-enabled` / `active`).
+  `toggle-status` is a true toggle: no value sent, the state flips, so it
+  is not a duplicate of `PATCH` even when `PATCH` covers `enabled`; a
+  single-item `set-status` with the value is such a duplicate and is not
+  added (a bulk operation always carries the value: `bulk-update-status`).
+  Any such segment must be
   listed in `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS`, otherwise
   the Rector CI job pluralizes it (`set-tax-rule-group` →
   `set-tax-rule-groups`). Never a fake plural sub-collection for an
@@ -247,7 +248,7 @@ To require the default language on create / update, add
 message includes a meaningful field reference (the auto-detection
 fallback only works in Form contexts, not on ApiResource attributes).
 Use `allowNull: true` on the Update group so the field is optional on
-partial update. See `src/ApiPlatform/Resources/Contact/Contact.php` for
+partial update. See `src/ApiPlatform/Resources/Country/Country.php` for
 the current usage pattern.
 
 ## Sub objects: typed DTOs
@@ -302,8 +303,8 @@ with `src/ApiPlatform/Resources/Customer/Dto/`.
   framework default on a `CQRS*` operation (`read`, `output`, `provider`,
   `processor`, `experimentalOperation`; `allowEmptyBody` defaults to
   `true` on `CQRSDelete` and to `false` on the other write operations)
-  are noise to remove — copy the block of `Contact` / `Title`, not an
-  older resource.
+  are noise to remove — copy the block of `Country`, not an older
+  resource.
 - A write property must be a constructor parameter or a setter of the
   command (through the mapping when the name differs): a property the
   command cannot receive is silently dropped; a value only reachable
@@ -456,9 +457,9 @@ examples: [`MULTISHOP.md`](./MULTISHOP.md).
   (nullability included), never guessed. Never declare `defaultValues`
   on an update operation — a partial update must only touch the
   provided fields.
-- Stay consistent with the reference resources (`Contact`, `Title`) and
-  with the sibling resources of the same domain: same validation groups,
-  same helpers, same wording.
+- Stay consistent with the canonical domain (`Country`) and with the
+  sibling resources of the same domain: same validation groups, same
+  helpers, same wording.
 
 ### Don't
 
@@ -568,18 +569,21 @@ the structure and what it must cover: [`TESTING.md`](./TESTING.md).
 Read these before adding new endpoints — they are the source of truth
 for the patterns above:
 
-- **Full CRUD on a localized entity** —
-  `src/ApiPlatform/Resources/Contact/Contact.php`
-  (`CQRSGet`, `CQRSCreate`, `CQRSPartialUpdate` with `LocalizedValue`,
-  `DefaultLanguage`, `QUERY_MAPPING`, `CREATE_COMMAND_MAPPING`,
-  `exceptionToStatus`).
-- **Lists** — see [`LISTS.md`](./LISTS.md) (`ContactList`,
-  `CustomerGroupList`, `CombinationList`, `FoundCustomer`).
+- **Full CRUD on a localized entity with a shop association** —
+  `src/ApiPlatform/Resources/Country/Country.php`
+  (`CQRSGet`, `CQRSCreate`, `CQRSPartialUpdate`, `CQRSDelete`, a
+  body-less `toggle-status` returning the entity, `LocalizedValue`,
+  `DefaultLanguage`, `QUERY_MAPPING`, `COMMAND_MAPPING`, `defaultValues`,
+  `exceptionToStatus`, `shopIds`).
+- **Lists** — see [`LISTS.md`](./LISTS.md) (`CountryList`,
+  `CombinationList`, `FoundCustomer`).
 - **Sub-resource** —
   `src/ApiPlatform/Resources/Product/Combination.php`.
-- **Bulk operation** —
-  `src/ApiPlatform/Resources/Attribute/BulkAttributeGroups.php`
-  (URI `/attributes/groups/bulk-delete`, `attributeGroupIds` input).
+- **Bulk operations** —
+  `src/ApiPlatform/Resources/Country/BulkDeleteCountries.php`,
+  `BulkUpdateStatusCountries.php` and `BulkUpdateZoneCountries.php`
+  (one class per operation, URIs `/countries/bulk-*`, `countryIds`
+  input, the exceptions of the failed items in the 207 response).
 - **Command-style operation returning the full entity** —
   `src/ApiPlatform/Resources/Carrier/Carrier.php`
   (URI `/carriers/{carrierId}/set-tax-rule-group`, dedicated validation
