@@ -24,9 +24,13 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Country;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\Country\Command\BulkUpdateCountryZoneCommand;
+use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Zone\Exception\ZoneException;
+use PrestaShop\PrestaShop\Core\Domain\Zone\Exception\ZoneNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -35,31 +39,44 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSUpdate(
             uriTemplate: '/countries/bulk-update-zone',
-            // ToggleCountryStatusCommand, BulkToggleCountriesStatusCommand, BulkUpdateCountryZoneCommand
-            // and BulkDeleteCountriesCommand were introduced by the Countries grid migration in 9.2.0
+            output: false,
+            CQRSCommand: BulkUpdateCountryZoneCommand::class,
+            CQRSCommandMapping: [
+                '[zoneId]' => '[newZoneId]',
+            ],
+            scopes: ['country_write'],
             extraProperties: [
+                // The bulk command exists from PrestaShop 9.2.0
                 'minVersion' => '9.2.0',
             ],
-            read: false,
-            CQRSCommand: BulkUpdateCountryZoneCommand::class,
-            scopes: ['country_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Move several countries to a zone.',
+                description: 'Sets the zone of the listed countries. An unknown zone answers 404 and nothing is '
+                    . 'changed; an unknown country does not stop the others: the response is a 207 with one 404 '
+                    . 'error per unknown country.',
+            ),
         ),
     ],
     exceptionToStatus: [
         CountryNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // The first matching class wins: ZoneNotFoundException extends ZoneException
+        ZoneNotFoundException::class => Response::HTTP_NOT_FOUND,
+        ZoneException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CountryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CountryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class BulkCountriesZone
+class BulkUpdateZoneCountries
 {
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $countryIds;
 
-    #[Assert\NotBlank]
-    #[Assert\GreaterThan(0)]
-    public int $newZoneId;
+    #[Assert\NotNull]
+    #[Assert\Positive]
+    public int $zoneId;
 }

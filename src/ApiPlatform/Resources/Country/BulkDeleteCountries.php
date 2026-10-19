@@ -24,7 +24,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Country;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\Country\Command\BulkDeleteCountriesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CannotDeleteCountryException;
+use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
@@ -35,25 +38,25 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSDelete(
             uriTemplate: '/countries/bulk-delete',
-            // ToggleCountryStatusCommand, BulkToggleCountriesStatusCommand, BulkUpdateCountryZoneCommand
-            // and BulkDeleteCountriesCommand were introduced by the Countries grid migration in 9.2.0
+            CQRSCommand: BulkDeleteCountriesCommand::class,
+            scopes: ['country_write'],
+            allowEmptyBody: false,
             extraProperties: [
+                // The bulk command exists from PrestaShop 9.2.0
                 'minVersion' => '9.2.0',
             ],
-            CQRSCommand: BulkDeleteCountriesCommand::class,
-            openapiContext: [
-                'summary' => 'Delete multiple countries at once',
-                'description' => 'Deletes the countries whose identifiers are provided in the request body.',
-            ],
-            scopes: [
-                'country_write',
-            ],
-            allowEmptyBody: false,
+            openapi: new OpenApiOperation(
+                summary: 'Delete several countries.',
+                description: 'Deletes the listed countries. A country that cannot be deleted (unknown, or the default '
+                    . 'country of the shop from PrestaShop 9.2.1) does not stop the others: the response is a 207 '
+                    . 'with one error per failed country, each with its own status (404 unknown, 422 refused).',
+            ),
         ),
     ],
     exceptionToStatus: [
         CountryNotFoundException::class => Response::HTTP_NOT_FOUND,
-        // CountryConstraintException on an invalid id, BulkCountryException when any id of the batch fails
+        CountryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        CannotDeleteCountryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CountryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
@@ -62,7 +65,8 @@ class BulkDeleteCountries
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $countryIds;
 }

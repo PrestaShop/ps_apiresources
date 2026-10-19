@@ -39,10 +39,9 @@ parameters:
             message: "#Class .*VirtualProductFile\\\\Query\\\\GetVirtualProductFileForEditing not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Product/VirtualProductFile.php
-        # ToggleCountryStatusCommand, BulkToggleCountriesStatusCommand, BulkUpdateCountryZoneCommand
-        # and BulkDeleteCountriesCommand were introduced by the Countries grid migration in 9.2.0.
-        # The operations declare minVersion 9.2.0, so they are expected to be absent here.
+        # The country toggle and bulk commands and DuplicateCountryIsoCodeException only exist since
+        # PrestaShop 9.2.0: the operations declare minVersion 9.2.0, the exception is only mapped.
         -
-            message: "#Class .*Country\\\\Command.* not found.#"
+            message: "#Class .*Country\\\\(Command\\\\(Bulk.*|ToggleCountryStatusCommand)|Exception\\\\DuplicateCountryIsoCodeException) not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Country/*

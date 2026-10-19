@@ -24,36 +24,52 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Country;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Country\Command\ToggleCountryStatusCommand;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\PrestaShop\Core\Domain\Country\Command\BulkToggleCountriesStatusCommand;
+use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryException;
 use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/countries/{countryId}/toggle-status',
-            // ToggleCountryStatusCommand, BulkToggleCountriesStatusCommand, BulkUpdateCountryZoneCommand
-            // and BulkDeleteCountriesCommand were introduced by the Countries grid migration in 9.2.0
+            uriTemplate: '/countries/bulk-update-status',
+            output: false,
+            CQRSCommand: BulkToggleCountriesStatusCommand::class,
+            CQRSCommandMapping: [
+                '[enabled]' => '[expectedStatus]',
+            ],
+            scopes: ['country_write'],
             extraProperties: [
+                // The bulk command exists from PrestaShop 9.2.0
                 'minVersion' => '9.2.0',
             ],
-            requirements: ['countryId' => '\d+'],
-            allowEmptyBody: true,
-            read: false,
-            CQRSCommand: ToggleCountryStatusCommand::class,
-            scopes: ['country_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Enable or disable several countries.',
+                description: 'Sets the status of the listed countries. An unknown country does not stop the '
+                    . 'others: the response is a 207 with one 404 error per unknown country.',
+            ),
         ),
     ],
     exceptionToStatus: [
         CountryNotFoundException::class => Response::HTTP_NOT_FOUND,
-        // CountryConstraintException on an invalid id, CannotToggleCountryStatusException
+        CountryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CountryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class CountryStatus
+class BulkUpdateStatusCountries
 {
-    #[ApiProperty(identifier: true)]
-    public int $countryId;
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
+    #[Assert\NotBlank]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
+    public array $countryIds;
+
+    #[Assert\NotNull]
+    public bool $enabled;
 }

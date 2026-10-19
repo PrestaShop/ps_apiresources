@@ -24,26 +24,27 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Country;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use PrestaShop\PrestaShop\Core\Domain\Country\Exception\CountryNotFoundException;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Search\Filters\CountryFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
-use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
-use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
     operations: [
         new PaginatedList(
             uriTemplate: '/countries',
-            provider: QueryListProvider::class,
             scopes: ['country_read'],
             ApiResourceMapping: self::MAPPING,
             gridDataFactory: 'prestashop.core.grid.data.factory.country',
             filtersClass: CountryFilters::class,
             filtersMapping: self::FILTERS_MAPPING,
+            openapi: new OpenApiOperation(
+                summary: 'List the countries.',
+                description: 'Lists the countries associated with the shops of the context. Filters: countryId and '
+                    . 'enabled match exactly, name, isoCode, callPrefix and zoneName match partially (callPrefix 33 '
+                    . 'also matches 233); an unknown filter is ignored. The name is returned in the language of the '
+                    . 'context (langId parameter).',
+            ),
         ),
-    ],
-    exceptionToStatus: [
-        CountryNotFoundException::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class CountryList
@@ -66,7 +67,6 @@ class CountryList
      */
     public const MAPPING = [
         '[id_country]' => '[countryId]',
-        '[name]' => '[name]',
         '[iso_code]' => '[isoCode]',
         '[call_prefix]' => '[callPrefix]',
         '[zone_name]' => '[zoneName]',
