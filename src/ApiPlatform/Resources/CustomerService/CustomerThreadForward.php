@@ -1,0 +1,60 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CustomerService;
+
+use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\CustomerService\Command\ForwardCustomerThreadCommand;
+use PrestaShop\PrestaShop\Core\Domain\CustomerService\Exception\CustomerServiceException;
+use PrestaShop\PrestaShop\Core\Domain\CustomerService\Exception\CustomerThreadNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ApiResource(
+    operations: [
+        new CQRSCreate(
+            uriTemplate: '/customer-services/{customerThreadId}/forwards',
+            requirements: ['customerThreadId' => '\d+'],
+            CQRSCommand: ForwardCustomerThreadCommand::class,
+            scopes: ['customer_thread_write'],
+        ),
+    ],
+    exceptionToStatus: [
+        CustomerThreadNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CustomerServiceException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
+)]
+class CustomerThreadForward
+{
+    public int $customerThreadId;
+
+    #[Assert\NotBlank]
+    public string $comment;
+
+    /** Forward to another employee. Mutually exclusive with $email. */
+    public ?int $employeeId = null;
+
+    /** Forward to someone else by email. Mutually exclusive with $employeeId. */
+    #[Assert\Email(mode: Assert\Email::VALIDATION_MODE_STRICT)]
+    public ?string $email = null;
+}
