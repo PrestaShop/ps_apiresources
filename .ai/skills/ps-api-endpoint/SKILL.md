@@ -7,9 +7,8 @@ description: >
 # PrestaShop Admin API Endpoint Generator
 
 This skill walks through creating a new endpoint in `ps_apiresources`, from discovery to generated code.
-The conventions are written once, in `.ai/CONTEXT.md` and its on-demand files;
-`references/conventions.md` maps each step below to the section to read. This skill never summarizes
-them: read the section.
+The conventions are written once, in `.ai/CONTEXT.md` and its on-demand files; each step below names
+the section to read, and this skill never summarizes it.
 
 ## Step 1: Gather requirements
 
@@ -343,5 +342,4 @@ Create both files at their correct paths. Then tell the user:
 
 ## Reference files
 
-- `references/conventions.md` — which section of the context each step needs, and where the files go
-- `../../CONTEXT.md` (`.ai/CONTEXT.md`) — the conventions, with the on-demand `.ai/*.md` contexts (`TESTING.md`, `OPENAPI.md`, `LISTS.md`, `ERRORS.md`, `MULTISHOP.md`, `VERSIONS.md`)
+- `../../CONTEXT.md` (`.ai/CONTEXT.md`) — the conventions, with the on-demand `.ai/*.md` contexts (`TESTING.md`, `OPENAPI.md`, `LISTS.md`, `ERRORS.md`, `MULTISHOP.md`, `VERSIONS.md`); ADR 0023 and the devdocs are linked from its "Authoritative external references"

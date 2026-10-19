@@ -621,8 +621,7 @@ Skills live in `.ai/skills/` and are symlinked from `.claude/skills/`:
 
 - `skills/ps-api-endpoint/` — creates or reworks an endpoint
   end-to-end (resource class, DTOs, integration test) following the
-  conventions above. See `skills/ps-api-endpoint/SKILL.md` and
-  `skills/ps-api-endpoint/references/conventions.md`.
+  conventions above (`skills/ps-api-endpoint/SKILL.md`).
 - `skills/review-api-pr/` — reviews a PR or audits an endpoint with
   `REVIEW.md`.
 - Core skills (PrestaShop repository, `.ai/Component/AdminAPI/skills/`):
