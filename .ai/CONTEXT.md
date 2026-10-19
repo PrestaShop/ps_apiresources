@@ -79,12 +79,15 @@ A domain whose back office lists the entity through a grid ships its
 
 ### Choosing the operation
 
-The operation follows the semantics of the command, not the other way
-round:
+The method of each operation is set by ADR 0023 (§HTTP methods, §Custom
+operations); the choice between them follows the semantics of the command,
+not the other way round:
 
 - `CQRSCreate` / `POST` for an `Add…Command` and for any non-idempotent
   action; a `POST` URI never carries the identifier of the entity it
-  creates.
+  creates. A duplication is the one `POST` with an id in the URI, the id
+  of the source: `POST /discounts/{discountId}/duplicate` with
+  `CQRSCreate` (ADR 0023).
 - `CQRSPartialUpdate` / `PATCH` only when the command really supports
   partial data (setters, nullable parameters): a command whose getters
   are non-nullable cannot be patched. `CQRSUpdate` / `PUT` when every
@@ -108,6 +111,13 @@ round:
 
 ## URI conventions
 
+Set by ADR 0023 (§URI path and parameters conventions: the plural domain
+word as the base, `{domain}Id` identifiers, sub parts appended after the
+entity id, kebab-case actions); the module adds the rules below. The
+endpoints shipped before the ADR amendments that deviate from it are
+listed at the end of this section: a new endpoint follows the ADR, an
+existing deviation is never a precedent.
+
 - **Plural, lowercase, kebab-case**: `/contacts`, `/attributes/groups`,
   `/customer-groups` — never `/contact`, `/attributeGroups`, or
   `/customerGroups`.
@@ -123,7 +133,11 @@ round:
   (documented as integers, non-numeric values answer 404).
 - **Bulk operations** use the `bulk-` prefix: `/contacts/bulk-delete`,
   `/attributes/groups/bulk-delete`. The bulk parameter name must be
-  plural domain + `Ids` (e.g. `attributeGroupIds`).
+  plural domain + `Ids` (e.g. `attributeGroupIds`). The method follows
+  ADR 0023 §Bulk operations: `DELETE` + `CQRSDelete` for `bulk-delete`,
+  `PUT` + `CQRSUpdate` for `bulk-update-status` (the value in the body,
+  never one endpoint per value), `POST` for `bulk-duplicate` and for any
+  bulk action no method fits.
 - **Command-style operations** that are not plain CRUD on the resource name
   the action explicitly, verb first: `/carriers/{carrierId}/set-tax-rule-group`,
   `/tax-rules-groups/{taxRulesGroupId}/set-status`,
@@ -143,9 +157,25 @@ round:
 - The DTO property exposed as the identifier must match the URI
   parameter and be marked `#[ApiProperty(identifier: true)]`.
 
+### Existing endpoints that deviate from ADR 0023
+
+Shipped before the ADR amendments of 2025-11 and 2025-12. They stay until
+the team decides their migration (BC break in 0.x or deprecation until
+1.0, an open question of the AI context PR); a review does not flag them,
+and a new endpoint never copies them.
+
+| Endpoint | ADR 0023 |
+|----------|----------|
+| `PUT /manufacturers/bulk-delete`, `PUT /taxes/bulk-delete` (`CQRSUpdate`) | `DELETE` + `CQRSDelete` |
+| `PATCH /discounts/bulk-update-status` (`CQRSPartialUpdate`) | `PUT` + `CQRSUpdate` |
+| `PUT /taxes/bulk-set-status`; `PUT /customers/bulk-enable` + `bulk-disable`; `PUT /suppliers/bulk-enable` + `bulk-disable` | one `PUT /x/bulk-update-status`, the value in the body |
+| `PUT /modules/bulk-uninstall` | `POST` when no method fits |
+| `/attributes/groups`, `/attributes/attributes` (sub-entities grouped under the domain root) | example `/attribute-groups`, older than the grouping |
+| `PATCH /categories/{categoryId}/status`, `PUT /stores/{storeId}/toggle-status`, `PUT /zones/{zoneId}/toggle-status`, `PATCH /tax-rules-groups/{taxRulesGroupId}/set-status`, `/hooks/{hookId}/status` | example sub part `/hooks/{hookId}/status`; the `set-status` rule above comes from the reviews of 2026-03, the ADR is not amended yet |
+
 ## Scopes
 
-OAuth2 scope naming: `{entity_snake_case}_{action}`.
+OAuth2 scope naming (ADR 0023 §Scope names): `{entity_snake_case}_{action}`.
 
 - Single-word entity: `contact_read`, `contact_write`
 - Multi-word entity: `attribute_group_read`, `tax_rule_write`
@@ -170,6 +200,10 @@ Details, limits and the features available per core version:
 [`VERSIONS.md`](./VERSIONS.md).
 
 ## Property naming
+
+Set by ADR 0023 (§API resources properties: typed fields, no `localized`
+or `is` prefix, `enabled` for a status, the mappings instead of
+`SerializedName`); the module adds the rows that follow.
 
 | Rule                                          | Correct                  | Wrong                          |
 |-----------------------------------------------|--------------------------|--------------------------------|
@@ -489,6 +523,14 @@ parameters, mappings and examples: [`MULTISHOP.md`](./MULTISHOP.md).
 - Don't return raw command results. If the endpoint should return data,
   define proper DTO properties and wire a `CQRSQuery`.
 - Don't declare an operation without a scope.
+- Don't extend a core resource for the fields of a module, and don't add
+  a module-specific property to a core entity endpoint: custom fields on
+  core entities are the Extra Properties feature (core 9.2.0, component
+  `ExtraProperty`). A module registers typed definitions, their values
+  ride on the entity endpoints under `extraProperties`
+  (`ExtraPropertyApiSubscriber`, validated and documented by the core),
+  and the definitions are managed through `/extra-property-definitions`
+  (`minVersion` 9.2.0).
 - Don't use plural names for boolean / status fields, or `id` as a
   property name — see Property naming.
 
@@ -635,7 +677,11 @@ Skills live in `.ai/skills/` and are symlinked from `.claude/skills/`:
   <https://devdocs.prestashop-project.org/9/admin-api/contribute-to-core-api/>
 - Devdocs — API Platform & CQRS integration:
   <https://devdocs.prestashop-project.org/9/admin-api/resource_server/api-platform/>
-- ADR 0023 — CQRS API guidelines:
+- ADR 0023 — CQRS API guidelines, the decision record of the contract
+  (URIs, methods, bulk operations, scopes, resource properties; amended
+  2025-11 and 2025-12). The sections above name the ADR section behind
+  each rule; a convention that contradicts the ADR needs an ADR amendment
+  first:
   <https://github.com/PrestaShop/ADR/blob/master/0023-cqrs-api-guidelines.md>
 - Core — `PrestaShopBundle/ApiPlatform` (the infrastructure this module
   plugs into):

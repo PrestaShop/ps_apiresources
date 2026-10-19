@@ -66,6 +66,11 @@ Each line is one check with the `CONTEXT.md` section that holds the rule and the
 - URIs: plural kebab-case, singular only for a 1:1 sub-resource, `{entityId}` with `\d+`, no HTTP verb,
   `bulk-` prefix, `/search` on a `Found{Entity}`, action verbs from the existing wording and listed in
   `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS`.
+- A new endpoint compared with [ADR 0023](https://github.com/PrestaShop/ADR/blob/master/0023-cqrs-api-guidelines.md)
+  (URI shape, method per operation, bulk shape and methods, scope name, property rules): a deviation is
+  Major unless the description announces an ADR amendment; the endpoints of
+  [Existing endpoints that deviate from ADR 0023](./CONTEXT.md#existing-endpoints-that-deviate-from-adr-0023)
+  are not flagged and not copied.
 - Every write returns the updated state through a `CQRSQuery`; `experimentalOperation` when the read side
   is missing.
 - One format for read and write; input-only fields `readable: false`.
@@ -164,6 +169,8 @@ derive the schema from the property types, the attributes and the core signature
 
 ## 2. Do not flag
 
+- An endpoint listed in [Existing endpoints that deviate from ADR 0023](./CONTEXT.md#existing-endpoints-that-deviate-from-adr-0023):
+  its migration is a decision of the team, not a review comment.
 - A "missing mapping" for a field whose name already matches the query-result getter or the constructor
   parameter: resolution is by name.
 - A field only reachable through a named constructor or a private setter: not a module fix, point to the
