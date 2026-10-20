@@ -268,4 +268,37 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
             $this->getItem('/order-returns/' . $orderReturnId, ['order_return_read'], Response::HTTP_NOT_FOUND);
         }
     }
+
+    public function testInvalidOrderReturnIds(): void
+    {
+        // OrderReturnId rejects 0
+        $this->requestApi('GET', '/order-returns/0/products', null, ['order_return_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // The bulk command casts each id with (int): "3abc" must not reach it
+        $response = $this->requestApi(
+            'DELETE',
+            '/order-returns/bulk-delete',
+            ['orderReturnIds' => ['3abc']],
+            ['order_return_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertValidationErrors([['propertyPath' => 'orderReturnIds[0]']], $response);
+    }
+
+    public function testBulkDeleteProductsWithInvalidRows(): void
+    {
+        [$orderReturnId] = $this->seedOrderReturn();
+
+        $response = $this->requestApi(
+            'DELETE',
+            '/order-returns/' . $orderReturnId . '/products/bulk-delete',
+            ['stagedProductRows' => [['customization_id' => 0], ['order_detail_id' => 'x']]],
+            ['order_return_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertValidationErrors([
+            ['propertyPath' => 'stagedProductRows[0][order_detail_id]'],
+            ['propertyPath' => 'stagedProductRows[1][order_detail_id]'],
+        ], $response);
+    }
 }
