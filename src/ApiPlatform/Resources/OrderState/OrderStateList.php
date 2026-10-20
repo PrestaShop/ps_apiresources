@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderState;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -37,6 +39,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             filtersClass: OrderStatesFilters::class,
             filtersMapping: [
                 '[orderStateId]' => '[id_order_state]',
+                '[sendEmail]' => '[send_email]',
             ],
         ),
     ]
@@ -50,7 +53,19 @@ class OrderStateList
 
     public string $color;
 
+    public bool $sendEmail;
+
+    public bool $delivery;
+
+    public bool $invoice;
+
+    public string $template;
+
+    // Native states cannot be deleted
+    public bool $unremovable;
+
     public const MAPPING = [
         '[id_order_state]' => '[orderStateId]',
+        '[send_email]' => '[sendEmail]',
     ];
 }

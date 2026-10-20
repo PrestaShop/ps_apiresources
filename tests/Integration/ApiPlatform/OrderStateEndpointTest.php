@@ -69,6 +69,11 @@ class OrderStateEndpointTest extends ApiTestCase
             'GET',
             '/order-states',
         ];
+
+        yield 'delete endpoint' => [
+            'DELETE',
+            '/order-states/1',
+        ];
     }
 
     private function getCreateData(): array
@@ -175,8 +180,22 @@ class OrderStateEndpointTest extends ApiTestCase
         $this->assertGreaterThanOrEqual(1, $paginatedOrderStates['totalItems']);
         $this->assertEquals('orderStateId', $paginatedOrderStates['orderBy']);
 
-        $firstOrderState = $paginatedOrderStates['items'][0];
-        $this->assertEquals($orderStateId, $firstOrderState['orderStateId']);
+        $this->assertEquals(
+            [
+                'orderStateId' => $orderStateId,
+                'name' => 'Updated status EN',
+                'color' => '#32CD32',
+                'sendEmail' => false,
+                'delivery' => false,
+                'invoice' => false,
+                'template' => '',
+                'unremovable' => false,
+            ],
+            $paginatedOrderStates['items'][0]
+        );
+
+        $filtered = $this->listItems('/order-states', ['order_state_read'], ['sendEmail' => 1]);
+        $this->assertNotContains($orderStateId, array_column($filtered['items'], 'orderStateId'));
 
         return $orderStateId;
     }
@@ -199,33 +218,60 @@ class OrderStateEndpointTest extends ApiTestCase
         $this->assertNotContains($orderStateId, $listedIds);
     }
 
-    /**
-     * @depends testDeleteOrderState
-     */
-    public function testBulkDeleteOrderStates(): void
+    public function testDeleteNativeOrderState(): void
     {
-        $bulkIds = [];
-        foreach (['A', 'B'] as $suffix) {
-            $data = $this->getCreateData();
-            $data['names'] = [
-                'en-US' => 'Bulk status ' . $suffix,
-                'fr-FR' => 'Bulk status ' . $suffix,
-            ];
-            $created = $this->createItem('/order-states', $data, ['order_state_write']);
-            $bulkIds[] = $created['orderStateId'];
-        }
+        // The native states are unremovable: DeleteOrderStateException
+        $this->deleteItem('/order-states/1', ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertFalse($this->getItem('/order-states/1', ['order_state_read'])['deleted']);
+    }
 
-        $this->bulkDeleteItems('/order-states/bulk-delete', [
-            'orderStateIds' => $bulkIds,
-        ], ['order_state_write']);
+    public function testUnknownOrderState(): void
+    {
+        $this->getItem('/order-states/999999', ['order_state_read'], Response::HTTP_NOT_FOUND);
+        $this->partialUpdateItem('/order-states/999999', ['color' => '#111111'], ['order_state_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/order-states/999999', ['order_state_write'], Response::HTTP_NOT_FOUND);
+    }
 
-        // Soft-deleted order states are still readable but flagged, and no longer listed
-        $orderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
-        $listedIds = array_column($orderStates['items'], 'orderStateId');
-        foreach ($bulkIds as $orderStateId) {
-            $this->assertTrue($this->getItem('/order-states/' . $orderStateId, ['order_state_read'])['deleted']);
-            $this->assertNotContains($orderStateId, $listedIds);
-        }
+    public function testInvalidOrderStateValues(): void
+    {
+        $invalidData = $this->getCreateData();
+        $invalidData['names'] = [
+            'en-US' => '<b>Bold</b>',
+            'fr-FR' => str_repeat('a', 65),
+        ];
+        $invalidData['templates'] = [
+            'en-US' => 'not a template',
+            'fr-FR' => '',
+        ];
+        $invalidData['color'] = '#zz';
+
+        $validationErrorsResponse = $this->createItem('/order-states', $invalidData, ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'names[en-US]'],
+            ['propertyPath' => 'names[fr-FR]'],
+            ['propertyPath' => 'templates[en-US]'],
+            ['propertyPath' => 'color'],
+        ], $validationErrorsResponse);
+    }
+
+    public function testInvalidOrderStateUpdate(): void
+    {
+        $orderState = $this->createItem('/order-states', $this->getCreateData(), ['order_state_write']);
+        $orderStateId = $orderState['orderStateId'];
+
+        // The default language cannot be emptied on update (a payload without it is a partial update
+        // of the other languages, which DefaultLanguage accepts)
+        $validationErrorsResponse = $this->partialUpdateItem('/order-states/' . $orderStateId, [
+            'names' => ['en-US' => '', 'fr-FR' => 'Nom FR'],
+        ], ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'names'],
+        ], $validationErrorsResponse);
+
+        // Sending e-mails needs a template in every language: MissingOrderStateRequiredFieldsException
+        $this->partialUpdateItem('/order-states/' . $orderStateId, [
+            'sendEmail' => true,
+        ], ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testInvalidOrderState(): void
