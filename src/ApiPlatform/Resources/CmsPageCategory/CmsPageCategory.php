@@ -102,6 +102,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
     ],
+    // parentId is null for the root category: returned as null, not omitted
+    normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         CmsPageCategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
         // The handlers and CmsPageCategoryId throw the base exception, and the Cannot* exceptions extend it
@@ -123,7 +125,13 @@ class CmsPageCategory
     #[DefaultLanguage(groups: ['Update'], fieldName: 'linkRewrites', allowNull: true)]
     public array $linkRewrites;
 
-    public int $parentId;
+    #[ApiProperty(openapiContext: [
+        'description' => 'Parent category, null for the root category (from PrestaShop 9.2.1, reading the root '
+            . 'category answered 500 before).',
+    ])]
+    #[Assert\NotNull(groups: ['Create'])]
+    #[Assert\Positive]
+    public ?int $parentId;
 
     public bool $displayed;
 

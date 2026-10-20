@@ -305,6 +305,18 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $this->getItem('/cms-page-categories/999999', ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
     }
 
+    public function testGetRootCmsPageCategory(): void
+    {
+        // The core builds the root category without parent from PrestaShop 9.2.1 (PrestaShop/PrestaShop#43269),
+        // reading it answered 500 before
+        $this->markTestSkippedByMinVersion('9.2.1');
+
+        $rootCategory = $this->getItem('/cms-page-categories/1', ['cms_page_category_read']);
+        $this->assertSame(1, $rootCategory['cmsPageCategoryId']);
+        $this->assertArrayHasKey('parentId', $rootCategory);
+        $this->assertNull($rootCategory['parentId']);
+    }
+
     public function testDeleteRootCmsPageCategory(): void
     {
         // The root category cannot be deleted: CannotDeleteCmsPageCategoryException extends the base exception
