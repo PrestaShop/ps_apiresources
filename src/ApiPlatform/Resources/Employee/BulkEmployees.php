@@ -26,8 +26,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Employee;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\BulkDeleteEmployeeCommand;
-use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\AdminEmployeeException;
-use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeCannotChangeItselfException;
+use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeException;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,17 +42,24 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     exceptionToStatus: [
+        // The specific one first: AdminEmployeeException, EmployeeCannotChangeItselfException and
+        // InvalidEmployeeIdException extend EmployeeException
         EmployeeNotFoundException::class => Response::HTTP_NOT_FOUND,
-        EmployeeCannotChangeItselfException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        AdminEmployeeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        EmployeeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkEmployees
 {
     /**
+     * Checked one by one: the command casts each id with (int), "3abc" would act on employee 3.
+     *
      * @var int[]
      */
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
+    #[Assert\All([
+        new Assert\Type('integer'),
+        new Assert\Positive(),
+    ])]
     public array $employeeIds;
 }

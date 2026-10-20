@@ -157,6 +157,7 @@ class EmployeeEndpointTest extends ApiTestCase
         $this->assertSame('john.doe@example.com', $employee['email']);
         $this->assertSame(self::$profileId, $employee['profileId']);
         $this->assertTrue($employee['enabled']);
+        $this->assertFalse($employee['hasEnabledGravatar']);
         // The resource carries no password property at all, in either direction
         $this->assertArrayNotHasKey('password', $employee);
 
@@ -164,11 +165,9 @@ class EmployeeEndpointTest extends ApiTestCase
     }
 
     /**
-     * The PATCH is only nominally partial. EditEmployeeHandler overwrites firstname, lastname,
-     * email, default_tab, id_lang, id_profile, active and has_enabled_gravatar from the command
-     * without checking whether they were sent — omitting `enabled` silently disables the
-     * employee — and it refuses an employee with no shop association. Every request therefore
-     * has to carry the whole representation; only the field under test changes.
+     * Up to 9.2.1, EditEmployeeHandler overwrites every field from the command whether it was sent
+     * or not, so the requests carry the whole representation; only the field under test changes.
+     * PrestaShop/PrestaShop#43276 makes the handler apply only the fields sent.
      *
      * @depends testGetEmployee
      */
@@ -300,6 +299,37 @@ class EmployeeEndpointTest extends ApiTestCase
         foreach ($employeeIds as $employeeId) {
             $this->assertTrue($this->isEmployeeEnabled($employeeId));
         }
+    }
+
+    public function testBulkActionsRefuseInvalidIds(): void
+    {
+        $employeeId = $this->createEmployee('bulkinvalid.actions@example.com');
+
+        // The commands cast each id with (int): "<id>abc" must not act on the employee
+        $response = $this->updateItem('/employees/bulk-update-status', [
+            'employeeIds' => [$employeeId . 'abc', -1],
+            'enabled' => false,
+        ], ['employee_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'employeeIds[0]'],
+            ['propertyPath' => 'employeeIds[1]'],
+        ], $response);
+        $this->assertTrue($this->isEmployeeEnabled($employeeId));
+
+        $response = $this->updateItem('/employees/bulk-update-status', [
+            'employeeIds' => [$employeeId],
+        ], ['employee_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'enabled'],
+        ], $response);
+
+        $response = $this->requestApi('DELETE', '/employees/bulk-delete', [
+            'employeeIds' => [$employeeId . 'abc'],
+        ], ['employee_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'employeeIds[0]'],
+        ], $response);
+        $this->getItem('/employees/' . $employeeId, ['employee_read']);
     }
 
     public function testBulkDelete(): void
