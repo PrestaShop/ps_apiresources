@@ -70,6 +70,12 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             'GET',
             '/cms-page-categories',
         ];
+
+        yield 'toggle status endpoint' => ['PUT', '/cms-page-categories/1/toggle-status'];
+        yield 'delete endpoint' => ['DELETE', '/cms-page-categories/1'];
+        yield 'bulk enable endpoint' => ['PUT', '/cms-page-categories/bulk-enable'];
+        yield 'bulk disable endpoint' => ['PUT', '/cms-page-categories/bulk-disable'];
+        yield 'bulk delete endpoint' => ['DELETE', '/cms-page-categories/bulk-delete'];
     }
 
     private function getCreateData(): array
@@ -288,6 +294,45 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             [
                 'propertyPath' => 'linkRewrites',
                 'message' => 'The field linkRewrites is required at least in your default language.',
+            ],
+        ], $validationErrorsResponse);
+    }
+
+    public function testInvalidCmsPageCategoryIds(): void
+    {
+        // CmsPageCategoryId rejects 0 with the base exception
+        $this->getItem('/cms-page-categories/0', ['cms_page_category_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->getItem('/cms-page-categories/999999', ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testDeleteRootCmsPageCategory(): void
+    {
+        // The root category cannot be deleted: CannotDeleteCmsPageCategoryException extends the base exception
+        $this->deleteItem('/cms-page-categories/1', ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testAddCmsPageCategoryInContextShops(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $data = $this->getCreateData();
+        unset($data['shopIds']);
+        $data['linkRewrites'] = ['en-US' => 'context-shops-en', 'fr-FR' => 'context-shops-fr'];
+
+        $cmsPageCategory = $this->createItem('/cms-page-categories', $data, ['cms_page_category_write']);
+        $this->assertSame([1], $cmsPageCategory['shopIds']);
+    }
+
+    public function testInvalidCmsPageCategoryShopIds(): void
+    {
+        $data = $this->getCreateData();
+        $data['shopIds'] = ['3abc'];
+
+        $validationErrorsResponse = $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'shopIds[0]',
+                'message' => 'This value should be of type integer.',
             ],
         ], $validationErrorsResponse);
     }

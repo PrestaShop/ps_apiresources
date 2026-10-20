@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -30,6 +32,8 @@ use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\ToggleCmsPageStatusCommand
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Query\GetCmsPageForEditing;
+use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryException;
+use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -37,6 +41,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -59,6 +64,11 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
+            extraProperties: [
+                // The shops of the context are used only when the payload has no shopIds (PrestaShop 9.2.0 and later,
+                // shopIds is required on older versions)
+                'defaultValues' => ['shopIds' => '[_context][shopIds]'],
+            ],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/cms-pages/{cmsPageId}',
@@ -100,6 +110,9 @@ use Symfony\Component\HttpFoundation\Response;
         // base exception carries the CannotAdd/CannotEdit/CannotDelete/CannotToggle cases.
         // CmsPageNotFoundException is declared above and wins, being more specific.
         CmsPageException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The page handlers check the category of the payload and throw the exceptions of its own domain
+        CmsPageCategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CmsPageCategoryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CmsPage
@@ -107,6 +120,10 @@ class CmsPage
     #[ApiProperty(identifier: true)]
     public int $cmsPageId;
 
+    // AddCmsPageCommand does not type this parameter, so the request body schema cannot document it: the
+    // constraints give a 422 instead of the 400 of a missing constructor argument
+    #[Assert\NotNull(groups: ['Create'])]
+    #[Assert\Positive]
     public int $cmsPageCategoryId;
 
     #[LocalizedValue]
@@ -132,7 +149,12 @@ class CmsPage
 
     public bool $displayed;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $shopIds;
 
     public const QUERY_MAPPING = [
