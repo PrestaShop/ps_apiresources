@@ -126,7 +126,7 @@ class CountryEndpointTest extends ApiTestCase
     {
         // The whole envelope is asserted on a list the test fully controls: an exact filter on its own fixture
         $filtered = $this->listItems('/countries?orderBy=countryId&sortOrder=asc', ['country_read'], ['isoCode' => 'ZZ']);
-        $this->assertEquals([
+        $expected = [
             'totalItems' => 1,
             'orderBy' => 'countryId',
             'sortOrder' => 'asc',
@@ -143,7 +143,12 @@ class CountryEndpointTest extends ApiTestCase
                     'enabled' => false,
                 ],
             ],
-        ], $filtered);
+        ];
+        if (self::isVersionUnder('9.2.1')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.1 returns 0
+            unset($expected['offset']);
+        }
+        $this->assertEquals($expected, $filtered);
 
         // The boolean filter matches exactly
         $disabled = $this->listItems('/countries', ['country_read'], ['isoCode' => 'ZZ', 'enabled' => false]);
