@@ -233,12 +233,12 @@ declared `= null`, otherwise the uninitialized property is skipped
 whatever the context says.
 
 Lists of scalars are typed with a docblock, `@var int[]` / `@var string[]`:
-the core reads the item type from it for the resource schema (from 9.2.1;
-older cores document a plain array). In a request body, built from the
-command, the items of such a list are documented as strings today (the
-core types the scalars from the resource property, not the items of an
-array). `#[ApiProperty(openapiContext: [...])]` is only added for an
-`example`. Anything structured is a typed DTO (next section), never a
+the core reads the item type from it, for the resource schema from 9.2.1
+and for the request body built from the command from 9.2.1 with
+PrestaShop#43264 (older cores document a plain array, or string items in
+a request body). `#[ApiProperty(openapiContext: [...])]` carries the
+`description` and the `example` only ([`OPENAPI.md`](./OPENAPI.md)),
+never a type. Anything structured is a typed DTO (next section), never a
 hand-written object schema. Every field the query or the grid returns is
 exposed, or its omission is a conscious decision: integrators need the
 identifiers (`{entity}Id`, nested ids, `shopIds`).

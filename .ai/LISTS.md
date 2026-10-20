@@ -73,8 +73,10 @@ localized fields of a list (one language) is in `CONTEXT.md` →
 
 The paginated envelope is `{totalItems, orderBy, sortOrder, limit,
 offset, filters, items}` (`offset` an integer, `items` a JSON list;
-`orderBy` is absent when the request sends none and `filters` is `[]`
-when empty, a core behaviour the tests account for). The
+`orderBy` is absent when the request sends none, `filters` is `[]`
+when empty, and before 9.2.1 `offset` is absent on the first page, a
+null the serializer drops where 9.2.1 returns `0`; core behaviours the
+tests account for). The
 core documents the `limit` / `offset` / `orderBy` / `sortOrder` /
 `filters[...]` parameters and the envelope from 9.2.1, for both
 `PaginatedList` and `CQRSPaginate` (the detection is on the

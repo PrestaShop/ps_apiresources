@@ -23,10 +23,15 @@ gives the parameters of a collection. What the resource must add:
   multishop coverage, the filters a list supports, the 207 behaviour of a
   bulk command. A description never promises what the command does not
   do.
-- `#[ApiProperty(description: ..., example: ...)]` on a property whose
-  name is not self-explanatory; localized examples keyed by locale. An
-  identifier needs no `openapiContext`: its `int` type already documents
-  it as an integer, and the resources set no example on it.
+- `#[ApiProperty(openapiContext: ['description' => ..., 'example' => ...])]`
+  on a property whose name is not self-explanatory; localized examples
+  keyed by locale. Only the `openapiContext` reaches the request body
+  built from the command (`ApiProperty(description:)` and `example:`
+  document the resource schema alone); the core merges it with the type
+  and the items it infers from the property and its docblock, so it never
+  carries a `type`. An identifier needs no `openapiContext`: its `int`
+  type already documents it as an integer, and the resources set no
+  example on it.
 - Query parameters through `parameters: new Parameters([new QueryParameter(
   key:, required:, description:)])`, declared once, with a schema limited
   to `{type, default}` (the `default` typed like the `type`: `5`, not
@@ -67,7 +72,7 @@ publish them (9.2.1 removed the factory that published class comments,
 older cores never loaded it; property summaries need
 `phpdocumentor/reflection-docblock`, which the core does not ship — only
 the `@var` types are read). Public text goes in `description` only:
-`#[ApiProperty(description: ...)]` on a property, `openapi: new
+`openapiContext: ['description' => ...]` on a property, `openapi: new
 OpenApiOperation(...)` on an operation.
 
 Check a change with the export of the core, diffed before/after, and a
