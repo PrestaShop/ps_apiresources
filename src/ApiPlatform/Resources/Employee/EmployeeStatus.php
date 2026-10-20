@@ -26,8 +26,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Employee;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\ToggleEmployeeStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\AdminEmployeeException;
-use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeCannotChangeItselfException;
+use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeException;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Exception\EmployeeNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -45,9 +44,10 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     exceptionToStatus: [
+        // The specific one first: AdminEmployeeException, EmployeeCannotChangeItselfException and
+        // InvalidEmployeeIdException extend EmployeeException
         EmployeeNotFoundException::class => Response::HTTP_NOT_FOUND,
-        EmployeeCannotChangeItselfException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        AdminEmployeeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        EmployeeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class EmployeeStatus

@@ -96,6 +96,8 @@ class Employee
     public const QUERY_MAPPING = [
         '[employee_id][value]' => '[employeeId]',
         '[active]' => '[enabled]',
+        // EditableEmployee::hasEnabledGravatar() is read as "enabledGravatar"
+        '[enabledGravatar]' => '[hasEnabledGravatar]',
     ];
 
     #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
