@@ -70,6 +70,8 @@ restates a rule: when a line below and the section disagree, the section wins an
 - A new endpoint deviating from [ADR 0023](https://github.com/PrestaShop/ADR/blob/master/0023-cqrs-api-guidelines.md)
   is Major unless the description announces an ADR amendment; the listed deviations are neither flagged
   nor copied.
+- One more resource class for an operation that fits an existing class of the domain (same payload
+  shape, the operation-specific field scoped by a validation group) is Minor, naming the class to join.
 
 ### B. Contract with the core
 

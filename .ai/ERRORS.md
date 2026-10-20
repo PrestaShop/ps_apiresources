@@ -100,7 +100,7 @@ A payload that follows the documentation never produces a 500 or a 400:
   there too); older cores answer 422. An exception the handler does not
   collect (a `CoreException` wrapping a legacy refusal) aborts the whole
   bulk with a 500: a core guard is a prerequisite (the default country in
-  `BulkDeleteCountries`, guarded from core 9.2.1). The operation description says it ([`OPENAPI.md`](./OPENAPI.md)),
+  `BulkCountries`, guarded from core 9.2.1). The operation description says it ([`OPENAPI.md`](./OPENAPI.md)),
   the test covers it ([`TESTING.md`](./TESTING.md)).
 - A bulk delete sets `allowEmptyBody: false` (the `CQRSDelete` default is
   `true`): a required body is never declared optional.

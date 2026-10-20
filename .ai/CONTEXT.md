@@ -60,16 +60,22 @@ Each operation declares:
 - An `exceptionToStatus` map at the class level so domain exceptions are
   translated into proper HTTP responses
 
-Single-entity, list, and bulk operations are split across **separate
-classes** in the same domain folder. For example:
+Single-entity, list and bulk operations are split across **separate
+classes** in the same domain folder, and that is the whole split: the
+operations of one kind share a class. The bulk operations of a domain live
+in one `Bulk{Entities}.php` even when their bodies differ: the body of each
+operation is documented from its own command ([`OPENAPI.md`](./OPENAPI.md)),
+so the field of one operation never appears on the others, and that field
+carries the validation group of its operation (`validationContext`) to stay
+optional elsewhere. A new class is justified by another payload shape
+(another entity, a list, a sub-resource), never by one more operation on
+the same shape. For example:
 
 ```
 src/ApiPlatform/Resources/Country/
-├── Country.php                    ← CQRSGet / CQRSCreate / CQRSPartialUpdate / CQRSDelete, CQRSUpdate toggle-status
-├── CountryList.php                ← PaginatedList
-├── BulkDeleteCountries.php        ← DELETE /countries/bulk-delete
-├── BulkUpdateStatusCountries.php  ← PUT /countries/bulk-update-status
-└── BulkUpdateZoneCountries.php    ← PUT /countries/bulk-update-zone
+├── Country.php         ← CQRSGet / CQRSCreate / CQRSPartialUpdate / CQRSDelete, CQRSUpdate toggle-status
+├── CountryList.php     ← PaginatedList
+└── BulkCountries.php   ← DELETE bulk-delete, PUT bulk-update-status, PUT bulk-update-zone
 ```
 
 A domain whose back office lists the entity through a grid ships its
@@ -227,9 +233,12 @@ declared `= null`, otherwise the uninitialized property is skipped
 whatever the context says.
 
 Lists of scalars are typed with a docblock, `@var int[]` / `@var string[]`:
-the core reads the item type from it (from 9.2.1; older cores document
-a plain array). `#[ApiProperty(openapiContext: [...])]` is only added for
-an `example`. Anything structured is a typed DTO (next section), never a
+the core reads the item type from it for the resource schema (from 9.2.1;
+older cores document a plain array). In a request body, built from the
+command, the items of such a list are documented as strings today (the
+core types the scalars from the resource property, not the items of an
+array). `#[ApiProperty(openapiContext: [...])]` is only added for an
+`example`. Anything structured is a typed DTO (next section), never a
 hand-written object schema. Every field the query or the grid returns is
 exposed, or its omission is a conscious decision: integrators need the
 identifiers (`{entity}Id`, nested ids, `shopIds`).
@@ -580,10 +589,10 @@ for the patterns above:
 - **Sub-resource** —
   `src/ApiPlatform/Resources/Product/Combination.php`.
 - **Bulk operations** —
-  `src/ApiPlatform/Resources/Country/BulkDeleteCountries.php`,
-  `BulkUpdateStatusCountries.php` and `BulkUpdateZoneCountries.php`
-  (one class per operation, URIs `/countries/bulk-*`, `countryIds`
-  input, the exceptions of the failed items in the 207 response).
+  `src/ApiPlatform/Resources/Country/BulkCountries.php` (the three bulk
+  operations in one class, URIs `/countries/bulk-*`, `countryIds` input,
+  the validation groups of `enabled` and `zoneId`, the exceptions of the
+  failed items in the 207 response).
 - **Command-style operation returning the full entity** —
   `src/ApiPlatform/Resources/Carrier/Carrier.php`
   (URI `/carriers/{carrierId}/set-tax-rule-group`, dedicated validation

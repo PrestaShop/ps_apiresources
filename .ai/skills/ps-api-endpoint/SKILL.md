@@ -70,9 +70,10 @@ operation"), the URIs and scopes ("URI conventions", "Scopes"), the properties (
 has and the new one does not (operations, mappings, attributes, options): nothing is kept because the
 original has it.
 
-A list lives in its own `{Entity}List.php` next to the resource (`.ai/LISTS.md`); a bulk operation in its
-own `Bulk{Entities}.php` (`BulkDelete{Entities}.php`, `BulkUpdateStatus{Entities}.php` when more
-specific), with the shape of `CONTEXT.md` → "URI conventions" and the constraints of `.ai/ERRORS.md`.
+A list lives in its own `{Entity}List.php` next to the resource (`.ai/LISTS.md`); the bulk operations of
+the domain share one `Bulk{Entities}.php` (`BulkCountries.php`), with the shape of `CONTEXT.md` → "URI
+conventions" and the constraints of `.ai/ERRORS.md`; no new class for one more operation on the same
+payload (`CONTEXT.md` → "Architecture").
 
 ## Step 5: Write the integration test
 
