@@ -63,6 +63,16 @@ class TaxRuleEndpointTest extends ApiTestCase
             '/tax-rules',
         ];
 
+        yield 'get endpoint' => [
+            'GET',
+            '/tax-rules/1',
+        ];
+
+        yield 'partial update endpoint' => [
+            'PATCH',
+            '/tax-rules/1',
+        ];
+
         yield 'delete endpoint' => [
             'DELETE',
             '/tax-rules/1',
@@ -236,7 +246,7 @@ class TaxRuleEndpointTest extends ApiTestCase
     }
 
     /**
-     * @return array{taxRuleId: int, taxRulesGroupId: int}
+     * @return array{taxRuleId: int, taxRulesGroupId: int, taxId: int, countryId: int}
      */
     public function testAddTaxRule(): array
     {
@@ -289,11 +299,107 @@ class TaxRuleEndpointTest extends ApiTestCase
             $taxRules['items'][0]
         );
 
-        return ['taxRuleId' => $taxRuleId, 'taxRulesGroupId' => $taxRulesGroupId];
+        return ['taxRuleId' => $taxRuleId, 'taxRulesGroupId' => $taxRulesGroupId, 'taxId' => $taxId, 'countryId' => $countryId];
     }
 
     /**
      * @depends testAddTaxRule
+     *
+     * @param array{taxRuleId: int, taxRulesGroupId: int, taxId: int, countryId: int} $fixtures
+     *
+     * @return array{taxRuleId: int, taxRulesGroupId: int, taxId: int, countryId: int}
+     */
+    public function testGetTaxRule(array $fixtures): array
+    {
+        $this->assertEquals(
+            [
+                'taxRuleId' => $fixtures['taxRuleId'],
+                'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+                'countryId' => $fixtures['countryId'],
+                'stateIds' => [0],
+                'taxId' => $fixtures['taxId'],
+                'behavior' => 1,
+                'zipCode' => '',
+                'description' => 'API test add tax rule',
+            ],
+            $this->getItem('/tax-rules/' . $fixtures['taxRuleId'], ['tax_rule_read'])
+        );
+
+        return $fixtures;
+    }
+
+    /**
+     * @depends testGetTaxRule
+     *
+     * @param array{taxRuleId: int, taxRulesGroupId: int, taxId: int, countryId: int} $fixtures
+     *
+     * @return array{taxRuleId: int, taxRulesGroupId: int, taxId: int, countryId: int}
+     */
+    public function testPartialUpdateTaxRule(array $fixtures): array
+    {
+        $expectedTaxRule = [
+            'taxRuleId' => $fixtures['taxRuleId'],
+            'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+            'countryId' => $fixtures['countryId'],
+            'stateIds' => [0],
+            'taxId' => $fixtures['taxId'],
+            'behavior' => 2,
+            'zipCode' => '28000-28999',
+            'description' => 'API test updated tax rule',
+        ];
+
+        $this->assertEquals($expectedTaxRule, $this->partialUpdateItem('/tax-rules/' . $fixtures['taxRuleId'], [
+            'behavior' => 2,
+            'zipCode' => '28000-28999',
+            'description' => 'API test updated tax rule',
+        ], ['tax_rule_write']));
+        $this->assertEquals($expectedTaxRule, $this->getItem('/tax-rules/' . $fixtures['taxRuleId'], ['tax_rule_read']));
+
+        // A single zip code is read back as is
+        $this->assertEquals(
+            ['zipCode' => '28001'] + $expectedTaxRule,
+            $this->partialUpdateItem('/tax-rules/' . $fixtures['taxRuleId'], ['zipCode' => '28001'], ['tax_rule_write'])
+        );
+
+        return $fixtures;
+    }
+
+    public function testGetUnknownTaxRule(): void
+    {
+        $this->getItem('/tax-rules/999999', ['tax_rule_read'], Response::HTTP_NOT_FOUND);
+        $this->partialUpdateItem('/tax-rules/999999', ['behavior' => 1], ['tax_rule_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * @depends testPartialUpdateTaxRule
+     *
+     * @param array{taxRuleId: int, taxRulesGroupId: int, taxId: int, countryId: int} $fixtures
+     *
+     * @return array{taxRuleId: int, taxRulesGroupId: int, taxId: int, countryId: int}
+     */
+    public function testInvalidPartialUpdateTaxRule(array $fixtures): array
+    {
+        $validationErrorsResponse = $this->partialUpdateItem('/tax-rules/' . $fixtures['taxRuleId'], [
+            'countryId' => 0,
+            'behavior' => 5,
+        ], ['tax_rule_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'countryId',
+                'message' => 'This value should be greater than 0.',
+            ],
+            [
+                'propertyPath' => 'behavior',
+                'message' => 'This value should be between 0 and 2.',
+            ],
+        ], $validationErrorsResponse);
+
+        return $fixtures;
+    }
+
+    /**
+     * @depends testInvalidPartialUpdateTaxRule
      *
      * @param array{taxRuleId: int, taxRulesGroupId: int} $fixtures
      */
