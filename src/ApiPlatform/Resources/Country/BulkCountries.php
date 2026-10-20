@@ -120,11 +120,11 @@ class BulkCountries
     #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $countryIds;
 
-    #[ApiProperty(description: 'Status to set on every listed country.')]
+    #[ApiProperty(openapiContext: ['description' => 'Status to set on every listed country.'])]
     #[Assert\NotNull(groups: ['BulkUpdateStatus'])]
     public bool $enabled;
 
-    #[ApiProperty(description: 'Zone to set on every listed country.')]
+    #[ApiProperty(openapiContext: ['description' => 'Zone to set on every listed country.'])]
     #[Assert\NotNull(groups: ['BulkUpdateZone'])]
     #[Assert\Positive]
     public int $zoneId;

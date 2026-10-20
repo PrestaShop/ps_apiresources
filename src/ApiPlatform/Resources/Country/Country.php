@@ -140,34 +140,37 @@ class Country
     ])]
     public array $names;
 
-    #[ApiProperty(
-        description: 'Two-letter ISO 3166-1 code, stored upper-cased. PrestaShop 9.2.0 and later refuse a code already '
-            . 'used by another country (422), older versions create the duplicate.',
-        example: 'FR',
-    )]
+    #[ApiProperty(openapiContext: [
+        'description' => 'Two-letter ISO 3166-1 code, stored upper-cased. PrestaShop 9.2.0 and later refuse a code '
+            . 'already used by another country (422), older versions create the duplicate.',
+        'example' => 'FR',
+    ])]
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\NotBlank(allowNull: true, groups: ['Update'])]
     #[TypedRegex(['type' => TypedRegex::TYPE_LANGUAGE_ISO_CODE])]
     #[Assert\Length(max: 2)]
     public string $isoCode;
 
-    #[ApiProperty(description: 'International call prefix of the country, 0 when there is none.', example: 33)]
+    #[ApiProperty(openapiContext: [
+        'description' => 'International call prefix of the country, 0 when there is none.',
+        'example' => 33,
+    ])]
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\PositiveOrZero]
     public int $callPrefix;
 
-    #[ApiProperty(
-        description: 'Default currency of the country, 0 for the default currency of the shop. The existence of the '
-            . 'currency is not checked.',
-    )]
+    #[ApiProperty(openapiContext: [
+        'description' => 'Default currency of the country, 0 for the default currency of the shop. The existence of '
+            . 'the currency is not checked.',
+    ])]
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\PositiveOrZero]
     public int $defaultCurrencyId;
 
-    #[ApiProperty(
-        description: 'Zone of the country. An unknown zone answers 404 from PrestaShop 9.2.1, older versions store it '
-            . 'and the country disappears from the list.',
-    )]
+    #[ApiProperty(openapiContext: [
+        'description' => 'Zone of the country. An unknown zone answers 404 from PrestaShop 9.2.1, older versions store '
+            . 'it and the country disappears from the list.',
+    ])]
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\Positive]
     public int $zoneId;
@@ -175,23 +178,23 @@ class Country
     #[Assert\NotNull(groups: ['Create'])]
     public bool $needZipCode;
 
-    #[ApiProperty(
-        description: 'Format of the zip codes of the country: L for a letter, N for a digit, C for the ISO code of '
-            . 'the country, spaces and dashes (NNNNN, LNNNN, C-NNNN); null when the zip code is not checked.',
-        example: 'NNNNN',
-    )]
+    #[ApiProperty(openapiContext: [
+        'description' => 'Format of the zip codes of the country: L for a letter, N for a digit, C for the ISO code '
+            . 'of the country, spaces and dashes (NNNNN, LNNNN, C-NNNN); null when the zip code is not checked.',
+        'example' => 'NNNNN',
+    ])]
     #[TypedRegex(['type' => TypedRegex::TYPE_ZIP_CODE_FORMAT])]
     #[Assert\Length(max: 12)]
     public ?string $zipCodeFormat;
 
-    #[ApiProperty(
-        description: 'Layout of the addresses of the country, one line per row of the address. The tokens are the '
-            . 'address fields (firstname, lastname, company, vat_number, address1, address2, postcode, city, phone, '
-            . 'dni...) and the pickers of a related entity (Country:name, State:name); firstname, lastname, address1, '
-            . 'city and Country:name are required. Stored and returned from PrestaShop 9.2.0, ignored on write and '
-            . 'empty on read before.',
-        example: "firstname lastname\naddress1\npostcode city\nCountry:name",
-    )]
+    #[ApiProperty(openapiContext: [
+        'description' => 'Layout of the addresses of the country, one line per row of the address. The tokens are '
+            . 'the address fields (firstname, lastname, company, vat_number, address1, address2, postcode, city, '
+            . 'phone, dni...) and the pickers of a related entity (Country:name, State:name); firstname, lastname, '
+            . 'address1, city and Country:name are required. Stored and returned from PrestaShop 9.2.0, ignored on '
+            . 'write and empty on read before.',
+        'example' => "firstname lastname\naddress1\npostcode city\nCountry:name",
+    ])]
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\Length(max: 255)]
     #[ValidAddressFormat(groups: ['Create', 'Update'])]
@@ -203,7 +206,9 @@ class Country
     #[Assert\NotNull(groups: ['Create'])]
     public bool $containsStates;
 
-    #[ApiProperty(description: 'Whether the addresses of the country require an identification number (DNI).')]
+    #[ApiProperty(openapiContext: [
+        'description' => 'Whether the addresses of the country require an identification number (DNI).',
+    ])]
     #[Assert\NotNull(groups: ['Create'])]
     public bool $needIdNumber;
 
@@ -213,12 +218,12 @@ class Country
     /**
      * @var int[]
      */
-    #[ApiProperty(
-        description: 'Shops associated with the country. On creation, optional from PrestaShop 9.2.0 where it '
+    #[ApiProperty(openapiContext: [
+        'description' => 'Shops associated with the country. On creation, optional from PrestaShop 9.2.0 where it '
             . 'defaults to the shops of the context, required on older versions. The existence of the shops is '
             . 'not checked.',
-        openapiContext: ['example' => [1, 3]],
-    )]
+        'example' => [1, 3],
+    ])]
     // Never fires from PrestaShop 9.2.0, the default value is set before the validation
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\NotBlank(allowNull: true)]
