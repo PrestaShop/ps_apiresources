@@ -11,6 +11,10 @@ Read when an operation is a `PaginatedList`, a `CQRSPaginate` or a
   `Filters` class.
 - `CQRSPaginate` when a CQRS list query exists and no grid does: the
   query result holds the items and the count (`itemsField` / `countField`).
+  A query that takes no filter or ordering still echoes `filters` and
+  `orderBy` in the envelope without applying them (core
+  PrestaShop/PrestaShop#43249): the operation description says which
+  parameters are supported and that the others are ignored.
 - `CQRSGetCollection` only when the handler returns a plain array, without
   pagination; a result wrapped in an object becomes a `CQRSGet` with an
   array property. A result indexed by id answers a JSON list with

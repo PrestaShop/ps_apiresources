@@ -35,13 +35,18 @@ automated review (§5).
    exception.** For each resource of the diff:
    - the command: constructor parameters (names, types, defaults, nullability), setters, multi-parameter
      setters, the exceptions its value objects throw (`{Entity}Id` → `{Entity}ConstraintException`,
-     `ShopId` → `ShopException`…);
+     `ShopId` → `ShopException`…), the body of an id guard before rating `/x/0` (`assertPositiveInt`
+     may accept `0`, which then behaves as an unknown id);
    - the query and its query result: getters (`getX()` / `isX()` → field `x`), types, what the handler
      really fills (a `0`/`1` tiny int, a formatted price, an always-empty array);
    - the handler: guards and exceptions (`{Entity}NotFoundException`, referenced entities such as
      `ZoneNotFoundException`), including the private assert / guard methods it calls before its own null
      checks, what it does with an optional parameter (a `foreach` on a null array, a uniqueness check on
-     an absent name);
+     an absent name), and the services it calls (validators, repositories: their exceptions are the
+     handler's);
+   - for a bulk operation: the single-item handler next to the bulk one, guards compared — a bulk handler
+     skipping a guard of the single handler is a core bug (`BulkDeleteOrderStateHandler` deletes the
+     native states `DeleteOrderStateHandler` refuses);
    - for a list: the grid query builder (`SELECT` columns, allowed filters and `orderBy` fields) or the
      CQRS list query result;
    - the back-office form type of the entity: constraints and default values the API must reproduce.
@@ -66,7 +71,10 @@ restates a rule: when a line below and the section disagree, the section wins an
   [Scopes](./CONTEXT.md#scopes), [Do / Don't](./CONTEXT.md#do--dont).
 - Evidence: the command (its setters and their nullability decide `PATCH` vs `PUT`, the read side decides
   the `CQRSQuery` of a write), the sibling resources of the domain and the reference resources
-  (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run.
+  (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run; for a duplicate,
+  the endpoints already serving the same data to the same caller (the item and the lists of the entity,
+  the exclusions of `GenerateApiTrackingTableCommand`) — a duplicate is functional, not a shared query
+  or grid: an endpoint returning fields no other exposes, or an item next to a list, is not one.
 - A new endpoint deviating from [ADR 0023](https://github.com/PrestaShop/ADR/blob/master/0023-cqrs-api-guidelines.md)
   is Major unless the description announces an ADR amendment; the listed deviations are neither flagged
   nor copied.
@@ -95,9 +103,12 @@ restates a rule: when a line below and the section disagree, the section wins an
 ### D. Errors and validation
 
 - Section: [`ERRORS.md`](./ERRORS.md).
-- Evidence: the handler and its guards, the value objects of the ids in the URI and in the body, the
-  command constructor, the back-office form type. On a bulk id list, review the constraint set, not only
-  the status it produces.
+- Evidence: the handler, its guards and the services it calls, the value objects of the ids in the URI
+  and in the body, the command constructor, the back-office form type. Two mechanical passes never
+  skipped: every validation group a constraint names is activated by the `validationContext` of an
+  operation (a `groups: ['Update']` without it never runs, the PATCH answers 500), and the exception map
+  compared in both directions with what is thrown — thrown but unmapped, mapped but never thrown. On a
+  bulk id list, review the constraint set, not only the status it produces.
 
 ### E. Tests
 
@@ -153,7 +164,8 @@ restates a rule: when a line below and the section disagree, the section wins an
 - A hand-rolled whole-envelope assertion on a 207 response instead of `bulkCommandItemsWithExpectedErrors()`
   (which only asserts `errors`); a Rector `SKIPPED_KEYWORDS` "gap" while the Rector dry run is green.
 - The generator limits listed in `OPENAPI.md` (input / read schema difference, first-level-only array
-  context, undocumented body of a bulk `DELETE`, generic error responses).
+  context, undocumented body of a bulk `DELETE`, generic error responses) — not the unsupported filters
+  and ordering a `CQRSPaginate` echoes in its envelope, which its description declares (`LISTS.md`).
 - Style already enforced by php-cs-fixer and PHPStan; docblocks on self-explanatory properties; `float`.
 - Development-mode stack traces in a QA report: the status code is the finding, not the trace.
 
@@ -161,7 +173,7 @@ restates a rule: when a line below and the section disagree, the section wins an
 
 | Severity | Examples |
 |----------|----------|
-| Blocker | a 500 reachable with a payload or URI the documentation allows (unknown id, id `0` through `\d+`, an omitted optional field, a documented body) — which includes an unmapped `*NotFoundException` / `*ConstraintException` on that path; a request that silently acts on another entity (unvalidated ids cast with `(int)`); business logic, normalizer, processor or provider in the module; an operation without scope; no integration test; a core limitation worked around in the module |
+| Blocker | a 500 reachable with a payload or URI the documentation allows (unknown id, id `0` through `\d+` when its value object rejects `0`, an omitted optional field, a documented body) — which includes an unmapped `*NotFoundException` / `*ConstraintException` on that path; a request that silently acts on another entity (unvalidated ids cast with `(int)`); business logic, normalizer, processor or provider in the module; an operation without scope; no integration test; a core limitation worked around in the module |
 | Major | an unmapped exception only reachable through a malformed payload, or one the constraints already prevent; wrong status code; property dropped or always null; schema/doc disagreeing with the payload; partial test assertions; missing version gate or gate hiding a 500; a new endpoint deviating from ADR 0023 |
 | Minor | naming, redundant option or mapping entry, a `filtersMapping` entry the grid ignores without a description saying so, missing description on a non-obvious behaviour, a contract written in PHPDoc instead of `description` |
 

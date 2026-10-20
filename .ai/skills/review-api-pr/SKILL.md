@@ -51,7 +51,12 @@ Ask only for what is missing:
    line, or the schema/payload) before keeping it; drop it if §2 says so; rate it with §3.
 4. **Runtime checks**, only when the environment running the skill has a PrestaShop instance with the
    module installed (a developer's shop, set up with the core skill `setup-apiresources-dev`); CodeRabbit
-   has no shop and stops at the static checks (.ai/REVIEW.md §1 C "without a shop"). Ask before running
+   has no shop and stops at the static checks (.ai/REVIEW.md §1 C "without a shop"). What the shop needs:
+   an API client with the scopes (`bin/console prestashop:api-client create <id> --all-scopes --secret-only`
+   when the back office has none), the `admin_api_experimental_endpoints` feature flag for an experimental
+   operation, plain HTTP accepted in debug mode (`PS_ADMIN_API_FORCE_DEBUG_SECURED=0` otherwise), a
+   `cache:clear` run with `php -d memory_limit=-1`. Read the HTTP status, not the body: in debug mode the
+   problem+json body says `"status":500` whatever the real code. Ask before running
    write operations on a shop that is not a disposable test instance:
    - `php bin/console api:openapi:export --yaml -o <scratch>/after.yaml` in the core with the PR applied,
      the same on the base branch, diff the operations of the PR;

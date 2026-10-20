@@ -103,7 +103,8 @@ Static helpers available for additional setup (call from
   PR, or leave a `@todo` naming it.
 - Error cases: a 404 test for every mapped `*NotFoundException` on every
   operation (GET included, `testGetNonExistent{Entity}` with `99999`),
-  plus GET after delete; `/x/0` → 422; a `testInvalid…` method with
+  plus GET after delete; `/x/0` → 422 when the value object rejects `0`,
+  otherwise the answer of an unknown id; a `testInvalid…` method with
   `$this->assertValidationErrors([...], $response)` for the 422 produced
   by the **constraints** (the response carries the list of invalid
   fields), with one case per nullable field, per partial-update

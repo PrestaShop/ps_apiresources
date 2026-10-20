@@ -69,7 +69,10 @@ so the field of one operation never appears on the others, and that field
 carries the validation group of its operation (`validationContext`) to stay
 optional elsewhere. A new class is justified by another payload shape
 (another entity, a list, a sub-resource), never by one more operation on
-the same shape. For example:
+the same shape. A class name is unique under `Resources/`: API Platform
+names the OpenAPI schema after the short name, and two `TaxRuleList`
+classes in different domains document both routes with the schema of
+the older one. For example:
 
 ```
 src/ApiPlatform/Resources/Country/
@@ -491,7 +494,12 @@ examples: [`MULTISHOP.md`](./MULTISHOP.md).
 
   This is enforced by the `ApiResourcePropertyTypeRule` PHPStan rule in
   CI.
-- Don't add an endpoint exposing data another endpoint already exposes,
+- Don't add an endpoint serving data another endpoint already serves to
+  the same caller — a functional duplicate: `GetCountryRequiredFields`
+  repeats two fields of `GET /countries/{countryId}`, `GetProductIsEnabled`
+  one field of `GET /products/{productId}` (both excluded in
+  `GenerateApiTrackingTableCommand`); an endpoint returning fields no
+  other one exposes, or an item next to a list, is not a duplicate —,
   a back-office-only workflow (e-mail token relays, confirmation steps,
   quick-access links — the Admin API is server-to-server), a deprecated
   command, or a domain whose core model is not settled; a CQRS class

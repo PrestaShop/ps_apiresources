@@ -31,6 +31,19 @@ PrestaShop < 9.2 and by its core twin on >= 9.2; both compare against
 `PrestaShop\PrestaShop\Core\Version::VERSION` with inclusive
 `version_compare` semantics.
 
+Independently of `minVersion`, the core drops, operation by operation,
+every operation whose `CQRSQuery` / `CQRSCommand` class or
+`gridDataFactory` service does not exist
+(`CQRSNotFoundMetadataCollectionFactoryDecorator`,
+`ApiResourceScopesExtractor`): the other operations of the class stay,
+the route answers 404 and the scope disappears. That filtering is off
+when the experimental endpoints are enabled (the missing class then
+fails at runtime), and PHPStan on the older legs needs the scoped
+`class.notFound` ignore either way. `minVersion` adds what the automatic
+filtering cannot: a class that exists but misbehaves, a gate the tests
+and the documentation know (`isVersionAtLeast`, the version in the
+description).
+
 Use it when the backing CQRS command/query does not exist on older
 supported cores, or exists but misbehaves there (e.g. the stock update
 endpoints require 9.2.0 because older cores cannot create stock

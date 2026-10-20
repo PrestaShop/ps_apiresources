@@ -12,8 +12,11 @@ raise, with the `Response::HTTP_*` constants — at minimum the entity's
 `…ConstraintException` → `HTTP_UNPROCESSABLE_ENTITY` (422) and
 `…NotFoundException` → `HTTP_NOT_FOUND` (404), plus:
 
-- the exceptions of the value objects built from the URI or the body
-  (`/x/0/...` passes `\d+` and must answer 422, not 500);
+- the exceptions of the value objects built from the URI or the body:
+  `/x/0/...` passes `\d+`, a value object that rejects `0` must answer
+  422, not 500, and one that accepts it (`TaxRulesGroupId::assertPositiveInt()`
+  only refuses negatives) makes `0` an unknown id, a 404 on an item or
+  an empty list — read the body of the guard, not its name;
 - the exceptions of the referenced entities checked by the handler or
   the value objects: `ShopException` 422 / `ShopNotFoundException` 404,
   `ZoneNotFoundException` 404, `CurrencyConstraintException` 422,
@@ -81,6 +84,12 @@ A payload that follows the documentation never produces a 500 or a 400:
   match the rules of the associated BO form type, including the ones the
   CQRS command does not enforce itself (`CleanHtml`, `TypedRegex`,
   `DefaultLanguage`, non-empty collections, ranges, URL formats).
+- A value the legacy model refuses is a raw `PrestaShopException` in
+  `add()` / `update()`, a 500 nothing maps: a handler relying on
+  `validateFields(false)` skips the localized fields, so `"<b>"` as a
+  name reaches the model. The resource constraint prevents it, and the
+  missing check is a core improvement (the CQRS layer validates every
+  field, `validateFieldsLang()` in the handler).
 
 ## Bulk operations
 
