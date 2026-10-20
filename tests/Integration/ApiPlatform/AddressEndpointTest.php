@@ -31,7 +31,7 @@ class AddressEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer']);
+        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer', 'required_field']);
         DatabaseDump::restoreMatchingTables('*cart*');
         DatabaseDump::restoreMatchingTables('*order*');
         self::createApiClient(['address_write', 'address_read']);
@@ -41,13 +41,23 @@ class AddressEndpointTest extends ApiTestCase
     {
         parent::tearDownAfterClass();
         // Reset DB as it was before this test
-        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer']);
+        DatabaseDump::restoreTables(['address', 'customer', 'manufacturer', 'required_field']);
         DatabaseDump::restoreMatchingTables('*cart*');
         DatabaseDump::restoreMatchingTables('*order*');
     }
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get address required fields endpoint' => [
+            'GET',
+            '/addresses/required-fields',
+        ];
+
+        yield 'set address required fields endpoint' => [
+            'PUT',
+            '/addresses/required-fields',
+        ];
+
         yield 'get customer address endpoint' => [
             'GET',
             '/addresses/customers/1',
@@ -497,5 +507,34 @@ class AddressEndpointTest extends ApiTestCase
 
         // Use the createItem method but expect it to fail with validation error
         $this->createItem('/addresses/customers', $invalidData, ['address_write'], 422);
+    }
+
+    public function testGetAddressRequiredFields(): void
+    {
+        // Fresh database: no required field configured for addresses
+        $this->assertEquals(['requiredFields' => []], $this->getItem('/addresses/required-fields', ['address_read']));
+    }
+
+    public function testSetAddressRequiredFields(): void
+    {
+        // The response is the updated list
+        $updatedRequiredFields = $this->updateItem(
+            '/addresses/required-fields',
+            ['requiredFields' => ['company', 'phone']],
+            ['address_write']
+        );
+        $this->assertEquals(['requiredFields' => ['company', 'phone']], $updatedRequiredFields);
+
+        $this->assertEquals($updatedRequiredFields, $this->getItem('/addresses/required-fields', ['address_read']));
+    }
+
+    public function testSetInvalidAddressRequiredFieldIsRejected(): void
+    {
+        $this->updateItem(
+            '/addresses/required-fields',
+            ['requiredFields' => ['not_a_valid_field']],
+            ['address_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
     }
 }
