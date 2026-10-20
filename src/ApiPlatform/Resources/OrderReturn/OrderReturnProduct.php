@@ -24,8 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Parameters;
-use ApiPlatform\Metadata\QueryParameter;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\DeleteProductFromOrderReturnCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\CannotDeleteLastProductFromOrderReturnException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
@@ -43,18 +42,14 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSCommand: DeleteProductFromOrderReturnCommand::class,
             scopes: ['order_return_write'],
-            parameters: new Parameters([
-                new QueryParameter(
-                    key: 'customizationId',
-                    required: false,
-                    description: 'Customization id when removing a customized line; defaults to 0'
-                ),
-            ]),
-            openapiContext: [
-                'parameters' => [
-                    ['name' => 'customizationId', 'in' => 'query', 'required' => false, 'schema' => ['type' => 'integer', 'default' => 0]],
-                ],
-            ],
+            // A query parameter does not reach the command (only the URI variables and the body do): this
+            // operation removes the classic line of the order detail, a customized line goes through the bulk delete
+            openapi: new OpenApiOperation(
+                summary: 'Remove a product line from an order return.',
+                description: 'Removes the line of the order detail that has no customization. To remove a customized '
+                    . 'line, use DELETE /order-returns/{orderReturnId}/products/bulk-delete with its customizationId. '
+                    . 'An order return keeps at least one line (422).',
+            ),
         ),
     ],
     exceptionToStatus: [
@@ -71,6 +66,4 @@ class OrderReturnProduct
 
     #[ApiProperty(identifier: true)]
     public int $orderDetailId;
-
-    public int $customizationId = 0;
 }
