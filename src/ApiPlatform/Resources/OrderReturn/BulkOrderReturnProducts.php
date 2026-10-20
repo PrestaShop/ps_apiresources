@@ -22,8 +22,8 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn\Dto\OrderReturnProductRow;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\BulkDeleteProductsFromOrderReturnCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\CannotDeleteLastProductFromOrderReturnException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
@@ -41,6 +41,11 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'minVersion' => '9.2.0',
             ],
             CQRSCommand: BulkDeleteProductsFromOrderReturnCommand::class,
+            // The command reads the column names of the rows
+            CQRSCommandMapping: [
+                '[stagedProductRows][@index][orderDetailId]' => '[stagedProductRows][@index][order_detail_id]',
+                '[stagedProductRows][@index][customizationId]' => '[stagedProductRows][@index][customization_id]',
+            ],
             scopes: ['order_return_write'],
             // The body is required, the CQRSDelete default allows an empty one
             allowEmptyBody: false,
@@ -58,27 +63,11 @@ class BulkOrderReturnProducts
     public int $orderReturnId;
 
     /**
-     * The lines to remove: the order detail and, for a customized line, its customization (0 otherwise).
-     * The rows keep the keys BulkDeleteProductsFromOrderReturnCommand reads: a CQRSCommandMapping to camelCase
-     * keys cannot be validated today, the resource is validated both before and after the mapping.
+     * The lines to remove.
+     *
+     * @var OrderReturnProductRow[]
      */
-    #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => [
-            'type' => 'object',
-            'properties' => [
-                'order_detail_id' => ['type' => 'integer'],
-                'customization_id' => ['type' => 'integer', 'default' => 0],
-            ],
-            'required' => ['order_detail_id'],
-        ],
-    ])]
     #[Assert\NotBlank]
-    #[Assert\All([
-        new Assert\Collection(fields: [
-            'order_detail_id' => [new Assert\NotNull(), new Assert\Type('integer'), new Assert\Positive()],
-            'customization_id' => new Assert\Optional([new Assert\Type('integer'), new Assert\PositiveOrZero()]),
-        ]),
-    ])]
+    #[Assert\Valid]
     public array $stagedProductRows;
 }

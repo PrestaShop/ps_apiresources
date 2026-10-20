@@ -184,8 +184,8 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
             [
                 'stagedProductRows' => array_map(
                     static fn (int $orderDetailId): array => [
-                        'order_detail_id' => $orderDetailId,
-                        'customization_id' => 0,
+                        'orderDetailId' => $orderDetailId,
+                        'customizationId' => 0,
                     ],
                     $orderDetailIds
                 ),
@@ -211,8 +211,8 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
             [
                 'stagedProductRows' => array_map(
                     static fn (int $orderDetailId): array => [
-                        'order_detail_id' => $orderDetailId,
-                        'customization_id' => 0,
+                        'orderDetailId' => $orderDetailId,
+                        'customizationId' => 0,
                     ],
                     $orderDetailIds
                 ),
@@ -292,13 +292,23 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
         $response = $this->requestApi(
             'DELETE',
             '/order-returns/' . $orderReturnId . '/products/bulk-delete',
-            ['stagedProductRows' => [['customization_id' => 0], ['order_detail_id' => 'x']]],
+            ['stagedProductRows' => [['customizationId' => 0], ['orderDetailId' => -1], ['orderDetailId' => null]]],
             ['order_return_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
         $this->assertValidationErrors([
-            ['propertyPath' => 'stagedProductRows[0][order_detail_id]'],
-            ['propertyPath' => 'stagedProductRows[1][order_detail_id]'],
+            ['propertyPath' => 'stagedProductRows[0].orderDetailId'],
+            ['propertyPath' => 'stagedProductRows[1].orderDetailId'],
+            ['propertyPath' => 'stagedProductRows[2].orderDetailId'],
         ], $response);
+
+        // A wrong type is refused by the serializer before the command could cast it: "3abc" must not act on line 3
+        $this->requestApi(
+            'DELETE',
+            '/order-returns/' . $orderReturnId . '/products/bulk-delete',
+            ['stagedProductRows' => [['orderDetailId' => '3abc']]],
+            ['order_return_write'],
+            Response::HTTP_BAD_REQUEST
+        );
     }
 }
