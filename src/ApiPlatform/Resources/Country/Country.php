@@ -80,6 +80,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['country_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            openapi: new OpenApiOperation(
+                summary: 'Update a country.',
+                description: 'Partial update: only the sent fields change. Before PrestaShop 9.2.0 the body must also '
+                    . 'carry names, the core edit command does not accept a partial body without it.',
+            ),
         ),
         new CQRSUpdate(
             uriTemplate: '/countries/{countryId}/toggle-status',
@@ -141,6 +146,7 @@ class Country
         example: 'FR',
     )]
     #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\NotBlank(allowNull: true, groups: ['Update'])]
     #[TypedRegex(['type' => TypedRegex::TYPE_LANGUAGE_ISO_CODE])]
     #[Assert\Length(max: 2)]
     public string $isoCode;

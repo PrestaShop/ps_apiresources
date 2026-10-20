@@ -107,8 +107,13 @@ class CountryEndpointTest extends ApiTestCase
         // The persisted state matches the PATCH response
         $this->assertEquals($expected, $this->getItem('/countries/' . $countryId, ['country_read']));
 
-        // A partial update with one field leaves the others untouched
-        $updated = $this->partialUpdateItem('/countries/' . $countryId, ['callPrefix' => 998], ['country_write']);
+        // A partial update with one field leaves the others untouched; before PrestaShop 9.2.0 the core edit command
+        // needs names in every body (its getter is not nullable)
+        $singleField = ['callPrefix' => 998];
+        if (self::isVersionUnder('9.2.0')) {
+            $singleField['names'] = $patchData['names'];
+        }
+        $updated = $this->partialUpdateItem('/countries/' . $countryId, $singleField, ['country_write']);
         $this->assertEquals($this->expectedCountry($countryId, $patchData + ['callPrefix' => 998]), $updated);
 
         return $countryId;
@@ -272,10 +277,13 @@ class CountryEndpointTest extends ApiTestCase
 
         // A localized field patched without its default language
         $this->partialUpdateItem('/countries/' . $countryId, ['names' => ['fr-FR' => 'Only FR']], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        // Refused by the core value objects and validator: a mapped exception, no field list
-        $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => ''], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        // An empty ISO code is refused by the module constraint on every core
+        $response = $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => ''], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'isoCode', 'message' => 'This value should not be blank.'],
+        ], $response);
         if (self::isVersionAtLeast('9.2.0')) {
-            // Older cores ignore the address format on write
+            // Refused by the core handler, a mapped exception without field list (older cores ignore the format on write)
             $this->partialUpdateItem('/countries/' . $countryId, ['addressFormat' => ''], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
