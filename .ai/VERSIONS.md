@@ -45,7 +45,11 @@ A version-constrained endpoint needs matching test handling (see
 
 - `minVersion` documents a real dependency (a CQRS class, a setter, a
   cast that only exists from that version). It never hides a 500 on an
-  older core: a bug there is fixed in the core, on the lowest branch.
+  older core: a bug there is fixed in the core, on the lowest branch. A
+  guard or a check that a later core adds is no dependency either: the
+  endpoint stays available, its description states the difference per
+  version and the test asserts the contract of each version
+  (`Country`: duplicate ISO code, unknown zone, default country).
 - An endpoint already shipped in a tagged release that gets gated behind
   a newer version disappears from the older cores. Weigh the loss, keep
   the operations that work everywhere (e.g. `POST /customers/{customerId}/carts`

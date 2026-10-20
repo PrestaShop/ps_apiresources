@@ -145,8 +145,9 @@ Start from one of these, never from a blank file or an older test:
   structure: the protected endpoints, the add → get → update → list →
   delete chain with whole-payload assertions in both languages, the
   invalid payloads field by field, 404 / 422 on ids, the business
-  refusals, the bulk operations and their 207 details, the version
-  gates, the shop association, the fixtures through the API;
+  refusals, the toggle, the bulk operations and their 207 details, the
+  contract of each core version, the shop association, the fixtures
+  through the API;
 - `tests/Integration/ApiPlatform/CustomerGroupEndpointTest.php` — the
   404 on an unknown shop of `shopIds`, when the core handler checks it.
 
@@ -210,7 +211,11 @@ yet is gated with `isVersionAtLeast()` on the version that will carry
 the fix (`git tag --contains <sha>` gives the first tag of a merged
 commit), and the module PR names the core PR: the CI job of that
 version is red until the core PR is merged (see `CONTEXT.md` → "Working
-with the core"). The assertion is not weakened to make the job green. In
+with the core"). The assertion is not weakened to make the job green, and
+when the behaviour of the older cores is known the test asserts it
+instead of skipping (`CountryEndpointTest`: the duplicate ISO code
+created before 9.2.0, the unknown zone stored and the default country
+answering 500 before 9.2.1). In
 a class that mixes gated and ungated operations, the gated entries of
 `getProtectedEndpoints()` are yielded only with `isVersionAtLeast()`: an
 older core answers 404, not 401, for a filtered operation. When a PR

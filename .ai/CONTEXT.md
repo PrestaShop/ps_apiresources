@@ -174,7 +174,7 @@ and a new endpoint never copies them.
 | `PATCH /discounts/bulk-update-status` (`CQRSPartialUpdate`) | `PUT` + `CQRSUpdate` |
 | `PUT /taxes/bulk-set-status`; `PUT /customers/bulk-enable` + `bulk-disable`; `PUT /suppliers/bulk-enable` + `bulk-disable` | one `PUT /x/bulk-update-status`, the value in the body |
 | `PUT /modules/bulk-uninstall` | `POST` when no method fits |
-| `PATCH /categories/{categoryId}/status`, `PUT /stores/{storeId}/toggle-status`, `PUT /zones/{zoneId}/toggle-status`, `PATCH /tax-rules-groups/{taxRulesGroupId}/set-status`, `/hooks/{hookId}/status` | example sub part `/hooks/{hookId}/status`; the `set-status` rule above comes from the reviews of 2026-03, the ADR is not amended yet |
+| `PATCH /categories/{categoryId}/status`, `PATCH /tax-rules-groups/{taxRulesGroupId}/set-status`, `/hooks/{hookId}/status` | example sub part `/hooks/{hookId}/status`; the `set-status` rule above comes from the reviews of 2026-03, the ADR is not amended yet (a `toggle-status` with no value follows the rule above: `/zones`, `/stores`, `/countries`) |
 | `GET /attributes/groups-with-attributes`, `GET /products/{productId}/attribute-groups` (`CQRSGetCollection`s returning every language) | §Multilang: a list returns one language |
 
 ## Scopes
