@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -37,6 +39,11 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             filtersClass: CmsPageFilters::class,
             filtersMapping: [
                 '[cmsPageId]' => '[id_cms]',
+                '[cmsPageCategoryId]' => '[id_cms_category_parent]',
+                '[title]' => '[meta_title]',
+                '[linkRewrite]' => '[link_rewrite]',
+                '[metaTitle]' => '[head_seo_title]',
+                '[displayed]' => '[active]',
             ],
         ),
     ]

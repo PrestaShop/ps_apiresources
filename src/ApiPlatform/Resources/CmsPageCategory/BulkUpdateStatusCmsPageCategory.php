@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -60,7 +62,8 @@ class BulkUpdateStatusCmsPageCategory
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $cmsPageCategoryIds;
 }

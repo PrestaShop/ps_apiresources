@@ -72,6 +72,12 @@ class CmsPageEndpointTest extends ApiTestCase
             'GET',
             '/cms-pages',
         ];
+
+        yield 'toggle status endpoint' => ['PUT', '/cms-pages/1/toggle-status'];
+        yield 'delete endpoint' => ['DELETE', '/cms-pages/1'];
+        yield 'bulk enable endpoint' => ['PUT', '/cms-pages/bulk-enable'];
+        yield 'bulk disable endpoint' => ['PUT', '/cms-pages/bulk-disable'];
+        yield 'bulk delete endpoint' => ['DELETE', '/cms-pages/bulk-delete'];
     }
 
     /**
@@ -320,6 +326,62 @@ class CmsPageEndpointTest extends ApiTestCase
             [
                 'propertyPath' => 'linkRewrites',
                 'message' => 'The field linkRewrites is required at least in your default language.',
+            ],
+        ], $validationErrorsResponse);
+    }
+
+    public function testListCmsPagesWithFiltersAndOrder(): void
+    {
+        [$cmsPageId] = $this->createSeveral(['Filtered page']);
+
+        // Every list field can be used through its API name, for the filters and for orderBy
+        $filtered = $this->listItems('/cms-pages?orderBy=title&sortOrder=asc', ['cms_page_read'], [
+            'cmsPageCategoryId' => 1,
+            'title' => 'Filtered page',
+        ]);
+        $this->assertEquals('title', $filtered['orderBy']);
+        $this->assertSame(1, $filtered['totalItems']);
+        $this->assertSame([$cmsPageId], array_column($filtered['items'], 'cmsPageId'));
+
+        $this->assertEquals(0, $this->countItems('/cms-pages', ['cms_page_read'], ['cmsPageCategoryId' => 999999]));
+    }
+
+    public function testAddCmsPageInUnknownCategory(): void
+    {
+        $data = $this->getCreateData();
+        $data['cmsPageCategoryId'] = 999999;
+
+        // The page handler checks the category and throws the not found exception of the category domain
+        $this->createItem('/cms-pages', $data, ['cms_page_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testAddCmsPageInContextShops(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.0');
+
+        $data = $this->getCreateData();
+        unset($data['shopIds']);
+        $data['linkRewrites'] = ['en-US' => 'context-shops-en', 'fr-FR' => 'context-shops-fr'];
+
+        $cmsPage = $this->createItem('/cms-pages', $data, ['cms_page_write']);
+        $this->assertSame([1], $cmsPage['shopIds']);
+    }
+
+    public function testInvalidCmsPageCategoryAndShops(): void
+    {
+        $data = $this->getCreateData();
+        unset($data['cmsPageCategoryId']);
+        $data['shopIds'] = ['3abc'];
+
+        $validationErrorsResponse = $this->createItem('/cms-pages', $data, ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'cmsPageCategoryId',
+                'message' => 'This value should not be null.',
+            ],
+            [
+                'propertyPath' => 'shopIds[0]',
+                'message' => 'This value should be of type integer.',
             ],
         ], $validationErrorsResponse);
     }

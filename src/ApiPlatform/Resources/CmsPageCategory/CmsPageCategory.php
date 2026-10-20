@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -27,7 +29,7 @@ use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\AddCmsPageCategory
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\DeleteCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\EditCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\ToggleCmsPageCategoryStatusCommand;
-use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Query\GetCmsPageCategoryForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -37,6 +39,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -59,6 +62,11 @@ use Symfony\Component\HttpFoundation\Response;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            extraProperties: [
+                // The shops of the context are used only when the payload has no shopIds (PrestaShop 9.2.0 and later,
+                // shopIds is required on older versions)
+                'defaultValues' => ['shopIds' => '[_context][shopIds]'],
+            ],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/cms-page-categories/{cmsPageCategoryId}',
@@ -96,7 +104,8 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         CmsPageCategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
-        CmsPageCategoryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The handlers and CmsPageCategoryId throw the base exception, and the Cannot* exceptions extend it
+        CmsPageCategoryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CmsPageCategory
@@ -127,7 +136,12 @@ class CmsPageCategory
     #[LocalizedValue]
     public array $metaDescriptions;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
+    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $shopIds;
 
     public const QUERY_MAPPING = [
