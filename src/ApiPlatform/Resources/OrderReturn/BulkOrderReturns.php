@@ -40,6 +40,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSCommand: BulkDeleteOrderReturnsCommand::class,
             scopes: ['order_return_write'],
+            // The body is required, the CQRSDelete default allows an empty one
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
@@ -53,7 +55,9 @@ class BulkOrderReturns
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
+    // The command casts each id with (int): "3abc" would act on order return 3
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $orderReturnIds;
 }

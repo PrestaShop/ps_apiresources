@@ -22,8 +22,9 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn\Dto\OrderReturnCustomizationField;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Query\GetOrderReturnProducts;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
@@ -33,6 +34,7 @@ use Symfony\Component\HttpFoundation\Response;
     operations: [
         new CQRSGetCollection(
             uriTemplate: '/order-returns/{orderReturnId}/products',
+            requirements: ['orderReturnId' => '\d+'],
             extraProperties: [
                 'minVersion' => '9.2.0',
             ],
@@ -42,6 +44,8 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         OrderReturnNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // OrderReturnId rejects 0
+        OrderReturnConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class OrderReturnProductList
@@ -60,16 +64,8 @@ class OrderReturnProductList
 
     /**
      * Customer-provided data of a customized line (file thumbnails, text inputs), empty for a classic line.
+     *
+     * @var OrderReturnCustomizationField[]
      */
-    #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => [
-            'type' => 'object',
-            'properties' => [
-                'type' => ['type' => 'integer'],
-                'value' => ['type' => 'string'],
-            ],
-        ],
-    ])]
     public array $customizationFields;
 }

@@ -42,6 +42,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSCommand: BulkDeleteProductsFromOrderReturnCommand::class,
             scopes: ['order_return_write'],
+            // The body is required, the CQRSDelete default allows an empty one
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
@@ -56,8 +58,9 @@ class BulkOrderReturnProducts
     public int $orderReturnId;
 
     /**
-     * Array of staged rows matching the Command ctor input shape.
-     * Each row: {order_detail_id: int, customization_id: int}.
+     * The lines to remove: the order detail and, for a customized line, its customization (0 otherwise).
+     * The rows keep the keys BulkDeleteProductsFromOrderReturnCommand reads: a CQRSCommandMapping to camelCase
+     * keys cannot be validated today, the resource is validated both before and after the mapping.
      */
     #[ApiProperty(openapiContext: [
         'type' => 'array',
@@ -71,5 +74,11 @@ class BulkOrderReturnProducts
         ],
     ])]
     #[Assert\NotBlank]
+    #[Assert\All([
+        new Assert\Collection(fields: [
+            'order_detail_id' => [new Assert\NotNull(), new Assert\Type('integer'), new Assert\Positive()],
+            'customization_id' => new Assert\Optional([new Assert\Type('integer'), new Assert\PositiveOrZero()]),
+        ]),
+    ])]
     public array $stagedProductRows;
 }
