@@ -4,7 +4,8 @@
 # The rules live in .ai/CONTEXT.md, its on-demand .ai/*.md contexts and .ai/REVIEW.md (review checklist). This
 # file only maps the paths to them and sets how CodeRabbit runs: it changes when that mapping changes, never
 # when a rule does.
-# Reviews are manual: comment "@coderabbitai full review" on the pull request.
+# The first review is manual: comment "@coderabbitai full review" on the pull request; each later push gets
+# an incremental review.
 # Reference: https://docs.coderabbit.ai/reference/configuration
 
 language: en-US
@@ -69,10 +70,10 @@ reviews:
         Review with the one-place-per-rule principle of .ai/STRUCTURE.md → "Maintenance"; a rule
         contradicted by a resource of the PR is a finding on one of them, say which.
   auto_review:
-    # Manual reviews only while CodeRabbit is evaluated; no description keyword nor label trigger, which
-    # would start reviews anyway
+    # No automatic first review, and no description keyword nor label trigger that would start one; once a
+    # review was requested, each push gets an incremental review
     enabled: false
-    auto_incremental_review: false
+    auto_incremental_review: true
   finishing_touches:
     docstrings:
       enabled: false

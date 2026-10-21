@@ -200,8 +200,9 @@ Apply §1 A–D to the whole resource instead of a diff. With a shop:
 
 - CodeRabbit reads `CONTEXT.md`, its on-demand files, this file and the core AdminAPI context as
   guidelines, plus the path-scoped instructions and pre-merge checks of `.coderabbit.yaml` (the file takes
-  precedence over the settings of the web UI; path instructions take precedence over learnings). It
-  reviews on demand only: comment `@coderabbitai full review` on the pull request.
+  precedence over the settings of the web UI; path instructions take precedence over learnings). Its
+  first review is requested with `@coderabbitai full review` on the pull request; each later push gets an
+  incremental review.
 - When a finding is wrong, answer on the line, with the evidence and the reason: CodeRabbit answers
   and records a learning from the reply. When the correction is general, change the rule in `CONTEXT.md` (or §2 here)
   instead: a learning only applies to similar code, a guideline applies everywhere.
