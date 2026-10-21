@@ -87,7 +87,7 @@ reviews:
       enabled: false
   pre_merge_checks:
     docstrings:
-      mode: off
+      mode: "off"
     title:
       mode: warning
       requirements: >-
