@@ -31,6 +31,9 @@ automated review (§5).
      release is absent on the older CI legs, whose behaviour is the one without it: a core bug to name in
      the description, a version gate on the test, red legs to announce. "The class exists on 9.0.3" says
      nothing about its behaviour.
+   - On that reference, read the domain context of each entity of the PR (`.ai/Domain/{Domain}/CONTEXT.md`,
+     when the core has one) and the Admin API context (`.ai/Component/AdminAPI/CONTEXT.md`) before the
+     classes of step 3: the domain rules and the core features per version the findings rely on.
 3. **Open the core classes before writing a finding about a field, a type, a nullability, a mapping or an
    exception.** For each resource of the diff:
    - the command: constructor parameters (names, types, defaults, nullability), setters, multi-parameter

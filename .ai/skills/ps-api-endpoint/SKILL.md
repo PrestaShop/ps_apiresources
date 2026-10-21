@@ -23,6 +23,11 @@ Ask the user (all in one message if not already specified):
 
 ## Step 2: Discover CQRS classes
 
+Start with the core contexts, from the PS root (the session root, or the path of Step 1): the domain
+context `.ai/Domain/{Domain}/CONTEXT.md` when the core has one, and the Admin API component context
+`.ai/Component/AdminAPI/CONTEXT.md`. They hold what the module context does not: the domain rules of the
+entity and the core infrastructure the resource relies on.
+
 List every command and query of the domain, not only the usual names. From the PS root:
 
 ```bash
@@ -102,3 +107,4 @@ Create both files at their correct paths. Then tell the user:
 ## Reference files
 
 - `../../CONTEXT.md` (`.ai/CONTEXT.md`) — the conventions, with the on-demand `.ai/*.md` contexts (`TESTING.md`, `OPENAPI.md`, `LISTS.md`, `ERRORS.md`, `MULTISHOP.md`, `VERSIONS.md`, `UPLOAD.md`); ADR 0023 and the devdocs are linked from its "Authoritative external references"
+- From the PrestaShop core: `.ai/Domain/{Domain}/CONTEXT.md` (the domain of the entity) and `.ai/Component/AdminAPI/CONTEXT.md` (the core side of the Admin API)
