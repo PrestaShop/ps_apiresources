@@ -9,19 +9,23 @@ Read when an operation receives a file: a `File` property, a
 - The file travels in a `multipart/form-data` request, the only format
   carrying a binary part: `inputFormats` lists `multipart`.
 - PHP only fills the uploaded files of a POST request, so an operation
-  receiving a file is a POST even when it updates, partially or not (ADR
-  PR #45, §HTTP methods). The update is a `CQRSUpdate` with
-  `method: CQRSUpdate::METHOD_POST` and `status: Response::HTTP_OK`; its
-  description says that it never creates and which fields it changes.
-  Both POST operations of the class carry an explicit summary
-  ([`OPENAPI.md`](./OPENAPI.md)). `Carrier` declares the same contract
-  with a `CQRSCreate`, `status: Response::HTTP_OK` and `read: false`.
-- An operation that also works without the file (an update keeping the
-  current file, an optional upload) accepts JSON too, so a client with
-  nothing to upload sends a regular JSON body: `inputFormats` lists
-  `json` and `multipart`, in a constant shared by the operations
-  (`Carrier::INPUT_FORMATS`). An operation that always needs the file is
+  receiving a file is a POST, even when it updates (ADR PR #45, §HTTP
+  methods). The update that may carry a file is a `CQRSUpdate` with
+  `method: CQRSUpdate::METHOD_POST`, `status: Response::HTTP_OK` and
+  `inputFormats` limited to `multipart`; it is partial or full like its
+  command, and its summary and description say that it updates
+  ([`OPENAPI.md`](./OPENAPI.md)).
+- When that update is partial, a JSON `PATCH` on the same URI updates
+  the fields without the file, for a client with nothing to upload: the
+  file field is left out of its input. A full update needs the file, so
+  it has no JSON variant.
+- A creation is a POST anyway: it accepts JSON when the file is
+  optional, and multipart when a file is sent (`inputFormats` lists
+  `json` and `multipart`). An operation that always needs the file is
   multipart only, and a JSON request answers 415.
+- Older updates predate the split: `Carrier` and `VirtualProductFile`
+  accept JSON on their multipart POST, `ProductImage` takes multipart
+  only. Their JSON `PATCH` comes with the refactoring of their domain.
 - The other fields are form fields of the same request (`ProductImage`:
   `legends`, `cover`, `position`). Form values are strings: the operation
   sets `denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT
@@ -78,10 +82,11 @@ On top of [`TESTING.md`](./TESTING.md):
   `prepareUploadedFile()` from an asset of `tests/Resources/assets/` (a
   temporary copy, since the API removes the uploaded file).
 - Covered: the upload (whole response, real types, the stored file or
-  its exposed URL); a partial update without file; the JSON body when the
-  operation accepts it, a 415 when it does not; an invalid file (422 on
-  the file property path, `CarrierEndpointTest`); the validation errors
-  of the other fields sent as form values.
+  its exposed URL); the JSON `PATCH` of the fields; a JSON creation when
+  the file is optional; a 415 for a JSON request on a multipart-only
+  operation; an invalid file (422 on the file property path,
+  `CarrierEndpointTest`); the validation errors of the other fields sent
+  as form values.
 - Stored files survive the database restore of the suite: remove them in
   `tearDownAfterClass()` (`CarrierEndpointTest`).
 - A core whose handler stores the file with `move_uploaded_file()`
@@ -92,13 +97,14 @@ On top of [`TESTING.md`](./TESTING.md):
 ## Canonical examples
 
 - `src/ApiPlatform/Resources/Carrier/Carrier.php` and
-  `CarrierEndpointTest` — JSON or multipart on create and update,
-  optional `?File $logo = null`, the constraint of the back-office form,
-  `[logo].pathName` mapping, stored-file assertions and cleanup.
+  `CarrierEndpointTest` — JSON or multipart creation, optional
+  `?File $logo = null`, the constraint of the back-office form,
+  `[logo].pathName` mapping, stored-file assertions and cleanup; its
+  update predates the JSON `PATCH` rule.
 - `src/ApiPlatform/Resources/Product/VirtualProductFile.php` and
   `VirtualProductFileEndpointTest` — multipart-only create (415 on
-  JSON), update by JSON or multipart, the file kept out of the JSON
-  schemas, `NotNull` on the create only.
+  JSON), the file kept out of the JSON schemas, `NotNull` on the create
+  only; its update predates the JSON `PATCH` rule.
 - `src/ApiPlatform/Resources/Product/ProductImage.php` — other fields
   sent as form values with the image (localized legends, cover,
   position).

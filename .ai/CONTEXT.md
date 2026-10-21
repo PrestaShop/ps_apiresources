@@ -140,7 +140,8 @@ not the other way round:
   `allowEmptyBody: true`, only when there is nothing to read back (see
   the Do list).
 - An operation receiving a file is a `POST` with a multipart body, even
-  when it updates: [`UPLOAD.md`](./UPLOAD.md).
+  when it updates; a partial update also gets a JSON `PATCH` without the
+  file: [`UPLOAD.md`](./UPLOAD.md).
 - Collections: `PaginatedList`, `CQRSPaginate` or `CQRSGetCollection`,
   chosen as described in [`LISTS.md`](./LISTS.md).
 
