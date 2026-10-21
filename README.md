@@ -114,7 +114,7 @@ The PrestaShop Admin API provides RESTful endpoints for managing your store prog
 - **[Create new API endpoints](https://devdocs.prestashop-project.org/9/admin-api/contribute-to-core-api/)** - Complete step-by-step guide
 - **[Admin API Documentation](https://devdocs.prestashop-project.org/9/admin-api/)** - Full API reference
 - **[.ai/CONTEXT.md](.ai/CONTEXT.md)** - The conventions of this repository (URIs, scopes, mappings, DTOs, errors, tests), also read by AI assistants
-- **[.ai/REVIEW.md](.ai/REVIEW.md)** - The review checklist applied to every pull request, by the maintainers and by CodeRabbit (see `.coderabbit.yaml`); run it on your own changes before opening the PR
+- **[.ai/REVIEW.md](.ai/REVIEW.md)** - The review checklist applied to every pull request by the maintainers, and by CodeRabbit on demand (see `.coderabbit.yaml`); run it on your own changes before opening the PR
 
 One pull request per domain, with its integration tests. When your endpoint needs a change in the PrestaShop core, open the core PR first and reference it in the module PR description ("Related PR"): the module CI stays red on the branches that lack the core change until the core PR is merged, which is expected.
 

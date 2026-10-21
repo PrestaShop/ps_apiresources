@@ -57,7 +57,10 @@ operation is built per command (its parameters, through the command
 mapping) and the read schema from the query result, so they may
 legitimately differ; a typed `openapiContext` on an array documents its
 first level only; the request body of a bulk `DELETE` is not documented
-(Swagger offers no field — a core limitation, not a resource bug); the
+(Swagger offers no field — a core limitation, not a resource bug); a
+`DELETE` answering a body (`status: 200`, `output`, the query in
+`extraProperties`) is exported as `200: '{Entity} resource deleted'`
+without a response schema; the
 responses listed (400, 422 on writes, 404 on item routes) are API
 Platform's generic defaults, not derived from `exceptionToStatus` yet;
 an id-only operation (`duplicate`, `toggle-status`, `reset`) is exported
@@ -65,7 +68,9 @@ with a required, empty request body; a command whose accessors are named
 differently from its constructor parameters (`getImageWidth()` for
 `$imgWidth`) loses those parameters from the documented body; a
 write-only nullable property guarded by `NotNull` (`?string $privateNote`)
-is documented as nullable although `null` answers 422.
+is documented as nullable although `null` answers 422; a `readable: false`
+property stays in the schema the GET shares, flagged `writeOnly: true`
+(sent in requests, never returned), which is correct.
 
 Class and property comments are PHPDoc for developers: the core does not
 publish them (9.2.1 removed the factory that published class comments,

@@ -90,5 +90,5 @@ an endpoint depends on most often:
 | 9.0.2 | `@index` placeholders in mappings; `CQRSDelete` with a `CQRSCommand` and `allowEmptyBody` |
 | 9.0.3 | `CQRSPaginate` |
 | 9.1.2 | 207 responses of the bulk commands (`AbstractBulkCommandHandler`, `BulkCommandExceptionNormalizer`) |
-| 9.2.0 | `minVersion` / `maxVersion` filtering in the core; `defaultValues`; `ScalarFirstUnionTypeExtractor`; request bodies documented from the commands |
+| 9.2.0 | `minVersion` / `maxVersion` filtering in the core; `defaultValues`; `ScalarFirstUnionTypeExtractor`; request bodies documented from the commands; `File` properties documented as binary parts of the multipart body; multipart parts holding a JSON array or object decoded ([`UPLOAD.md`](./UPLOAD.md)) |
 | 9.2.1 | Booleans of every query result cast at every level (nested DTOs, `@var Foo[]` lists); `@var Foo[]` / `@var int[]` item types read from the PHPDoc; `collectionAsList`; paginated envelope with an integer `offset` and documented list parameters; class PHPDoc no longer published |

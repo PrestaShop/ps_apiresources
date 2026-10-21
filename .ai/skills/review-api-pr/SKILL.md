@@ -12,7 +12,7 @@ subagent: recommended
 
 # Review an Admin API pull request or endpoint
 
-Read `.ai/REVIEW.md` (the checklist) and `.ai/CONTEXT.md` (the conventions, with the on-demand `.ai/TESTING.md`, `OPENAPI.md`, `LISTS.md`, `MULTISHOP.md`, `VERSIONS.md` the checks point to)
+Read `.ai/REVIEW.md` (the checklist) and `.ai/CONTEXT.md` (the conventions, with the on-demand `.ai/TESTING.md`, `OPENAPI.md`, `LISTS.md`, `MULTISHOP.md`, `VERSIONS.md`, `UPLOAD.md` the checks point to)
 before anything else. The core side (providers, normalizers, OpenAPI adapters, features per core version)
 is in the PrestaShop repository: `.ai/Component/AdminAPI/CONTEXT.md`.
 

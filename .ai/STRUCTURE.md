@@ -14,6 +14,7 @@ tool-specific touch points at the repository root (`CLAUDE.md`, `AGENTS.md`, `GE
 ├── MULTISHOP.md      # shop association and shop context
 ├── ERRORS.md         # exception mapping, validation, bulk operations, status codes
 ├── VERSIONS.md       # minVersion, features per core version
+├── UPLOAD.md         # file uploads: multipart body, POST updates, File property, tests
 ├── REVIEW.md         # review checklist (CodeRabbit guideline, review-api-pr skill)
 ├── skills/           # ps-api-endpoint, review-api-pr — symlinked from .claude/skills/
 ├── rules/            # path-scoped rules, source of the per-tool copies (see below)
@@ -29,7 +30,7 @@ context to read. `bash .ai/bin/sync-rules.sh` symlinks it into `.claude/rules/` 
 generated ("do not edit" header) and committed; edit the source and run the script.
 
 Rules: `api-resources` (`src/ApiPlatform/**`, `config/**` → `OPENAPI.md`, `LISTS.md`, `MULTISHOP.md`,
-`ERRORS.md`, `VERSIONS.md`), `api-tests` (`tests/Integration/**` → `TESTING.md`).
+`ERRORS.md`, `VERSIONS.md`, `UPLOAD.md`), `api-tests` (`tests/Integration/**` → `TESTING.md`, `UPLOAD.md`).
 
 ## Maintenance
 

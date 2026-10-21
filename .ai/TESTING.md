@@ -47,7 +47,10 @@ The suite boots like `admin-api/index.php`: **no employee in the legacy
 context** (no `_PS_ADMIN_DIR_`), and `requestApi()` resets the legacy
 static caches and clears the employee / cart of the context before each
 request. An endpoint that only works with an employee in the context is
-broken for real API clients; a test must not add one.
+broken for real API clients; a test must not add one. The command is
+fixed in the core to work with an API client, recording the API client
+with `MutationTracker::addMutationForApiClient()` when the action needs a
+history of who performed it (an edge case: `UpdateOrderStatusHandler`).
 
 A test class never repeats this setup: its `setUpBeforeClass()` calls
 the parent, restores its tables and pre-creates its API client, nothing
@@ -77,6 +80,8 @@ Static helpers available for additional setup (call from
 
 ## Test structure
 
+- An upload endpoint adds the cases of [`UPLOAD.md`](./UPLOAD.md) →
+  "Tests" (multipart request, stored file, JSON alternative).
 - Implement `getProtectedEndpoints()` listing every operation that
   requires authentication so the base class can verify scope
   enforcement via `testProtectedEndpoints`.
@@ -136,7 +141,10 @@ Static helpers available for additional setup (call from
   in `setUpBeforeClass` / `tearDownAfterClass` (include `_lang` table
   if localized, `_shop` table if shop-associated), never with manual
   SQL — it also runs after a failure; `ResourceResetter` for module
-  files; no per-domain `*Resetter` class.
+  files. A per-domain resetter of the core test resources
+  (`ProductResetter`, `ShopResetter`) is used when one exists, once
+  checked to restore what the test changes on every core version the
+  test covers.
 
 ## Canonical tests
 

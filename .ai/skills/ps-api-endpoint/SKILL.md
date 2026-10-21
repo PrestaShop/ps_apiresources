@@ -23,22 +23,21 @@ Ask the user (all in one message if not already specified):
 
 ## Step 2: Discover CQRS classes
 
-Search the PS core for the entity's domain classes. The standard layout is:
+List every command and query of the domain, not only the usual names. From the PS root:
 
-```
-{PS_ROOT}/src/Core/Domain/{Entity}/
-  Command/Add{Entity}Command.php
-  Command/Edit{Entity}Command.php
-  Command/Delete{Entity}Command.php
-  Command/BulkDelete{Entity}Command.php
-  Query/Get{Entity}ForEditing.php
-  Query/Get{Entity}ListForEditing.php     ← may not exist; Grid is used for lists
-  QueryResult/{Entity}ForEditing.php      ← shows what fields the query returns
-  Exception/{Entity}NotFoundException.php
-  Exception/{Entity}ConstraintException.php
+```bash
+php bin/console prestashop:list:commands-and-queries --domain={Domain} -f simplified
 ```
 
-Use Glob/Grep to find these files. Then **read the QueryResult class** (e.g. `{Entity}ForEditing.php`) — its constructor arguments and getters reveal the exact field names returned by the query. This is the ground truth for `QUERY_MAPPING`. Read the query handler too: it tells what really fills each field (a `0`/`1` tiny int, a formatted amount, an always-empty array) and which exceptions it throws.
+The list includes the subdomains nested in the domain folder, which have their own `Command/`, `Query/`
+and `QueryResult/` (`Product/Combination/`, `Product/Image/`), and shows the endpoint already exposing
+each class; without a running shop, list `src/Core/Domain/{Domain}/` recursively. The usual names are a
+first scan, not a rule: `Add` or `Create`, `Edit` or `Update`, `Get{Entity}ForEditing`, plus specific
+actions no pattern predicts (`Toggle…Status`, `Set…`, `Duplicate…`).
+
+For each query, **read the class its handler returns**, whatever its name (`{Entity}ForEditing` is
+common, `EditableCustomerAddress` or `Attachment` are not) — its constructor arguments and getters reveal
+the exact field names returned by the query. This is the ground truth for `QUERY_MAPPING`. Read the query handler too: it tells what really fills each field (a `0`/`1` tiny int, a formatted amount, an always-empty array) and which exceptions it throws.
 
 Also read the Command constructors and setters (multi-parameter setters become one sub object) to learn the parameter names needed for `CQRSCommandMapping`, and the value objects they build (`{Entity}Id`, `ShopId`…): their exceptions must be mapped in `exceptionToStatus`. Finally read the handler of each command for the exceptions of the referenced entities (`ZoneNotFoundException`, `ShopNotFoundException`…).
 
@@ -62,7 +61,7 @@ After reading the QueryResult, confirm with the user:
 Copy the canonical resource that matches the feature (`CONTEXT.md` → "Canonical examples": the `Country`
 domain for a CRUD on a localized entity with a shop association, its grid list and its bulk operations,
 `CustomerDetails` for DTO sub objects, the others for `CQRSPaginate`, command-style operations and
-uploads), then adapt it
+uploads, the latter with `.ai/UPLOAD.md`), then adapt it
 with the sections of the context: the operations and their method (`CONTEXT.md` → "Choosing the
 operation"), the URIs and scopes ("URI conventions", "Scopes"), the properties ("Property naming",
 "Sub objects: typed DTOs"), the mappings ("Field mapping"), the exceptions and constraints
@@ -70,10 +69,11 @@ operation"), the URIs and scopes ("URI conventions", "Scopes"), the properties (
 has and the new one does not (operations, mappings, attributes, options): nothing is kept because the
 original has it.
 
-A list lives in its own `{Entity}List.php` next to the resource (`.ai/LISTS.md`); the bulk operations of
-the domain share one `Bulk{Entities}.php` (`BulkCountries.php`), with the shape of `CONTEXT.md` → "URI
-conventions" and the constraints of `.ai/ERRORS.md`; no new class for one more operation on the same
-payload (`CONTEXT.md` → "Architecture").
+A list lives in its own `{Entity}List.php` next to the resource (`.ai/LISTS.md`); every write returning
+the entity joins `{Entity}.php`; the bulk operations of the domain share one `Bulk{Entities}.php`
+(`BulkCountries.php`), with the shape of `CONTEXT.md` → "URI conventions" and the constraints of
+`.ai/ERRORS.md`; no new class for one more operation on the same output or payload (`CONTEXT.md` →
+"Architecture overview").
 
 ## Step 5: Write the integration test
 
@@ -101,4 +101,4 @@ Create both files at their correct paths. Then tell the user:
 
 ## Reference files
 
-- `../../CONTEXT.md` (`.ai/CONTEXT.md`) — the conventions, with the on-demand `.ai/*.md` contexts (`TESTING.md`, `OPENAPI.md`, `LISTS.md`, `ERRORS.md`, `MULTISHOP.md`, `VERSIONS.md`); ADR 0023 and the devdocs are linked from its "Authoritative external references"
+- `../../CONTEXT.md` (`.ai/CONTEXT.md`) — the conventions, with the on-demand `.ai/*.md` contexts (`TESTING.md`, `OPENAPI.md`, `LISTS.md`, `ERRORS.md`, `MULTISHOP.md`, `VERSIONS.md`, `UPLOAD.md`); ADR 0023 and the devdocs are linked from its "Authoritative external references"

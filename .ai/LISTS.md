@@ -70,8 +70,8 @@ by the grid's underlying query builder. To verify alignment:
 
 The same principle applies to `CQRSPaginate`: compare the CQRS query's
 result DTO fields against the ApiResource properties. The format of the
-localized fields of a list (one language) is in `CONTEXT.md` →
-"Property naming".
+localized fields of a list (one language from a grid, the contract of the
+query otherwise) is in `CONTEXT.md` → "Property naming".
 
 ## Envelope and documentation
 

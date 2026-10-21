@@ -14,6 +14,7 @@ situations live next to it and are read on demand:
 | [`LISTS.md`](./LISTS.md) | the operation is a `PaginatedList`, a `CQRSPaginate` or a `CQRSGetCollection` |
 | [`ERRORS.md`](./ERRORS.md) | touching `exceptionToStatus`, a constraint or a validation group, a bulk operation, or when an endpoint answers an unexpected status |
 | [`MULTISHOP.md`](./MULTISHOP.md) | the entity has a shop association (`shopIds`) or the command / query takes a shop id or a `ShopConstraint` |
+| [`UPLOAD.md`](./UPLOAD.md) | an operation receives a file (a `File` property, a `multipart/form-data` request) |
 | [`VERSIONS.md`](./VERSIONS.md) | a CQRS class or behaviour is missing or different on a supported core (`minVersion`, features per core version) |
 | [`REVIEW.md`](./REVIEW.md) | reviewing a pull request or auditing an existing endpoint |
 
@@ -39,7 +40,7 @@ All resources live under `src/ApiPlatform/Resources/{Domain}/`.
 A resource class binds an HTTP operation to a CQRS class from the Core,
 using one of the operation attributes provided by `PrestaShopBundle`:
 
-| Attribute            | HTTP   | Wraps                        | Use case                                  |
+| Attribute            | HTTP   | Usually wraps                | Use case                                  |
 |----------------------|--------|------------------------------|-------------------------------------------|
 | `CQRSGet`            | GET    | A `Get…ForEditing` query     | Fetch a single entity                     |
 | `CQRSCreate`         | POST   | An `Add…Command`             | Create a new entity                       |
@@ -60,19 +61,51 @@ Each operation declares:
 - An `exceptionToStatus` map at the class level so domain exceptions are
   translated into proper HTTP responses
 
-Single-entity, list and bulk operations are split across **separate
-classes** in the same domain folder, and that is the whole split: the
-operations of one kind share a class. The bulk operations of a domain live
-in one `Bulk{Entities}.php` even when their bodies differ: the body of each
-operation is documented from its own command ([`OPENAPI.md`](./OPENAPI.md)),
-so the field of one operation never appears on the others, and that field
-carries the validation group of its operation (`validationContext`) to stay
-optional elsewhere. A new class is justified by another payload shape
-(another entity, a list, a sub-resource), never by one more operation on
-the same shape. A class name is unique under `Resources/`: API Platform
-names the OpenAPI schema after the short name, and two `TaxRuleList`
-classes in different domains document both routes with the schema of
-the older one. For example:
+Resource classes are shared as much as possible: one class per shape,
+used by every operation answering with it or sharing its body.
+
+- `{Entity}.php` carries the GET and every write answering with the
+  entity (POST, PATCH, PUT, command-style operations): a write returns
+  the updated entity, read back through the `CQRSQuery` of the GET (ADR
+  PR #45, §HTTP methods), so the class normalizing the GET normalizes
+  their response too.
+- `Bulk{Entities}.php` carries every bulk operation on the entities of
+  the domain (the id list plus one or two options; no content returned,
+  the failed items in a 207), even when their bodies differ: the body of
+  each operation is documented from its own command
+  ([`OPENAPI.md`](./OPENAPI.md)), so the field of one operation never
+  appears on the others. The list lives in `{Entity}List.php`
+  ([`LISTS.md`](./LISTS.md)).
+- A field used by one operation only stays in the shared class, with a
+  PHP comment naming the endpoint that writes it, and `readable: false`
+  when the GET does not return it (`Customer::$deleteMethod`,
+  `Carrier::$taxRuleGroupId`). A constraint that would make the other
+  operations require it (`NotNull`, `NotBlank`) carries the validation
+  group of that operation (`validationContext`); a constraint that only
+  checks a value when one is sent stays in `Default`, which every
+  operation validates.
+- Another class only when the shapes are too different to make sense
+  together: another entity, a list, a sub-resource with its own read
+  model (`CarrierRanges`). Older resources still split one shape over
+  several classes (`ProductShops extends Product` to add the input of one
+  operation, one bulk class per operation): they are merged when their
+  domain is refactored.
+- Nice to have, for a bulk operation on the sub-content of one parent
+  entity only (`/x/{xId}/…/bulk-*`, rows or associations of that
+  parent): it joins the class showing that sub-content and returns its
+  updated state, `{Entity}.php` when the GET of the parent includes it,
+  the class listing it otherwise (`/x/{xId}/items`). A `DELETE` cannot
+  return it cleanly yet: `CQRSDelete` takes no `CQRSQuery` argument and a
+  `DELETE` answering a body is exported without its response schema
+  ([`OPENAPI.md`](./OPENAPI.md)), so a sub-content bulk `DELETE` joins
+  the class and answers 204 until the core supports it
+  (PrestaShop#43281); the endpoint then returns the updated state and
+  requires the core version that ships it.
+
+A class name is unique under `Resources/`: API Platform names the OpenAPI
+schema after the short name, and two `TaxRuleList` classes in different
+domains document both routes with the schema of the older one. For
+example:
 
 ```
 src/ApiPlatform/Resources/Country/
@@ -106,9 +139,8 @@ not the other way round:
 - Body-less actions answer 204 with `read: false`, `output: false` and
   `allowEmptyBody: true`, only when there is nothing to read back (see
   the Do list).
-- An operation receiving files forces `method: CQRSUpdate::METHOD_POST`
-  (PHP only parses multipart on POST), with `status: Response::HTTP_OK`
-  when it updates, and an explicit `openapi` summary; see `ProductImage`.
+- An operation receiving a file is a `POST` with a multipart body, even
+  when it updates: [`UPLOAD.md`](./UPLOAD.md).
 - Collections: `PaginatedList`, `CQRSPaginate` or `CQRSGetCollection`,
   chosen as described in [`LISTS.md`](./LISTS.md).
 
@@ -147,7 +179,9 @@ existing deviation is never a precedent.
   ADR 0023 §Bulk operations: `DELETE` + `CQRSDelete` for `bulk-delete`,
   `PUT` + `CQRSUpdate` for `bulk-update-status` (the value in the body,
   never one endpoint per value), `POST` for `bulk-duplicate` and for any
-  bulk action no method fits.
+  bulk action no method fits. A bulk update is a `PUT`, not a `PATCH`:
+  its command needs the ids and the value on every call, and repeating
+  it changes nothing more (see "Choosing the operation").
 - **Command-style operations** that are not plain CRUD on the resource name
   the action explicitly, verb first: `/carriers/{carrierId}/set-tax-rule-group`,
   `/tax-rules-groups/{taxRulesGroupId}/set-status`,
@@ -184,7 +218,6 @@ and a new endpoint never copies them.
 | `PUT /taxes/bulk-set-status`; `PUT /customers/bulk-enable` + `bulk-disable`; `PUT /suppliers/bulk-enable` + `bulk-disable` | one `PUT /x/bulk-update-status`, the value in the body |
 | `PUT /modules/bulk-uninstall` | `POST` when no method fits |
 | `PATCH /categories/{categoryId}/status`, `PATCH /tax-rules-groups/{taxRulesGroupId}/set-status`, `/hooks/{hookId}/status` | example sub part `/hooks/{hookId}/status`; the `set-status` rule above comes from the reviews of 2026-03, the ADR is not amended yet (a `toggle-status` with no value follows the rule above: `/zones`, `/stores`, `/countries`) |
-| `GET /attributes/groups-with-attributes`, `GET /products/{productId}/attribute-groups` (`CQRSGetCollection`s returning every language) | §Multilang: a list returns one language |
 
 ## Scopes
 
@@ -249,9 +282,13 @@ identifiers (`{entity}Id`, nested ids, `shopIds`).
 Localized properties must be marked with `#[LocalizedValue]` — this
 triggers automatic locale↔languageId conversion on both read and write.
 Single-entity endpoints return localized fields as locale-indexed arrays
-(e.g. `{"names": {"en-US": "Size", "fr-FR": "Taille"}}`); list endpoints,
-paginated or not, return a single language string (default shop
-language, or via the `langId` query parameter) — ADR 0023 §Multilang.
+(e.g. `{"names": {"en-US": "Size", "fr-FR": "Taille"}}`). A list built
+on a grid returns a single language string, since a grid lists one
+language (default shop language, or via the `langId` query parameter) —
+ADR 0023 §Multilang. A list built on a CQRS query (`CQRSPaginate`,
+`CQRSGetCollection`) follows the contract of the query: when the query
+returns every language, so does the endpoint, as locale-indexed arrays
+(ADR PR #45).
 Never return language IDs as keys — always locale strings like `en-US`.
 
 To require the default language on create / update, add
@@ -291,6 +328,13 @@ public array $validOrders;
   of `@var Foo[]` lists from 9.2.1 — a DTO holding a list or a boolean
   filled from a query result needs `minVersion: 9.2.1` (the `@var Foo[]`
   item type is also read from 9.2.1 only).
+- A localized value inside a sub object is a `#[LocalizedValue]`
+  property of its DTO, indexed by locale like on the resource. The core
+  only converts the properties of the resource itself (a DTO property
+  still comes out keyed by language id on 9.2.1): an endpoint needing it
+  waits for the core improvement (PrestaShop#43278) and requires the core
+  version that ships it. `AttributeGroupWithAttributesNormalizer` does it by hand for
+  two legacy resources and is not copied.
 - Hand-written `openapiContext` object schemas (`'type' => 'object',
   'properties' => [...]`) are the legacy form: existing resources are
   migrated to DTOs domain by domain, new resources never use them.
@@ -337,8 +381,9 @@ with `src/ApiPlatform/Resources/Customer/Dto/`.
   and when the query result is normalized (**query result field → API
   field**, e.g. `'[localisedTitles]' => '[names]'`). A common mistake is
   inverting the second direction (using the API field name as key
-  instead of the QueryResult field name). Read the `Get{Entity}ForEditing`
-  query result class in PrestaShop Core to find source field names.
+  instead of the QueryResult field name). Read the class the query
+  handler returns (often `{Entity}ForEditing`, not always) to find the
+  source field names.
 - `CQRSCommandMapping` (often `CREATE_COMMAND_MAPPING` /
   `UPDATE_COMMAND_MAPPING`, or a shared `COMMAND_MAPPING` when both
   commands accept the same parameters) maps **API field → command
@@ -443,9 +488,9 @@ examples: [`MULTISHOP.md`](./MULTISHOP.md).
   This includes command-style operations: prefer returning the updated
   resource over answering `204` with `output: false`, so the caller does not
   need a follow-up GET. When the operation only touches one association of a
-  bigger entity, host it in that entity's resource class and return the whole
-  entity — `Carrier::set-tax-rule-group` returns the carrier, not the
-  association alone. An operation whose read side does not exist yet, or
+  bigger entity, return the whole entity from that entity's class (see
+  "Architecture overview") — `Carrier::set-tax-rule-group` returns the
+  carrier, not the association alone. An operation whose read side does not exist yet, or
   whose domain is not settled, ships with `experimentalOperation: true`
   (exposed only when the experimental endpoints feature flag is on) and
   is graduated by removing it once the contract is complete.
@@ -488,7 +533,8 @@ examples: [`MULTISHOP.md`](./MULTISHOP.md).
   - `PrestaShop\Decimal\DecimalNumber` — which **must** be used instead
     of `float` for any decimal / monetary value (never `float`);
   - `DateTimeImmutable` / `DateImmutable` — for date / datetime properties;
-  - `Symfony\Component\HttpFoundation\File\File` — for file uploads;
+  - `Symfony\Component\HttpFoundation\File\File` — for file uploads
+    ([`UPLOAD.md`](./UPLOAD.md));
   - a DTO class of the `Resources\{Domain}\Dto` namespace — for sub
     objects (see "Sub objects: typed DTOs").
 
@@ -592,6 +638,8 @@ for the patterns above:
   body-less `toggle-status` returning the entity, `LocalizedValue`,
   `DefaultLanguage`, `QUERY_MAPPING`, `COMMAND_MAPPING`, `defaultValues`,
   `exceptionToStatus`, `shopIds`).
+- **File uploads** — see [`UPLOAD.md`](./UPLOAD.md) (`Carrier`,
+  `VirtualProductFile`, `ProductImage`).
 - **Lists** — see [`LISTS.md`](./LISTS.md) (`CountryList`,
   `CombinationList`, `FoundCustomer`).
 - **Sub-resource** —

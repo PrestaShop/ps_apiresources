@@ -78,14 +78,18 @@ restates a rule: when a line below and the section disagree, the section wins an
 - A new endpoint deviating from [ADR 0023](https://github.com/PrestaShop/ADR/blob/master/0023-cqrs-api-guidelines.md)
   is Major unless the description announces an ADR amendment; the listed deviations are neither flagged
   nor copied.
-- One more resource class for an operation that fits an existing class of the domain (same payload
-  shape, the operation-specific field scoped by a validation group) is Minor, naming the class to join.
+- One more resource class for an operation that fits an existing class of the domain (same output as
+  the GET, or a bulk body next to `Bulk{Entities}`) is Minor, naming the class to join — a subclass of
+  the entity carrying input fields included. In a shared class, a `NotNull` / `NotBlank` on a field one
+  operation uses, outside the validation group of that operation, is Major (the other operations
+  require the field); a constraint that only checks a sent value can stay in `Default`. A missing PHP
+  comment naming the endpoint that writes the field is Minor.
 
 ### B. Contract with the core
 
 - Sections: [Property naming](./CONTEXT.md#property-naming), [Sub objects](./CONTEXT.md#sub-objects-typed-dtos),
   [Field mapping](./CONTEXT.md#field-mapping), [Read and write formats must match](./CONTEXT.md#read-and-write-formats-must-match),
-  [`LISTS.md`](./LISTS.md), [`MULTISHOP.md`](./MULTISHOP.md), [`VERSIONS.md`](./VERSIONS.md).
+  [`LISTS.md`](./LISTS.md), [`MULTISHOP.md`](./MULTISHOP.md), [`VERSIONS.md`](./VERSIONS.md), [`UPLOAD.md`](./UPLOAD.md).
 - Evidence: the command constructor and setters (every write property must reach one), the query result
   getters and the handler (every read property must have a source, every returned field is exposed or its
   omission explained), the grid query builder or the CQRS list query result, the back-office form type,
@@ -196,9 +200,10 @@ Apply §1 A–D to the whole resource instead of a diff. With a shop:
 
 - CodeRabbit reads `CONTEXT.md`, its on-demand files, this file and the core AdminAPI context as
   guidelines, plus the path-scoped instructions and pre-merge checks of `.coderabbit.yaml` (the file takes
-  precedence over the settings of the web UI; path instructions take precedence over learnings).
-- When a finding is wrong, answer on the line, with the evidence and the reason: CodeRabbit records a
-  learning from the reply. When the correction is general, change the rule in `CONTEXT.md` (or §2 here)
+  precedence over the settings of the web UI; path instructions take precedence over learnings). It
+  reviews on demand only: comment `@coderabbitai full review` on the pull request.
+- When a finding is wrong, answer on the line, with the evidence and the reason: CodeRabbit answers
+  and records a learning from the reply. When the correction is general, change the rule in `CONTEXT.md` (or §2 here)
   instead: a learning only applies to similar code, a guideline applies everywhere.
 - When a human review catches something `CONTEXT.md` does not state, add the convention there (never a
   check that restates it here); add the false-positive pattern to §2. A finding caused by an outdated
