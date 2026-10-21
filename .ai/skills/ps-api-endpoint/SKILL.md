@@ -61,6 +61,11 @@ After reading the QueryResult, confirm with the user:
 
 ## Step 4: Write the ApiResource class
 
+Before writing, read the module on-demand contexts the endpoint needs (`.ai/CONTEXT.md` → "Read when"):
+`OPENAPI.md`, `ERRORS.md` and `TESTING.md` for any new or reworked endpoint, plus `LISTS.md`,
+`MULTISHOP.md`, `UPLOAD.md` or `VERSIONS.md` when their trigger applies. The path rules only remind them
+once a resource file is written, after this reading.
+
 **File location:** `src/ApiPlatform/Resources/{Domain}/{Entity}.php`
 
 Copy the canonical resource that matches the feature (`CONTEXT.md` → "Canonical examples": the `Country`

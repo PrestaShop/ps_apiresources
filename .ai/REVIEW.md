@@ -14,7 +14,10 @@ automated review (§5).
    when the PR graduates the operation (`experimentalOperation` removed), re-documents it or edits its
    block; any other pre-existing line is reported once, at the end, as a follow-up, not as a finding.
    Read the PR description (`gh pr view <n> --json body`): related core PR, BC breaks, version gates and
-   deliberate omissions are checked against it, not guessed.
+   deliberate omissions are checked against it, not guessed. Read the on-demand contexts the PR needs
+   (`CONTEXT.md` → "Read when") before the checks of §1: `OPENAPI.md`, `ERRORS.md` and `TESTING.md` for
+   any resource or test of the diff, plus `LISTS.md`, `MULTISHOP.md`, `UPLOAD.md` or `VERSIONS.md` when
+   their trigger applies.
 2. **Find the core reference** ([Working with the core](./CONTEXT.md#working-with-the-core)):
    - the **related core PR** when the description names one (`PrestaShop/PrestaShop#NNNN`): review the
      module against that PR's branch. The module CI is then expected to be red on the branches that lack
