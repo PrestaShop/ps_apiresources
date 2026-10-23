@@ -270,16 +270,18 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testCountryWithThreeLetterIsoCode(): void
     {
-        // AddCountryCommand would keep the first 2 letters: refused instead of silently truncated
-        $response = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XAB', 'callPrefix' => 997]), ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        $this->assertValidationErrors([
-            ['propertyPath' => 'isoCode', 'message' => 'This value is too long. It should have 2 characters or less.'],
-        ], $response);
+        // The back office form, AddCountryCommand (from 9.2.1) and EditCountryCommand accept 3 letters
+        if (self::isVersionAtLeast('9.2.1')) {
+            $country = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XAB', 'callPrefix' => 997]), ['country_write']);
+            $this->assertSame('XAB', $country['isoCode']);
+            $this->assertSame('XAB', $this->getItem('/countries/' . $country['countryId'], ['country_read'])['isoCode']);
+            $this->deleteItem('/countries/' . $country['countryId'], ['country_write']);
+        }
 
-        // The back office form and EditCountryCommand accept 3 letters: a country read with one can be written back
+        // A country read with 3 letters can be written back
         $countryId = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XA', 'callPrefix' => 997]), ['country_write'])['countryId'];
-        $this->assertSame('XAB', $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => 'XAB'], ['country_write'])['isoCode']);
-        $this->assertSame('XAB', $this->getItem('/countries/' . $countryId, ['country_read'])['isoCode']);
+        $this->assertSame('XAC', $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => 'XAC'], ['country_write'])['isoCode']);
+        $this->assertSame('XAC', $this->getItem('/countries/' . $countryId, ['country_read'])['isoCode']);
         $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => 'XABC'], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $this->deleteItem('/countries/' . $countryId, ['country_write']);
