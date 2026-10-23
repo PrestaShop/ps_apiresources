@@ -148,7 +148,10 @@ class Country
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\NotBlank(allowNull: true, groups: ['Update'])]
     #[TypedRegex(['type' => TypedRegex::TYPE_LANGUAGE_ISO_CODE])]
-    #[Assert\Length(max: 2)]
+    // AddCountryCommand keeps the first 2 letters only: a longer code is refused instead of truncated.
+    // EditCountryCommand stores 3 letters, like the back office form (TYPE_LANGUAGE_ISO_CODE)
+    #[Assert\Length(max: 2, groups: ['Create'])]
+    #[Assert\Length(max: 3, groups: ['Update'])]
     public string $isoCode;
 
     #[ApiProperty(openapiContext: [

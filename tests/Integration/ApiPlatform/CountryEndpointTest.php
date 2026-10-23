@@ -241,7 +241,7 @@ class CountryEndpointTest extends ApiTestCase
     public function testAddCountryWithInvalidValues(): void
     {
         $response = $this->createItem('/countries', $this->getCreatePayload([
-            'isoCode' => 'ZZZ',
+            'isoCode' => 'ZZZZ',
             'callPrefix' => -1,
             'defaultCurrencyId' => -1,
             'zoneId' => 0,
@@ -249,7 +249,8 @@ class CountryEndpointTest extends ApiTestCase
             'shopIds' => [0],
         ]), ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertValidationErrors([
-            ['propertyPath' => 'isoCode', 'message' => 'This value is too long. It should have 2 characters or less.'],
+            // Too long, and refused by the typed regex (2 or 3 letters)
+            ['propertyPath' => 'isoCode'],
             ['propertyPath' => 'callPrefix', 'message' => 'This value should be either positive or zero.'],
             ['propertyPath' => 'defaultCurrencyId', 'message' => 'This value should be either positive or zero.'],
             ['propertyPath' => 'zoneId', 'message' => 'This value should be positive.'],
@@ -265,6 +266,23 @@ class CountryEndpointTest extends ApiTestCase
         ] as $overrides) {
             $this->createItem('/countries', $this->getCreatePayload($overrides), ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+    }
+
+    public function testCountryWithThreeLetterIsoCode(): void
+    {
+        // AddCountryCommand would keep the first 2 letters: refused instead of silently truncated
+        $response = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XAB', 'callPrefix' => 997]), ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'isoCode', 'message' => 'This value is too long. It should have 2 characters or less.'],
+        ], $response);
+
+        // The back office form and EditCountryCommand accept 3 letters: a country read with one can be written back
+        $countryId = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XA', 'callPrefix' => 997]), ['country_write'])['countryId'];
+        $this->assertSame('XAB', $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => 'XAB'], ['country_write'])['isoCode']);
+        $this->assertSame('XAB', $this->getItem('/countries/' . $countryId, ['country_read'])['isoCode']);
+        $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => 'XABC'], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->deleteItem('/countries/' . $countryId, ['country_write']);
     }
 
     public function testEditCountryWithInvalidValues(): void
