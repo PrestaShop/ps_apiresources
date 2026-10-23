@@ -51,6 +51,8 @@ class GenerateApiTrackingTableCommand extends Command
         'GetCustomerForAddressCreation' => self::USELESS_DUPLICATE,
         'ResetEmployeePasswordCommand' => self::USELESS_DUPLICATE,
         'GetEmployeeEmailById' => self::USELESS_DUPLICATE,
+        // GET /countries/{countryId} already returns containsStates and needIdNumber
+        'GetCountryRequiredFields' => self::USELESS_DUPLICATE,
         // GET /products/{productId} already returns the enabled status (and much more)
         'GetProductIsEnabled' => self::USELESS_DUPLICATE,
         // GET /products/{productId}/suppliers returns the associated supplier ids along with the full options
