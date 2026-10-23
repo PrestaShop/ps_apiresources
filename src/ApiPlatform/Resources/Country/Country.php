@@ -63,6 +63,12 @@ use Symfony\Component\Validator\Constraints as Assert;
                 // (the fields stay required on older versions)
                 'defaultValues' => self::CREATE_DEFAULT_VALUES,
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Create a country.',
+                description: 'Before PrestaShop 9.2.1 the creation keeps only the first 2 letters of a 3-letter ISO '
+                    . 'code: send the full code afterwards with PATCH /countries/{countryId}, which accepts 3 letters '
+                    . 'on every version.',
+            ),
         ),
         new CQRSGet(
             uriTemplate: '/countries/{countryId}',
@@ -141,8 +147,9 @@ class Country
     public array $names;
 
     #[ApiProperty(openapiContext: [
-        'description' => 'Two-letter ISO 3166-1 code, stored upper-cased. PrestaShop 9.2.0 and later refuse a code '
-            . 'already used by another country (422), older versions create the duplicate.',
+        'description' => 'ISO 3166-1 code of 2 or 3 letters: the creation stores it upper-cased, the update as sent. '
+            . 'PrestaShop 9.2.0 and later refuse a code already used by another country (422), older versions create '
+            . 'the duplicate.',
         'example' => 'FR',
     ])]
     #[Assert\NotBlank(groups: ['Create'])]

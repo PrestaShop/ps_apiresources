@@ -270,17 +270,20 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testCountryWithThreeLetterIsoCode(): void
     {
-        // The back office form, AddCountryCommand (from 9.2.1) and EditCountryCommand accept 3 letters
-        if (self::isVersionAtLeast('9.2.1')) {
-            $country = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XAB', 'callPrefix' => 997]), ['country_write']);
-            $this->assertSame('XAB', $country['isoCode']);
-            $this->assertSame('XAB', $this->getItem('/countries/' . $country['countryId'], ['country_read'])['isoCode']);
-            $this->deleteItem('/countries/' . $country['countryId'], ['country_write']);
-        }
+        // The creation keeps the 3 letters from PrestaShop 9.2.1, older versions keep the first 2
+        $expectedIsoCode = self::isVersionAtLeast('9.2.1') ? 'XAB' : 'XA';
+        $country = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XAB', 'callPrefix' => 997]), ['country_write']);
+        $countryId = $country['countryId'];
+        $this->assertSame($expectedIsoCode, $country['isoCode']);
+        $this->assertSame($expectedIsoCode, $this->getItem('/countries/' . $countryId, ['country_read'])['isoCode']);
 
-        // A country read with 3 letters can be written back
-        $countryId = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XA', 'callPrefix' => 997]), ['country_write'])['countryId'];
-        $this->assertSame('XAC', $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => 'XAC'], ['country_write'])['isoCode']);
+        // The update accepts 3 letters on every version, the workaround for the older creations
+        $patchData = ['isoCode' => 'XAC'];
+        if (self::isVersionUnder('9.2.0')) {
+            // The older core edit command needs names in every body
+            $patchData['names'] = $this->getCreatePayload()['names'];
+        }
+        $this->assertSame('XAC', $this->partialUpdateItem('/countries/' . $countryId, $patchData, ['country_write'])['isoCode']);
         $this->assertSame('XAC', $this->getItem('/countries/' . $countryId, ['country_read'])['isoCode']);
         $this->partialUpdateItem('/countries/' . $countryId, ['isoCode' => 'XABC'], ['country_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
