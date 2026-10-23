@@ -20,7 +20,6 @@
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Address;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Address\Command\DeleteAddressCommand;
 use PrestaShop\PrestaShop\Core\Domain\Address\Exception\AddressConstraintException;
@@ -46,6 +45,7 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class Address
 {
-    #[ApiProperty(identifier: true)]
+    // No identifier: without a GET operation, API Platform would register an unusable NotExposed GET
+    // /addresses/{addressId} route that intercepts the static /addresses/* paths (see issue #440)
     public int $addressId;
 }
