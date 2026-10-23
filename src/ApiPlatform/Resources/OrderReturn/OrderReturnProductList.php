@@ -22,13 +22,19 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn\Dto\OrderReturnCustomizationField;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn\Dto\OrderReturnProductRow;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\BulkDeleteProductsFromOrderReturnCommand;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\CannotDeleteLastProductFromOrderReturnException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Query\GetOrderReturnProducts;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -41,11 +47,30 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQuery: GetOrderReturnProducts::class,
             scopes: ['order_return_read'],
         ),
+        // Answers 204: a CQRSDelete cannot return the updated lines yet (it takes no CQRSQuery)
+        new CQRSDelete(
+            uriTemplate: '/order-returns/{orderReturnId}/products/bulk-delete',
+            requirements: ['orderReturnId' => '\d+'],
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
+            CQRSCommand: BulkDeleteProductsFromOrderReturnCommand::class,
+            // The command reads the column names of the rows
+            CQRSCommandMapping: [
+                '[stagedProductRows][@index][orderDetailId]' => '[stagedProductRows][@index][order_detail_id]',
+                '[stagedProductRows][@index][customizationId]' => '[stagedProductRows][@index][customization_id]',
+            ],
+            scopes: ['order_return_write'],
+            // The body is required, the CQRSDelete default allows an empty one
+            allowEmptyBody: false,
+        ),
     ],
     exceptionToStatus: [
         OrderReturnNotFoundException::class => Response::HTTP_NOT_FOUND,
         // OrderReturnId rejects 0
         OrderReturnConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // A merchandise return must keep at least one product: a client error, not a 500
+        CannotDeleteLastProductFromOrderReturnException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class OrderReturnProductList
@@ -68,4 +93,18 @@ class OrderReturnProductList
      * @var OrderReturnCustomizationField[]
      */
     public array $customizationFields;
+
+    // Types the URI variable for the bulk delete command, the lines do not repeat it
+    #[ApiProperty(readable: false)]
+    public int $orderReturnId;
+
+    /**
+     * The lines to remove, only read by the bulk delete.
+     *
+     * @var OrderReturnProductRow[]
+     */
+    #[ApiProperty(readable: false)]
+    #[Assert\NotBlank]
+    #[Assert\Valid]
+    public array $stagedProductRows;
 }
