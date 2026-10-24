@@ -1,7 +1,7 @@
 # Agents — ps_apiresources
 
 All agents working in this repository must read
-**[`CONTEXT.md`](./CONTEXT.md)** before proposing or generating code.
+**[`.ai/CONTEXT.md`](./.ai/CONTEXT.md)** before proposing or generating code.
 It is the single source of truth for module purpose, architecture, URI
 and scope conventions, coding standards, Do/Don't rules, testing
 expectations, and canonical examples.

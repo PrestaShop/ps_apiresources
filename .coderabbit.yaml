@@ -1,0 +1,149 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit configuration of ps_apiresources.
+# The rules live in .ai/CONTEXT.md, its on-demand .ai/*.md contexts and .ai/REVIEW.md (review checklist). This
+# file only maps the paths to them and sets how CodeRabbit runs: it changes when that mapping changes, never
+# when a rule does.
+# The first review is manual: comment "@coderabbitai full review" on the pull request; each later push gets
+# an incremental review.
+# Reference: https://docs.coderabbit.ai/reference/configuration
+
+language: en-US
+tone_instructions: >-
+  Direct, no praise. Comment format and severity of .ai/REVIEW.md §3.
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  # The findings go inline; the walkthrough comment stays as short as possible
+  high_level_summary: false
+  collapse_walkthrough: true
+  changed_files_summary: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  assess_linked_issues: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  review_status: false
+  review_info: false
+  # Kept: the prompt to fix a finding with an AI agent, with the "Fix comments" finishing touch below
+  enable_prompt_for_ai_agents: true
+  path_filters:
+    - "!vendor/**"
+    - "!**/*.lock"
+    - "!tests/Integration/clover.xml"
+  path_instructions:
+    - path: "src/ApiPlatform/Resources/**/*.php"
+      instructions: |
+        Review with .ai/REVIEW.md: the procedure of §0, the checks of §1 (A to F), §2 for what not to flag,
+        §3 for the severity. Each check names the .ai/CONTEXT.md section or the on-demand .ai/*.md file
+        holding its rule.
+    - path: "src/ApiPlatform/Resources/**/Dto/*.php"
+      instructions: |
+        DTO sub objects: .ai/REVIEW.md §1 B, rules in .ai/CONTEXT.md → "Sub objects: typed DTOs".
+    - path: "src/ApiPlatform/Normalizer/**"
+      instructions: |
+        Rules in .ai/CONTEXT.md → "When mapping cannot express the format".
+    - path: "tests/Integration/ApiPlatform/**/*.php"
+      instructions: |
+        Review with .ai/REVIEW.md §1 E, §2 and §3; rules in .ai/TESTING.md.
+    - path: "tests/PHPStan/**"
+      instructions: |
+        CI rules of the module: review a relaxation against the rule it bypasses in .ai/CONTEXT.md,
+        .ai/ERRORS.md or .ai/VERSIONS.md.
+    - path: "tests/Rector/**"
+      instructions: |
+        Rules in .ai/CONTEXT.md → "URI conventions" (command-style segments, SKIPPED_KEYWORDS).
+    - path: "config/**"
+      instructions: |
+        Rules in .ai/CONTEXT.md: no business logic in the module, services of a normalizer under "When
+        mapping cannot express the format".
+    - path: ".github/workflows/**"
+      instructions: |
+        Supported cores in .ai/CONTEXT.md → "Core versions"; red legs per .ai/REVIEW.md §0 and §2.
+    - path: "**/*.md"
+      instructions: |
+        Review with the one-place-per-rule principle of .ai/STRUCTURE.md → "Maintenance"; a rule
+        contradicted by a resource of the PR is a finding on one of them, say which.
+  auto_review:
+    # No automatic first review, and no description keyword nor label trigger that would start one; once a
+    # review was requested, each push gets an incremental review
+    enabled: false
+    auto_incremental_review: true
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    autofix:
+      enabled: true
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: warning
+      requirements: >-
+        Imperative sentence naming the domain or endpoint concerned (e.g. "Add the customer group
+        endpoints", "Fix the discount amount documentation"), no ticket number alone.
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+    custom_checks:
+      - name: "Integration test for every operation"
+        mode: warning
+        instructions: >-
+          Fail when an operation added or changed by the PR lacks a test that .ai/TESTING.md requires, or
+          when a fix has no test failing without it. Pass otherwise, or when the description explains why
+          a test is impossible.
+      - name: "OpenAPI documentation matches the behaviour"
+        mode: warning
+        instructions: >-
+          Fail when a resource of the PR documents something the core command or query it maps
+          contradicts, or misses a description .ai/OPENAPI.md requires. Pass otherwise.
+      - name: "Related core PR declared"
+        mode: warning
+        instructions: >-
+          Fail when the module code relies on a core change absent from the targeted core branches and the
+          description names no related core PR (.ai/CONTEXT.md → "Working with the core"). Pass otherwise.
+  tools:
+    phpstan:
+      # The module rules need a PrestaShop checkout (_PS_ROOT_DIR_): the module CI runs them.
+      enabled: false
+
+chat:
+  art: false
+  # Answers a reply to its own comments without a mention; no setting limits it to those threads, so it may
+  # also answer another comment it considers addressed to it
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      # The module contexts and the review checklist
+      - ".ai/*.md"
+      # Core side of the Admin API (providers, normalizers, OpenAPI adapters, test environment)
+      - "PrestaShop/PrestaShop:.ai/Component/AdminAPI/CONTEXT.md"
+  learnings:
+    scope: auto
+  pull_requests:
+    scope: auto
+  issues:
+    scope: auto
+  linked_repositories:
+    - repository: "PrestaShop/PrestaShop"
+      instructions: >-
+        The core the module plugs into: CQRS classes, handlers and API Platform infrastructure. Choose the
+        branch and the classes to read as .ai/REVIEW.md §0 describes.
