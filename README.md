@@ -116,7 +116,7 @@ The PrestaShop Admin API provides RESTful endpoints for managing your store prog
 - **[.ai/CONTEXT.md](.ai/CONTEXT.md)** - The conventions of this repository (URIs, scopes, mappings, DTOs, errors, tests), also read by AI assistants
 - **[.ai/REVIEW.md](.ai/REVIEW.md)** - The review checklist applied to every pull request by the maintainers, and by CodeRabbit once a first review is requested (see `.coderabbit.yaml`); run it on your own changes before opening the PR
 
-One pull request per domain, with its integration tests. When your endpoint needs a change in the PrestaShop core, open the core PR first and reference it in the module PR description ("Related PR"): the module CI stays red on the branches that lack the core change until the core PR is merged, which is expected.
+One pull request per domain, with its integration tests. When your endpoint needs a change in the PrestaShop core, open the core PR first and reference it in the module PR description ("Related PR"): the module CI stays red on the branches that lack the core change, which does not block the review nor the QA (the CI of the core PR, which runs the module branch, must be green). The module PR is merged once the core change has reached every branch (the core PR merged, then merged up to `develop`) and its own CI is green.
 
 Need help or believe core improvements are needed? Reach out to the team on [Slack][slack], and `#cfc-adminapi` channel - we're here to help!
 

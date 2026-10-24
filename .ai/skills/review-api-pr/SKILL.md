@@ -13,8 +13,8 @@ subagent: recommended
 # Review an Admin API pull request or endpoint
 
 Read `.ai/REVIEW.md` (the checklist) and `.ai/CONTEXT.md` (the conventions, with the on-demand `.ai/TESTING.md`, `OPENAPI.md`, `LISTS.md`, `MULTISHOP.md`, `VERSIONS.md`, `UPLOAD.md` the checks point to)
-before anything else. The core side (providers, normalizers, OpenAPI adapters, features per core version)
-is in the PrestaShop repository: `.ai/Component/AdminAPI/CONTEXT.md`.
+before anything else. The core side (providers, normalizers, OpenAPI adapters, test environment) is in
+the PrestaShop repository: `.ai/Component/AdminAPI/CONTEXT.md`.
 
 ## Inputs
 
@@ -23,11 +23,9 @@ Ask only for what is missing:
 1. **What to review**: a PR number / URL of `PrestaShop/ps_apiresources` (or a fork), a local branch, or
    a resource class to audit (`src/ApiPlatform/Resources/{Domain}/{Resource}.php`).
 2. **The core checkout** to compare against (`_PS_ROOT_DIR_`, usually `modules/ps_apiresources` is a
-   symlink from it). The module must be read against the core branch of the **related core PR** named in
-   the PR description when there is one (`gh pr view <n> --repo PrestaShop/ps_apiresources --json body`),
-   otherwise against the most recent maintained stable branch (the highest `X.Y.x`, `9.2.x` today); the
-   older supported cores (9.0.3, 9.1.5) are checked on top through the age of the guards (.ai/REVIEW.md → 0.2).
-   Say which reference was used in the report.
+   symlink from it), on the reference branch of .ai/REVIEW.md → §0.2 (the related core PR is named in the
+   PR description: `gh pr view <n> --repo PrestaShop/ps_apiresources --json body`). Say which reference
+   was used in the report.
 3. Whether to **post** the findings on the PR (`gh pr comment` / `gh pr review`) or only report them.
    Never post without an explicit request.
 
@@ -40,10 +38,8 @@ Ask only for what is missing:
    query result getters, handler exceptions (private guard methods included), value objects, grid query
    builder for lists, BO form type. With a related core PR: `gh pr diff <core-n> --repo
    PrestaShop/PrestaShop` and read the classes on that branch (`git -C <core> fetch upstream
-   pull/<core-n>/head:pr-<core-n>` then `git show pr-<core-n>:<path>`). Without one, read the most recent
-   maintained stable branch, and for every guard, cast or null check you rely on, check its age (`git -C
-   <core> log --format='%h %ad' --date=short -- <file>`, `git blame`, `git tag --contains <sha>`): a commit
-   younger than the lowest supported tag (9.0.3) means the older CI legs run without it.
+   pull/<core-n>/head:pr-<core-n>` then `git show pr-<core-n>:<path>`). Without one, read the reference
+   branch; either way, check the age of every guard, cast or null check you rely on (.ai/REVIEW.md → §0.2).
 3. **Static checks**: go through .ai/REVIEW.md §1 sections A (design), B (contract with the core), C (OpenAPI),
    D (errors), E (tests), F (hygiene), reading the context section each one names. For every array
    property, write down its element constraints before reading the command (the expected set is in
@@ -58,8 +54,7 @@ Ask only for what is missing:
    `cache:clear` run with `php -d memory_limit=-1`. Read the HTTP status, not the body: in debug mode the
    problem+json body says `"status":500` whatever the real code. Ask before running
    write operations on a shop that is not a disposable test instance:
-   - `php bin/console api:openapi:export --yaml -o <scratch>/after.yaml` in the core with the PR applied,
-     the same on the base branch, diff the operations of the PR;
+   - the export and diff of .ai/REVIEW.md §1 C, written to a scratch directory;
    - call the endpoints with a token of an API client of that shop (BO > Advanced Parameters > Admin API,
      then `POST /admin-api/access_token` with `grant_type=client_credentials` and the scopes needed):
      happy path, unknown id, id `0`, empty body, invalid field; compare statuses and payloads with the

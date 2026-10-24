@@ -18,15 +18,12 @@ automated review (§5).
    (`CONTEXT.md` → "Read when") before the checks of §1: `OPENAPI.md`, `ERRORS.md` and `TESTING.md` for
    any resource or test of the diff, plus `LISTS.md`, `MULTISHOP.md`, `UPLOAD.md` or `VERSIONS.md` when
    their trigger applies.
-2. **Find the core reference** ([Working with the core](./CONTEXT.md#working-with-the-core)):
-   - the **related core PR** when the description names one (`PrestaShop/PrestaShop#NNNN`): review the
-     module against that PR's branch. The module CI is then expected to be red on the branches that lack
-     the core change, and the core PR (which pins the module branch in its `composer.json`) must be green
-     with the module changes — say so instead of flagging the red jobs;
-   - otherwise the **most recent maintained stable branch** of the core (the highest `X.Y.x` branch,
-     `9.2.x` today); `develop` only adds the evolutions too big for a patch release, and is the
-     reference of an operation gated with `minVersion` on the next minor — a PR can have one reference
-     per operation.
+2. **Find the core reference**: the branch [Working with the core](./CONTEXT.md#working-with-the-core)
+   names for each operation (the related core PR `PrestaShop/PrestaShop#NNNN` the description names,
+   otherwise the most recent maintained stable branch). With a related core PR, the module jobs red on
+   the branches that lack the core change are expected and the CI of the core PR is the one checked: say
+   so instead of flagging the red jobs (the review and the QA go on, the merge waits for them to turn
+   green).
    - The module also runs on the older supported cores (9.0.3, 9.1.5), and the local checkout is never
      one of them: before writing "passed" or a finding about a handler, a query handler or a value object,
      check the age of the guard, cast or null check you rely on (`git log --since=<release date of the
@@ -36,7 +33,7 @@ automated review (§5).
      nothing about its behaviour.
    - On that reference, read the domain context of each entity of the PR (`.ai/Domain/{Domain}/CONTEXT.md`,
      when the core has one) and the Admin API context (`.ai/Component/AdminAPI/CONTEXT.md`) before the
-     classes of step 3: the domain rules and the core features per version the findings rely on.
+     classes of step 3: the domain rules and the core infrastructure the findings rely on.
 3. **Open the core classes before writing a finding about a field, a type, a nullability, a mapping or an
    exception.** For each resource of the diff:
    - the command: constructor parameters (names, types, defaults, nullability), setters, multi-parameter
@@ -77,10 +74,9 @@ restates a rule: when a line below and the section disagree, the section wins an
   [Scopes](./CONTEXT.md#scopes), [Do / Don't](./CONTEXT.md#do--dont).
 - Evidence: the command (its setters and their nullability decide `PATCH` vs `PUT`, the read side decides
   the `CQRSQuery` of a write), the sibling resources of the domain and the reference resources
-  (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run; for a duplicate,
-  the endpoints already serving the same data to the same caller (the item and the lists of the entity,
-  the exclusions of `GenerateApiTrackingTableCommand`) — a duplicate is functional, not a shared query
-  or grid: an endpoint returning fields no other exposes, or an item next to a list, is not one.
+  (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run; for a duplicate
+  (a functional one, as the Don't list defines it), the endpoints already serving the same data to the
+  same caller: the item and the lists of the entity, the exclusions of `GenerateApiTrackingTableCommand`.
 - A new endpoint deviating from [ADR 0023](https://github.com/PrestaShop/ADR/blob/master/0023-cqrs-api-guidelines.md)
   is Major unless the description announces an ADR amendment; the listed deviations are neither flagged
   nor copied.

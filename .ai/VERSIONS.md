@@ -62,7 +62,8 @@ A version-constrained endpoint needs matching test handling (see
   guard or a check that a later core adds is no dependency either: the
   endpoint stays available, its description states the difference per
   version and the test asserts the contract of each version
-  (`Country`: duplicate ISO code, unknown zone, default country).
+  (`Country`: duplicate ISO code, unknown zone, default country, 3-letter
+  ISO code on creation).
 - An endpoint already shipped in a tagged release that gets gated behind
   a newer version disappears from the older cores. Weigh the loss, keep
   the operations that work everywhere (e.g. `POST /customers/{customerId}/carts`
@@ -81,14 +82,13 @@ needs no such care).
 
 ## Features per core version
 
-The full list is in the core context (`.ai/Component/AdminAPI/CONTEXT.md`
-of the PrestaShop repository → "What changed per core version"). The ones
-an endpoint depends on most often:
+The features of the core API layer the resources rely on. A core PR adding
+one is paired with the module PR that uses it, which adds its row here.
 
 | Core | Feature |
 |------|---------|
 | 9.0.2 | `@index` placeholders in mappings; `CQRSDelete` with a `CQRSCommand` and `allowEmptyBody` |
-| 9.0.3 | `CQRSPaginate` |
+| 9.0.3 | `CQRSPaginate` (paginated list from a CQRS query, `itemsField` / `countField`) |
 | 9.1.2 | 207 responses of the bulk commands (`AbstractBulkCommandHandler`, `BulkCommandExceptionNormalizer`) |
-| 9.2.0 | `minVersion` / `maxVersion` filtering in the core; `defaultValues`; `ScalarFirstUnionTypeExtractor`; request bodies documented from the commands; `File` properties documented as binary parts of the multipart body; multipart parts holding a JSON array or object decoded ([`UPLOAD.md`](./UPLOAD.md)) |
-| 9.2.1 | Booleans of every query result cast at every level (nested DTOs, `@var Foo[]` lists); `@var Foo[]` / `@var int[]` item types read from the PHPDoc; `collectionAsList`; paginated envelope with an integer `offset` and documented list parameters; class PHPDoc no longer published |
+| 9.2.0 | `minVersion` / `maxVersion` filtering in the core; `defaultValues` (context paths allowed, typed end to end, exposed as `default` in the schema); `ScalarFirstUnionTypeExtractor`; `_queryResult` wrapping of scalar lists; request bodies documented from the commands; multistore context parameters documented; `File` properties documented as binary parts of the multipart body; multipart parts holding a JSON array or object decoded ([`UPLOAD.md`](./UPLOAD.md)) |
+| 9.2.1 (PrestaShop#43116, #43237, #43264) | Booleans of every query result cast at every level (nested DTOs, `@var Foo[]` lists); `@var Foo[]` / `@var int[]` item types read from the PHPDoc, request bodies included; `collectionAsList`; paginated envelope with an integer `offset` and documented list parameters; sub object schemas adapted (`DecimalNumber` as number), unused schemas removed, class PHPDoc no longer published; `DecimalNumber` parameters of multi-parameter setters documented as numbers; API test environment without employee (`phpunit-api.xml`) |

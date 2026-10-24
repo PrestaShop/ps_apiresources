@@ -218,13 +218,18 @@ Two patterns, depending on the scope of the constraint:
 A test whose expected value depends on a core fix that is not released
 yet is gated with `isVersionAtLeast()` on the version that will carry
 the fix (`git tag --contains <sha>` gives the first tag of a merged
-commit), and the module PR names the core PR: the CI job of that
-version is red until the core PR is merged (see `CONTEXT.md` → "Working
-with the core"). The assertion is not weakened to make the job green, and
-when the behaviour of the older cores is known the test asserts it
+commit), and the module PR names the core PR: the CI job of a branch is
+red until the core change reaches it, and the module PR waits for it (see
+`CONTEXT.md` → "Working with the core"). The assertion is not weakened to
+make the job green, and
+when an operation available on several cores behaves differently on the
+older ones, even subtly, the test asserts the contract of each version
 instead of skipping (`CountryEndpointTest`: the duplicate ISO code
-created before 9.2.0, the unknown zone stored and the default country
-answering 500 before 9.2.1). In
+created before 9.2.0, the unknown zone stored, the default country
+answering 500, a 3-letter ISO code cut to 2 letters on creation and the
+list envelope without `offset` on the first page before 9.2.1). An
+operation gated with `minVersion` is skipped on the older cores, its 404
+there is not tested (`VersionedEndpointsTest` covers the filtering). In
 a class that mixes gated and ungated operations, the gated entries of
 `getProtectedEndpoints()` are yielded only with `isVersionAtLeast()`: an
 older core answers 404, not 401, for a filtered operation. When a PR
@@ -241,6 +246,7 @@ composer run-module-tests
 From the core checkout (the module symlinked in `modules/`):
 `composer api-module-tests-local` (full setup) then
 `composer run-api-module-tests-local`, or one class with
-`_PS_ROOT_DIR_=$(pwd) php -d date.timezone=UTC ./vendor/phpunit/phpunit/phpunit -c modules/ps_apiresources/tests/Integration/phpunit-local.xml --filter=ClassName`.
-The core API suite and the module suite share `var/cache/test`: clear it
-when switching from one to the other.
+`_PS_ROOT_DIR_=$(pwd) php -d date.timezone=UTC ./vendor/phpunit/phpunit/phpunit -c modules/ps_apiresources/tests/Integration/phpunit-local.xml --filter=ClassName`
+(`_PS_ROOT_DIR_` on every command: PHPUnit cannot find the core root
+when the module is a symlink). The core API suite and the module suite
+share `var/cache/test`: clear it when switching from one to the other.

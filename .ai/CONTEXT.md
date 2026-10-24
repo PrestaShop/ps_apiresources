@@ -484,14 +484,12 @@ examples: [`MULTISHOP.md`](./MULTISHOP.md).
   and validate at the resource level what the command does not: the
   rules, the mapping order, the bulk constraints and the status code
   table are in [`ERRORS.md`](./ERRORS.md).
-- Use a `CQRSQuery` on `CQRSCreate` and `CQRSPartialUpdate` when the
-  endpoint should return the full updated state, not just an identifier.
-  This includes command-style operations: prefer returning the updated
-  resource over answering `204` with `output: false`, so the caller does not
-  need a follow-up GET. When the operation only touches one association of a
-  bigger entity, return the whole entity from that entity's class (see
-  "Architecture overview") — `Carrier::set-tax-rule-group` returns the
-  carrier, not the association alone. An operation whose read side does not exist yet, or
+- Return the updated entity from every write ("Architecture overview"),
+  command-style operations included, so the caller needs no follow-up
+  GET: an operation touching one association of a bigger entity returns
+  the whole entity (`Carrier::set-tax-rule-group` returns the carrier,
+  not the association alone), and `204` stays for the actions with
+  nothing to read back. An operation whose read side does not exist yet, or
   whose domain is not settled, ships with `experimentalOperation: true`
   (exposed only when the experimental endpoints feature flag is on) and
   is graduated by removing it once the contract is complete.
@@ -598,8 +596,12 @@ the structure and what it must cover: [`TESTING.md`](./TESTING.md).
   the module PR's CI stays red on the branches that lack the core
   change until the core PR is merged. Reviews of the module PR compare
   the resources with the core PR branch, not with the release branch.
-  Release order: core PR, then module PR, then the core `composer.json`
-  is reverted to upstream `dev-dev`.
+  The red jobs do not block the review nor the QA, but the module PR is
+  only merged with a green CI: it waits until the core change has
+  reached every branch its CI runs on (the core PR merged, then merged
+  up to `develop`). What the core `composer.json` pins afterwards is a
+  core matter (`.ai/Component/AdminAPI/CONTEXT.md` in the PrestaShop
+  repository).
 - **Which core to read.** The module must work on every supported core,
   but its reference is one branch: the related core PR when the PR names
   one; otherwise the **most recent maintained stable branch** of
@@ -712,8 +714,8 @@ Skills live in `.ai/skills/` and are symlinked from `.claude/skills/`:
 
 - Module repository: <https://github.com/PrestaShop/ps_apiresources>
 - Core context of the Admin API (providers, normalizers, OpenAPI
-  adapters, features per core version, test environment):
-  `.ai/Component/AdminAPI/CONTEXT.md` in the PrestaShop repository.
+  adapters, test environment): `.ai/Component/AdminAPI/CONTEXT.md` in
+  the PrestaShop repository.
 - Devdocs — Admin API (context, OAuth2, resource server, how to use,
   contribute, Swagger): <https://devdocs.prestashop-project.org/9/admin-api/>
 - Devdocs — Contribute to the Core API:

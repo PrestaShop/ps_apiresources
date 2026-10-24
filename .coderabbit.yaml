@@ -134,7 +134,7 @@ knowledge_base:
     filePatterns:
       # The module contexts and the review checklist
       - ".ai/*.md"
-      # Core side of the Admin API (providers, normalizers, OpenAPI adapters, features per version)
+      # Core side of the Admin API (providers, normalizers, OpenAPI adapters, test environment)
       - "PrestaShop/PrestaShop:.ai/Component/AdminAPI/CONTEXT.md"
   learnings:
     scope: auto

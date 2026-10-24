@@ -101,12 +101,8 @@ Create both files at their correct paths. Then tell the user:
 
 1. **Where the files were written**
 2. **How to register the resource** — if the ApiResource isn't auto-discovered, a service definition may be needed (usually not required for standard resources)
-3. **How to run the tests:**
-   ```bash
-   composer setup-local-tests  # first time only
-   composer run-module-tests
-   ```
-4. **What to double-check**: mappings between CQRS fields and API fields — these are the most common source of errors. Ask the user to run the endpoint manually via Swagger UI to verify, and to export the OpenAPI documentation (`bin/console api:openapi:export --yaml` in the core) to compare the generated schema with the real payloads (types, nullability, `required` list, descriptions).
+3. **How to run the tests**: `.ai/TESTING.md` → "Running the suite".
+4. **What to double-check**: mappings between CQRS fields and API fields — these are the most common source of errors. Ask the user to call the endpoint (Swagger UI) and to compare the exported documentation with the real payloads (`.ai/OPENAPI.md`, last paragraph): types, nullability, `required` list, descriptions.
 5. **Review it**: run the `review-api-pr` skill (`REVIEW.md`) on the new files before opening the PR.
 
 ## Reference files
