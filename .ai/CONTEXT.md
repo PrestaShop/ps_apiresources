@@ -132,8 +132,8 @@ not the other way round:
   partial data (setters, nullable parameters): a command whose getters
   are non-nullable cannot be patched. `CQRSUpdate` / `PUT` when every
   parameter must be sent on each call, even on an endpoint that only
-  covers part of the entity: `/carts/{cartId}/addresses` is a `PUT`
-  because `UpdateCartAddressesCommand` requires both addresses.
+  covers part of the entity: `/products/{productId}/carriers` is a `PUT`
+  because `SetCarriersCommand` requires the whole list of carriers.
 - `CQRSDelete` / `DELETE` for a deletion and for a destructive clear-all;
   it answers 204 (the body of a bulk delete: [`ERRORS.md`](./ERRORS.md)).
 - Body-less actions answer 204 with `read: false`, `output: false` and
