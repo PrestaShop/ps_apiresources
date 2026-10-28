@@ -18,12 +18,16 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Decimal\DecimalNumber;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount\Dto\DiscountMinimumAmount;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Discount\Dto\DiscountReductionAmount;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\AddDiscountCommand;
 use PrestaShop\PrestaShop\Core\Domain\Discount\Command\DeleteDiscountCommand;
@@ -117,26 +121,10 @@ class Discount
     public ?DecimalNumber $reductionPercent;
     #[ApiProperty(
         openapiContext: [
-            'type' => ['object', 'null'],
-            'description' => 'Fixed reduction amount',
-            'properties' => [
-                'amount' => [
-                    'type' => 'number',
-                    'description' => 'Fixed reduction amount value',
-                ],
-                'currencyId' => [
-                    'type' => 'integer',
-                    'description' => 'Currency ID for reduction amount',
-                ],
-                'taxIncluded' => [
-                    'type' => 'boolean',
-                    'description' => 'Whether reduction amount is tax included',
-                ],
-            ],
-            'required' => ['amount', 'currencyId', 'taxIncluded'],
+            'description' => 'Fixed reduction amount, its three fields sent together. Setting reductionPercent removes it.',
         ]
     )]
-    public ?array $reductionAmount;
+    public ?DiscountReductionAmount $reductionAmount;
     public ?int $giftProductId;
     public ?int $giftCombinationId;
 
@@ -204,30 +192,10 @@ class Discount
 
     #[ApiProperty(
         openapiContext: [
-            'type' => ['object', 'null'],
-            'description' => 'Minimum amount required',
-            'properties' => [
-                'amount' => [
-                    'type' => 'number',
-                    'description' => 'Minimum amount value',
-                ],
-                'currencyId' => [
-                    'type' => 'integer',
-                    'description' => 'Currency ID for minimum amount',
-                ],
-                'taxIncluded' => [
-                    'type' => 'boolean',
-                    'description' => 'Whether minimum amount is tax included',
-                ],
-                'shippingIncluded' => [
-                    'type' => 'boolean',
-                    'description' => 'Whether minimum amount includes shipping',
-                ],
-            ],
-            'required' => ['amount', 'currencyId'],
+            'description' => 'Minimum cart amount, amount and currencyId required when it is sent. Null removes it.',
         ]
     )]
-    public ?array $minimumAmount;
+    public ?DiscountMinimumAmount $minimumAmount;
 
     public ?int $customerId;
     #[ApiProperty(

@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Customer;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -89,7 +91,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class CustomerDetails
 {
-    #[ApiProperty(identifier: true, openapiContext: ['type' => 'integer', 'example' => 1])]
+    #[ApiProperty(identifier: true)]
     public int $customerId;
 
     public CustomerPersonalInformation $personalInformation;
