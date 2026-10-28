@@ -29,7 +29,8 @@ the OpenAPI documentation. The filtering is handled by the module's
 `CoreVersionCompatibilityMetadataCollectionFactoryDecorator` on
 PrestaShop < 9.2 and by its core twin on >= 9.2; both compare against
 `PrestaShop\PrestaShop\Core\Version::VERSION` with inclusive
-`version_compare` semantics.
+`version_compare` semantics, and both expose every operation when the
+experimental endpoints feature flag is on.
 
 Independently of `minVersion`, the core drops, operation by operation,
 every operation whose `CQRSQuery` / `CQRSCommand` class or
@@ -39,10 +40,13 @@ every operation whose `CQRSQuery` / `CQRSCommand` class or
 the route answers 404 and the scope disappears. That filtering is off
 when the experimental endpoints are enabled (the missing class then
 fails at runtime), and PHPStan on the older legs needs the scoped
-`class.notFound` ignore either way. `minVersion` adds what the automatic
-filtering cannot: a class that exists but misbehaves, a gate the tests
-and the documentation know (`isVersionAtLeast`, the version in the
-description).
+`class.notFound` ignore either way. Only these three references are
+filtered: a constant of a class missing on an older core (an attribute
+argument, an `enum` list) breaks the parsing of the API resources there,
+so the values are written as literals (`Discount::$productConditions`).
+`minVersion` adds what the automatic filtering cannot: a class that
+exists but misbehaves, a gate the tests and the documentation know
+(`isVersionAtLeast`, the version in the description).
 
 Use it when the backing CQRS command/query does not exist on older
 supported cores, or exists but misbehaves there (e.g. the stock update
@@ -82,13 +86,8 @@ needs no such care).
 
 ## Features per core version
 
-The features of the core API layer the resources rely on. A core PR adding
-one is paired with the module PR that uses it, which adds its row here.
-
-| Core | Feature |
-|------|---------|
-| 9.0.2 | `@index` placeholders in mappings; `CQRSDelete` with a `CQRSCommand` and `allowEmptyBody` |
-| 9.0.3 | `CQRSPaginate` (paginated list from a CQRS query, `itemsField` / `countField`) |
-| 9.1.2 | 207 responses of the bulk commands (`AbstractBulkCommandHandler`, `BulkCommandExceptionNormalizer`) |
-| 9.2.0 | `minVersion` / `maxVersion` filtering in the core; `defaultValues` (context paths allowed, typed end to end, exposed as `default` in the schema); `ScalarFirstUnionTypeExtractor`; `_queryResult` wrapping of scalar lists; request bodies documented from the commands; multistore context parameters documented; `File` properties documented as binary parts of the multipart body; multipart parts holding a JSON array or object decoded ([`UPLOAD.md`](./UPLOAD.md)) |
-| 9.2.1 (PrestaShop#43116, #43237, #43264) | Booleans of every query result cast at every level (nested DTOs, `@var Foo[]` lists); `@var Foo[]` / `@var int[]` item types read from the PHPDoc, request bodies included; `collectionAsList`; paginated envelope with an integer `offset` and documented list parameters; sub object schemas adapted (`DecimalNumber` as number), unused schemas removed, class PHPDoc no longer published; `DecimalNumber` parameters of multi-parameter setters documented as numbers; API test environment without employee (`phpunit-api.xml`) |
+The features of the core API layer the resources rely on are listed by the
+core, which adds a row with each of them: `.ai/Component/AdminAPI/CONTEXT.md`
+→ "What changed per core version" in the PrestaShop repository (the
+`develop` branch has every row, a version branch the rows up to its own
+releases).

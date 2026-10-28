@@ -30,9 +30,11 @@ across tests), and assert the expected HTTP status code.
 | `countItems($url, $scopes, $filters)` | GET | Paginated list → totalItems only     |
 | `requestApi(...)`         | any    | Last resort for cases the others don't fit    |
 
-Each helper also accepts an `$expectedHttpCode` parameter when asserting
-a specific status (e.g. `HTTP_UNPROCESSABLE_ENTITY` on invalid payloads,
-`HTTP_NOT_FOUND` after a delete).
+The item and write helpers and `requestApi()` also accept an
+`$expectedHttpCode` parameter when asserting a specific status (e.g.
+`HTTP_UNPROCESSABLE_ENTITY` on invalid payloads, `HTTP_NOT_FOUND` after a
+delete); `listItems()` and `countItems()` always expect 200, and
+`bulkCommandItemsWithExpectedErrors()` picks its own status.
 
 ## Default test environment
 
@@ -70,7 +72,11 @@ Static helpers available for additional setup (call from
 
 - `addLanguageByLocale($locale)` — install another language
 - `addShopGroup($name, $color?)` / `addShop($name, $groupId, $color?)`
-  — build a multi-shop fixture
+  — build a multi-shop fixture. Once multistore is active, every API
+  request answers 404 until the class also sets
+  `MultistoreConfig::FEATURE_STATUS` and enables
+  `FeatureFlagSettings::FEATURE_FLAG_ADMIN_API_MULTISTORE`, reset with
+  `FeatureFlagResetter` (`CustomerGroupMultiShopEndpointTest`)
 - `updateConfiguration($key, $value, $shopConstraint?)` — override a
   configuration value for the test
 - `createApiClient([...])` — called from `setUpBeforeClass` with every
@@ -101,7 +107,9 @@ Static helpers available for additional setup (call from
   methods contribute to gets a shape assertion and `assertContains`,
   never a hard-coded count. Dynamic values (dates, display amounts) get a
   format assertion, then are copied into the expected array. GET after
-  every write; a partial update leaves the other fields untouched.
+  every write; a partial update leaves the other fields untouched, and
+  the languages it does not send (`CONTEXT.md` → "Choosing the
+  operation").
 - Fixtures are created **through the API** (the endpoints under test or
   of the same domain), not with `ObjectModel` or SQL. When the endpoint
   that would create the fixture is missing, add it in the same domain
@@ -131,8 +139,10 @@ Static helpers available for additional setup (call from
   different values. Test data has a known state: a dedicated fixture with
   expected content rather than a demo-data snapshot, values checked
   against the core constants.
-- Lists: `listItems()` with `filters[...]` and `orderBy` using the API
-  field names, asserting the filtered items and the envelope.
+- Lists: `listItems()` with the API field names, asserting the filtered
+  items and the envelope. Its third argument is sent as `filters[...]`;
+  `orderBy`, `sortOrder`, `limit` and `offset` go in the URL
+  (`CountryEndpointTest`).
 - Shop association: both behaviours when `shopIds` exists (no `shopIds`
   → context shops, explicit list kept), an unknown shop → 404, an
   invalid one → 422.
@@ -212,7 +222,7 @@ Two patterns, depending on the scope of the constraint:
   automatically), and guard conditional yields or assertions with
   `isVersionAtLeast()`. A conditional yield in `getProtectedEndpoints()`
   is fine here as long as at least one data set is always yielded.
-  Examples: `CustomerRequiredFieldsEndpointTest`,
+  Examples: `CustomerCartsEndpointTest`,
   `ProductStockMovementsEndpointTest`.
 
 A test whose expected value depends on a core fix that is not released

@@ -9,11 +9,13 @@ the module are in [`CONTEXT.md`](./CONTEXT.md).
 > (Advanced Parameters → New & Experimental Features). The conventions
 > below describe how endpoints must be written so they behave correctly
 > in multistore, but they only take effect at runtime once the flag is
-> enabled. Without the flag, multistore context parameters are ignored
-> and the API falls back to single-shop behavior.
+> enabled: without it, a shop with multistore active answers 404 to every
+> Admin API request (`AdminAPIFeatureListener`). A multishop test enables
+> both ([`TESTING.md`](./TESTING.md)).
 
-When PrestaShop's multistore feature is **disabled**, the API
-automatically uses the default shop — no extra parameters are needed.
+When PrestaShop's multistore feature is **disabled**, the API builds the
+shop context of the default shop: no extra parameter is needed, and the
+code reading the context sees a single shop.
 
 When multistore is **enabled** (and the `admin_api_multistore` feature
 flag is on), every API request **must** include a shop context
@@ -56,7 +58,8 @@ sent by the client. Both behaviours are tested
 ([`TESTING.md`](./TESTING.md)). The `shopIds` association is
 round-tripped: the write response contains what was sent. An unknown
 shop in `shopIds` answers 404 (`ShopNotFoundException`), an invalid one
-422 (`ShopException`) — both mapped in `exceptionToStatus`. The 404
+422 (`ShopException`) — both mapped in `exceptionToStatus`, the subclass
+`ShopNotFoundException` first ([`ERRORS.md`](./ERRORS.md)). The 404
 needs a core handler that checks the shops exist (`CustomerGroup` does):
 the legacy `AbstractObjectModelHandler::associateWithShops()` inserts
 with `INSERT IGNORE` and never throws, a core prerequisite to name in

@@ -19,7 +19,9 @@ gives the parameters of a collection. What the resource must add:
 - A description for every non-obvious behaviour: version differences
   (`minVersion`, a response shape that differs before 9.2.1), values
   formatted for display, fields that are always empty, side effects (an
-  existing empty cart is reused), what a "set" operation replaces, the
+  existing empty cart is reused), what a "set" operation replaces, a
+  `PATCH` replacing every language of a localized field (all of them must
+  be sent, `CONTEXT.md` → "Choosing the operation"), the
   multishop coverage, the filters a list supports, the 207 behaviour of a
   bulk command. A description never promises what the command does not
   do.

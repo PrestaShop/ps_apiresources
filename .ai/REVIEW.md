@@ -45,7 +45,8 @@ automated review (§5).
    - the handler: guards and exceptions (`{Entity}NotFoundException`, referenced entities such as
      `ZoneNotFoundException`), including the private assert / guard methods it calls before its own null
      checks, what it does with an optional parameter (a `foreach` on a null array, a uniqueness check on
-     an absent name), and the services it calls (validators, repositories: their exceptions are the
+     an absent name, a field written although it was not sent, every language of a localized field
+     replaced by the ones sent), and the services it calls (validators, repositories: their exceptions are the
      handler's);
    - for a bulk operation: the single-item handler next to the bulk one, guards compared — a bulk handler
      skipping a guard of the single handler is a core bug (`BulkDeleteOrderStateHandler` deletes the
@@ -72,8 +73,9 @@ restates a rule: when a line below and the section disagree, the section wins an
   [Choosing the operation](./CONTEXT.md#choosing-the-operation), [URI conventions](./CONTEXT.md#uri-conventions)
   with its table of [endpoints deviating from ADR 0023](./CONTEXT.md#existing-endpoints-that-deviate-from-adr-0023),
   [Scopes](./CONTEXT.md#scopes), [Do / Don't](./CONTEXT.md#do--dont).
-- Evidence: the command (its setters and their nullability decide `PATCH` vs `PUT`, the read side decides
-  the `CQRSQuery` of a write), the sibling resources of the domain and the reference resources
+- Evidence: the command and its handler (what the URI replaces decides `PUT` vs `PATCH`; a `PATCH` of the
+  entity needs a handler applying only the fields and the languages sent, nullable getters prove nothing;
+  the read side decides the `CQRSQuery` of a write), the sibling resources of the domain and the reference resources
   (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run; for a duplicate
   (a functional one, as the Don't list defines it), the endpoints already serving the same data to the
   same caller: the item and the lists of the entity, the exclusions of `GenerateApiTrackingTableCommand`.
@@ -155,7 +157,7 @@ restates a rule: when a line below and the section disagree, the section wins an
 - An option at its framework default reported as "missing" (`allowEmptyBody: false` on a `CQRSCreate` /
   `CQRSPartialUpdate`; on a `CQRSDelete` the default is `true`, so `allowEmptyBody: false` there is a
   real setting).
-- `identifier: true` on a resource without an item GET: the convention is not settled, ask the maintainer
+- `identifier: true` on a resource without an item GET: the convention is not settled, ask the committers
   instead of flagging.
 - A normalizer, processor or provider as the suggested fix: it is forbidden here.
 - A convention that the reference resources (`Country`) or every sibling of the same kind do not

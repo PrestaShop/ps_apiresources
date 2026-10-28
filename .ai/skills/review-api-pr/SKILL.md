@@ -12,7 +12,7 @@ subagent: recommended
 
 # Review an Admin API pull request or endpoint
 
-Read `.ai/REVIEW.md` (the checklist) and `.ai/CONTEXT.md` (the conventions, with the on-demand `.ai/TESTING.md`, `OPENAPI.md`, `LISTS.md`, `MULTISHOP.md`, `VERSIONS.md`, `UPLOAD.md` the checks point to)
+Read `.ai/REVIEW.md` (the checklist) and `.ai/CONTEXT.md` (the conventions, with the on-demand `.ai/TESTING.md`, `OPENAPI.md`, `ERRORS.md`, `LISTS.md`, `MULTISHOP.md`, `VERSIONS.md`, `UPLOAD.md` the checks point to)
 before anything else. The core side (providers, normalizers, OpenAPI adapters, test environment) is in
 the PrestaShop repository: `.ai/Component/AdminAPI/CONTEXT.md`.
 
@@ -52,7 +52,8 @@ Ask only for what is missing:
    when the back office has none), the `admin_api_experimental_endpoints` feature flag for an experimental
    operation, plain HTTP accepted in debug mode (`PS_ADMIN_API_FORCE_DEBUG_SECURED=0` otherwise), a
    `cache:clear` run with `php -d memory_limit=-1`. Read the HTTP status, not the body: in debug mode the
-   problem+json body says `"status":500` whatever the real code. Ask before running
+   problem+json body says `"status":500` whatever the real code (core fix: PrestaShop/PrestaShop#42156).
+   Ask before running
    write operations on a shop that is not a disposable test instance:
    - the export and diff of .ai/REVIEW.md §1 C, written to a scratch directory;
    - call the endpoints with a token of an API client of that shop (BO > Advanced Parameters > Admin API,
@@ -64,7 +65,8 @@ Ask only for what is missing:
      test fails.
 5. **Report** (.ai/REVIEW.md → §3): findings sorted by severity, each with `path:line`, the rule, the evidence,
    the fix; then the checks that passed in one line each (no detail); then the open questions for the
-   maintainer. State the core reference used and whether the runtime checks ran.
+   committers, who decide what the context leaves open. State the core reference used and whether the
+   runtime checks ran.
 6. **Compare with the existing review** when the PR already has human comments: list what they found that
    the checklist missed (a candidate rule for REVIEW.md) and what the checklist found that they did not.
 
@@ -86,6 +88,6 @@ Core reference: <branch or related PR> · runtime checks: yes/no
 ### Passed
 - A design/URIs · B contract (Add/Edit commands read) · C OpenAPI (exported, 0 diff outside the PR) · D errors · E tests · F hygiene
 
-### Questions for the maintainer
+### Questions for the committers
 - ...
 ```

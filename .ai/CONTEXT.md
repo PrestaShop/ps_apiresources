@@ -125,15 +125,27 @@ not the other way round:
 
 - `CQRSCreate` / `POST` for an `Add…Command` and for any non-idempotent
   action; a `POST` URI never carries the identifier of the entity it
-  creates. A duplication is the one `POST` with an id in the URI, the id
-  of the source: `POST /discounts/{discountId}/duplicate` with
-  `CQRSCreate` (ADR 0023).
-- `CQRSPartialUpdate` / `PATCH` only when the command really supports
-  partial data (setters, nullable parameters): a command whose getters
-  are non-nullable cannot be patched. `CQRSUpdate` / `PUT` when every
-  parameter must be sent on each call, even on an endpoint that only
-  covers part of the entity: `/products/{productId}/carriers` is a `PUT`
-  because `SetCarriersCommand` requires the whole list of carriers.
+  creates. Two `POST` carry an id: a duplication, the id of the source
+  (`POST /discounts/{discountId}/duplicate` with `CQRSCreate`, ADR 0023),
+  and an update receiving a file, the id of the entity it updates (see
+  below).
+- `CQRSUpdate` / `PUT` replaces the whole target of its URI: the entity,
+  or a sub part replaced as a whole (`PUT /products/{productId}/carriers`
+  sets the complete list of carriers). Any other change of a part of the
+  entity is a `CQRSPartialUpdate` / `PATCH`, even when its command
+  requires every parameter (`PATCH /carriers/{carrierId}/set-tax-rule-group`),
+  unless a technical reason forces another method (ADR 0023 §HTTP
+  methods).
+- A `PATCH` of the entity needs a handler that applies only what it
+  receives; a nullable getter in the command does not guarantee it. Some
+  older handlers apply every field of the command whatever was sent,
+  others replace all the languages of a localized field when one is sent
+  (`.ai/Component/CQRS/CONTEXT.md` in the PrestaShop repository →
+  "Handlers"). Read the handler: one applying every field makes the
+  operation a `PUT` until the core fixes it; when only the languages are
+  replaced, the `PATCH` stays and its description says so
+  ([`OPENAPI.md`](./OPENAPI.md)). The core fix comes with the contract of
+  each version in the test.
 - `CQRSDelete` / `DELETE` for a deletion and for a destructive clear-all;
   it answers 204 (the body of a bulk delete: [`ERRORS.md`](./ERRORS.md)).
 - Body-less actions answer 204 with `read: false`, `output: false` and
@@ -155,13 +167,13 @@ listed at the end of this section: a new endpoint follows the ADR, an
 existing deviation is never a precedent.
 
 - **Plural, lowercase, kebab-case**: `/contacts`, `/attributes/groups`,
-  `/customer-groups` — never `/contact`, `/attributeGroups`, or
-  `/customerGroups`.
+  `/tax-rules-groups` — never `/contact`, `/attributeGroups`, or
+  `/taxRulesGroups`.
 - **Sub-resources** nest under the parent ID:
   `/products/{productId}/combinations`,
   `/categories/{categoryId}/cover`. A segment is singular only for a
   one-to-one sub-resource (`/products/{productId}/stock`,
-  `/default-supplier`, `/virtual-file`), plural otherwise. A sub-entity
+  `/products/{productId}/default-supplier`), plural otherwise. A sub-entity
   with its own global identifier lives under the domain root, not under
   a parent id: `/products/combinations/{combinationId}`,
   `/attributes/groups/{attributeGroupId}`,
@@ -177,22 +189,23 @@ existing deviation is never a precedent.
 - **Bulk operations** use the `bulk-` prefix: `/contacts/bulk-delete`,
   `/attributes/groups/bulk-delete`. The bulk parameter name must be
   plural domain + `Ids` (e.g. `attributeGroupIds`). The method follows
-  ADR 0023 §Bulk operations: `DELETE` + `CQRSDelete` for `bulk-delete`,
-  `PUT` + `CQRSUpdate` for `bulk-update-status` (the value in the body,
-  never one endpoint per value), `POST` for `bulk-duplicate` and for any
-  bulk action no method fits. A bulk update is a `PUT`, not a `PATCH`:
-  its command needs the ids and the value on every call, and repeating
-  it changes nothing more (see "Choosing the operation").
+  the rules of the single item operations ("Choosing the operation",
+  ADR 0023 §Bulk operations): `DELETE` + `CQRSDelete` for `bulk-delete`,
+  `PATCH` + `CQRSPartialUpdate` for an update of a part of each entity
+  (`bulk-update-status`, the value in the body, never one endpoint per
+  value), `POST` for `bulk-duplicate` and for any bulk action no method
+  fits.
 - **Command-style operations** that are not plain CRUD on the resource name
   the action explicitly, verb first: `/carriers/{carrierId}/set-tax-rule-group`,
-  `/tax-rules-groups/{taxRulesGroupId}/set-status`,
+  `/countries/{countryId}/toggle-status`,
   `/carriers/search-compatible-carriers`,
   `/employees/send-password-reset-email`. Prefer a name that says what the
   operation does for its caller over a bare noun (`search-compatible-carriers`
   over `available`). The same kind of action uses the same word in every
-  domain (`set-status`, never `status` / `is-enabled` / `active`).
-  `toggle-status` is a true toggle: no value sent, the state flips, so it
-  is not a duplicate of `PATCH` even when `PATCH` covers `enabled`; a
+  domain (`toggle-status`, `bulk-update-status`; never `status`,
+  `set-status`, `is-enabled` or `active`). A status change is the `PATCH`
+  of the resource (`enabled`); `toggle-status` is a true toggle: no value
+  sent, the state flips, so it is not a duplicate of that `PATCH`; a
   single-item `set-status` with the value is such a duplicate and is not
   added (a bulk operation always carries the value: `bulk-update-status`).
   Any such segment must be
@@ -207,18 +220,18 @@ existing deviation is never a precedent.
 
 ### Existing endpoints that deviate from ADR 0023
 
-Shipped before the ADR amendments of 2025-11 and 2025-12. They stay until
-the team decides their migration (BC break in 0.x or deprecation until
-1.0, an open question of the AI context PR); a review does not flag them,
-and a new endpoint never copies them.
+Shipped before the ADR amendments they deviate from (2025-11, 2025-12,
+ADR PR #45). They stay until the team decides their migration (BC break
+in 0.x or deprecation until 1.0, an open question of the AI context PR);
+a review does not flag them, and a new endpoint never copies them.
 
 | Endpoint | ADR 0023 |
 |----------|----------|
 | `PUT /manufacturers/bulk-delete`, `PUT /taxes/bulk-delete` (`CQRSUpdate`) | `DELETE` + `CQRSDelete` |
-| `PATCH /discounts/bulk-update-status` (`CQRSPartialUpdate`) | `PUT` + `CQRSUpdate` |
-| `PUT /taxes/bulk-set-status`; `PUT /customers/bulk-enable` + `bulk-disable`; `PUT /suppliers/bulk-enable` + `bulk-disable` | one `PUT /x/bulk-update-status`, the value in the body |
+| `PUT /categories/bulk-update-status`, `PUT /modules/bulk-update-status`, `PUT /stores/bulk-update-status`, `PUT /tax-rules-groups/bulk-update-status`, `PUT /zones/bulk-update-status`, `PUT /countries/bulk-update-status` + `bulk-update-zone` (not released yet) (`CQRSUpdate`) | `PATCH` + `CQRSPartialUpdate` |
+| `PUT /taxes/bulk-set-status`; `PUT /customers/bulk-enable` + `bulk-disable`; `PUT /suppliers/bulk-enable` + `bulk-disable` | one `PATCH /x/bulk-update-status`, the value in the body |
 | `PUT /modules/bulk-uninstall` | `POST` when no method fits |
-| `PATCH /categories/{categoryId}/status`, `PATCH /tax-rules-groups/{taxRulesGroupId}/set-status`, `/hooks/{hookId}/status` | example sub part `/hooks/{hookId}/status`; the `set-status` rule above comes from the reviews of 2026-03, the ADR is not amended yet (a `toggle-status` with no value follows the rule above: `/zones`, `/stores`, `/countries`) |
+| `PATCH /categories/{categoryId}/status`, `PATCH /tax-rules-groups/{taxRulesGroupId}/set-status`, `PUT /hooks/{hookId}/status`, `PUT /modules/{technicalName}/status` | the `PATCH` of the resource (`enabled`), or a `toggle-status` without value (`/zones`, `/stores`, `/countries`); a rule of the reviews of 2026-03, the ADR still gives `/hooks/{hookId}/status` as its sub part example |
 
 ## Scopes
 
@@ -340,12 +353,17 @@ public array $validOrders;
   'properties' => [...]`) are the legacy form: existing resources are
   migrated to DTOs domain by domain, new resources never use them.
 - A sub object fed to a **multi-parameter setter** of the command
-  (`setMinimumAmount(?DecimalNumber $amount, int $currencyId, bool $taxIncluded, ...)`)
-  is one object `{amount, currencyId, taxIncluded}`. When the setter
-  accepts `null` (unset), the property is nullable and documented as
-  `['object', 'null']`; once the object is sent, every parameter without
-  a default is `required` — `currencyId` included when `0` throws.
-  `minimumAmount: null` unsets the amount, `{"amount": null}` is invalid.
+  (`setMinimumAmount(?DecimalNumber $amount, int $currencyId = 0, ...)`)
+  is one object `{amount, currencyId, taxIncluded}`, typed with a DTO
+  like any sub object (`DiscountMinimumAmount`) and nullable when the
+  setter accepts `null` (`minimumAmount: null` unsets the amount,
+  `{"amount": null}` is invalid). The request body is built from the
+  setter by the core (`MultiParameterSetterAdapter`): from 9.2.1
+  (PrestaShop#43252) it lists the parameters without default as
+  `required` and makes the object nullable when the setter accepts `null`
+  alone. The property description says what `null` does and which fields
+  are required beyond the signature (`currencyId` when `0` throws), for
+  the older cores too.
 
 Real example: `src/ApiPlatform/Resources/Customer/CustomerDetails.php`
 with `src/ApiPlatform/Resources/Customer/Dto/`.
@@ -491,7 +509,8 @@ examples: [`MULTISHOP.md`](./MULTISHOP.md).
   not the association alone), and `204` stays for the actions with
   nothing to read back. An operation whose read side does not exist yet, or
   whose domain is not settled, ships with `experimentalOperation: true`
-  (exposed only when the experimental endpoints feature flag is on) and
+  (exposed only when the experimental endpoints feature flag is on, or in
+  debug mode) and
   is graduated by removing it once the contract is complete.
 - Declare the default values a creation endpoint applies (matching the
   BO form's `default_empty_data` / untouched fields) with the
@@ -651,11 +670,13 @@ for the patterns above:
   `src/ApiPlatform/Resources/Country/BulkCountries.php` (the three bulk
   operations in one class, URIs `/countries/bulk-*`, `countryIds` input,
   the validation groups of `enabled` and `zoneId`, the exceptions of the
-  failed items in the 207 response).
+  failed items in the 207 response; its two updates are still `PUT`, a
+  new bulk update is a `PATCH`).
 - **Command-style operation returning the full entity** —
   `src/ApiPlatform/Resources/Carrier/Carrier.php`
-  (URI `/carriers/{carrierId}/set-tax-rule-group`, dedicated validation
-  group, `CQRSQuery` reused from the CRUD operations).
+  (URI `/carriers/{carrierId}/set-tax-rule-group`, a `PATCH` since it
+  changes part of the carrier, dedicated validation group, `CQRSQuery`
+  reused from the CRUD operations).
 - **Shared read / write format, with a normalizer as last resort** —
   `src/ApiPlatform/Resources/Carrier/CarrierRanges.php` and
   `src/ApiPlatform/Normalizer/CarrierRangesCollectionNormalizer.php`.
@@ -663,11 +684,13 @@ for the patterns above:
   explicit summaries and descriptions, write-only input** —
   `src/ApiPlatform/Resources/Customer/CustomerDetails.php` and
   `src/ApiPlatform/Resources/Customer/Dto/`.
-- **Nullable objects of multi-parameter setters** (`minimumAmount`,
-  `reductionAmount` with their `required` lists) —
-  `src/ApiPlatform/Resources/Discount/Discount.php`, the only resource
-  using the pattern; an experimental domain still evolving, copy the two
-  property blocks, not the resource.
+- **Nullable DTOs of multi-parameter setters** (`minimumAmount`,
+  `reductionAmount`, their required fields in the description) —
+  `src/ApiPlatform/Resources/Discount/Discount.php` with
+  `src/ApiPlatform/Resources/Discount/Dto/`, the only resource using the
+  pattern; an experimental domain still evolving, copy the two properties
+  and their DTOs, not the resource (`productConditions` keeps the legacy
+  hand-written schema: a DTO list filled from a query needs 9.2.1).
 - **Exception mapping** — see [`ERRORS.md`](./ERRORS.md) (`OrderReturn`).
 - **Shop association** — see [`MULTISHOP.md`](./MULTISHOP.md)
   (`CustomerGroup`, `Product`, `CombinationList`).

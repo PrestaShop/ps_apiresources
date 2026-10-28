@@ -31,12 +31,12 @@ entity and the core infrastructure the resource relies on.
 List every command and query of the domain, not only the usual names. From the PS root:
 
 ```bash
-php bin/console prestashop:list:commands-and-queries --domain={Domain} -f simplified
+php bin/console prestashop:list:commands-and-queries --domain={Domain}
 ```
 
 The list includes the subdomains nested in the domain folder, which have their own `Command/`, `Query/`
 and `QueryResult/` (`Product/Combination/`, `Product/Image/`), and shows the endpoint already exposing
-each class; without a running shop, list `src/Core/Domain/{Domain}/` recursively. The usual names are a
+each class (the `API:` line of the default format, which `-f simple` drops); without a running shop, list `src/Core/Domain/{Domain}/` recursively. The usual names are a
 first scan, not a rule: `Add` or `Create`, `Edit` or `Update`, `Get{Entity}ForEditing`, plus specific
 actions no pattern predicts (`Toggle…Status`, `Set…`, `Duplicate…`).
 
@@ -100,7 +100,7 @@ clients, the test class never repeats that setup.
 Create both files at their correct paths. Then tell the user:
 
 1. **Where the files were written**
-2. **How to register the resource** — if the ApiResource isn't auto-discovered, a service definition may be needed (usually not required for standard resources)
+2. **Nothing to register**: the core scans `src/ApiPlatform/Resources/`; a cache clear (`php -d memory_limit=-1 bin/console cache:clear`) makes the new resource show up
 3. **How to run the tests**: `.ai/TESTING.md` → "Running the suite".
 4. **What to double-check**: mappings between CQRS fields and API fields — these are the most common source of errors. Ask the user to call the endpoint (Swagger UI) and to compare the exported documentation with the real payloads (`.ai/OPENAPI.md`, last paragraph): types, nullability, `required` list, descriptions.
 5. **Review it**: run the `review-api-pr` skill (`REVIEW.md`) on the new files before opening the PR.

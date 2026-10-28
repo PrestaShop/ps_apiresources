@@ -48,9 +48,9 @@ use PHPStan\Rules\RuleErrorBuilder;
  * - Every property must have a type declaration.
  * - No other class types are allowed.
  *
- * This rule only applies to classes:
- *   1. In the ApiPlatform\Resources namespace.
- *   2. Annotated with the #[ApiResource] attribute.
+ * This rule only applies to:
+ *   1. The classes of the ApiPlatform\Resources namespace annotated with #[ApiResource].
+ *   2. The DTO classes of a Resources\{Domain}\Dto namespace.
  *
  * @implements Rule<Class_>
  */

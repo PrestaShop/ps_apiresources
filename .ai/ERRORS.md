@@ -18,8 +18,8 @@ raise, with the `Response::HTTP_*` constants — at minimum the entity's
   only refuses negatives) makes `0` an unknown id, a 404 on an item or
   an empty list — read the body of the guard, not its name;
 - the exceptions of the referenced entities checked by the handler or
-  the value objects: `ShopException` 422 / `ShopNotFoundException` 404,
-  `ZoneNotFoundException` 404, `CurrencyConstraintException` 422,
+  the value objects: `ShopNotFoundException` 404 before its parent
+  `ShopException` 422, `ZoneNotFoundException` 404, `CurrencyConstraintException` 422,
   `OrderReturnStateNotFoundException` 404…
 
 Rule of thumb: **any identifier checked for existence answers 404 when
