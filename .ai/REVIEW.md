@@ -208,8 +208,10 @@ Apply §1 A–D to the whole resource instead of a diff. With a shop:
   first review is requested with `@coderabbitai full review` on the pull request; each later push gets an
   incremental review.
 - When a finding is wrong, answer on the line, with the evidence and the reason: CodeRabbit answers
-  and records a learning from the reply. When the correction is general, change the rule in `CONTEXT.md` (or §2 here)
-  instead: a learning only applies to similar code, a guideline applies everywhere.
+  and records a learning from the reply. The learning stays pending on the Learnings dashboard until an
+  admin approves it, or applies by itself once the `approval_delay` of `.coderabbit.yaml` runs out: reject
+  the ones drawn from a wrong or misread reply. When the correction is general, change the rule in
+  `CONTEXT.md` (or §2 here) instead: a learning only applies to similar code, a guideline applies everywhere.
 - When a human review catches something `CONTEXT.md` does not state, add the convention there (never a
   check that restates it here); add the false-positive pattern to §2. A finding caused by an outdated
   example (a resource copied from an older one, a snippet of `CONTEXT.md` or of the `ps-api-endpoint`

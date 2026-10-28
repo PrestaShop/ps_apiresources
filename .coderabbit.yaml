@@ -138,6 +138,9 @@ knowledge_base:
       - "PrestaShop/PrestaShop:.ai/Component/AdminAPI/CONTEXT.md"
   learnings:
     scope: auto
+    # A learning drawn from a chat waits for an admin approval (Learnings dashboard → Pending approvals) and
+    # applies by itself after this many days, 30 at most
+    approval_delay: 30
   pull_requests:
     scope: auto
   issues:
