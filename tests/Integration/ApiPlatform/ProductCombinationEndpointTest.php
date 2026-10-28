@@ -305,6 +305,14 @@ class ProductCombinationEndpointTest extends ApiTestCase
             $this->assertEquals($expectedCombinationIds, $paginatedCombinationIds);
         }
 
+        // The sort order reaches the query through the CQRS query mapping (orderWay)
+        $descendingCombinations = $this->listItems(sprintf('/products/%d/combinations?sortOrder=desc', $productId), ['product_read']);
+        $this->assertEquals('desc', $descendingCombinations['sortOrder']);
+        $descendingCombinationIds = array_map(static function (array $combination): int {
+            return $combination['combinationId'];
+        }, $descendingCombinations['items']);
+        $this->assertEquals(array_slice(array_reverse($newCombinationIds), 0, count($descendingCombinationIds)), $descendingCombinationIds);
+
         return $newCombinationIds;
     }
 

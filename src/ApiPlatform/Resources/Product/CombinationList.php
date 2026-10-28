@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -40,6 +42,7 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQueryMapping: [
                 '[_context][langId]' => '[languageId]',
                 '[_context][shopConstraint]' => '[shopConstraint]',
+                '[sortOrder]' => '[orderWay]',
             ],
             ApiResourceMapping: [
                 '[combinationName]' => '[name]',
