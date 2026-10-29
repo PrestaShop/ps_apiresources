@@ -118,6 +118,7 @@ class AttributeGroup
     #[Assert\NotBlank(allowNull: true)]
     public array $shopIds;
 
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'description' => 'Zero based position among its siblings, matching the value stored by PrestaShop. The back office list adds 1 for display. Returned from PrestaShop 9.3.0, whose for-editing query exposes it (PrestaShop/PrestaShop#41844).'])]
     public int $position;
 
     public const QUERY_MAPPING = [

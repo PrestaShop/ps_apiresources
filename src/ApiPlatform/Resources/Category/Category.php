@@ -172,6 +172,7 @@ class Category
     #[DefaultLanguage(groups: ['Update'], fieldName: 'metaDescriptions', allowNull: true)]
     public array $metaDescriptions;
 
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'description' => 'Zero based position among its siblings, matching the value stored by PrestaShop. The back office list adds 1 for display.'])]
     public int $position;
 
     public int $parentCategoryId;
