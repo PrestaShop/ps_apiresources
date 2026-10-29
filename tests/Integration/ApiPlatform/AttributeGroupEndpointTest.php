@@ -25,6 +25,19 @@ use Tests\Resources\DatabaseDump;
 
 class AttributeGroupEndpointTest extends ApiTestCase
 {
+    /**
+     * The single-item endpoints carry the group position from PrestaShop 9.3.0, whose CQRS result exposes
+     * it (PrestaShop/PrestaShop#41844). The list endpoints are unaffected: they read it from the grid query.
+     *
+     * @param int $position
+     *
+     * @return array<string, int>
+     */
+    private function expectedPosition(int $position): array
+    {
+        return self::isVersionAtLeast('9.3.0') ? ['position' => $position] : [];
+    }
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -113,7 +126,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
 
         // We assert the returned data matches what was posted (plus the ID)
         $this->assertEquals(
-            ['attributeGroupId' => $attributeGroupId] + $postData,
+            ['attributeGroupId' => $attributeGroupId] + $this->expectedPosition($itemsCount) + $postData,
             $attributeGroup
         );
 
@@ -145,7 +158,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
             ],
             'type' => 'select',
             'shopIds' => [1],
-        ], $attributeGroup);
+        ] + $this->expectedPosition(4), $attributeGroup);
 
         return $attributeGroupId;
     }
@@ -173,11 +186,11 @@ class AttributeGroupEndpointTest extends ApiTestCase
         ];
 
         $updatedAttributeGroup = $this->partialUpdateItem('/attributes/groups/' . $attributeGroupId, $patchData, ['attribute_group_write']);
-        $this->assertEquals(['attributeGroupId' => $attributeGroupId] + $patchData, $updatedAttributeGroup);
+        $this->assertEquals(['attributeGroupId' => $attributeGroupId] + $this->expectedPosition(4) + $patchData, $updatedAttributeGroup);
 
         // We check that when we GET the item it is updated as expected
         $attributeGroup = $this->getItem('/attributes/groups/' . $attributeGroupId, ['attribute_group_read']);
-        $this->assertEquals(['attributeGroupId' => $attributeGroupId] + $patchData, $attributeGroup);
+        $this->assertEquals(['attributeGroupId' => $attributeGroupId] + $this->expectedPosition(4) + $patchData, $attributeGroup);
 
         // Test partial update
         $partialUpdateData = [
@@ -200,7 +213,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
             ],
             'type' => 'radio',
             'shopIds' => [1],
-        ];
+        ] + $this->expectedPosition(4);
         $updatedAttributeGroup = $this->partialUpdateItem('/attributes/groups/' . $attributeGroupId, $partialUpdateData, ['attribute_group_write']);
         $this->assertEquals($expectedUpdatedData, $updatedAttributeGroup);
 
