@@ -24,10 +24,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\State;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\State\Command\AddStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\State\Command\DeleteStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\State\Command\EditStateCommand;
-use PrestaShop\PrestaShop\Core\Domain\State\Exception\StateConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\State\Exception\StateException;
 use PrestaShop\PrestaShop\Core\Domain\State\Exception\StateNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\State\Query\GetStateForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -72,7 +73,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         StateNotFoundException::class => Response::HTTP_NOT_FOUND,
-        StateConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // Every other state exception: invalid field values, a state used by an address on delete, the StateId constraint
+        StateException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class State
@@ -81,15 +83,21 @@ class State
     public int $stateId;
 
     #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Length(max: 64)]
+    #[TypedRegex(['type' => TypedRegex::TYPE_GENERIC_NAME])]
     public string $name;
 
     #[Assert\NotNull(groups: ['Create'])]
+    #[Assert\Positive]
     public int $countryId;
 
     #[Assert\NotNull(groups: ['Create'])]
+    #[Assert\Positive]
     public int $zoneId;
 
     #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\Length(max: 7)]
+    #[TypedRegex(['type' => TypedRegex::TYPE_STATE_ISO_CODE])]
     public string $isoCode;
 
     #[Assert\NotNull(groups: ['Create'])]

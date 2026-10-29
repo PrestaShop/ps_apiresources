@@ -27,6 +27,11 @@ use Tests\Resources\DatabaseDump;
 
 class StateEndpointTest extends ApiTestCase
 {
+    /**
+     * New York, used by two addresses of the demo data, so it cannot be deleted.
+     */
+    private const STATE_USED_BY_AN_ADDRESS = 35;
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -50,8 +55,8 @@ class StateEndpointTest extends ApiTestCase
     public function testAddState(): int
     {
         $state = $this->createItem('/states', $this->getCreatePayload(), ['state_write']);
-
         $this->assertArrayHasKey('stateId', $state);
+        $this->assertEquals($this->expectedState($state['stateId']), $state);
 
         return $state['stateId'];
     }
@@ -61,10 +66,7 @@ class StateEndpointTest extends ApiTestCase
      */
     public function testGetState(int $stateId): int
     {
-        $expected = ['stateId' => $stateId] + $this->getCreatePayload();
-
-        $state = $this->getItem('/states/' . $stateId, ['state_read']);
-        $this->assertEquals($expected, $state);
+        $this->assertEquals($this->expectedState($stateId), $this->getItem('/states/' . $stateId, ['state_read']));
 
         return $stateId;
     }
@@ -80,21 +82,10 @@ class StateEndpointTest extends ApiTestCase
             'isoCode' => 'XY',
             'enabled' => false,
         ];
+        $expected = $this->expectedState($stateId, $patchData);
 
-        $expected = [
-            'stateId' => $stateId,
-            'name' => 'Updated Test State',
-            'countryId' => 21,
-            'zoneId' => 1,
-            'isoCode' => 'XY',
-            'enabled' => false,
-        ];
-
-        $updatedState = $this->partialUpdateItem('/states/' . $stateId, $patchData, ['state_write']);
-        $this->assertEquals($expected, $updatedState);
-
-        $fetched = $this->getItem('/states/' . $stateId, ['state_read']);
-        $this->assertEquals($expected, $fetched);
+        $this->assertEquals($expected, $this->partialUpdateItem('/states/' . $stateId, $patchData, ['state_write']));
+        $this->assertEquals($expected, $this->getItem('/states/' . $stateId, ['state_read']));
 
         return $stateId;
     }
@@ -105,38 +96,93 @@ class StateEndpointTest extends ApiTestCase
     public function testDeleteState(int $stateId): void
     {
         // This endpoint returns an empty response and a 204 HTTP code.
-        $return = $this->deleteItem('/states/' . $stateId, ['state_write']);
-        $this->assertNull($return);
+        $this->assertNull($this->deleteItem('/states/' . $stateId, ['state_write']));
 
-        // Fetching a state that does not exist returns a 404 (StateNotFoundException mapping).
+        $this->getItem('/states/' . $stateId, ['state_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testNotFoundState(): void
+    {
         $this->getItem('/states/999999', ['state_read'], Response::HTTP_NOT_FOUND);
+        $this->partialUpdateItem('/states/999999', ['enabled' => true], ['state_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/states/999999', ['state_write'], Response::HTTP_NOT_FOUND);
     }
 
-    public function testInvalidState(): void
+    public function testInvalidStateId(): void
     {
-        $invalidData = array_merge($this->getCreatePayload(), [
-            // Name is required (NotBlank) on creation.
-            'name' => '',
-        ]);
+        // The id passes the \d+ requirement and is refused by the StateId value object: a mapped exception, no field list
+        $this->getItem('/states/0', ['state_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->partialUpdateItem('/states/0', ['enabled' => true], ['state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        // DeleteStateCommand turns 0 into a NoStateId, which the handler reports as not found
+        $this->deleteItem('/states/0', ['state_write'], Response::HTTP_NOT_FOUND);
+    }
 
-        $validationErrorsResponse = $this->createItem(
-            '/states',
-            $invalidData,
-            ['state_write'],
-            Response::HTTP_UNPROCESSABLE_ENTITY
-        );
-        $this->assertIsArray($validationErrorsResponse);
+    public function testAddStateWithInvalidData(): void
+    {
+        $response = $this->createItem('/states', $this->getCreatePayload(['name' => '']), ['state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertValidationErrors([
-            [
-                'propertyPath' => 'name',
-                'message' => 'This value should not be blank.',
-            ],
-        ], $validationErrorsResponse);
+            ['propertyPath' => 'name', 'message' => 'This value should not be blank.'],
+        ], $response);
     }
 
-    private function getCreatePayload(): array
+    public function testAddStateWithInvalidValues(): void
     {
-        return [
+        $response = $this->createItem('/states', $this->getCreatePayload([
+            'name' => str_repeat('a', 65),
+            'isoCode' => 'ABCDEFGH',
+            'countryId' => 0,
+            'zoneId' => 0,
+        ]), ['state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'name', 'message' => 'This value is too long. It should have 64 characters or less.'],
+            // Too long, and refused by the typed regex
+            ['propertyPath' => 'isoCode'],
+            ['propertyPath' => 'countryId', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'zoneId', 'message' => 'This value should be positive.'],
+        ], $response);
+
+        // Refused by the typed regex constraints: the message carries the value, only the status is asserted
+        foreach ([['name' => '<b>'], ['isoCode' => 'ABCDEF']] as $overrides) {
+            $this->createItem('/states', $this->getCreatePayload($overrides), ['state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
+    public function testEditStateWithInvalidValues(): void
+    {
+        $stateId = $this->createItem('/states', $this->getCreatePayload(), ['state_write'])['stateId'];
+
+        $response = $this->partialUpdateItem('/states/' . $stateId, [
+            'name' => str_repeat('a', 65),
+            'countryId' => 0,
+            'zoneId' => 0,
+        ], ['state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'name', 'message' => 'This value is too long. It should have 64 characters or less.'],
+            ['propertyPath' => 'countryId', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'zoneId', 'message' => 'This value should be positive.'],
+        ], $response);
+        foreach ([['name' => '<b>'], ['isoCode' => 'ABCDEF']] as $patchData) {
+            $this->partialUpdateItem('/states/' . $stateId, $patchData, ['state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        $this->assertEquals($this->expectedState($stateId), $this->getItem('/states/' . $stateId, ['state_read']));
+
+        $this->deleteItem('/states/' . $stateId, ['state_write']);
+    }
+
+    public function testDeleteStateUsedByAnAddress(): void
+    {
+        $this->deleteItem('/states/' . self::STATE_USED_BY_AN_ADDRESS, ['state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertSame(self::STATE_USED_BY_AN_ADDRESS, $this->getItem('/states/' . self::STATE_USED_BY_AN_ADDRESS, ['state_read'])['stateId']);
+    }
+
+    private function expectedState(int $stateId, array $overrides = []): array
+    {
+        return ['stateId' => $stateId] + $overrides + $this->getCreatePayload();
+    }
+
+    private function getCreatePayload(array $overrides = []): array
+    {
+        return $overrides + [
             'name' => 'Test State',
             'countryId' => 21,
             'zoneId' => 2,
