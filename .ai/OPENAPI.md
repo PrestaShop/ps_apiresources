@@ -58,13 +58,20 @@ What the generator does and does not do: the input schema of a write
 operation is built per command (its parameters, through the command
 mapping) and the read schema from the query result, so they may
 legitimately differ; a typed `openapiContext` on an array documents its
-first level only; the request body of a bulk `DELETE` is not documented
-(Swagger offers no field — a core limitation, not a resource bug); a
-`DELETE` answering a body (`status: 200`, `output`, the query in
-`extraProperties`) is exported as `200: '{Entity} resource deleted'`
-without a response schema; the
-responses listed (400, 422 on writes, 404 on item routes) are API
-Platform's generic defaults, not derived from `exceptionToStatus` yet;
+first level only (item types come from the `@var` docblock); the request
+body of a `DELETE` is documented, from the command, only with
+`allowEmptyBody: false` (core 9.2.1; Swagger offers no field on older
+cores, and an optional body stays undocumented): a hand-written
+`requestBody` is kept only when the generated one is wrong (a required
+field the command defaults, a field the command misses), with the
+reason; a `DELETE` with a `CQRSQuery` documents its 200 response schema
+from 9.2.1, a list for a `CQRS*Collection` write operation (their body
+is documented as one object, not as a list); the error responses are the statuses of the operation
+`exceptionToStatus` (the resource map when the operation has none),
+described by the exception names, plus API Platform's 400 and 422 on
+writes, and the 207 of a bulk command (core 9.2.1; older cores list API
+Platform's generic 400, 404, 422) — a status missing from the
+documentation is a status missing from the map;
 an id-only operation (`duplicate`, `toggle-status`, `reset`) is exported
 with a required, empty request body; a command whose accessors are named
 differently from its constructor parameters (`getImageWidth()` for

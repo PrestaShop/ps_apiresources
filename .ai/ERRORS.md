@@ -27,6 +27,12 @@ unknown, in the URI or in the body** (every `*NotFoundException` → 404,
 no exception), an invalid identifier format (`0`, negative) answers
 422, and the error message names the entity that failed.
 
+An operation-level `exceptionToStatus` **replaces** the resource one, it
+is not merged: it repeats every entry the operation needs. The map is
+also the documentation of the error responses (core 9.2.1,
+[`OPENAPI.md`](./OPENAPI.md)): a resource-level entry appears on every
+operation of the class.
+
 API Platform takes the **first matching class**, so a subclass mapped to
 a different status is listed before its parent
 (`OrderReturnStateNotFoundException` → 404 before
@@ -59,7 +65,8 @@ A payload that follows the documentation never produces a 500 or a 400:
 
 - `#[Assert\NotNull]` / `NotBlank` on every required non-nullable
   property: a missing constructor argument is otherwise a 400 from the
-  serializer; a `Choice` alone leaves an uninitialized typed property and
+  serializer (a missing parameter of a multi-parameter setter answers
+  422 from core 9.2.1, a 400 before); a `Choice` alone leaves an uninitialized typed property and
   a 500; a missing key and an explicit `null` must give the same 422
   (`Choice`, `TypedRegex`, `Length`, `Positive` skip `null`: only
   `NotNull` / `NotBlank` / `DefaultLanguage` catch it).
@@ -119,7 +126,7 @@ A payload that follows the documentation never produces a 500 or a 400:
 | Status | When |
 |--------|------|
 | 201 | creation, with the full resource (`CQRSQuery`) |
-| 200 | update and command-style operation returning the updated state |
+| 200 | update and command-style operation returning the updated state; from 9.2.1, a removal on the sub-content of a parent (`CQRSDelete` with a `CQRSQuery`, `CQRSDeleteCollection`) returning the updated parent or list |
 | 204 | deletion and body-less action with nothing to read back |
 | 207 | partial failure of a bulk command (core ≥ 9.1.2) |
 | 404 | unknown identifier, in the URI or in the body |
@@ -127,5 +134,7 @@ A payload that follows the documentation never produces a 500 or a 400:
 | 400 | malformed request only: invalid JSON, missing shop context |
 | 401 / 403 | missing token / missing scope |
 
-The responses listed in the OpenAPI output are not derived from this
-mapping: see [`OPENAPI.md`](./OPENAPI.md).
+The `status` of an error payload is the status of the response from core 9.2.1 (500 before, whatever the mapping), and without debug mode its `detail` names the mapped exception (`ZoneNotFoundException` → "Zone not found"); `requestApi()` checks the status ([`TESTING.md`](./TESTING.md)).
+
+The responses listed in the OpenAPI output are derived from this
+mapping from core 9.2.1: see [`OPENAPI.md`](./OPENAPI.md).
