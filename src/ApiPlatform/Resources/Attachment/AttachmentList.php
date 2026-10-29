@@ -35,7 +35,8 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
                 'attachment_read',
             ],
             ApiResourceMapping: self::MAPPING,
-            gridDataFactory: 'prestashop.core.grid.data_factory.attachment_decorator',
+            // The undecorated factory: the decorator turns the size and the product count into display labels
+            gridDataFactory: 'prestashop.core.grid.data_factory.attachment',
             filtersClass: AttachmentFilters::class,
             filtersMapping: [
                 '[attachmentId]' => '[id_attachment]',
@@ -52,9 +53,11 @@ class AttachmentList
 
     public string $file;
 
-    public string $fileSize;
+    #[ApiProperty(openapiContext: ['description' => 'Size of the file, in bytes.'])]
+    public int $fileSize;
 
-    public string $products;
+    #[ApiProperty(openapiContext: ['description' => 'Number of products the attachment is associated with.'])]
+    public int $products;
 
     public const MAPPING = [
         '[id_attachment]' => '[attachmentId]',

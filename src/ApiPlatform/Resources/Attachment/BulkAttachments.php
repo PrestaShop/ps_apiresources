@@ -26,6 +26,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Attachment\Command\BulkDeleteAttachmentsCommand;
 use PrestaShop\PrestaShop\Core\Domain\Attachment\Exception\AttachmentNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Attachment\Exception\BulkDeleteAttachmentsException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -35,6 +36,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         new CQRSDelete(
             uriTemplate: '/attachments/bulk-delete',
             CQRSCommand: BulkDeleteAttachmentsCommand::class,
+            allowEmptyBody: false,
             scopes: [
                 'attachment_write',
             ],
@@ -42,6 +44,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         AttachmentNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // The handler deletes what it can and reports the failed ids together at the end
+        BulkDeleteAttachmentsException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkAttachments
@@ -52,5 +56,6 @@ class BulkAttachments
     #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
     #[Assert\NotBlank]
     #[Assert\Count(min: 1)]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $attachmentIds = [];
 }

@@ -22,12 +22,13 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\Attachment\Query\GetAttachmentForEditing;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class AttachmentEndpointTest extends ApiTestCase
 {
+    private const ASSET = __DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg';
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
@@ -42,87 +43,24 @@ class AttachmentEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'create endpoint' => [
-            'POST',
-            '/attachments',
-            'multipart/form-data',
-        ];
-
-        yield 'get endpoint' => [
-            'GET',
-            '/attachments/1',
-        ];
-
-        yield 'update endpoint' => [
-            'PATCH',
-            '/attachments/1',
-            'multipart/form-data',
-        ];
-
-        yield 'delete endpoint' => [
-            'DELETE',
-            '/attachments/1',
-        ];
-
-        yield 'list endpoint' => [
-            'GET',
-            '/attachments',
-        ];
-
-        yield 'bulk delete endpoint' => [
-            'DELETE',
-            '/attachments/bulk-delete',
-        ];
-    }
-
-    /**
-     * The CQRS API normalizer builds GetAttachmentForEditing from the command result using the
-     * `attachmentId` key. Cores whose constructor still takes `$attachmentIdValue` cannot be
-     * instantiated from that data, so POST /attachments answers 500 there. 9.0.3 will never carry
-     * the fix (the 9.0.x branch was deleted), hence a capability probe rather than a version check.
-     */
-    private function skipIfAttachmentIdNotExposed(): void
-    {
-        $constructor = (new \ReflectionClass(GetAttachmentForEditing::class))->getConstructor();
-        $parameters = null !== $constructor ? $constructor->getParameters() : [];
-
-        if ([] === $parameters || 'attachmentId' !== $parameters[0]->getName()) {
-            $this->markTestSkipped(
-                'Requires the core attachment for-editing CQRS alignment'
-                . ' (PrestaShop/PrestaShop#41889 on develop, #42124 on 9.1.x):'
-                . ' GetAttachmentForEditing must accept an "attachmentId" parameter.'
-            );
+        // The single item operations are filtered out below PrestaShop 9.2.1, where they answer 404 instead of 401
+        if (self::isVersionAtLeast('9.2.1')) {
+            yield 'create endpoint' => ['POST', '/attachments', 'multipart/form-data'];
+            yield 'get endpoint' => ['GET', '/attachments/1'];
+            yield 'update endpoint' => ['POST', '/attachments/1', 'multipart/form-data'];
         }
+        yield 'delete endpoint' => ['DELETE', '/attachments/1'];
+        yield 'list endpoint' => ['GET', '/attachments'];
+        yield 'bulk delete endpoint' => ['DELETE', '/attachments/bulk-delete'];
     }
 
     public function testAddAttachment(): int
     {
-        $this->skipIfAttachmentIdNotExposed();
+        $this->markTestSkippedByMinVersion('9.2.1');
 
-        $uploadedFile = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
-
-        $attachment = $this->requestApi('POST', '/attachments', null, ['attachment_write'], Response::HTTP_CREATED, [
-            'headers' => [
-                'content-type' => 'multipart/form-data',
-            ],
-            'extra' => [
-                'files' => [
-                    'file' => $uploadedFile,
-                ],
-                'parameters' => [
-                    'names' => [
-                        'en-US' => 'Documentation',
-                    ],
-                    'descriptions' => [
-                        'en-US' => 'A product documentation file',
-                    ],
-                ],
-            ],
-        ]);
-
-        $this->assertArrayHasKey('attachmentId', $attachment);
+        $attachment = $this->sendAttachment('/attachments', $this->getFormFields('Documentation', 'A product documentation file'), true, Response::HTTP_CREATED);
         $this->assertIsInt($attachment['attachmentId']);
-        $this->assertGreaterThan(0, $attachment['attachmentId']);
+        $this->assertEquals($this->expectedAttachment($attachment['attachmentId'], 'Documentation', 'A product documentation file'), $attachment);
 
         return $attachment['attachmentId'];
     }
@@ -132,11 +70,10 @@ class AttachmentEndpointTest extends ApiTestCase
      */
     public function testGetAttachment(int $attachmentId): int
     {
-        $attachment = $this->getItem('/attachments/' . $attachmentId, ['attachment_read']);
-
-        $this->assertArrayHasKey('names', $attachment);
-        $this->assertArrayHasKey('fileName', $attachment);
-        $this->assertSame('Documentation', reset($attachment['names']));
+        $this->assertEquals(
+            $this->expectedAttachment($attachmentId, 'Documentation', 'A product documentation file'),
+            $this->getItem('/attachments/' . $attachmentId, ['attachment_read'])
+        );
 
         return $attachmentId;
     }
@@ -146,23 +83,12 @@ class AttachmentEndpointTest extends ApiTestCase
      */
     public function testUpdateAttachment(int $attachmentId): int
     {
-        $attachment = $this->requestApi('PATCH', '/attachments/' . $attachmentId, null, ['attachment_write'], Response::HTTP_OK, [
-            'headers' => [
-                'content-type' => 'multipart/form-data',
-            ],
-            'extra' => [
-                'parameters' => [
-                    'names' => [
-                        'en-US' => 'Updated documentation',
-                    ],
-                    'descriptions' => [
-                        'en-US' => 'An updated description',
-                    ],
-                ],
-            ],
-        ]);
-
-        $this->assertSame('Updated documentation', reset($attachment['names']));
+        // Without a file the current one is kept
+        $expected = $this->expectedAttachment($attachmentId, 'Updated documentation', 'An updated description');
+        $this->assertEquals($expected, $this->sendAttachment('/attachments/' . $attachmentId, $this->getFormFields('Updated documentation', 'An updated description'), false));
+        $this->assertEquals($expected, $this->getItem('/attachments/' . $attachmentId, ['attachment_read']));
+        // Not covered with a file: AttachmentFileUploader stores it with move_uploaded_file(), which stores nothing for a
+        // test upload, so replacing it would only unlink a missing file
 
         return $attachmentId;
     }
@@ -178,12 +104,11 @@ class AttachmentEndpointTest extends ApiTestCase
 
         // The attachment created above is the most recent, so it comes first in the descending list.
         $listed = $attachments['items'][0];
-        $this->assertEquals($attachmentId, $listed['attachmentId']);
+        $this->assertSame($attachmentId, $listed['attachmentId']);
         $this->assertSame('Updated documentation', $listed['name']);
-        // The grid decorator exposes file_size and products as formatted strings.
-        $this->assertArrayHasKey('file', $listed);
-        $this->assertArrayHasKey('fileSize', $listed);
-        $this->assertArrayHasKey('products', $listed);
+        $this->assertSame(filesize(self::ASSET), $listed['fileSize']);
+        $this->assertSame(0, $listed['products']);
+        $this->assertIsString($listed['file']);
 
         // The filter parameter is mapped to the grid's id_attachment column.
         $filtered = $this->listItems('/attachments', ['attachment_read'], [
@@ -198,14 +123,54 @@ class AttachmentEndpointTest extends ApiTestCase
     /**
      * @depends testListAttachments
      */
+    public function testUpdateAttachmentWithInvalidData(int $attachmentId): int
+    {
+        // EditAttachmentHandler writes the names and the descriptions whatever was sent, so both are required
+        $response = $this->sendAttachment('/attachments/' . $attachmentId, ['names' => ['en-US' => 'Updated documentation']], false, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'descriptions', 'message' => 'This value should not be null.'],
+        ], $response);
+        $response = $this->sendAttachment('/attachments/' . $attachmentId, ['descriptions' => ['en-US' => 'An updated description']], false, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'names', 'message' => 'This value should not be blank.'],
+        ], $response);
+        $this->assertSame('Updated documentation', $this->getItem('/attachments/' . $attachmentId, ['attachment_read'])['names']['en-US']);
+
+        return $attachmentId;
+    }
+
+    /**
+     * @depends testUpdateAttachmentWithInvalidData
+     */
     public function testDeleteAttachment(int $attachmentId): void
     {
         $this->requestApi('DELETE', '/attachments/' . $attachmentId, null, ['attachment_write'], Response::HTTP_NO_CONTENT);
         $this->getItem('/attachments/' . $attachmentId, ['attachment_read'], Response::HTTP_NOT_FOUND);
     }
 
+    public function testAddAttachmentWithInvalidData(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
+        $response = $this->sendAttachment('/attachments', $this->getFormFields('Documentation', 'A product documentation file'), false, Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'file', 'message' => 'This value should not be null.'],
+        ], $response);
+    }
+
+    public function testNotFoundAttachment(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
+        $this->getItem('/attachments/999999', ['attachment_read'], Response::HTTP_NOT_FOUND);
+        $this->sendAttachment('/attachments/999999', $this->getFormFields('Documentation', 'A product documentation file'), false, Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/attachments/999999', ['attachment_write'], Response::HTTP_NOT_FOUND);
+    }
+
     public function testBulkDeleteAttachments(): void
     {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
         $attachmentIds = [
             $this->createAttachment('Bulk attachment one'),
             $this->createAttachment('Bulk attachment two'),
@@ -217,39 +182,64 @@ class AttachmentEndpointTest extends ApiTestCase
         foreach ($attachmentIds as $attachmentId) {
             $this->getItem('/attachments/' . $attachmentId, ['attachment_read'], Response::HTTP_NOT_FOUND);
         }
+
+        // BulkDeleteAttachmentsHandler deletes the known ids and reports the unknown ones together at the end
+        $attachmentId = $this->createAttachment('Bulk attachment four');
+        $this->bulkDeleteItems('/attachments/bulk-delete', ['attachmentIds' => [$attachmentId, 999999]], ['attachment_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->getItem('/attachments/' . $attachmentId, ['attachment_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkDeleteAttachmentsValidationErrors(): void
     {
-        // An empty id list must be rejected with a 422 validation error.
         $this->bulkDeleteItems('/attachments/bulk-delete', ['attachmentIds' => []], ['attachment_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $response = $this->bulkDeleteItems('/attachments/bulk-delete', ['attachmentIds' => [0]], ['attachment_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'attachmentIds[0]', 'message' => 'This value should be positive.'],
+        ], $response);
+        $response = $this->bulkDeleteItems('/attachments/bulk-delete', ['attachmentIds' => ['3abc']], ['attachment_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'attachmentIds[0]', 'message' => 'This value should be of type integer.'],
+        ], $response);
     }
 
     private function createAttachment(string $name): int
     {
-        $this->skipIfAttachmentIdNotExposed();
+        return $this->sendAttachment('/attachments', $this->getFormFields($name, 'A product documentation file'), true, Response::HTTP_CREATED)['attachmentId'];
+    }
 
-        $uploadedFile = $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/image/Hummingbird_cushion.jpg');
+    /**
+     * Sends the multipart POST of the creation and of the update.
+     */
+    private function sendAttachment(string $uri, array $parameters, bool $withFile, int $expectedHttpCode = Response::HTTP_OK): array
+    {
+        $extra = ['parameters' => $parameters];
+        if ($withFile) {
+            $extra['files'] = ['file' => $this->prepareUploadedFile(self::ASSET)];
+        }
 
-        $attachment = $this->requestApi('POST', '/attachments', null, ['attachment_write'], Response::HTTP_CREATED, [
-            'headers' => [
-                'content-type' => 'multipart/form-data',
-            ],
-            'extra' => [
-                'files' => [
-                    'file' => $uploadedFile,
-                ],
-                'parameters' => [
-                    'names' => [
-                        'en-US' => $name,
-                    ],
-                    'descriptions' => [
-                        'en-US' => 'A product documentation file',
-                    ],
-                ],
-            ],
+        return $this->requestApi('POST', $uri, null, ['attachment_write'], $expectedHttpCode, [
+            'headers' => ['content-type' => 'multipart/form-data'],
+            'extra' => $extra,
         ]);
+    }
 
-        return $attachment['attachmentId'];
+    private function getFormFields(string $name, string $description): array
+    {
+        return [
+            'names' => ['en-US' => $name],
+            'descriptions' => ['en-US' => $description],
+        ];
+    }
+
+    private function expectedAttachment(int $attachmentId, string $name, string $description): array
+    {
+        return [
+            'attachmentId' => $attachmentId,
+            // The languages left out get the name of the default language
+            'names' => ['en-US' => $name, 'fr-FR' => $name],
+            'descriptions' => ['en-US' => $description, 'fr-FR' => ''],
+            'fileName' => basename(self::ASSET),
+        ];
     }
 }

@@ -29,11 +29,12 @@ use PrestaShop\PrestaShop\Core\Domain\Attachment\Command\DeleteAttachmentCommand
 use PrestaShop\PrestaShop\Core\Domain\Attachment\Command\EditAttachmentCommand;
 use PrestaShop\PrestaShop\Core\Domain\Attachment\Exception\AttachmentConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Attachment\Exception\AttachmentNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Attachment\Exception\EmptyFileException;
 use PrestaShop\PrestaShop\Core\Domain\Attachment\Query\GetAttachmentForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Response;
@@ -48,6 +49,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetAttachmentForEditing::class,
             scopes: ['attachment_read'],
             CQRSQueryMapping: self::QUERY_MAPPING,
+            extraProperties: [
+                // GetAttachmentForEditing accepts the attachmentId the API builds it from only from PrestaShop 9.2.1
+                // (PrestaShop/PrestaShop#42124), older cores answer 500
+                'minVersion' => '9.2.1',
+            ],
         ),
         new CQRSCreate(
             uriTemplate: '/attachments',
@@ -60,11 +66,21 @@ use Symfony\Component\Validator\Constraints as Assert;
             denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
+            extraProperties: [
+                // GetAttachmentForEditing accepts the attachmentId the API builds it from only from PrestaShop 9.2.1
+                // (PrestaShop/PrestaShop#42124), older cores answer 500
+                'minVersion' => '9.2.1',
+            ],
         ),
-        new CQRSPartialUpdate(
+        // A POST, since PHP only parses the multipart body of a POST request. EditAttachmentHandler writes the
+        // names and the descriptions whatever was sent, so both are required, the file is optional.
+        new CQRSUpdate(
+            method: CQRSUpdate::METHOD_POST,
             uriTemplate: '/attachments/{attachmentId}',
             requirements: ['attachmentId' => '\d+'],
+            status: Response::HTTP_OK,
             read: false,
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditAttachmentCommand::class,
             CQRSQuery: GetAttachmentForEditing::class,
             scopes: ['attachment_write'],
@@ -72,6 +88,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             denormalizationContext: [ObjectNormalizer::DISABLE_TYPE_ENFORCEMENT => true],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
+            extraProperties: [
+                // GetAttachmentForEditing accepts the attachmentId the API builds it from only from PrestaShop 9.2.1
+                // (PrestaShop/PrestaShop#42124), older cores answer 500
+                'minVersion' => '9.2.1',
+            ],
         ),
         new CQRSDelete(
             uriTemplate: '/attachments/{attachmentId}',
@@ -84,6 +105,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     exceptionToStatus: [
         AttachmentNotFoundException::class => Response::HTTP_NOT_FOUND,
         AttachmentConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        EmptyFileException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Attachment
@@ -92,13 +114,22 @@ class Attachment
     public int $attachmentId;
 
     #[LocalizedValue]
-    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\NotBlank(groups: ['Create', 'Update'])]
     public array $names;
 
     #[LocalizedValue]
+    #[Assert\NotNull(groups: ['Create', 'Update'])]
     public array $descriptions;
 
-    public ?File $file;
+    /**
+     * Write-only: the file, sent as the `file` part of the multipart request. Required to add an attachment,
+     * optional on the update, which keeps the current file without it. The responses expose the stored file
+     * through fileName. Not nullable, like VirtualProductFile::$file: an initialized null is normalized into the
+     * response despite readable: false.
+     */
+    #[ApiProperty(readable: false, writable: false)]
+    #[Assert\NotNull(groups: ['Create'])]
+    public File $file;
 
     public string $fileName;
 
