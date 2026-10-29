@@ -157,6 +157,7 @@ class Carrier
     #[Assert\Url]
     public string $trackingUrl;
 
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'description' => 'Zero based position among the carriers, matching the value stored by PrestaShop. The back office list adds 1 for display.'])]
     public int $position;
 
     #[Assert\NotNull(groups: ['Create'])]

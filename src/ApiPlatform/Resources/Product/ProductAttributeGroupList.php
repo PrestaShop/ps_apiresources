@@ -73,6 +73,7 @@ class ProductAttributeGroupList
 
     public bool $colorGroup;
 
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'description' => 'Zero based position among its siblings, matching the value stored by PrestaShop. The back office list adds 1 for display.'])]
     public int $position;
 
     #[ApiProperty(
@@ -83,7 +84,7 @@ class ProductAttributeGroupList
                 'type' => 'object',
                 'properties' => [
                     'attributeId' => ['type' => 'integer'],
-                    'position' => ['type' => 'integer'],
+                    'position' => ['type' => 'integer', 'description' => 'Zero based position among the attributes of the group, matching the value stored by PrestaShop.'],
                     'color' => ['type' => 'string', 'description' => 'Hexadecimal color, empty when the group is not a color group.'],
                     'names' => [
                         'type' => 'object',
