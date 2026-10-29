@@ -80,14 +80,14 @@ composer run-module-tests
 
 You can run PHPStan locally using the composer script, you will need to specify two variables though:
 - `_PS_ROOT_DIR_`: path to a local PrestaShop root folder
-- `_PS_BRANCH_`: which branch you are testing, this impacts the PHPStan config file used which contains specific rules and exceptions, accepted values are `develop|9.1.x`
+- `_PS_BRANCH_`: which branch you are testing, this impacts the PHPStan config file used (`tests/PHPStan/phpstan-<branch>.neon`) which contains specific rules and exceptions, accepted values are `9.0.3|9.1.5|9.2.x|develop` (the versions of the CI matrix)
 
 ```bash
 # To test with the develop branch
 _PS_ROOT_DIR_=/path/to/prestashop-develop _PS_BRANCH_=develop composer phpstan
 
-# To test with the 9.1.x branch
-_PS_ROOT_DIR_=/path/to/prestashop-91x _PS_BRANCH_=9.1.x composer phpstan
+# To test with the 9.2.x branch
+_PS_ROOT_DIR_=/path/to/prestashop-92x _PS_BRANCH_=9.2.x composer phpstan
 ```
 
 Each config uses a différent cache folders stored in `var/phpstan-tmp` but you can easily pollute it if:
@@ -99,8 +99,8 @@ You can remove the `var/phpstan-tmp` cache to reset the cache.
 You can also use the composer script to update the baseline to include exceptions for specific versions:
 
 ```bash
-# To test with the develop branch (this should updated phpstan-9.1.x.neon only)
-_PS_ROOT_DIR_=/path/to/prestashop-91x _PS_BRANCH_=9.1.x composer phpstan-baseline
+# To update the baseline of the 9.2.x branch (writes tests/PHPStan/phpstan-9.2.x-baseline.neon only)
+_PS_ROOT_DIR_=/path/to/prestashop-92x _PS_BRANCH_=9.2.x composer phpstan-baseline
 ```
 
 Make sure you use the correct two variables and your cache is correct ro you will add the wrong exceptions for the wrong branch.
@@ -113,6 +113,10 @@ The PrestaShop Admin API provides RESTful endpoints for managing your store prog
 **Please read our contributing guide before starting:**
 - **[Create new API endpoints](https://devdocs.prestashop-project.org/9/admin-api/contribute-to-core-api/)** - Complete step-by-step guide
 - **[Admin API Documentation](https://devdocs.prestashop-project.org/9/admin-api/)** - Full API reference
+- **[.ai/CONTEXT.md](.ai/CONTEXT.md)** - The conventions of this repository (URIs, scopes, mappings, DTOs, errors, tests), also read by AI assistants
+- **[.ai/REVIEW.md](.ai/REVIEW.md)** - The review checklist applied to every pull request by the committers, and by CodeRabbit once a first review is requested (see `.coderabbit.yaml`); run it on your own changes before opening the PR
+
+One pull request per domain, with its integration tests. When your endpoint needs a change in the PrestaShop core, open the core PR first and reference it in the module PR description ("Related PR"): the module CI stays red on the branches that lack the core change, which does not block the review nor the QA (the CI of the core PR, which runs the module branch, must be green). The module PR is merged once the core change has reached every branch (the core PR merged, then merged up to `develop`) and its own CI is green.
 
 Need help or believe core improvements are needed? Reach out to the team on [Slack][slack], and `#cfc-adminapi` channel - we're here to help!
 

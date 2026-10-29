@@ -40,15 +40,17 @@ use PHPStan\Rules\RuleErrorBuilder;
  * Allowed types: bool, int, string, array (and their nullable variants),
  * PrestaShop\Decimal\DecimalNumber, DateTimeImmutable,
  * PrestaShop\PrestaShop\Core\Util\DateTime\DateImmutable (date-only fields),
- * and Symfony\Component\HttpFoundation\File\File (file-upload resources).
+ * Symfony\Component\HttpFoundation\File\File (file-upload resources),
+ * and the DTO classes of a Resources\{Domain}\Dto namespace (sub objects, which
+ * follow the same property rules).
  *
  * - `float` is explicitly banned: use DecimalNumber instead.
  * - Every property must have a type declaration.
  * - No other class types are allowed.
  *
- * This rule only applies to classes:
- *   1. In the ApiPlatform\Resources namespace.
- *   2. Annotated with the #[ApiResource] attribute.
+ * This rule only applies to:
+ *   1. The classes of the ApiPlatform\Resources namespace annotated with #[ApiResource].
+ *   2. The DTO classes of a Resources\{Domain}\Dto namespace.
  *
  * @implements Rule<Class_>
  */
