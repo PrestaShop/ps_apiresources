@@ -75,7 +75,7 @@ restates a rule: when a line below and the section disagree, the section wins an
   [Scopes](./CONTEXT.md#scopes), [Do / Don't](./CONTEXT.md#do--dont).
 - Evidence: the command and its handler (what the URI replaces decides `PUT` vs `PATCH`; a `PATCH` of the
   entity needs a handler applying only the fields and the languages sent, nullable getters prove nothing;
-  the read side decides the `CQRSQuery` of a write), the sibling resources of the domain and the reference resources
+  the read side decides the `CQRSQuery` of a write; from 9.2.1 a write on the sub-content of a parent answers the updated parent or list, not 204, and a query passed through `extraProperties` is a finding), the sibling resources of the domain and the reference resources
   (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run; for a duplicate
   (a functional one, as the Don't list defines it), the endpoints already serving the same data to the
   same caller: the item and the lists of the entity, the exclusions of `GenerateApiTrackingTableCommand`.
@@ -172,7 +172,8 @@ restates a rule: when a line below and the section disagree, the section wins an
 - A hand-rolled whole-envelope assertion on a 207 response instead of `bulkCommandItemsWithExpectedErrors()`
   (which only asserts `errors`); a Rector `SKIPPED_KEYWORDS` "gap" while the Rector dry run is green.
 - The generator limits listed in `OPENAPI.md` (input / read schema difference, first-level-only array
-  context, undocumented body of a bulk `DELETE`, generic error responses) — not the unsupported filters
+  context, undocumented optional body of a `DELETE`; on cores before 9.2.1 the undocumented body of a
+  bulk `DELETE` and the generic error responses) — not the unsupported filters
   and ordering a `CQRSPaginate` echoes in its envelope, which its description declares (`LISTS.md`).
 - Style already enforced by php-cs-fixer and PHPStan; docblocks on self-explanatory properties; `float`.
 - Development-mode stack traces in a QA report: the status code is the finding, not the trace.
