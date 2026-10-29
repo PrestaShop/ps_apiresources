@@ -198,37 +198,41 @@ class Discount
     public ?DiscountMinimumAmount $minimumAmount;
 
     public ?int $customerId;
+    /**
+     * @var int[]
+     */
     #[ApiProperty(
         openapiContext: [
-            'type' => 'array',
             'description' => 'Customer group IDs for which the discount is valid',
-            'items' => ['type' => 'integer'],
         ]
     )]
     public ?array $customerGroupIds;
 
+    /**
+     * @var int[]
+     */
     #[ApiProperty(
         openapiContext: [
-            'type' => 'array',
             'description' => 'Carrier IDs for which the discount is valid',
-            'items' => ['type' => 'integer'],
         ]
     )]
     public ?array $carrierIds;
 
+    /**
+     * @var int[]
+     */
     #[ApiProperty(
         openapiContext: [
-            'type' => 'array',
             'description' => 'Country IDs for which the discount is valid',
-            'items' => ['type' => 'integer'],
         ]
     )]
     public ?array $countryIds;
+    /**
+     * @var int[]
+     */
     #[ApiProperty(
         openapiContext: [
-            'type' => 'array',
             'description' => 'Discount Type IDs compatible with the discount',
-            'items' => ['type' => 'integer'],
         ]
     )]
     public ?array $compatibleDiscountTypeIds;

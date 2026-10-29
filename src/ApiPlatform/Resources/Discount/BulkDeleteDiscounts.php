@@ -42,26 +42,6 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             experimentalOperation: true,
             allowEmptyBody: false,
-            openapiContext: [
-                'requestBody' => [
-                    'content' => [
-                        'application/json' => [
-                            'schema' => [
-                                'type' => 'object',
-                                'properties' => [
-                                    'discountIds' => [
-                                        'type' => 'array',
-                                        'items' => ['type' => 'integer'],
-                                    ],
-                                ],
-                            ],
-                            'example' => [
-                                'discountIds' => [1, 3],
-                            ],
-                        ],
-                    ],
-                ],
-            ],
         ),
     ],
     exceptionToStatus: [
@@ -75,7 +55,7 @@ class BulkDeleteDiscounts
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
     public array $discountIds;
 }

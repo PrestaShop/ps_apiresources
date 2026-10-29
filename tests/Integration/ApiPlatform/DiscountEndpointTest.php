@@ -722,4 +722,34 @@ class DiscountEndpointTest extends ApiTestCase
             ],
         ], ['discount_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
+
+    /**
+     * @depends testCreateDiscountForUpdateTests
+     */
+    public function testMissingAmountParameter(array $discount): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
+        // A null amount is a type error of the sub object
+        $this->partialUpdateItem('/discounts/' . $discount['discountId'], [
+            'minimumAmount' => [
+                'amount' => null,
+                'currencyId' => 1,
+            ],
+        ], ['discount_write'], Response::HTTP_BAD_REQUEST);
+
+        // A missing amount is a violation of the parameters of the setter it feeds
+        $response = $this->partialUpdateItem('/discounts/' . $discount['discountId'], [
+            'reductionAmount' => [
+                'currencyId' => 1,
+                'taxIncluded' => true,
+            ],
+        ], ['discount_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'reductionAmount.amount',
+                'message' => 'This value should not be null.',
+            ],
+        ], $response);
+    }
 }

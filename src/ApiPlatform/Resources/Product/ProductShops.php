@@ -20,7 +20,6 @@
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\InvalidProductShopAssociationException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
@@ -59,7 +58,9 @@ class ProductShops extends Product
     #[Assert\Positive]
     public int $sourceShopId;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
+    /**
+     * @var int[]
+     */
     #[Assert\NotBlank]
     #[Assert\All([new Assert\Positive()])]
     public array $associatedShopIds;

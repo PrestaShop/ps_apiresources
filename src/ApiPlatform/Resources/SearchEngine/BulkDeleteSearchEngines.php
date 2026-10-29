@@ -22,7 +22,6 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchEngine;
 
-use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Command\BulkDeleteSearchEngineCommand;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\SearchEngineNotFoundException;
@@ -36,6 +35,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/search-engines/bulk-delete',
             CQRSCommand: BulkDeleteSearchEngineCommand::class,
             scopes: ['search_engine_write'],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
@@ -44,12 +44,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class BulkDeleteSearchEngines
 {
-    #[ApiProperty(
-        openapiContext: [
-            'type' => 'array',
-            'items' => ['type' => 'int'],
-        ]
-    )]
+    /**
+     * @var int[]
+     */
     #[Assert\NotBlank]
     #[Assert\Count(min: 1)]
     public array $searchEngineIds = [];
