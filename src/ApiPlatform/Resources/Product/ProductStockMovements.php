@@ -124,8 +124,6 @@ class ProductStockMovements
      * @var int[]
      */
     #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => ['type' => 'integer'],
         'description' => 'Ids of the stock movements of the group, one per movement (a single one for an edition, several for an orders group).',
     ])]
     public array $stockMovementIds;
@@ -134,8 +132,6 @@ class ProductStockMovements
      * @var int[]
      */
     #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => ['type' => 'integer'],
         'description' => 'Ids of the stock entries the movements of the group apply to, aligned with stockMovementIds.',
     ])]
     public array $stockIds;
@@ -144,8 +140,6 @@ class ProductStockMovements
      * @var int[]
      */
     #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => ['type' => 'integer'],
         'description' => 'Ids of the orders that generated the movements of the group, empty for an edition.',
     ])]
     public array $orderIds;
@@ -154,8 +148,6 @@ class ProductStockMovements
      * @var int[]
      */
     #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => ['type' => 'integer'],
         'description' => 'Ids of the employees that made the movements of the group, empty when they were made by an API client.',
     ])]
     public array $employeeIds;
@@ -171,13 +163,11 @@ class ProductStockMovements
      *
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $apiClientIds = [];
 
     /**
      * @var string[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string']])]
     public array $apiClientNames = [];
 
     /**

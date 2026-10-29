@@ -222,8 +222,9 @@ class ExtraPropertyDefinition
 
     /**
      * Allowed values of a choice property.
+     *
+     * @var string[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string'], 'nullable' => true])]
     public ?array $enumValues;
 
     public ?string $labelWording;
@@ -261,27 +262,34 @@ class ExtraPropertyDefinition
 
     /**
      * Back office form placements: "formId[:path[:before|after]]".
+     *
+     * @var string[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string'], 'nullable' => true, 'example' => ['product', 'category:seo:after']])]
+    #[ApiProperty(openapiContext: ['example' => ['product', 'category:seo:after']])]
     public ?array $associatedForms;
 
     /**
      * Back office grid placements: "gridId[:columnId[:before|after]]".
+     *
+     * @var string[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string'], 'nullable' => true, 'example' => ['product:reference:after']])]
+    #[ApiProperty(openapiContext: ['example' => ['product:reference:after']])]
     public ?array $associatedGrids;
 
     /**
      * Admin API endpoints exposing the value: URI templates with an optional ":METHOD" filter.
+     *
+     * @var string[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string'], 'nullable' => true, 'example' => ['/products', '/products/{productId}:GET,PATCH']])]
+    #[ApiProperty(openapiContext: ['example' => ['/products', '/products/{productId}:GET,PATCH']])]
     public ?array $associatedApis;
 
     /**
      * Shops the definition is restricted to. Null = no explicit restriction (core-owned: every
      * shop, module-owned: the module's shops); an empty list on update reverts to that fallback.
+     *
+     * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'nullable' => true])]
     public ?array $shopIds;
 
     public const QUERY_MAPPING = [

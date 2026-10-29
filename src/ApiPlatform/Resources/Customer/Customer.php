@@ -166,8 +166,11 @@ class Customer
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 3])]
     public int $defaultGroupId;
 
+    /**
+     * @var int[]
+     */
     #[Assert\NotBlank(groups: ['Create'])]
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     public array $groupIds;
 
     #[ApiProperty(openapiContext: ['type' => 'integer', 'example' => 1])]
