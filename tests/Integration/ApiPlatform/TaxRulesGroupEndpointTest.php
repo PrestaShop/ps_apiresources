@@ -23,23 +23,33 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\TaxRule\Query\GetTaxRuleList;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class TaxRulesGroupEndpointTest extends ApiTestCase
 {
+    private const TAX_RULE_FIXTURES = [
+        'FR' => ['countryName' => 'France', 'behavior' => 0, 'zipCode' => '75000-75999', 'expectedZipcode' => '75000 - 75999'],
+        'IT' => ['countryName' => 'Italy', 'behavior' => 1, 'stateIsoCode' => 'AG', 'stateName' => 'Agrigento'],
+        'DE' => ['countryName' => 'Germany', 'behavior' => 2],
+    ];
+
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        self::createApiClient(['tax_rules_group_write', 'tax_rules_group_read']);
+        $scopes = ['tax_rules_group_write', 'tax_rules_group_read', 'tax_write'];
+        // The tax rule endpoints, used to create the fixtures of the tax rule list tests, only exist since 9.2.0
+        if (self::isVersionAtLeast('9.2.0')) {
+            $scopes[] = 'tax_rule_write';
+        }
+        self::createApiClient($scopes);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
         // Reset DB as it was before this test
-        DatabaseDump::restoreTables(['tax_rules_group', 'tax_rules_group_shop', 'tax_rule']);
+        DatabaseDump::restoreTables(['tax', 'tax_lang', 'tax_rules_group', 'tax_rules_group_shop', 'tax_rule']);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -84,8 +94,8 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
             '/tax-rules-groups/1/set-status',
         ];
 
-        // Only registered on PS versions where the CQRS query exists (>= develop).
-        if (class_exists(GetTaxRuleList::class)) {
+        // minVersion 9.2.0: an older core answers 404, not 401
+        if (self::isVersionAtLeast('9.2.0')) {
             yield 'list tax rules endpoint' => [
                 'GET',
                 '/tax-rules-groups/1/tax-rules',
@@ -374,50 +384,72 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
         $this->assertEquals(50, $this->countItems('/tax-rules-groups', ['tax_rules_group_read']));
     }
 
-    public function testListTaxRulesOfExistingGroup(): void
+    public function testListTaxRulesOfGroup(): array
     {
-        if (!class_exists(GetTaxRuleList::class)) {
-            $this->markTestSkipped('GetTaxRuleList query is only available on PrestaShop develop.');
-        }
-        // Group 1 comes from the default install fixtures. We only assert the
-        // response shape — the exact number of rules can vary by installed
-        // country pack, so we check every returned item matches the DTO.
-        $response = $this->listItems('/tax-rules-groups/1/tax-rules', ['tax_rules_group_read']);
-        $this->assertArrayHasKey('items', $response);
-        $this->assertArrayHasKey('totalItems', $response);
-        $this->assertIsInt($response['totalItems']);
-        $this->assertCount($response['totalItems'] > 50 ? 50 : $response['totalItems'], $response['items']);
+        $this->markTestSkippedByMinVersion('9.2.0');
+        $fixtures = $this->createTaxRuleFixtures();
 
-        foreach ($response['items'] as $rule) {
-            $this->assertEquals(
-                ['taxRulesGroupId', 'taxRuleId', 'countryName', 'stateName', 'zipcode', 'behavior', 'taxName', 'taxRate', 'description'],
-                array_keys($rule)
-            );
-            $this->assertEquals(1, $rule['taxRulesGroupId']);
-            $this->assertIsInt($rule['taxRuleId']);
-            $this->assertIsInt($rule['behavior']);
+        $response = $this->listItems('/tax-rules-groups/' . $fixtures['taxRulesGroupId'] . '/tax-rules', ['tax_rules_group_read']);
+        $expected = [
+            'totalItems' => 3,
+            'sortOrder' => 'asc',
+            'limit' => 10,
+            'offset' => 0,
+            'filters' => [],
+            'items' => [
+                $this->getExpectedTaxRule($fixtures, 'FR'),
+                $this->getExpectedTaxRule($fixtures, 'IT'),
+                $this->getExpectedTaxRule($fixtures, 'DE'),
+            ],
+        ];
+        if (self::isVersionUnder('9.2.1')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.1 returns 0
+            unset($expected['offset']);
         }
+        $this->assertEquals($expected, $response);
+
+        return $fixtures;
     }
 
-    public function testListTaxRulesPagination(): void
+    /**
+     * @depends testListTaxRulesOfGroup
+     */
+    public function testListTaxRulesPagination(array $fixtures): void
     {
-        if (!class_exists(GetTaxRuleList::class)) {
-            $this->markTestSkipped('GetTaxRuleList query is only available on PrestaShop develop.');
-        }
-        $response = $this->listItems('/tax-rules-groups/1/tax-rules?limit=1&offset=0', ['tax_rules_group_read']);
-        $this->assertLessThanOrEqual(1, count($response['items']));
+        $response = $this->listItems('/tax-rules-groups/' . $fixtures['taxRulesGroupId'] . '/tax-rules?limit=1&offset=1', ['tax_rules_group_read']);
+        $this->assertEquals([
+            'totalItems' => 3,
+            'sortOrder' => 'asc',
+            'limit' => 1,
+            'offset' => 1,
+            'filters' => [],
+            'items' => [
+                $this->getExpectedTaxRule($fixtures, 'IT'),
+            ],
+        ], $response);
     }
 
     public function testListTaxRulesForMissingGroup(): void
     {
-        if (!class_exists(GetTaxRuleList::class)) {
-            $this->markTestSkipped('GetTaxRuleList query is only available on PrestaShop develop.');
+        $this->markTestSkippedByMinVersion('9.2.0');
+        // GetTaxRuleList does not check that the group exists: an unknown group answers an empty list,
+        // and TaxRulesGroupId accepts 0, so it answers the same
+        $expected = [
+            'totalItems' => 0,
+            'sortOrder' => 'asc',
+            'limit' => 10,
+            'offset' => 0,
+            'filters' => [],
+            'items' => [],
+        ];
+        if (self::isVersionUnder('9.2.1')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.1 returns 0
+            unset($expected['offset']);
         }
-        // GetTaxRuleList does not check parent existence — a missing group
-        // just yields an empty rule set, mirroring the BO controller behavior.
-        $response = $this->listItems('/tax-rules-groups/999999/tax-rules', ['tax_rules_group_read']);
-        $this->assertSame(0, $response['totalItems']);
-        $this->assertSame([], $response['items']);
+        foreach ([999999, 0] as $taxRulesGroupId) {
+            $response = $this->listItems('/tax-rules-groups/' . $taxRulesGroupId . '/tax-rules', ['tax_rules_group_read']);
+            $this->assertEquals($expected, $response);
+        }
     }
 
     public function testCreateInvalidTaxRulesGroup(): void
@@ -441,5 +473,61 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
                 'message' => 'This value should not be null.',
             ],
         ], $validationErrorsResponse);
+    }
+
+    /**
+     * Creates a tax rules group with three tax rules (France, Italy, Germany) sharing one tax.
+     *
+     * @return array{taxRulesGroupId: int, taxRuleIds: array<string, int>}
+     */
+    private function createTaxRuleFixtures(): array
+    {
+        $tax = $this->createItem('/taxes', [
+            'names' => ['en-US' => 'API Test Tax EN', 'fr-FR' => 'API Test Tax FR'],
+            'enabled' => true,
+            'rate' => 10.0,
+        ], ['tax_write']);
+
+        $taxRulesGroup = $this->createItem('/tax-rules-groups', [
+            'name' => 'API Test Tax Rules Group',
+            'enabled' => true,
+            'shopIds' => [1],
+        ], ['tax_rules_group_write']);
+
+        $taxRuleIds = [];
+        foreach (self::TAX_RULE_FIXTURES as $isoCode => $fixture) {
+            $countryId = (int) \Country::getByIso($isoCode);
+            $taxRule = $this->createItem('/tax-rules', [
+                'taxRulesGroupId' => $taxRulesGroup['taxRulesGroupId'],
+                'countryId' => $countryId,
+                'stateIds' => [isset($fixture['stateIsoCode']) ? (int) \State::getIdByIso($fixture['stateIsoCode'], $countryId) : 0],
+                'taxId' => $tax['taxId'],
+                'behavior' => $fixture['behavior'],
+                'zipCode' => $fixture['zipCode'] ?? '',
+                'description' => 'API test rule ' . $isoCode,
+            ], ['tax_rule_write']);
+            $taxRuleIds[$isoCode] = $taxRule['taxRuleId'];
+        }
+
+        return [
+            'taxRulesGroupId' => $taxRulesGroup['taxRulesGroupId'],
+            'taxRuleIds' => $taxRuleIds,
+        ];
+    }
+
+    private function getExpectedTaxRule(array $fixtures, string $isoCode): array
+    {
+        return [
+            'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+            'taxRuleId' => $fixtures['taxRuleIds'][$isoCode],
+            'countryName' => self::TAX_RULE_FIXTURES[$isoCode]['countryName'],
+            'stateName' => self::TAX_RULE_FIXTURES[$isoCode]['stateName'] ?? '--',
+            'zipcode' => self::TAX_RULE_FIXTURES[$isoCode]['expectedZipcode'] ?? '--',
+            'behavior' => self::TAX_RULE_FIXTURES[$isoCode]['behavior'],
+            // The list is in the language of the context, the default language of the shop
+            'taxName' => 'API Test Tax EN',
+            'rate' => 10.0,
+            'description' => 'API test rule ' . $isoCode,
+        ];
     }
 }
