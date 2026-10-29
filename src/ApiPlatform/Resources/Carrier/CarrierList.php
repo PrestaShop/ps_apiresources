@@ -66,9 +66,7 @@ class CarrierList
 
     public bool $free;
 
-    /**
-     * The list is ordered by position by default, which is the order the carriers are offered in.
-     */
+    #[ApiProperty(openapiContext: ['type' => 'integer', 'description' => 'Zero based position among the carriers, matching the value stored by PrestaShop. The back office list adds 1 for display. The list is ordered by position by default, which is the order the carriers are offered in.'])]
     public int $position;
 
     /**
