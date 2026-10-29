@@ -20,17 +20,14 @@
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\QueryResult\EditableAttributeGroup;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class AttributeGroupEndpointTest extends ApiTestCase
 {
     /**
-     * The single-item endpoints only carry the group position once the core CQRS result exposes it
-     * (PrestaShop/PrestaShop#41844). Cores without it answer the same payload minus that key, so the
-     * expectation adapts rather than pinning these tests to one core version. The list endpoints are
-     * unaffected: they read the position from the grid query.
+     * The single-item endpoints carry the group position from PrestaShop 9.3.0, whose CQRS result exposes
+     * it (PrestaShop/PrestaShop#41844). The list endpoints are unaffected: they read it from the grid query.
      *
      * @param int $position
      *
@@ -38,7 +35,7 @@ class AttributeGroupEndpointTest extends ApiTestCase
      */
     private function expectedPosition(int $position): array
     {
-        return method_exists(EditableAttributeGroup::class, 'getPosition') ? ['position' => $position] : [];
+        return self::isVersionAtLeast('9.3.0') ? ['position' => $position] : [];
     }
 
     public static function setUpBeforeClass(): void
