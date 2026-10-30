@@ -45,3 +45,10 @@ parameters:
             message: "#Class .*Country\\\\(Command\\\\(Bulk.*|ToggleCountryStatusCommand)|Exception\\\\DuplicateCountryIsoCodeException) not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Country/*
+        # GetTaxRuleList only exists since PrestaShop 9.2.0, the operation declares minVersion 9.2.0
+        # so it is filtered out of the API on this core version.
+        -
+            message: "#Class .*TaxRulesGroup\\\\TaxRule\\\\Query\\\\GetTaxRuleList not found.#"
+            identifier: class.notFound
+            count: 1
+            path: ../../src/ApiPlatform/Resources/TaxRulesGroup/TaxRulesGroupTaxRuleList.php
