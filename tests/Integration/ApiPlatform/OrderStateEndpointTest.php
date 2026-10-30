@@ -230,6 +230,80 @@ class OrderStateEndpointTest extends ApiTestCase
         $this->getItem('/order-states/999999', ['order_state_read'], Response::HTTP_NOT_FOUND);
         $this->partialUpdateItem('/order-states/999999', ['color' => '#111111'], ['order_state_write'], Response::HTTP_NOT_FOUND);
         $this->deleteItem('/order-states/999999', ['order_state_write'], Response::HTTP_NOT_FOUND);
+
+        // OrderStateId accepts 0, which is then unknown
+        $this->getItem('/order-states/0', ['order_state_read'], Response::HTTP_NOT_FOUND);
+        $this->partialUpdateItem('/order-states/0', ['color' => '#111111'], ['order_state_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/order-states/0', ['order_state_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testAddOrderStateWithTemplates(): void
+    {
+        $createData = array_merge($this->getCreateData(), [
+            'sendEmail' => true,
+            'templates' => [
+                'en-US' => 'payment',
+                'fr-FR' => 'payment',
+            ],
+        ]);
+        $orderState = $this->createItem('/order-states', $createData, ['order_state_write']);
+        $orderStateId = $orderState['orderStateId'];
+        $expected = $this->getExpectedOrderState($orderStateId, $createData);
+        $this->assertEquals($expected, $orderState);
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
+
+        // The templates are only stored when sendEmail is sent in the same request
+        $this->partialUpdateItem('/order-states/' . $orderStateId, [
+            'templates' => ['en-US' => 'shipped', 'fr-FR' => 'shipped'],
+        ], ['order_state_write']);
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
+
+        $patchData = [
+            'sendEmail' => true,
+            'templates' => ['en-US' => 'shipped', 'fr-FR' => 'shipped'],
+        ];
+        $expected = $this->getExpectedOrderState($orderStateId, array_merge($createData, $patchData));
+        $this->assertEquals($expected, $this->partialUpdateItem('/order-states/' . $orderStateId, $patchData, ['order_state_write']));
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
+    }
+
+    public function testAddOrderStateSendingEmailsWithoutTemplates(): void
+    {
+        $createData = array_merge($this->getCreateData(), ['sendEmail' => true]);
+
+        if (!self::isVersionAtLeast('9.2.1')) {
+            // Older cores do not check the templates on creation (only on update)
+            $this->createItem('/order-states', $createData, ['order_state_write']);
+
+            return;
+        }
+
+        // Sending e-mails needs a template in every language: MissingOrderStateRequiredFieldsException
+        $this->createItem('/order-states', $createData, ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testAddOrderStateWithDefaultValues(): void
+    {
+        $createData = [
+            'names' => [
+                'en-US' => 'Minimal state EN',
+                'fr-FR' => 'Minimal state FR',
+            ],
+            'color' => '#123456',
+        ];
+
+        if (!self::isVersionAtLeast('9.2.0')) {
+            // The defaultValues extra property is ignored before 9.2.0, the fields stay required
+            $this->createItem('/order-states', $createData, ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+            return;
+        }
+
+        $orderState = $this->createItem('/order-states', $createData, ['order_state_write']);
+        $this->assertEquals(
+            $this->getExpectedOrderState($orderState['orderStateId'], array_merge($this->getCreateData(), $createData)),
+            $orderState
+        );
     }
 
     public function testInvalidOrderStateValues(): void
@@ -241,7 +315,7 @@ class OrderStateEndpointTest extends ApiTestCase
         ];
         $invalidData['templates'] = [
             'en-US' => 'not a template',
-            'fr-FR' => '',
+            'fr-FR' => str_repeat('a', 65),
         ];
         $invalidData['color'] = '#zz';
 
@@ -250,6 +324,7 @@ class OrderStateEndpointTest extends ApiTestCase
             ['propertyPath' => 'names[en-US]'],
             ['propertyPath' => 'names[fr-FR]'],
             ['propertyPath' => 'templates[en-US]'],
+            ['propertyPath' => 'templates[fr-FR]'],
             ['propertyPath' => 'color'],
         ], $validationErrorsResponse);
     }
