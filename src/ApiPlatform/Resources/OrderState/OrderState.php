@@ -30,7 +30,6 @@ use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Command\AddOrderStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Command\DeleteOrderStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Command\EditOrderStateCommand;
-use PrestaShop\PrestaShop\Core\Domain\OrderState\Exception\DeleteOrderStateException;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Exception\OrderStateException;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\Exception\OrderStateNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderState\OrderStateSettings;
@@ -64,11 +63,15 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
+            extraProperties: [
+                // The defaults of the back office form, applied before the validation from PrestaShop 9.2.0
+                // (the fields stay required on older versions)
+                'defaultValues' => self::CREATE_DEFAULT_VALUES,
+            ],
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/order-states/{orderStateId}',
             requirements: ['orderStateId' => '\d+'],
-            read: false,
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditOrderStateCommand::class,
             CQRSQuery: GetOrderStateForEditing::class,
@@ -86,17 +89,15 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'order_state_write',
             ],
             openapi: new OpenApiOperation(
-                description: 'Order states are soft deleted: the state stays readable with "deleted": true and leaves the list. The native states of the shop (unremovable) cannot be deleted and answer 422.',
+                description: 'Order states are soft deleted: the state stays readable and editable with "deleted": true, leaves '
+                    . 'the list. The native states of the shop (unremovable) cannot be deleted and answer 422.',
             ),
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
         OrderStateNotFoundException::class => Response::HTTP_NOT_FOUND,
-        // Thrown on an unremovable (native) state
-        DeleteOrderStateException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        // Every other exception of the domain extends it, and the add / edit handlers and OrderStateId
-        // throw it directly on invalid values
+        // Every exception of the domain extends it, and the add / edit handlers and OrderStateId throw it directly on invalid values
         OrderStateException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
@@ -117,10 +118,18 @@ class OrderState
     ])]
     public array $names;
 
+    #[ApiProperty(openapiContext: [
+        'description' => 'Mail template sent to the customer when an order gets this state, per language. Only '
+            . 'stored when the same request sends "sendEmail": true; ignored otherwise. The name is not checked '
+            . 'against the existing mail templates.',
+        'example' => ['en-US' => 'payment', 'fr-FR' => 'payment'],
+    ])]
     #[LocalizedValue]
-    // Mail template names, validated by OrderState::$definition (isTplName); empty when no e-mail is sent
+    #[Assert\NotNull(groups: ['Create'])]
+    // Mail template names, validated by OrderState::$definition (isTplName, 64 characters)
     #[Assert\All(constraints: [
         new Assert\Regex(pattern: '/^[a-zA-Z0-9_-]*$/'),
+        new Assert\Length(max: 64),
     ])]
     public array $templates;
 
@@ -130,33 +139,55 @@ class OrderState
     #[Assert\Length(max: 32)]
     public string $color;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $loggable;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $invoice;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $hidden;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $sendEmail;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $pdfInvoice;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $pdfDelivery;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $shipped;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $paid;
 
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $delivery;
 
-    /**
-     * Read only: order states are soft deleted, EditableOrderState exposes isDeleted().
-     */
+    #[ApiProperty(openapiContext: [
+        'description' => 'Read only: order states are soft deleted, a deleted state stays readable with true.',
+    ])]
     public bool $deleted;
 
     public const QUERY_MAPPING = [
         '[localizedNames]' => '[names]',
         '[localizedTemplates]' => '[templates]',
         '[sendEmailEnabled]' => '[sendEmail]',
+    ];
+
+    public const CREATE_DEFAULT_VALUES = [
+        'templates' => [],
+        'loggable' => false,
+        'invoice' => false,
+        'hidden' => false,
+        'sendEmail' => false,
+        'pdfInvoice' => false,
+        'pdfDelivery' => false,
+        'shipped' => false,
+        'paid' => false,
+        'delivery' => false,
     ];
 
     public const CREATE_COMMAND_MAPPING = [

@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderState;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Search\Filters\OrderStatesFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
@@ -41,6 +42,12 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
                 '[orderStateId]' => '[id_order_state]',
                 '[sendEmail]' => '[send_email]',
             ],
+            openapi: new OpenApiOperation(
+                description: 'Lists the order states that are not deleted. Filters: orderStateId, sendEmail, delivery '
+                    . 'and invoice match exactly, name and template match partially; color and unremovable are not '
+                    . 'filterable and an unknown filter is ignored. orderBy accepts the same fields as the filters. The '
+                    . 'name and template are returned in a single language.',
+            ),
         ),
     ]
 )]
@@ -61,7 +68,9 @@ class OrderStateList
 
     public string $template;
 
-    // Native states cannot be deleted
+    #[ApiProperty(openapiContext: [
+        'description' => 'True for the native states of the shop, which cannot be deleted.',
+    ])]
     public bool $unremovable;
 
     public const MAPPING = [
