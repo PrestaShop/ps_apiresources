@@ -54,7 +54,7 @@ class DiscountList
 {
     #[ApiProperty(identifier: true)]
     public int $discountId;
-    public string $type;
+    public ?string $type;
     public string $name;
     public bool $enabled;
     public string $code;
