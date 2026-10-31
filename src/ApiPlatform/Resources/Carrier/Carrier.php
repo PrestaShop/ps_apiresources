@@ -176,10 +176,11 @@ class Carrier
     /**
      * A carrier without group cannot be selected by any customer, so the BO form rejects an empty list and this
      * endpoint does the same: the list is required on creation, and it cannot be emptied by an update.
+     *
+     * @var int[]
      */
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\Count(min: 1)]
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $associatedGroupIds;
 
     public bool $additionalHandlingFee;
@@ -205,19 +206,22 @@ class Carrier
     #[Assert\NotNull(groups: ['SetTaxRuleGroup'])]
     public int $taxRuleGroupId;
 
+    /**
+     * @var int[]
+     */
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\Count(min: 1)]
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $zones;
 
     /**
      * When the create payload omits the shops, they default to the ones of the request context: the shops of
      * the selected scope, so the single shop of the installation when multistore is disabled. An update never
      * fills them by default, an omitted field keeps the shops already associated with the carrier.
+     *
+     * @var int[]
      */
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\Count(min: 1)]
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
     public array $associatedShopIds;
 
     public int $ordersCount;

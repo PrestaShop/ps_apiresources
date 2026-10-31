@@ -292,6 +292,11 @@ abstract class ApiTestCase extends SymfonyApiTestCase
         $decodedResponse = json_decode($content, true);
         $this->assertNotFalse($decodedResponse);
 
+        // The status of an error payload is the one of the response from core 9.2.1 (500 before, whatever the mapping)
+        if ($expectedHttpCode >= Response::HTTP_BAD_REQUEST && is_array($decodedResponse) && array_key_exists('status', $decodedResponse) && self::isVersionAtLeast('9.2.1')) {
+            $this->assertSame($expectedHttpCode, $decodedResponse['status']);
+        }
+
         return $decodedResponse;
     }
 

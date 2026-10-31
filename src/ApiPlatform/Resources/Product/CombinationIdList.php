@@ -50,6 +50,9 @@ use Symfony\Component\HttpFoundation\Response;
 class CombinationIdList
 {
     public int $productId;
-    #[ApiProperty(openapiContext: ['type' => 'array', 'description' => 'List of combination IDs', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['description' => 'List of combination IDs', 'example' => [1, 3]])]
     public array $combinationIds;
 }

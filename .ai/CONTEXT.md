@@ -50,6 +50,7 @@ using one of the operation attributes provided by `PrestaShopBundle`:
 | `PaginatedList`      | GET    | A Grid data factory + Filters | List endpoint sourced from an admin Grid |
 | `CQRSPaginate`       | GET    | A `…List` CQRS query + Filters | List endpoint sourced from a CQRS query (preferred when a Grid doesn't exist) |
 | `CQRSGetCollection`  | GET    | A `…Query` returning a list  | Non-paginated collection                  |
+| `CQRSCreateCollection`, `CQRSUpdateCollection`, `CQRSPartialUpdateCollection`, `CQRSDeleteCollection` | POST, PUT, PATCH, DELETE | An `Add…` / `Set…` / `Update…` / `Remove…` command on the rows of one parent, then the `…Query` listing them (without query: the list the command returns, e.g. the created IDs, 204 when it returns nothing) | Write on the sub-content of a parent answering the updated list, like the `CQRSGetCollection` of that list (core 9.2.1) |
 | `UpdatePosition`     | PATCH  | A `PositionCollection` + `positionDefinition` | Reorder entities (`/x/positions`) |
 
 Each operation declares:
@@ -94,13 +95,18 @@ used by every operation answering with it or sharing its body.
   entity only (`/x/{xId}/…/bulk-*`, rows or associations of that
   parent): it joins the class showing that sub-content and returns its
   updated state, `{Entity}.php` when the GET of the parent includes it,
-  the class listing it otherwise (`/x/{xId}/items`). A `DELETE` cannot
-  return it cleanly yet: `CQRSDelete` takes no `CQRSQuery` argument and a
-  `DELETE` answering a body is exported without its response schema
-  ([`OPENAPI.md`](./OPENAPI.md)), so a sub-content bulk `DELETE` joins
-  the class and answers 204 until the core supports it
-  (PrestaShop#43281); the endpoint then returns the updated state and
-  requires the core version that ships it.
+  the class listing it otherwise (`/x/{xId}/items`). From core 9.2.1
+  (`minVersion: 9.2.1` in `extraProperties`): a `CQRSDelete` takes a
+  `CQRSQuery` (and its `CQRSQueryMapping`), passed through
+  `extraProperties` while older cores are supported, and answers 200
+  with the resource read back; on the class listing the sub-content, the
+  write goes through `CQRSCreateCollection` / `CQRSUpdateCollection` /
+  `CQRSPartialUpdateCollection` / `CQRSDeleteCollection` with the query
+  of its `CQRSGetCollection`, and answers the same list (older cores get
+  a stand-in class, [`VERSIONS.md`](./VERSIONS.md)). The body stays one
+  object (`{rows: [...]}`), the documentation shows it and the list
+  response (`ProductFeatureValueList`). A domain that keeps the older
+  cores answers 204 instead.
 
 A class name is unique under `Resources/`: API Platform names the OpenAPI
 schema after the short name, and two `TaxRuleList` classes in different
@@ -147,7 +153,9 @@ not the other way round:
   ([`OPENAPI.md`](./OPENAPI.md)). The core fix comes with the contract of
   each version in the test.
 - `CQRSDelete` / `DELETE` for a deletion and for a destructive clear-all;
-  it answers 204 (the body of a bulk delete: [`ERRORS.md`](./ERRORS.md)).
+  it answers 204 (the body of a bulk delete: [`ERRORS.md`](./ERRORS.md)),
+  except a removal on the sub-content of a parent, which answers the
+  updated parent or list from 9.2.1 ("Architecture overview").
 - Body-less actions answer 204 with `read: false`, `output: false` and
   `allowEmptyBody: true`, only when there is nothing to read back (see
   the Do list).
@@ -288,7 +296,9 @@ and for the request body built from the command from 9.2.1 with
 PrestaShop#43264 (older cores document a plain array, or string items in
 a request body). `#[ApiProperty(openapiContext: [...])]` carries the
 `description` and the `example` only ([`OPENAPI.md`](./OPENAPI.md)),
-never a type. Anything structured is a typed DTO (next section), never a
+never a type nor `items`, except a list of enumerated values
+(`items: {type, enum}`, `CustomerRequiredFields`) or of arrays, which a
+docblock cannot express. Anything structured is a typed DTO (next section), never a
 hand-written object schema. Every field the query or the grid returns is
 exposed, or its omission is a conscious decision: integrators need the
 identifiers (`{entity}Id`, nested ids, `shopIds`).
@@ -344,11 +354,11 @@ public array $validOrders;
   item type is also read from 9.2.1 only).
 - A localized value inside a sub object is a `#[LocalizedValue]`
   property of its DTO, indexed by locale like on the resource. The core
-  only converts the properties of the resource itself (a DTO property
-  still comes out keyed by language id on 9.2.1): an endpoint needing it
-  waits for the core improvement (PrestaShop#43278) and requires the core
-  version that ships it. `AttributeGroupWithAttributesNormalizer` does it by hand for
-  two legacy resources and is not copied.
+  converts it, in a DTO or a `@var Foo[]` DTO list, from 9.2.1 (older
+  cores convert the properties of the resource only, a DTO property comes
+  out keyed by language id): the operation needs `minVersion: 9.2.1`.
+  `AttributeGroupWithAttributesNormalizer` does it by hand for two legacy
+  resources and is not copied.
 - Hand-written `openapiContext` object schemas (`'type' => 'object',
   'properties' => [...]`) are the legacy form: existing resources are
   migrated to DTOs domain by domain, new resources never use them.
@@ -361,9 +371,10 @@ public array $validOrders;
   setter by the core (`MultiParameterSetterAdapter`): from 9.2.1
   (PrestaShop#43252) it lists the parameters without default as
   `required` and makes the object nullable when the setter accepts `null`
-  alone. The property description says what `null` does and which fields
-  are required beyond the signature (`currencyId` when `0` throws), for
-  the older cores too.
+  alone; a missing required parameter answers 422 with a violation on
+  the API field (`reductionAmount.amount`), a 400 before. The property
+  description says what `null` does and which fields are required beyond
+  the signature (`currencyId` when `0` throws), for the older cores too.
 
 Real example: `src/ApiPlatform/Resources/Customer/CustomerDetails.php`
 with `src/ApiPlatform/Resources/Customer/Dto/`.

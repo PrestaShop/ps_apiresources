@@ -35,6 +35,9 @@ The item and write helpers and `requestApi()` also accept an
 `HTTP_UNPROCESSABLE_ENTITY` on invalid payloads, `HTTP_NOT_FOUND` after a
 delete); `listItems()` and `countItems()` always expect 200, and
 `bulkCommandItemsWithExpectedErrors()` picks its own status.
+From core 9.2.1, `requestApi()` (so every helper) also asserts that the
+`status` of an error payload is the HTTP status of the response; before,
+it was always 500 whatever the `exceptionToStatus` mapping.
 
 ## Default test environment
 
@@ -223,7 +226,9 @@ Two patterns, depending on the scope of the constraint:
   `isVersionAtLeast()`. A conditional yield in `getProtectedEndpoints()`
   is fine here as long as at least one data set is always yielded.
   Examples: `CustomerCartsEndpointTest`,
-  `ProductStockMovementsEndpointTest`.
+  `ProductStockMovementsEndpointTest`; `ProductFeatureValueListEndpointTest`
+  also asserts the 405 of its write operations on the older cores, which
+  proves the resource still loads there.
 
 A test whose expected value depends on a core fix that is not released
 yet is gated with `isVersionAtLeast()` on the version that will carry

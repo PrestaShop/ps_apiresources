@@ -48,7 +48,7 @@ class BulkAttribute
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
     public array $attributeIds;
 }
