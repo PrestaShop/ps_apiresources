@@ -226,7 +226,9 @@ Two patterns, depending on the scope of the constraint:
   `isVersionAtLeast()`. A conditional yield in `getProtectedEndpoints()`
   is fine here as long as at least one data set is always yielded.
   Examples: `CustomerCartsEndpointTest`,
-  `ProductStockMovementsEndpointTest`.
+  `ProductStockMovementsEndpointTest`; `ProductFeatureValueListEndpointTest`
+  also asserts the 405 of its write operations on the older cores, which
+  proves the resource still loads there.
 
 A test whose expected value depends on a core fix that is not released
 yet is gated with `isVersionAtLeast()` on the version that will carry
