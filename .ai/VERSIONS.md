@@ -78,11 +78,29 @@ A version-constrained endpoint needs matching test handling (see
   literal `Choice` list rather than an enum only the newer core has).
 
 The named operation arguments (`minVersion`, `maxVersion`,
-`defaultValues`…) are copied by the core into `extraProperties`, but a
-core that does not know an argument rejects it: pass the ones younger
-than 9.0.3 through `extraProperties: [...]` so the resource still loads
-there (`experimentalOperation` is a named argument since 9.0.0 and
-needs no such care).
+`defaultValues`, `CQRSQuery` on a `CQRSDelete`…) are copied by the core
+into `extraProperties`, but a core that does not know an argument
+rejects it: pass the ones younger than 9.0.3 through `extraProperties:
+[...]` so the resource still loads there (`experimentalOperation` is a
+named argument since 9.0.0 and needs no such care). An unknown argument
+or operation class is not an endpoint failure: the core instantiates
+every resource while building its container (scopes extraction), so the
+back office and the whole API answer 500 on that core. From 9.2.1 the
+core ignores such a resource instead, with a warning in the logs (an
+unknown class outside `PrestaShopBundle\` and `PrestaShop\PrestaShop\`, a typo in a class of the
+module, still fails: PHPStan reports both kinds on its legs).
+
+The operation classes younger than the oldest supported core have a
+stand-in in `polyfill/` (`CQRSCreateCollection`, `CQRSUpdateCollection`,
+`CQRSPartialUpdateCollection`, `CQRSDeleteCollection` of 9.2.1), loaded
+by an autoloader appended after the core one, so only on a core that
+lacks the class: it moves the arguments its parent operation does not
+know to `extraProperties` and requires the version of the class, so the
+version filter removes the operation and the rest of the resource stays
+(`ProductFeatureValueList`: its `GET` on every core, its `PUT` and
+`DELETE` from 9.2.1). A new operation class of the core used by the
+module gets its stand-in in the same PR; the stand-ins go when the
+oldest supported core ships the class.
 
 ## Features per core version
 

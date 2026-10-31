@@ -75,7 +75,7 @@ restates a rule: when a line below and the section disagree, the section wins an
   [Scopes](./CONTEXT.md#scopes), [Do / Don't](./CONTEXT.md#do--dont).
 - Evidence: the command and its handler (what the URI replaces decides `PUT` vs `PATCH`; a `PATCH` of the
   entity needs a handler applying only the fields and the languages sent, nullable getters prove nothing;
-  the read side decides the `CQRSQuery` of a write; from 9.2.1 a write on the sub-content of a parent answers the updated parent or list, not 204, and a query passed through `extraProperties` is a finding), the sibling resources of the domain and the reference resources
+  the read side decides the `CQRSQuery` of a write; from 9.2.1 a write on the sub-content of a parent answers the updated parent or list, not 204; the `CQRSQuery` of a `CQRSDelete` goes through `extraProperties` while older cores are supported, as a named argument it breaks them: [`VERSIONS.md`](./VERSIONS.md)), the sibling resources of the domain and the reference resources
   (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run; for a duplicate
   (a functional one, as the Don't list defines it), the endpoints already serving the same data to the
   same caller: the item and the lists of the entity, the exclusions of `GenerateApiTrackingTableCommand`.
@@ -182,7 +182,7 @@ restates a rule: when a line below and the section disagree, the section wins an
 
 | Severity | Examples |
 |----------|----------|
-| Blocker | a 500 reachable with a payload or URI the documentation allows (unknown id, id `0` through `\d+` when its value object rejects `0`, an omitted optional field, a documented body) — which includes an unmapped `*NotFoundException` / `*ConstraintException` on that path; a request that silently acts on another entity (unvalidated ids cast with `(int)`); business logic, normalizer, processor or provider in the module; an operation without scope; no integration test; a core limitation worked around in the module |
+| Blocker | a 500 reachable with a payload or URI the documentation allows (unknown id, id `0` through `\d+` when its value object rejects `0`, an omitted optional field, a documented body) — which includes an unmapped `*NotFoundException` / `*ConstraintException` on that path; a request that silently acts on another entity (unvalidated ids cast with `(int)`); business logic, normalizer, processor or provider in the module; an operation without scope; no integration test; a core limitation worked around in the module; an operation class or named argument the oldest supported core doesn't have, without its stand-in or `extraProperties` ([`VERSIONS.md`](./VERSIONS.md): the back office and the whole API of that core answer 500) |
 | Major | an unmapped exception only reachable through a malformed payload, or one the constraints already prevent; wrong status code; property dropped or always null; schema/doc disagreeing with the payload; partial test assertions; missing version gate or gate hiding a 500; a new endpoint deviating from ADR 0023 |
 | Minor | naming, redundant option or mapping entry, a `filtersMapping` entry the grid ignores without a description saying so, missing description on a non-obvious behaviour, a contract written in PHPDoc instead of `description` |
 

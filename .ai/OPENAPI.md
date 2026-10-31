@@ -68,7 +68,8 @@ reason; a `DELETE` with a `CQRSQuery` documents its 200 response schema
 from 9.2.1, a list for a `CQRS*Collection` write operation (their body
 is documented as one object, not as a list); the error responses are the statuses of the operation
 `exceptionToStatus` (the resource map when the operation has none),
-described by the exception names, plus API Platform's 400 and 422 on
+described by the exception names (a response the resource writes in
+`openapi` keeps its description), plus API Platform's 400 and 422 on
 writes, and the 207 of a bulk command (core 9.2.1; older cores list API
 Platform's generic 400, 404, 422) — a status missing from the
 documentation is a status missing from the map;

@@ -50,7 +50,7 @@ using one of the operation attributes provided by `PrestaShopBundle`:
 | `PaginatedList`      | GET    | A Grid data factory + Filters | List endpoint sourced from an admin Grid |
 | `CQRSPaginate`       | GET    | A `…List` CQRS query + Filters | List endpoint sourced from a CQRS query (preferred when a Grid doesn't exist) |
 | `CQRSGetCollection`  | GET    | A `…Query` returning a list  | Non-paginated collection                  |
-| `CQRSCreateCollection`, `CQRSUpdateCollection`, `CQRSPartialUpdateCollection`, `CQRSDeleteCollection` | POST, PUT, PATCH, DELETE | An `Add…` / `Set…` / `Update…` / `Remove…` command on the rows of one parent, then the `…Query` listing them (without query: the list the command returns, e.g. the created IDs) | Write on the sub-content of a parent answering the updated list, like the `CQRSGetCollection` of that list (core 9.2.1) |
+| `CQRSCreateCollection`, `CQRSUpdateCollection`, `CQRSPartialUpdateCollection`, `CQRSDeleteCollection` | POST, PUT, PATCH, DELETE | An `Add…` / `Set…` / `Update…` / `Remove…` command on the rows of one parent, then the `…Query` listing them (without query: the list the command returns, e.g. the created IDs, 204 when it returns nothing) | Write on the sub-content of a parent answering the updated list, like the `CQRSGetCollection` of that list (core 9.2.1) |
 | `UpdatePosition`     | PATCH  | A `PositionCollection` + `positionDefinition` | Reorder entities (`/x/positions`) |
 
 Each operation declares:
@@ -96,14 +96,17 @@ used by every operation answering with it or sharing its body.
   parent): it joins the class showing that sub-content and returns its
   updated state, `{Entity}.php` when the GET of the parent includes it,
   the class listing it otherwise (`/x/{xId}/items`). From core 9.2.1
-  (`minVersion: 9.2.1`): a `CQRSDelete` takes a `CQRSQuery` (and its
-  `CQRSQueryMapping`) and answers 200 with the resource read back; on
-  the class listing the sub-content, the write goes through
-  `CQRSCreateCollection` / `CQRSUpdateCollection` / `CQRSPartialUpdateCollection` /
-  `CQRSDeleteCollection` with the query of its `CQRSGetCollection`, and
-  answers the same list. The body stays one object (`{rows: [...]}`),
-  the documentation shows it and the list response. A domain that keeps
-  the older cores answers 204 instead.
+  (`minVersion: 9.2.1` in `extraProperties`): a `CQRSDelete` takes a
+  `CQRSQuery` (and its `CQRSQueryMapping`), passed through
+  `extraProperties` while older cores are supported, and answers 200
+  with the resource read back; on the class listing the sub-content, the
+  write goes through `CQRSCreateCollection` / `CQRSUpdateCollection` /
+  `CQRSPartialUpdateCollection` / `CQRSDeleteCollection` with the query
+  of its `CQRSGetCollection`, and answers the same list (older cores get
+  a stand-in class, [`VERSIONS.md`](./VERSIONS.md)). The body stays one
+  object (`{rows: [...]}`), the documentation shows it and the list
+  response (`ProductFeatureValueList`). A domain that keeps the older
+  cores answers 204 instead.
 
 A class name is unique under `Resources/`: API Platform names the OpenAPI
 schema after the short name, and two `TaxRuleList` classes in different

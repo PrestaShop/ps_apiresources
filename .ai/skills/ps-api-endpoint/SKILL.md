@@ -19,7 +19,7 @@ Ask the user (all in one message if not already specified):
 1. **Entity name** — e.g. `TaxRule`, `Warehouse` (PascalCase, singular)
 2. **Operations needed** — GET single, POST (create), PATCH (partial update), PUT (full update), DELETE, GET list (paginated). Also ask about bulk operations (e.g. bulk delete) or custom sub-resource actions (e.g. status toggle).
 3. **PrestaShop core path** — absolute path to the PS root, e.g. `/home/user/prestashop-90x`. Needed to look up CQRS classes. Offer to skip this step if the user already knows the class names.
-4. **Minimum core version** — does the endpoint rely on CQRS classes or core behaviour only available (or only working) since a specific PrestaShop version? If so, the operations declare `minVersion` (`.ai/VERSIONS.md`) and the test skips accordingly (`.ai/TESTING.md` → "Version-dependent endpoints").
+4. **Minimum core version** — does the endpoint rely on CQRS classes or core behaviour only available (or only working) since a specific PrestaShop version? If so, the operations declare `minVersion` (`.ai/VERSIONS.md`) and the test skips accordingly (`.ai/TESTING.md` → "Version-dependent endpoints"). An operation class or a named argument younger than the oldest supported core breaks that core entirely: arguments go through `extraProperties`, operation classes need their stand-in in `polyfill/` (`.ai/VERSIONS.md`).
 
 ## Step 2: Discover CQRS classes
 
