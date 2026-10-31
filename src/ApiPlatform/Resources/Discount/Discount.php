@@ -199,7 +199,7 @@ class Discount
 
     public ?int $customerId;
     /**
-     * @var int[]
+     * @var int[]|null
      */
     #[ApiProperty(
         openapiContext: [
@@ -209,7 +209,7 @@ class Discount
     public ?array $customerGroupIds;
 
     /**
-     * @var int[]
+     * @var int[]|null
      */
     #[ApiProperty(
         openapiContext: [
@@ -219,7 +219,7 @@ class Discount
     public ?array $carrierIds;
 
     /**
-     * @var int[]
+     * @var int[]|null
      */
     #[ApiProperty(
         openapiContext: [
@@ -227,8 +227,9 @@ class Discount
         ]
     )]
     public ?array $countryIds;
+
     /**
-     * @var int[]
+     * @var int[]|null
      */
     #[ApiProperty(
         openapiContext: [

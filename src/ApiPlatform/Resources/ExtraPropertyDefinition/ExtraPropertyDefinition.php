@@ -223,7 +223,7 @@ class ExtraPropertyDefinition
     /**
      * Allowed values of a choice property.
      *
-     * @var string[]
+     * @var string[]|null
      */
     public ?array $enumValues;
 
@@ -263,7 +263,7 @@ class ExtraPropertyDefinition
     /**
      * Back office form placements: "formId[:path[:before|after]]".
      *
-     * @var string[]
+     * @var string[]|null
      */
     #[ApiProperty(openapiContext: ['example' => ['product', 'category:seo:after']])]
     public ?array $associatedForms;
@@ -271,7 +271,7 @@ class ExtraPropertyDefinition
     /**
      * Back office grid placements: "gridId[:columnId[:before|after]]".
      *
-     * @var string[]
+     * @var string[]|null
      */
     #[ApiProperty(openapiContext: ['example' => ['product:reference:after']])]
     public ?array $associatedGrids;
@@ -279,7 +279,7 @@ class ExtraPropertyDefinition
     /**
      * Admin API endpoints exposing the value: URI templates with an optional ":METHOD" filter.
      *
-     * @var string[]
+     * @var string[]|null
      */
     #[ApiProperty(openapiContext: ['example' => ['/products', '/products/{productId}:GET,PATCH']])]
     public ?array $associatedApis;
@@ -288,7 +288,7 @@ class ExtraPropertyDefinition
      * Shops the definition is restricted to. Null = no explicit restriction (core-owned: every
      * shop, module-owned: the module's shops); an empty list on update reverts to that fallback.
      *
-     * @var int[]
+     * @var int[]|null
      */
     public ?array $shopIds;
 
