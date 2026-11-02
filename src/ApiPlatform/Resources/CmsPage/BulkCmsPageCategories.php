@@ -51,6 +51,10 @@ use Symfony\Component\Validator\Constraints as Assert;
                     . 'listed before it are already deleted, the following ones are not.',
             ),
         ),
+        // Deliberate deviation from ADR 0023 (one PATCH bulk-update-status with the value in the body): the core only
+        // has BulkEnableCmsPageCategoryCommand and BulkDisableCmsPageCategoryCommand, one command per status, and the
+        // module cannot pick a command from a body value. A core command taking the status would bring the ADR
+        // endpoint.
         new CQRSUpdate(
             uriTemplate: '/cms-pages/categories/bulk-enable',
             output: false,
