@@ -171,7 +171,11 @@ class CmsPage
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
+    #[ApiProperty(openapiContext: [
+        'description' => 'Shops of the page. Optional on creation from PrestaShop 9.2.0, the shops of the context are '
+            . 'used when it is omitted (required on older versions). The existence of the shops is not checked.',
+        'example' => [1, 3],
+    ])]
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $shopIds;

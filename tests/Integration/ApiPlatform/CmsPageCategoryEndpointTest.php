@@ -107,16 +107,20 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         ];
     }
 
+    /**
+     * The payload the API returns for a category created with getCreateData()
+     */
+    private function expectedCmsPageCategory(int $cmsPageCategoryId, array $overrides = []): array
+    {
+        return array_replace(['cmsPageCategoryId' => $cmsPageCategoryId], $this->getCreateData(), $overrides);
+    }
+
     public function testAddCmsPageCategory(): int
     {
         $cmsPageCategory = $this->createItem('/cms-page-categories', $this->getCreateData(), ['cms_page_category_write']);
-        $this->assertArrayHasKey('cmsPageCategoryId', $cmsPageCategory);
+        $this->assertIsInt($cmsPageCategory['cmsPageCategoryId']);
         $cmsPageCategoryId = $cmsPageCategory['cmsPageCategoryId'];
-
-        $this->assertSame($this->getCreateData()['names'], $cmsPageCategory['names']);
-        $this->assertSame($this->getCreateData()['linkRewrites'], $cmsPageCategory['linkRewrites']);
-        $this->assertEquals(1, $cmsPageCategory['parentId']);
-        $this->assertTrue($cmsPageCategory['displayed']);
+        $this->assertEquals($this->expectedCmsPageCategory($cmsPageCategoryId), $cmsPageCategory);
 
         return $cmsPageCategoryId;
     }
@@ -127,11 +131,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
     public function testGetCmsPageCategory(int $cmsPageCategoryId): int
     {
         $cmsPageCategory = $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
-        $this->assertEquals($cmsPageCategoryId, $cmsPageCategory['cmsPageCategoryId']);
-        $this->assertArrayHasKey('names', $cmsPageCategory);
-        $this->assertArrayHasKey('linkRewrites', $cmsPageCategory);
-        $this->assertEquals(1, $cmsPageCategory['parentId']);
-        $this->assertSame([1], $cmsPageCategory['shopIds']);
+        $this->assertEquals($this->expectedCmsPageCategory($cmsPageCategoryId), $cmsPageCategory);
 
         return $cmsPageCategoryId;
     }
@@ -149,14 +149,13 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             'displayed' => false,
         ];
 
+        // The fields and languages not sent are untouched
         $updatedCmsPageCategory = $this->partialUpdateItem('/cms-page-categories/' . $cmsPageCategoryId, $patchData, ['cms_page_category_write']);
-        $this->assertSame($patchData['names'], $updatedCmsPageCategory['names']);
-        $this->assertFalse($updatedCmsPageCategory['displayed']);
+        $this->assertEquals($this->expectedCmsPageCategory($cmsPageCategoryId, $patchData), $updatedCmsPageCategory);
 
         // We check that when we GET the item it is updated as expected
         $cmsPageCategory = $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
-        $this->assertSame($patchData['names'], $cmsPageCategory['names']);
-        $this->assertFalse($cmsPageCategory['displayed']);
+        $this->assertEquals($this->expectedCmsPageCategory($cmsPageCategoryId, $patchData), $cmsPageCategory);
 
         return $cmsPageCategoryId;
     }
@@ -168,12 +167,18 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
     {
         // Status is currently false (set by the partial update), toggling it should enable it back.
         // The toggle replays the query of the GET, so it answers with the entity it flipped.
+        $expectedCmsPageCategory = $this->expectedCmsPageCategory($cmsPageCategoryId, [
+            'names' => [
+                'en-US' => 'Updated category EN',
+                'fr-FR' => 'Updated category FR',
+            ],
+            'displayed' => true,
+        ]);
         $toggled = $this->updateItem('/cms-page-categories/' . $cmsPageCategoryId . '/toggle-status', [], ['cms_page_category_write']);
-        $this->assertTrue($toggled['displayed']);
+        $this->assertEquals($expectedCmsPageCategory, $toggled);
 
         $cmsPageCategory = $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
-        $this->assertTrue($cmsPageCategory['displayed']);
-        $this->assertEquals($cmsPageCategory, $toggled);
+        $this->assertEquals($expectedCmsPageCategory, $cmsPageCategory);
 
         return $cmsPageCategoryId;
     }
@@ -324,6 +329,44 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
                 'message' => 'The field linkRewrites is required at least in your default language.',
             ],
         ], $validationErrorsResponse);
+    }
+
+    public function testInvalidCmsPageCategoryParent(): void
+    {
+        $data = $this->getCreateData();
+        unset($data['parentId']);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'parentId', 'message' => 'This value should not be null.'],
+        ], $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
+
+        $data['parentId'] = 0;
+        $this->assertValidationErrors([
+            ['propertyPath' => 'parentId', 'message' => 'This value should be positive.'],
+        ], $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
+    }
+
+    public function testInvalidPartialUpdateCmsPageCategory(): void
+    {
+        [$cmsPageCategoryId] = $this->createSeveral(['Invalid update category']);
+
+        // The Update group validates the PATCH: the default language cannot be emptied, the parent and the shops
+        // are checked like on the creation
+        $validationErrorsResponse = $this->partialUpdateItem('/cms-page-categories/' . $cmsPageCategoryId, [
+            'names' => ['en-US' => ''],
+            'parentId' => 0,
+            'shopIds' => ['3abc'],
+        ], ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'names', 'message' => 'The field names is required at least in your default language.'],
+            ['propertyPath' => 'parentId', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'shopIds[0]', 'message' => 'This value should be of type integer.'],
+        ], $validationErrorsResponse);
+
+        // Nothing was changed
+        $this->assertSame(
+            ['en-US' => 'Invalid update category', 'fr-FR' => 'Invalid update category'],
+            $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read'])['names']
+        );
     }
 
     public function testInvalidCmsPageCategoryIds(): void
