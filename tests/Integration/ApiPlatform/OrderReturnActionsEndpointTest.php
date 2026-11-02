@@ -22,34 +22,30 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class OrderReturnActionsEndpointTest extends ApiTestCase
 {
-    private const MIN_VERSION = '9.2.0';
-
     public static function setUpBeforeClass(): void
     {
-        parent::setUpBeforeClass();
-        DatabaseDump::restoreTables(['order_return', 'order_return_detail']);
-        // Every command and query this class exercises landed in 9.2. On older cores the
-        // operations are filtered out of the API (ApiResourceScopesExtractor drops operations
-        // whose CQRS class is missing), so the routes and the scopes do not exist at all.
-        if (!self::isVersionAtLeast(self::MIN_VERSION)) {
-            self::markTestSkipped(sprintf(
-                'The OrderReturn command and query classes require PrestaShop >= %s',
-                self::MIN_VERSION
-            ));
+        // Every command and query this class exercises landed in 9.2.0. On older cores the operations are filtered
+        // out of the API (their CQRS class is missing), so the routes and the scopes do not exist at all.
+        if (self::isVersionUnder('9.2.0')) {
+            self::markTestSkipped('The OrderReturn command and query classes require PrestaShop >= 9.2.0');
         }
 
+        parent::setUpBeforeClass();
+        DatabaseDump::restoreTables(['order_return', 'order_return_detail', 'customized_data']);
         self::createApiClient(['order_return_read', 'order_return_write']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        DatabaseDump::restoreTables(['order_return', 'order_return_detail']);
+        DatabaseDump::restoreTables(['order_return', 'order_return_detail', 'customized_data']);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -57,8 +53,12 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
         yield 'delete endpoint' => ['DELETE', '/order-returns/999999'];
         yield 'bulk delete endpoint' => ['DELETE', '/order-returns/bulk-delete'];
         yield 'list products endpoint' => ['GET', '/order-returns/1/products'];
-        yield 'delete product endpoint' => ['DELETE', '/order-returns/1/products/1'];
-        yield 'bulk delete products endpoint' => ['DELETE', '/order-returns/1/products/bulk-delete'];
+
+        // The product deletions use the CQRSDeleteCollection of core 9.2.1, filtered out on older cores
+        if (self::isVersionAtLeast('9.2.1')) {
+            yield 'delete product endpoint' => ['DELETE', '/order-returns/1/products/1'];
+            yield 'bulk delete products endpoint' => ['DELETE', '/order-returns/1/products/bulk-delete'];
+        }
     }
 
     /**
@@ -67,232 +67,176 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
      * create one and this is the single place where a fixture cannot come from the API.
      * Everything the tests below assert goes back through the API.
      *
-     * @return array{0: int, 1: int[]} the order return id and the order detail ids it holds
+     * The first fixture order holds the order details 1 (demo_1) and 2 (demo_3): the return holds one unit of each.
      */
-    private function seedOrderReturn(): array
+    private function seedOrderReturn(): int
     {
-        $order = \Db::getInstance()->getRow(
-            'SELECT `id_order`, `id_customer` FROM `' . _DB_PREFIX_ . 'orders` ORDER BY `id_order` ASC'
-        );
-
         \Db::getInstance()->insert('order_return', [
-            'id_customer' => (int) $order['id_customer'],
-            'id_order' => (int) $order['id_order'],
+            'id_customer' => 2,
+            'id_order' => 1,
             'state' => 1,
             'question' => 'Seed for the order return actions test',
         ]);
         $orderReturnId = (int) \Db::getInstance()->Insert_ID();
 
-        $orderDetailIds = [];
-        $rows = \Db::getInstance()->executeS(
-            'SELECT `id_order_detail` FROM `' . _DB_PREFIX_ . 'order_detail`
-             WHERE `id_order` = ' . (int) $order['id_order'] . ' ORDER BY `id_order_detail` ASC'
-        );
-        foreach ($rows ?: [] as $row) {
+        foreach ([1, 2] as $orderDetailId) {
             \Db::getInstance()->insert('order_return_detail', [
                 'id_order_return' => $orderReturnId,
-                'id_order_detail' => (int) $row['id_order_detail'],
+                'id_order_detail' => $orderDetailId,
                 'id_customization' => 0,
                 'product_quantity' => 1,
             ]);
-            $orderDetailIds[] = (int) $row['id_order_detail'];
         }
 
-        return [$orderReturnId, $orderDetailIds];
+        return $orderReturnId;
     }
 
-    /**
-     * @return int[]
-     */
-    private function listProductIds(int $orderReturnId): array
+    private static function productLine(int $orderDetailId): array
     {
-        $products = $this->getItem('/order-returns/' . $orderReturnId . '/products', ['order_return_read']);
+        return [
+            1 => [
+                'orderDetailId' => 1,
+                'customizationId' => 0,
+                'reference' => 'demo_1',
+                'productName' => 'Hummingbird printed t-shirt - Color : White, Size : S',
+                'quantity' => 1,
+                'customization' => false,
+                'customizationFields' => [],
+            ],
+            2 => [
+                'orderDetailId' => 2,
+                'customizationId' => 0,
+                'reference' => 'demo_3',
+                'productName' => 'Hummingbird printed sweater - Color : White, Size : S',
+                'quantity' => 1,
+                'customization' => false,
+                'customizationFields' => [],
+            ],
+        ][$orderDetailId];
+    }
 
-        return array_map('intval', array_column($products, 'orderDetailId'));
+    private function listProducts(int $orderReturnId): array
+    {
+        return $this->getItem('/order-returns/' . $orderReturnId . '/products', ['order_return_read']);
     }
 
     public function testListOrderReturnProducts(): void
     {
-        [$orderReturnId, $orderDetailIds] = $this->seedOrderReturn();
-        if ([] === $orderDetailIds) {
-            $this->markTestSkipped('The fixture order has no order detail to return.');
-        }
+        $orderReturnId = $this->seedOrderReturn();
 
-        $products = $this->getItem('/order-returns/' . $orderReturnId . '/products', ['order_return_read']);
+        $this->assertSame([self::productLine(1), self::productLine(2)], $this->listProducts($orderReturnId));
 
-        // The seed returns one unit of each line of the first fixture order
-        $this->assertEquals(
+        $this->getItem('/order-returns/999999/products', ['order_return_read'], Response::HTTP_NOT_FOUND);
+        // OrderReturnId rejects 0
+        $this->getItem('/order-returns/0/products', ['order_return_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testListOnlyTheLinesOfTheOrderReturn(): void
+    {
+        // Before 9.2.1, the list holds the customized lines of every return of the order, and lists them twice
+        $this->markTestSkippedByMinVersion('9.2.1');
+        $classicReturnId = $this->seedOrderReturn();
+
+        // A second return of the same order holds a customized line of the order detail 1 (a text field)
+        $customizationId = 9001;
+        \Db::getInstance()->insert('customized_data', [
+            'id_customization' => $customizationId,
+            'type' => 1,
+            'index' => 1,
+            'value' => 'Hello',
+        ]);
+        \Db::getInstance()->insert('order_return', [
+            'id_customer' => 2,
+            'id_order' => 1,
+            'state' => 1,
+            'question' => 'Seed of a customized line',
+        ]);
+        $customizedReturnId = (int) \Db::getInstance()->Insert_ID();
+        \Db::getInstance()->insert('order_return_detail', [
+            'id_order_return' => $customizedReturnId,
+            'id_order_detail' => 1,
+            'id_customization' => $customizationId,
+            'product_quantity' => 1,
+        ]);
+
+        $this->assertSame([self::productLine(1), self::productLine(2)], $this->listProducts($classicReturnId));
+        $this->assertSame([
             [
-                [
-                    'orderDetailId' => 1,
-                    'customizationId' => 0,
-                    'reference' => 'demo_1',
-                    'productName' => 'Hummingbird printed t-shirt - Color : White, Size : S',
-                    'quantity' => 1,
-                    'customization' => false,
-                    'customizationFields' => [],
-                ],
-                [
-                    'orderDetailId' => 2,
-                    'customizationId' => 0,
-                    'reference' => 'demo_3',
-                    'productName' => 'Hummingbird printed sweater - Color : White, Size : S',
-                    'quantity' => 1,
-                    'customization' => false,
-                    'customizationFields' => [],
+                'orderDetailId' => 1,
+                'customizationId' => $customizationId,
+                'reference' => 'demo_1',
+                'productName' => 'Hummingbird printed t-shirt - Color : White, Size : S',
+                'quantity' => 1,
+                'customization' => true,
+                'customizationFields' => [
+                    ['type' => 1, 'value' => 'Hello'],
                 ],
             ],
-            $products
-        );
-        $this->assertSame($orderDetailIds, $this->listProductIds($orderReturnId));
+        ], $this->listProducts($customizedReturnId));
     }
 
     public function testDeleteProductFromOrderReturn(): void
     {
-        [$orderReturnId, $orderDetailIds] = $this->seedOrderReturn();
-        if ([] === $orderDetailIds) {
-            $this->markTestSkipped('The fixture order has no order detail to return.');
-        }
+        $this->markTestSkippedByMinVersion('9.2.1');
+        $orderReturnId = $this->seedOrderReturn();
 
-        $removed = array_shift($orderDetailIds);
+        // A line that is not in the return
+        $this->deleteItem('/order-returns/' . $orderReturnId . '/products/3', ['order_return_write'], Response::HTTP_NOT_FOUND);
 
-        $this->requestApi(
-            'DELETE',
-            '/order-returns/' . $orderReturnId . '/products/' . $removed,
-            null,
-            ['order_return_write'],
-            Response::HTTP_NO_CONTENT
-        );
+        // Answers the remaining lines
+        $this->assertSame([self::productLine(2)], $this->deleteItem('/order-returns/' . $orderReturnId . '/products/1', ['order_return_write'], Response::HTTP_OK));
+        $this->assertSame([self::productLine(2)], $this->listProducts($orderReturnId));
 
-        // The removal is observed through the products listing, which #372 adds
-        $this->assertSame($orderDetailIds, $this->listProductIds($orderReturnId));
+        // A merchandise return keeps at least one line: checked before the line itself
+        $this->deleteItem('/order-returns/' . $orderReturnId . '/products/2', ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->deleteItem('/order-returns/' . $orderReturnId . '/products/1', ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->deleteItem('/order-returns/999999/products/1', ['order_return_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/order-returns/0/products/1', ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->deleteItem('/order-returns/' . $orderReturnId . '/products/0', ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertSame([self::productLine(2)], $this->listProducts($orderReturnId));
     }
 
     public function testBulkDeleteProductsFromOrderReturn(): void
     {
-        [$orderReturnId, $orderDetailIds] = $this->seedOrderReturn();
-        if (count($orderDetailIds) < 2) {
-            $this->markTestSkipped('The fixture order has fewer than two order details to return.');
-        }
+        $this->markTestSkippedByMinVersion('9.2.1');
+        $orderReturnId = $this->seedOrderReturn();
 
-        // A merchandise return must keep at least one product, so the last one stays
-        $kept = array_pop($orderDetailIds);
-
-        $this->requestApi(
-            'DELETE',
+        // Answers the remaining lines
+        $this->assertSame([self::productLine(2)], $this->bulkDeleteItems(
             '/order-returns/' . $orderReturnId . '/products/bulk-delete',
-            [
-                'stagedProductRows' => array_map(
-                    static fn (int $orderDetailId): array => [
-                        'orderDetailId' => $orderDetailId,
-                        'customizationId' => 0,
-                    ],
-                    $orderDetailIds
-                ),
-            ],
+            ['stagedProductRows' => [['orderDetailId' => 1, 'customizationId' => 0]]],
             ['order_return_write'],
-            Response::HTTP_NO_CONTENT
-        );
-
-        $this->assertSame([$kept], $this->listProductIds($orderReturnId));
+            Response::HTTP_OK
+        ));
+        $this->assertSame([self::productLine(2)], $this->listProducts($orderReturnId));
     }
 
     public function testBulkDeleteEveryProductFromOrderReturnIsRefused(): void
     {
-        [$orderReturnId, $orderDetailIds] = $this->seedOrderReturn();
-        if ([] === $orderDetailIds) {
-            $this->markTestSkipped('The fixture order has no order detail to return.');
-        }
+        $this->markTestSkippedByMinVersion('9.2.1');
+        $orderReturnId = $this->seedOrderReturn();
 
         // Emptying a merchandise return is refused by the core, which is a client error
-        $this->requestApi(
-            'DELETE',
+        $this->bulkDeleteItems(
             '/order-returns/' . $orderReturnId . '/products/bulk-delete',
-            [
-                'stagedProductRows' => array_map(
-                    static fn (int $orderDetailId): array => [
-                        'orderDetailId' => $orderDetailId,
-                        'customizationId' => 0,
-                    ],
-                    $orderDetailIds
-                ),
-            ],
+            ['stagedProductRows' => [['orderDetailId' => 1], ['orderDetailId' => 2]]],
             ['order_return_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
 
-        $this->assertSame($orderDetailIds, $this->listProductIds($orderReturnId));
+        $this->assertSame([self::productLine(1), self::productLine(2)], $this->listProducts($orderReturnId));
     }
 
-    public function testDeleteOrderReturn(): void
+    public function testBulkDeleteProductsWithInvalidBodies(): void
     {
-        [$orderReturnId] = $this->seedOrderReturn();
+        $this->markTestSkippedByMinVersion('9.2.1');
+        $orderReturnId = $this->seedOrderReturn();
+        $uri = '/order-returns/' . $orderReturnId . '/products/bulk-delete';
 
-        $this->requestApi(
-            'DELETE',
-            '/order-returns/' . $orderReturnId,
-            null,
-            ['order_return_write'],
-            Response::HTTP_NO_CONTENT
-        );
-
-        // Asserted through the API instead of SELECT COUNT(*) FROM ps_order_return
-        $this->getItem('/order-returns/' . $orderReturnId, ['order_return_read'], Response::HTTP_NOT_FOUND);
-    }
-
-    public function testBulkDeleteOrderReturnsWithInvalidId(): void
-    {
-        // OrderReturnId rejects 0 in the command constructor with an OrderReturnConstraintException
-        $this->requestApi(
-            'DELETE',
-            '/order-returns/bulk-delete',
-            ['orderReturnIds' => [0]],
-            ['order_return_write'],
-            Response::HTTP_UNPROCESSABLE_ENTITY
-        );
-    }
-
-    public function testBulkDeleteOrderReturns(): void
-    {
-        $orderReturnIds = [$this->seedOrderReturn()[0], $this->seedOrderReturn()[0]];
-
-        $this->requestApi(
-            'DELETE',
-            '/order-returns/bulk-delete',
-            ['orderReturnIds' => $orderReturnIds],
-            ['order_return_write'],
-            Response::HTTP_NO_CONTENT
-        );
-
-        foreach ($orderReturnIds as $orderReturnId) {
-            $this->getItem('/order-returns/' . $orderReturnId, ['order_return_read'], Response::HTTP_NOT_FOUND);
-        }
-    }
-
-    public function testInvalidOrderReturnIds(): void
-    {
-        // OrderReturnId rejects 0
-        $this->requestApi('GET', '/order-returns/0/products', null, ['order_return_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
-
-        // The bulk command casts each id with (int): "3abc" must not reach it
-        $response = $this->requestApi(
-            'DELETE',
-            '/order-returns/bulk-delete',
-            ['orderReturnIds' => ['3abc']],
-            ['order_return_write'],
-            Response::HTTP_UNPROCESSABLE_ENTITY
-        );
-        $this->assertValidationErrors([['propertyPath' => 'orderReturnIds[0]']], $response);
-    }
-
-    public function testBulkDeleteProductsWithInvalidRows(): void
-    {
-        [$orderReturnId] = $this->seedOrderReturn();
-
-        $response = $this->requestApi(
-            'DELETE',
-            '/order-returns/' . $orderReturnId . '/products/bulk-delete',
-            ['stagedProductRows' => [['customizationId' => 0], ['orderDetailId' => -1], ['orderDetailId' => null]]],
+        $response = $this->bulkDeleteItems(
+            $uri,
+            ['stagedProductRows' => [['customizationId' => 0], ['orderDetailId' => -1], ['orderDetailId' => null], ['orderDetailId' => 1, 'customizationId' => -1]]],
             ['order_return_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
@@ -300,15 +244,92 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
             ['propertyPath' => 'stagedProductRows[0].orderDetailId'],
             ['propertyPath' => 'stagedProductRows[1].orderDetailId'],
             ['propertyPath' => 'stagedProductRows[2].orderDetailId'],
+            ['propertyPath' => 'stagedProductRows[3].customizationId'],
         ], $response);
 
         // A wrong type is refused by the serializer before the command could cast it: "3abc" must not act on line 3
-        $this->requestApi(
-            'DELETE',
-            '/order-returns/' . $orderReturnId . '/products/bulk-delete',
-            ['stagedProductRows' => [['orderDetailId' => '3abc']]],
-            ['order_return_write'],
-            Response::HTTP_BAD_REQUEST
+        $this->bulkDeleteItems($uri, ['stagedProductRows' => [['orderDetailId' => '3abc']]], ['order_return_write'], Response::HTTP_BAD_REQUEST);
+
+        // The rows are required
+        $this->bulkDeleteItems($uri, ['stagedProductRows' => []], ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->bulkDeleteItems($uri, null, ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY, ['json' => []]);
+
+        $this->bulkDeleteItems('/order-returns/999999/products/bulk-delete', ['stagedProductRows' => [['orderDetailId' => 1]]], ['order_return_write'], Response::HTTP_NOT_FOUND);
+        $this->bulkDeleteItems('/order-returns/0/products/bulk-delete', ['stagedProductRows' => [['orderDetailId' => 1]]], ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertSame([self::productLine(1), self::productLine(2)], $this->listProducts($orderReturnId));
+    }
+
+    public function testDeleteOrderReturn(): void
+    {
+        $orderReturnId = $this->seedOrderReturn();
+
+        $this->assertNull($this->deleteItem('/order-returns/' . $orderReturnId, ['order_return_write'], Response::HTTP_NO_CONTENT));
+        $this->getItem('/order-returns/' . $orderReturnId, ['order_return_read'], Response::HTTP_NOT_FOUND);
+
+        $this->deleteItem('/order-returns/' . $orderReturnId, ['order_return_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/order-returns/0', ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testUpdateOrderReturnStateIsRequired(): void
+    {
+        $orderReturnId = $this->seedOrderReturn();
+
+        // A missing state and an explicit null are the same error
+        // An empty array is sent as an empty JSON object through the json option (the data argument would send no body)
+        foreach ([['json' => []], ['json' => ['orderReturnStateId' => null]]] as $requestOptions) {
+            $response = $this->partialUpdateItem('/order-returns/' . $orderReturnId, null, ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY, $requestOptions);
+            $this->assertValidationErrors([['propertyPath' => 'orderReturnStateId']], $response);
+        }
+    }
+
+    public function testBulkDeleteOrderReturns(): void
+    {
+        $orderReturnIds = [$this->seedOrderReturn(), $this->seedOrderReturn()];
+
+        $this->assertNull($this->bulkDeleteItems('/order-returns/bulk-delete', ['orderReturnIds' => $orderReturnIds], ['order_return_write'], Response::HTTP_NO_CONTENT));
+        foreach ($orderReturnIds as $orderReturnId) {
+            $this->getItem('/order-returns/' . $orderReturnId, ['order_return_read'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    public function testBulkDeleteOrderReturnsWithUnknownId(): void
+    {
+        // Before 9.2.1, an unknown id answers 404 and stops the deletion
+        $this->markTestSkippedByMinVersion('9.2.1');
+        $orderReturnIds = [$this->seedOrderReturn(), $this->seedOrderReturn()];
+
+        $this->bulkCommandItemsWithExpectedErrors(
+            Request::METHOD_DELETE,
+            '/order-returns/bulk-delete',
+            ['orderReturnIds' => [$orderReturnIds[0], 999999, $orderReturnIds[1]]],
+            [
+                [
+                    'type' => OrderReturnNotFoundException::class,
+                    'message' => 'OrderReturn #999999 was not found',
+                    'status' => Response::HTTP_NOT_FOUND,
+                ],
+            ],
+            ['order_return_write']
         );
+
+        // The other order returns are deleted
+        foreach ($orderReturnIds as $orderReturnId) {
+            $this->getItem('/order-returns/' . $orderReturnId, ['order_return_read'], Response::HTTP_NOT_FOUND);
+        }
+    }
+
+    public function testBulkDeleteOrderReturnsWithInvalidBodies(): void
+    {
+        // OrderReturnId rejects 0 in the command constructor
+        $this->bulkDeleteItems('/order-returns/bulk-delete', ['orderReturnIds' => [0]], ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // The bulk command casts each id with (int): "3abc" must not reach it
+        $response = $this->bulkDeleteItems('/order-returns/bulk-delete', ['orderReturnIds' => ['3abc']], ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([['propertyPath' => 'orderReturnIds[0]']], $response);
+
+        // The ids are required
+        $this->bulkDeleteItems('/order-returns/bulk-delete', ['orderReturnIds' => []], ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->bulkDeleteItems('/order-returns/bulk-delete', null, ['order_return_write'], Response::HTTP_UNPROCESSABLE_ENTITY, ['json' => []]);
     }
 }
