@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\DeleteOrderReturnCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\UpdateOrderReturnStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
@@ -60,6 +61,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             extraProperties: [
                 'minVersion' => '9.2.0',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Delete an order return.',
+                description: 'Deletes the order return and its product lines.',
+            ),
             CQRSCommand: DeleteOrderReturnCommand::class,
             scopes: ['order_return_write'],
         ),
@@ -89,11 +94,11 @@ class OrderReturn
     public string $orderDate;
 
     /**
-     * Only required when updating: the constraint is unscoped no more, because ApiPlatform
-     * validates the resource on the DELETE too and the state is never sent there.
+     * Only required when updating: ApiPlatform validates the resource on the DELETE too and the state is never
+     * sent there. Nullable so that an explicit null gets the same 422 as a missing field (a wrong type answers 400).
      */
     #[Assert\NotNull(groups: ['Update'])]
-    public int $orderReturnStateId;
+    public ?int $orderReturnStateId = null;
 
     public string $question;
 }
