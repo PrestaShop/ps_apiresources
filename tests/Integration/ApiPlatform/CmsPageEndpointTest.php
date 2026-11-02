@@ -108,16 +108,20 @@ class CmsPageEndpointTest extends ApiTestCase
         ];
     }
 
+    /**
+     * The payload the API returns for a page created with getCreateData()
+     */
+    private function expectedCmsPage(int $cmsPageId, array $overrides = []): array
+    {
+        return array_replace(['cmsPageId' => $cmsPageId], $this->getCreateData(), $overrides);
+    }
+
     public function testAddCmsPage(): int
     {
         $cmsPage = $this->createItem('/cms-pages', $this->getCreateData(), ['cms_page_write']);
-        $this->assertArrayHasKey('cmsPageId', $cmsPage);
+        $this->assertIsInt($cmsPage['cmsPageId']);
         $cmsPageId = $cmsPage['cmsPageId'];
-
-        $this->assertSame($this->getCreateData()['titles'], $cmsPage['titles']);
-        $this->assertSame($this->getCreateData()['linkRewrites'], $cmsPage['linkRewrites']);
-        $this->assertEquals(1, $cmsPage['cmsPageCategoryId']);
-        $this->assertTrue($cmsPage['displayed']);
+        $this->assertEquals($this->expectedCmsPage($cmsPageId), $cmsPage);
 
         return $cmsPageId;
     }
@@ -128,10 +132,7 @@ class CmsPageEndpointTest extends ApiTestCase
     public function testGetCmsPage(int $cmsPageId): int
     {
         $cmsPage = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
-        $this->assertEquals($cmsPageId, $cmsPage['cmsPageId']);
-        $this->assertArrayHasKey('titles', $cmsPage);
-        $this->assertArrayHasKey('linkRewrites', $cmsPage);
-        $this->assertEquals(1, $cmsPage['cmsPageCategoryId']);
+        $this->assertEquals($this->expectedCmsPage($cmsPageId), $cmsPage);
 
         return $cmsPageId;
     }
@@ -149,14 +150,13 @@ class CmsPageEndpointTest extends ApiTestCase
             'displayed' => false,
         ];
 
+        // The fields and languages not sent are untouched
         $updatedCmsPage = $this->partialUpdateItem('/cms-pages/' . $cmsPageId, $patchData, ['cms_page_write']);
-        $this->assertSame($patchData['titles'], $updatedCmsPage['titles']);
-        $this->assertFalse($updatedCmsPage['displayed']);
+        $this->assertEquals($this->expectedCmsPage($cmsPageId, $patchData), $updatedCmsPage);
 
         // We check that when we GET the item it is updated as expected
         $cmsPage = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
-        $this->assertSame($patchData['titles'], $cmsPage['titles']);
-        $this->assertFalse($cmsPage['displayed']);
+        $this->assertEquals($this->expectedCmsPage($cmsPageId, $patchData), $cmsPage);
 
         return $cmsPageId;
     }
@@ -168,12 +168,18 @@ class CmsPageEndpointTest extends ApiTestCase
     {
         // Status is currently false (set by the partial update), toggling it should enable it back.
         // The toggle replays the query of the GET, so it answers with the entity it flipped.
+        $expectedCmsPage = $this->expectedCmsPage($cmsPageId, [
+            'titles' => [
+                'en-US' => 'Updated page EN',
+                'fr-FR' => 'Updated page FR',
+            ],
+            'displayed' => true,
+        ]);
         $toggled = $this->updateItem('/cms-pages/' . $cmsPageId . '/toggle-status', [], ['cms_page_write']);
-        $this->assertTrue($toggled['displayed']);
+        $this->assertEquals($expectedCmsPage, $toggled);
 
         $cmsPage = $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']);
-        $this->assertTrue($cmsPage['displayed']);
-        $this->assertEquals($cmsPage, $toggled);
+        $this->assertEquals($expectedCmsPage, $cmsPage);
 
         return $cmsPageId;
     }
@@ -301,6 +307,30 @@ class CmsPageEndpointTest extends ApiTestCase
         ], ['cms_page_write'], Response::HTTP_NOT_FOUND);
         $this->getItem('/cms-pages/' . $firstId, ['cms_page_read'], Response::HTTP_NOT_FOUND);
         $this->getItem('/cms-pages/' . $lastId, ['cms_page_read']);
+    }
+
+    public function testInvalidPartialUpdateCmsPage(): void
+    {
+        [$cmsPageId] = $this->createSeveral(['Invalid update page']);
+
+        // The Update group validates the PATCH: the default language cannot be emptied, the category and the shops
+        // are checked like on the creation
+        $validationErrorsResponse = $this->partialUpdateItem('/cms-pages/' . $cmsPageId, [
+            'titles' => ['en-US' => ''],
+            'cmsPageCategoryId' => 0,
+            'shopIds' => ['3abc'],
+        ], ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'cmsPageCategoryId', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'titles', 'message' => 'The field titles is required at least in your default language.'],
+            ['propertyPath' => 'shopIds[0]', 'message' => 'This value should be of type integer.'],
+        ], $validationErrorsResponse);
+
+        // Nothing was changed
+        $this->assertSame(
+            ['en-US' => 'Invalid update page', 'fr-FR' => 'Invalid update page'],
+            $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read'])['titles']
+        );
     }
 
     public function testUnknownAndInvalidCmsPageIds(): void
