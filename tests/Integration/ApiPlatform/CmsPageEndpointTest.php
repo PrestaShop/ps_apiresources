@@ -51,8 +51,6 @@ class CmsPageEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'category-for-redirection endpoint' => ['GET', '/cms-pages/1/category-for-redirections'];
-
         yield 'get endpoint' => [
             'GET',
             '/cms-pages/1',
@@ -78,37 +76,6 @@ class CmsPageEndpointTest extends ApiTestCase
         yield 'bulk enable endpoint' => ['PUT', '/cms-pages/bulk-enable'];
         yield 'bulk disable endpoint' => ['PUT', '/cms-pages/bulk-disable'];
         yield 'bulk delete endpoint' => ['DELETE', '/cms-pages/bulk-delete'];
-    }
-
-    /**
-     * The source PR could not create a CMS page, so it queried /cms-pages/999999/... and
-     * asserted the handler's fallback to ROOT — the nominal case was never covered. With the
-     * create endpoint in the same PR, the page is created in a known category.
-     */
-    public function testGetCmsPageCategoryForRedirection(): void
-    {
-        $data = $this->getCreateData();
-        $data['titles'] = ['en-US' => 'Redirect page EN', 'fr-FR' => 'Redirect page FR'];
-        $data['linkRewrites'] = ['en-US' => 'redirect-page-en', 'fr-FR' => 'redirect-page-fr'];
-        $cmsPage = $this->createItem('/cms-pages', $data, ['cms_page_write']);
-
-        $result = $this->getItem(
-            '/cms-pages/' . $cmsPage['cmsPageId'] . '/category-for-redirections',
-            ['cms_page_read']
-        );
-
-        $this->assertEquals(['cmsPageId', 'cmsPageCategoryId'], array_keys($result));
-        $this->assertSame($cmsPage['cmsPageId'], $result['cmsPageId']);
-        $this->assertSame($data['cmsPageCategoryId'], $result['cmsPageCategoryId']);
-    }
-
-    public function testGetCmsPageCategoryForRedirectionOfUnknownPage(): void
-    {
-        // An unknown page id is caught by the handler, which falls back to ROOT
-        $result = $this->getItem('/cms-pages/999999/category-for-redirections', ['cms_page_read']);
-
-        $this->assertSame(999999, $result['cmsPageId']);
-        $this->assertIsInt($result['cmsPageCategoryId']);
     }
 
     private function getCreateData(): array
@@ -293,16 +260,111 @@ class CmsPageEndpointTest extends ApiTestCase
 
     public function testBulkActionsWithInvalidCmsPageId(): void
     {
-        // CmsPageId rejects 0 in the command constructor
-        $this->bulkDeleteItems('/cms-pages/bulk-delete', [
-            'cmsPageIds' => [0],
-        ], ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        // The constraints of cmsPageIds reject the invalid ids before the command is built
+        $invalidIds = [
+            [[0], 'cmsPageIds[0]', 'This value should be positive.'],
+            [['3abc'], 'cmsPageIds[0]', 'This value should be of type integer.'],
+            [[], 'cmsPageIds', 'This value should not be blank.'],
+        ];
+        foreach ($invalidIds as [$ids, $propertyPath, $message]) {
+            $expectedErrors = [['propertyPath' => $propertyPath, 'message' => $message]];
+            $this->assertValidationErrors($expectedErrors, $this->bulkDeleteItems('/cms-pages/bulk-delete', [
+                'cmsPageIds' => $ids,
+            ], ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
 
-        foreach (['bulk-enable', 'bulk-disable'] as $action) {
-            $this->updateItem('/cms-pages/' . $action, [
-                'cmsPageIds' => [0],
-            ], ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            foreach (['bulk-enable', 'bulk-disable'] as $action) {
+                $this->assertValidationErrors($expectedErrors, $this->updateItem('/cms-pages/' . $action, [
+                    'cmsPageIds' => $ids,
+                ], ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
+            }
         }
+    }
+
+    public function testBulkActionsWithUnknownCmsPage(): void
+    {
+        // The handlers stop at the first unknown page: the pages listed before it are already changed
+        [$firstId, $lastId] = $this->createSeveral(['Bulk unknown A', 'Bulk unknown B']);
+
+        $this->updateItem('/cms-pages/bulk-disable', [
+            'cmsPageIds' => [$firstId, 999999, $lastId],
+        ], ['cms_page_write'], Response::HTTP_NOT_FOUND);
+        $this->assertFalse($this->getItem('/cms-pages/' . $firstId, ['cms_page_read'])['displayed']);
+        $this->assertTrue($this->getItem('/cms-pages/' . $lastId, ['cms_page_read'])['displayed']);
+
+        $this->updateItem('/cms-pages/bulk-enable', [
+            'cmsPageIds' => [$firstId, 999999],
+        ], ['cms_page_write'], Response::HTTP_NOT_FOUND);
+        $this->assertTrue($this->getItem('/cms-pages/' . $firstId, ['cms_page_read'])['displayed']);
+
+        $this->bulkDeleteItems('/cms-pages/bulk-delete', [
+            'cmsPageIds' => [$firstId, 999999, $lastId],
+        ], ['cms_page_write'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/cms-pages/' . $firstId, ['cms_page_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/cms-pages/' . $lastId, ['cms_page_read']);
+    }
+
+    public function testUnknownAndInvalidCmsPageIds(): void
+    {
+        // CmsPageId rejects 0 with the base exception (422), an unknown page answers 404
+        foreach ([999999 => Response::HTTP_NOT_FOUND, 0 => Response::HTTP_UNPROCESSABLE_ENTITY] as $cmsPageId => $status) {
+            $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read'], $status);
+            $this->partialUpdateItem('/cms-pages/' . $cmsPageId, ['displayed' => true], ['cms_page_write'], $status);
+            $this->updateItem('/cms-pages/' . $cmsPageId . '/toggle-status', [], ['cms_page_write'], $status);
+            $this->deleteItem('/cms-pages/' . $cmsPageId, ['cms_page_write'], $status);
+        }
+    }
+
+    public function testAddCmsPageWithDefaultValues(): void
+    {
+        $data = [
+            'cmsPageCategoryId' => 1,
+            'titles' => ['en-US' => 'Default page EN'],
+            'linkRewrites' => ['en-US' => 'default-page-en'],
+            'shopIds' => [1],
+        ];
+
+        if (self::isVersionUnder('9.2.0')) {
+            // The defaults are applied from PrestaShop 9.2.0, the fields are required before
+            $validationErrorsResponse = $this->createItem('/cms-pages', $data, ['cms_page_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $this->assertValidationErrors(array_map(
+                fn (string $field) => ['propertyPath' => $field, 'message' => 'This value should not be null.'],
+                ['metaTitles', 'metaDescriptions', 'contents', 'indexedForSearch', 'displayed']
+            ), $validationErrorsResponse);
+
+            return;
+        }
+
+        $cmsPage = $this->createItem('/cms-pages', $data, ['cms_page_write']);
+        $empty = ['en-US' => '', 'fr-FR' => ''];
+        $this->assertEquals([
+            'cmsPageId' => $cmsPage['cmsPageId'],
+            'cmsPageCategoryId' => 1,
+            // The missing languages of the required fields take the value of the default language
+            'titles' => ['en-US' => 'Default page EN', 'fr-FR' => 'Default page EN'],
+            'linkRewrites' => ['en-US' => 'default-page-en', 'fr-FR' => 'default-page-en'],
+            'metaTitles' => $empty,
+            'metaDescriptions' => $empty,
+            'contents' => $empty,
+            'indexedForSearch' => true,
+            'displayed' => false,
+            'shopIds' => [1],
+        ], $cmsPage);
+    }
+
+    public function testPartialUpdateOneLanguageReplacesTheOthers(): void
+    {
+        [$cmsPageId] = $this->createSeveral(['One language page']);
+
+        // The edit handler replaces every language of a localized field: the missing one becomes empty, or takes the
+        // value of the default language for a required field
+        $cmsPage = $this->partialUpdateItem('/cms-pages/' . $cmsPageId, [
+            'contents' => ['en-US' => '<p>Patched EN</p>'],
+            'titles' => ['en-US' => 'Patched EN'],
+        ], ['cms_page_write']);
+        $this->assertSame(['en-US' => '<p>Patched EN</p>', 'fr-FR' => ''], $cmsPage['contents']);
+        $this->assertSame(['en-US' => 'Patched EN', 'fr-FR' => 'Patched EN'], $cmsPage['titles']);
+        // The fields not sent keep their languages
+        $this->assertSame($this->getCreateData()['metaTitles'], $cmsPage['metaTitles']);
     }
 
     public function testInvalidCmsPage(): void
@@ -334,7 +396,8 @@ class CmsPageEndpointTest extends ApiTestCase
     {
         [$cmsPageId] = $this->createSeveral(['Filtered page']);
 
-        // Every list field can be used through its API name, for the filters and for orderBy
+        // The list fields are filtered and ordered through their API names (cmsPageCategoryId filters but cannot be
+        // used in orderBy: the core grid sorts on its filter name)
         $filtered = $this->listItems('/cms-pages?orderBy=title&sortOrder=asc', ['cms_page_read'], [
             'cmsPageCategoryId' => 1,
             'title' => 'Filtered page',

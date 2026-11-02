@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\BulkDeleteCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryNotFoundException;
@@ -40,6 +41,12 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'cms_page_category_write',
             ],
             allowEmptyBody: false,
+            openapi: new OpenApiOperation(
+                summary: 'Delete several CMS page categories.',
+                description: 'Deletes the listed categories. Each category is deleted with all its subcategories and '
+                    . 'all their pages. The handler stops at the first unknown category with a 404: the categories '
+                    . 'listed before it are already deleted, the following ones are not.',
+            ),
         ),
     ],
     exceptionToStatus: [

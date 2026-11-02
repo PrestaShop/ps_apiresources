@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\BulkDisableCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\BulkEnableCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryException;
@@ -41,6 +42,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'cms_page_category_write',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Enable several CMS page categories.',
+                description: 'Enables the listed categories. The handler stops at the first unknown category with a '
+                    . '404: the categories listed before it are already enabled, the following ones are not.',
+            ),
         ),
         new CQRSUpdate(
             uriTemplate: '/cms-page-categories/bulk-disable',
@@ -49,6 +55,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'cms_page_category_write',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Disable several CMS page categories.',
+                description: 'Disables the listed categories. The handler stops at the first unknown category with a '
+                    . '404: the categories listed before it are already disabled, the following ones are not.',
+            ),
         ),
     ],
     exceptionToStatus: [

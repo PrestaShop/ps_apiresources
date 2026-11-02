@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Search\Filters\CmsPageCategoryFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
@@ -42,8 +43,18 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
                 '[parentId]' => '[id_cms_category_parent]',
                 '[displayed]' => '[active]',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'List the CMS page categories.',
+                description: 'Lists the CMS page categories associated with the shops of the context, the root '
+                    . 'category included. Filters: cmsPageCategoryId, parentId, displayed and position match exactly, '
+                    . 'name and description match partially; an unknown filter is ignored. The position filter '
+                    . 'counts from 1 while the returned position counts from 0. Every field except parentId can be '
+                    . 'used in orderBy. The texts are returned in the language of the context (langId parameter).',
+            ),
         ),
-    ]
+    ],
+    // parentId is null for the root category, like on GET /cms-page-categories/{cmsPageCategoryId}
+    normalizationContext: ['skip_null_values' => false],
 )]
 class CmsPageCategoryList
 {
@@ -54,7 +65,7 @@ class CmsPageCategoryList
 
     public string $description;
 
-    public int $parentId;
+    public ?int $parentId;
 
     public bool $displayed;
 
@@ -65,4 +76,12 @@ class CmsPageCategoryList
         '[id_parent]' => '[parentId]',
         '[active]' => '[displayed]',
     ];
+
+    // The grid returns 0 as the parent of the root category
+    public function setParentId(int $parentId): self
+    {
+        $this->parentId = 0 === $parentId ? null : $parentId;
+
+        return $this;
+    }
 }

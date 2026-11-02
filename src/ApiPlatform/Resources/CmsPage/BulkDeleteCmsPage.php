@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDeleteCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageNotFoundException;
@@ -40,6 +41,11 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'cms_page_write',
             ],
             allowEmptyBody: false,
+            openapi: new OpenApiOperation(
+                summary: 'Delete several CMS pages.',
+                description: 'Deletes the listed pages. The handler stops at the first unknown page with a 404: the '
+                    . 'pages listed before it are already deleted, the following ones are not.',
+            ),
         ),
     ],
     exceptionToStatus: [
