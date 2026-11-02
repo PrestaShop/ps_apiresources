@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Search\Filters\CmsPageFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 
@@ -45,6 +46,14 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
                 '[metaTitle]' => '[head_seo_title]',
                 '[displayed]' => '[active]',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'List the CMS pages.',
+                description: 'Lists the CMS pages associated with the shops of the context. Filters: cmsPageId, '
+                    . 'cmsPageCategoryId, displayed and position match exactly, title, linkRewrite and metaTitle '
+                    . 'match partially; an unknown filter is ignored. The position filter counts from 1 while the '
+                    . 'returned position counts from 0. Every field except cmsPageCategoryId can be used in orderBy. '
+                    . 'The texts are returned in the language of the context (langId parameter).',
+            ),
         ),
     ]
 )]

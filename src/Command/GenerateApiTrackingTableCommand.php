@@ -80,6 +80,9 @@ class GenerateApiTrackingTableCommand extends Command
         // would also collide: the query returns a CmsPageCategoryId, which normalizes to the
         // very key the URI identifier already occupies.
         'GetCmsPageParentCategoryIdForRedirection' => self::USELESS_DUPLICATE,
+        // The category of a page is already served by GET /cms-pages/{id}, which returns cmsPageCategoryId.
+        // The handler also answers the root category for an unknown page where the API answers 404.
+        'GetCmsCategoryIdForRedirection' => self::USELESS_DUPLICATE,
     ];
 
     private const GRID_DEFINITION_NAMESPACE = 'PrestaShop\\PrestaShop\\Core\\Grid\\Definition\\Factory\\';

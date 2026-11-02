@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDisableCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkEnableCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageException;
@@ -41,6 +42,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'cms_page_write',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Enable several CMS pages.',
+                description: 'Enables the listed pages. The handler stops at the first unknown page with a 404: the '
+                    . 'pages listed before it are already enabled, the following ones are not.',
+            ),
         ),
         new CQRSUpdate(
             uriTemplate: '/cms-pages/bulk-disable',
@@ -49,6 +55,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'cms_page_write',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Disable several CMS pages.',
+                description: 'Disables the listed pages. The handler stops at the first unknown page with a 404: the '
+                    . 'pages listed before it are already disabled, the following ones are not.',
+            ),
         ),
     ],
     exceptionToStatus: [

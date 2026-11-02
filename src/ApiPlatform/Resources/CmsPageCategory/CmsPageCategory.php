@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\AddCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\DeleteCmsPageCategoryCommand;
@@ -63,9 +64,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             extraProperties: [
-                // The shops of the context are used only when the payload has no shopIds (PrestaShop 9.2.0 and later,
-                // shopIds is required on older versions)
-                'defaultValues' => ['shopIds' => '[_context][shopIds]'],
+                // The defaults of the back office form, applied before the validation from PrestaShop 9.2.0
+                // (the fields stay required on older versions)
+                'defaultValues' => self::CREATE_DEFAULT_VALUES,
             ],
         ),
         new CQRSPartialUpdate(
@@ -79,6 +80,12 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
+            openapi: new OpenApiOperation(
+                summary: 'Update a CMS page category.',
+                description: 'Partial update: only the sent fields change. A localized field replaces all its '
+                    . 'languages: send every language, a missing one takes the value of the default language for '
+                    . 'names and linkRewrites, and becomes empty for the other localized fields.',
+            ),
         ),
         new CQRSUpdate(
             uriTemplate: '/cms-page-categories/{cmsPageCategoryId}/toggle-status',
@@ -91,15 +98,24 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: [
                 'cms_page_category_write',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Toggle the status of a CMS page category.',
+                description: 'Flips the displayed status without a body and returns the updated category. To set a '
+                    . 'given status, send displayed to PATCH /cms-page-categories/{cmsPageCategoryId}.',
+            ),
         ),
         new CQRSDelete(
             uriTemplate: '/cms-page-categories/{cmsPageCategoryId}',
             requirements: ['cmsPageCategoryId' => '\d+'],
-            output: false,
             CQRSCommand: DeleteCmsPageCategoryCommand::class,
             scopes: [
                 'cms_page_category_write',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'Delete a CMS page category.',
+                description: 'Deletes the category with all its subcategories and all their pages. The root '
+                    . 'category cannot be deleted (422).',
+            ),
         ),
     ],
     // parentId is null for the root category: returned as null, not omitted
@@ -126,16 +142,20 @@ class CmsPageCategory
     public array $linkRewrites;
 
     #[ApiProperty(openapiContext: [
-        'description' => 'Parent category, null for the root category (from PrestaShop 9.2.1, reading the root '
-            . 'category answered 500 before).',
+        'description' => 'Parent category, null for the root category. An unknown parent answers 404 from '
+            . 'PrestaShop 9.2.1, older versions store it. Reading the root category needs PrestaShop 9.2.1.',
     ])]
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\Positive]
     public ?int $parentId;
 
+    // The NotNull constraints of the Create group answer 422 on the cores older than 9.2.0, which ignore
+    // CREATE_DEFAULT_VALUES: a missing displayed is a 400 there, a missing descriptions a TypeError in the handler
+    #[Assert\NotNull(groups: ['Create'])]
     public bool $displayed;
 
     #[LocalizedValue]
+    #[Assert\NotNull(groups: ['Create'])]
     public array $descriptions;
 
     #[LocalizedValue]
@@ -151,6 +171,16 @@ class CmsPageCategory
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $shopIds;
+
+    /**
+     * The values of CmsPageCategoryFormDataProvider::getDefaultData(); descriptions is empty since
+     * AddCmsPageCategoryHandler checks it whether it was set or not.
+     */
+    public const CREATE_DEFAULT_VALUES = [
+        'displayed' => true,
+        'descriptions' => [],
+        'shopIds' => '[_context][shopIds]',
+    ];
 
     public const QUERY_MAPPING = [
         '[localisedName]' => '[names]',
@@ -170,8 +200,8 @@ class CmsPageCategory
         '[shopIds]' => '[shopAssociation]',
     ];
 
-    // The legacy query result may expose the status as a string ("1"/"0"), so we
-    // coerce it here to keep the typed bool property happy across versions.
+    // Up to PrestaShop 9.2.0 the query result may expose the status as a string ("1"/"0"): the core casts it from
+    // 9.2.1 (QueryResultSerializerTrait), remove this setter once 9.2.1 is the minimum version
     public function setDisplayed(string|int|bool $displayed): self
     {
         $this->displayed = (bool) $displayed;
