@@ -25,16 +25,31 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDeleteCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDisableCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkEnableCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
+        new CQRSDelete(
+            uriTemplate: '/cms-pages/bulk-delete',
+            CQRSCommand: BulkDeleteCmsPageCommand::class,
+            scopes: [
+                'cms_page_write',
+            ],
+            allowEmptyBody: false,
+            openapi: new OpenApiOperation(
+                summary: 'Delete several CMS pages.',
+                description: 'Deletes the listed pages. The handler stops at the first unknown page with a 404: the '
+                    . 'pages listed before it are already deleted, the following ones are not.',
+            ),
+        ),
         new CQRSUpdate(
             uriTemplate: '/cms-pages/bulk-enable',
             output: false,
@@ -68,7 +83,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         CmsPageException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class BulkUpdateStatusCmsPage
+class BulkCmsPages
 {
     /**
      * @var int[]

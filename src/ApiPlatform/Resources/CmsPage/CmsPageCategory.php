@@ -20,7 +20,7 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
@@ -45,7 +45,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSGet(
-            uriTemplate: '/cms-page-categories/{cmsPageCategoryId}',
+            uriTemplate: '/cms-pages/categories/{cmsPageCategoryId}',
             requirements: ['cmsPageCategoryId' => '\d+'],
             CQRSQuery: GetCmsPageCategoryForEditing::class,
             scopes: [
@@ -54,7 +54,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
         ),
         new CQRSCreate(
-            uriTemplate: '/cms-page-categories',
+            uriTemplate: '/cms-pages/categories',
             validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddCmsPageCategoryCommand::class,
             CQRSQuery: GetCmsPageCategoryForEditing::class,
@@ -70,7 +70,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
         ),
         new CQRSPartialUpdate(
-            uriTemplate: '/cms-page-categories/{cmsPageCategoryId}',
+            uriTemplate: '/cms-pages/categories/{cmsPageCategoryId}',
             requirements: ['cmsPageCategoryId' => '\d+'],
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditCmsPageCategoryCommand::class,
@@ -88,7 +88,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ),
         ),
         new CQRSUpdate(
-            uriTemplate: '/cms-page-categories/{cmsPageCategoryId}/toggle-status',
+            uriTemplate: '/cms-pages/categories/{cmsPageCategoryId}/toggle-status',
             requirements: ['cmsPageCategoryId' => '\d+'],
             allowEmptyBody: true,
             CQRSCommand: ToggleCmsPageCategoryStatusCommand::class,
@@ -101,11 +101,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             openapi: new OpenApiOperation(
                 summary: 'Toggle the status of a CMS page category.',
                 description: 'Flips the displayed status without a body and returns the updated category. To set a '
-                    . 'given status, send displayed to PATCH /cms-page-categories/{cmsPageCategoryId}.',
+                    . 'given status, send displayed to PATCH /cms-pages/categories/{cmsPageCategoryId}.',
             ),
         ),
         new CQRSDelete(
-            uriTemplate: '/cms-page-categories/{cmsPageCategoryId}',
+            uriTemplate: '/cms-pages/categories/{cmsPageCategoryId}',
             requirements: ['cmsPageCategoryId' => '\d+'],
             CQRSCommand: DeleteCmsPageCategoryCommand::class,
             scopes: [

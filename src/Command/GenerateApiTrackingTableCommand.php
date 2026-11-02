@@ -75,7 +75,7 @@ class GenerateApiTrackingTableCommand extends Command
         // returns an iterator-only Breadcrumb whose items expose a CmsPageCategoryId object.
         'GetCmsPageCategoryNameForListing' => self::REASON_BACK_OFFICE_UI,
         'GetCmsPageCategoriesForBreadcrumb' => self::REASON_BACK_OFFICE_UI,
-        // The parent of a category is already served by GET /cms-page-categories/{id}, which
+        // The parent of a category is already served by GET /cms-pages/categories/{id}, which
         // returns parentId. Exposing it a second time under its back office redirection name
         // would also collide: the query returns a CmsPageCategoryId, which normalizes to the
         // very key the URI identifier already occupies.

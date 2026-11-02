@@ -20,7 +20,7 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
@@ -31,7 +31,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 #[ApiResource(
     operations: [
         new PaginatedList(
-            uriTemplate: '/cms-page-categories',
+            uriTemplate: '/cms-pages/categories',
             scopes: [
                 'cms_page_category_read',
             ],
@@ -53,7 +53,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             ),
         ),
     ],
-    // parentId is null for the root category, like on GET /cms-page-categories/{cmsPageCategoryId}
+    // parentId is null for the root category, like on GET /cms-pages/categories/{cmsPageCategoryId}
     normalizationContext: ['skip_null_values' => false],
 )]
 class CmsPageCategoryList
