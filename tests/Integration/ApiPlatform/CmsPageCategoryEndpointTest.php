@@ -53,29 +53,29 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => [
             'GET',
-            '/cms-page-categories/1',
+            '/cms-pages/categories/1',
         ];
 
         yield 'create endpoint' => [
             'POST',
-            '/cms-page-categories',
+            '/cms-pages/categories',
         ];
 
         yield 'patch endpoint' => [
             'PATCH',
-            '/cms-page-categories/1',
+            '/cms-pages/categories/1',
         ];
 
         yield 'list endpoint' => [
             'GET',
-            '/cms-page-categories',
+            '/cms-pages/categories',
         ];
 
-        yield 'toggle status endpoint' => ['PUT', '/cms-page-categories/1/toggle-status'];
-        yield 'delete endpoint' => ['DELETE', '/cms-page-categories/1'];
-        yield 'bulk enable endpoint' => ['PUT', '/cms-page-categories/bulk-enable'];
-        yield 'bulk disable endpoint' => ['PUT', '/cms-page-categories/bulk-disable'];
-        yield 'bulk delete endpoint' => ['DELETE', '/cms-page-categories/bulk-delete'];
+        yield 'toggle status endpoint' => ['PUT', '/cms-pages/categories/1/toggle-status'];
+        yield 'delete endpoint' => ['DELETE', '/cms-pages/categories/1'];
+        yield 'bulk enable endpoint' => ['PUT', '/cms-pages/categories/bulk-enable'];
+        yield 'bulk disable endpoint' => ['PUT', '/cms-pages/categories/bulk-disable'];
+        yield 'bulk delete endpoint' => ['DELETE', '/cms-pages/categories/bulk-delete'];
     }
 
     private function getCreateData(): array
@@ -117,7 +117,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
 
     public function testAddCmsPageCategory(): int
     {
-        $cmsPageCategory = $this->createItem('/cms-page-categories', $this->getCreateData(), ['cms_page_category_write']);
+        $cmsPageCategory = $this->createItem('/cms-pages/categories', $this->getCreateData(), ['cms_page_category_write']);
         $this->assertIsInt($cmsPageCategory['cmsPageCategoryId']);
         $cmsPageCategoryId = $cmsPageCategory['cmsPageCategoryId'];
         $this->assertEquals($this->expectedCmsPageCategory($cmsPageCategoryId), $cmsPageCategory);
@@ -130,7 +130,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
      */
     public function testGetCmsPageCategory(int $cmsPageCategoryId): int
     {
-        $cmsPageCategory = $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
+        $cmsPageCategory = $this->getItem('/cms-pages/categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
         $this->assertEquals($this->expectedCmsPageCategory($cmsPageCategoryId), $cmsPageCategory);
 
         return $cmsPageCategoryId;
@@ -150,11 +150,11 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         ];
 
         // The fields and languages not sent are untouched
-        $updatedCmsPageCategory = $this->partialUpdateItem('/cms-page-categories/' . $cmsPageCategoryId, $patchData, ['cms_page_category_write']);
+        $updatedCmsPageCategory = $this->partialUpdateItem('/cms-pages/categories/' . $cmsPageCategoryId, $patchData, ['cms_page_category_write']);
         $this->assertEquals($this->expectedCmsPageCategory($cmsPageCategoryId, $patchData), $updatedCmsPageCategory);
 
         // We check that when we GET the item it is updated as expected
-        $cmsPageCategory = $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
+        $cmsPageCategory = $this->getItem('/cms-pages/categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
         $this->assertEquals($this->expectedCmsPageCategory($cmsPageCategoryId, $patchData), $cmsPageCategory);
 
         return $cmsPageCategoryId;
@@ -174,10 +174,10 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             ],
             'displayed' => true,
         ]);
-        $toggled = $this->updateItem('/cms-page-categories/' . $cmsPageCategoryId . '/toggle-status', [], ['cms_page_category_write']);
+        $toggled = $this->updateItem('/cms-pages/categories/' . $cmsPageCategoryId . '/toggle-status', [], ['cms_page_category_write']);
         $this->assertEquals($expectedCmsPageCategory, $toggled);
 
-        $cmsPageCategory = $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
+        $cmsPageCategory = $this->getItem('/cms-pages/categories/' . $cmsPageCategoryId, ['cms_page_category_read']);
         $this->assertEquals($expectedCmsPageCategory, $cmsPageCategory);
 
         return $cmsPageCategoryId;
@@ -188,7 +188,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
      */
     public function testListCmsPageCategories(int $cmsPageCategoryId): int
     {
-        $paginatedCmsPageCategories = $this->listItems('/cms-page-categories?orderBy=cmsPageCategoryId&sortOrder=desc', ['cms_page_category_read']);
+        $paginatedCmsPageCategories = $this->listItems('/cms-pages/categories?orderBy=cmsPageCategoryId&sortOrder=desc', ['cms_page_category_read']);
         $this->assertGreaterThanOrEqual(1, $paginatedCmsPageCategories['totalItems']);
         $this->assertEquals('cmsPageCategoryId', $paginatedCmsPageCategories['orderBy']);
 
@@ -213,12 +213,12 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
      */
     public function testDeleteCmsPageCategory(int $cmsPageCategoryId): void
     {
-        $return = $this->deleteItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_write']);
+        $return = $this->deleteItem('/cms-pages/categories/' . $cmsPageCategoryId, ['cms_page_category_write']);
         // This endpoint returns an empty response and a 204 HTTP code
         $this->assertNull($return);
 
         // Getting the item should result in a 404 now
-        $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/cms-pages/categories/' . $cmsPageCategoryId, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
     }
 
     /**
@@ -229,19 +229,19 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $bulkIds = $this->createSeveral(['Bulk status A', 'Bulk status B']);
 
         // Disable both
-        $this->updateItem('/cms-page-categories/bulk-disable', [
+        $this->updateItem('/cms-pages/categories/bulk-disable', [
             'cmsPageCategoryIds' => $bulkIds,
         ], ['cms_page_category_write'], Response::HTTP_NO_CONTENT);
         foreach ($bulkIds as $id) {
-            $this->assertFalse($this->getItem('/cms-page-categories/' . $id, ['cms_page_category_read'])['displayed']);
+            $this->assertFalse($this->getItem('/cms-pages/categories/' . $id, ['cms_page_category_read'])['displayed']);
         }
 
         // Enable both back
-        $this->updateItem('/cms-page-categories/bulk-enable', [
+        $this->updateItem('/cms-pages/categories/bulk-enable', [
             'cmsPageCategoryIds' => $bulkIds,
         ], ['cms_page_category_write'], Response::HTTP_NO_CONTENT);
         foreach ($bulkIds as $id) {
-            $this->assertTrue($this->getItem('/cms-page-categories/' . $id, ['cms_page_category_read'])['displayed']);
+            $this->assertTrue($this->getItem('/cms-pages/categories/' . $id, ['cms_page_category_read'])['displayed']);
         }
     }
 
@@ -252,12 +252,12 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
     {
         $bulkIds = $this->createSeveral(['Bulk delete A', 'Bulk delete B']);
 
-        $this->bulkDeleteItems('/cms-page-categories/bulk-delete', [
+        $this->bulkDeleteItems('/cms-pages/categories/bulk-delete', [
             'cmsPageCategoryIds' => $bulkIds,
         ], ['cms_page_category_write']);
 
         foreach ($bulkIds as $id) {
-            $this->getItem('/cms-page-categories/' . $id, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
+            $this->getItem('/cms-pages/categories/' . $id, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
         }
     }
 
@@ -271,12 +271,12 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         ];
         foreach ($invalidIds as [$ids, $propertyPath, $message]) {
             $expectedErrors = [['propertyPath' => $propertyPath, 'message' => $message]];
-            $this->assertValidationErrors($expectedErrors, $this->bulkDeleteItems('/cms-page-categories/bulk-delete', [
+            $this->assertValidationErrors($expectedErrors, $this->bulkDeleteItems('/cms-pages/categories/bulk-delete', [
                 'cmsPageCategoryIds' => $ids,
             ], ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
 
             foreach (['bulk-enable', 'bulk-disable'] as $action) {
-                $this->assertValidationErrors($expectedErrors, $this->updateItem('/cms-page-categories/' . $action, [
+                $this->assertValidationErrors($expectedErrors, $this->updateItem('/cms-pages/categories/' . $action, [
                     'cmsPageCategoryIds' => $ids,
                 ], ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
             }
@@ -288,22 +288,22 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         // The handlers stop at the first unknown category: the categories listed before it are already changed
         [$firstId, $lastId] = $this->createSeveral(['Bulk unknown A', 'Bulk unknown B']);
 
-        $this->updateItem('/cms-page-categories/bulk-disable', [
+        $this->updateItem('/cms-pages/categories/bulk-disable', [
             'cmsPageCategoryIds' => [$firstId, 999999, $lastId],
         ], ['cms_page_category_write'], Response::HTTP_NOT_FOUND);
-        $this->assertFalse($this->getItem('/cms-page-categories/' . $firstId, ['cms_page_category_read'])['displayed']);
-        $this->assertTrue($this->getItem('/cms-page-categories/' . $lastId, ['cms_page_category_read'])['displayed']);
+        $this->assertFalse($this->getItem('/cms-pages/categories/' . $firstId, ['cms_page_category_read'])['displayed']);
+        $this->assertTrue($this->getItem('/cms-pages/categories/' . $lastId, ['cms_page_category_read'])['displayed']);
 
-        $this->updateItem('/cms-page-categories/bulk-enable', [
+        $this->updateItem('/cms-pages/categories/bulk-enable', [
             'cmsPageCategoryIds' => [$firstId, 999999],
         ], ['cms_page_category_write'], Response::HTTP_NOT_FOUND);
-        $this->assertTrue($this->getItem('/cms-page-categories/' . $firstId, ['cms_page_category_read'])['displayed']);
+        $this->assertTrue($this->getItem('/cms-pages/categories/' . $firstId, ['cms_page_category_read'])['displayed']);
 
-        $this->bulkDeleteItems('/cms-page-categories/bulk-delete', [
+        $this->bulkDeleteItems('/cms-pages/categories/bulk-delete', [
             'cmsPageCategoryIds' => [$firstId, 999999, $lastId],
         ], ['cms_page_category_write'], Response::HTTP_NOT_FOUND);
-        $this->getItem('/cms-page-categories/' . $firstId, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
-        $this->getItem('/cms-page-categories/' . $lastId, ['cms_page_category_read']);
+        $this->getItem('/cms-pages/categories/' . $firstId, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/cms-pages/categories/' . $lastId, ['cms_page_category_read']);
     }
 
     public function testInvalidCmsPageCategory(): void
@@ -316,7 +316,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             'fr-FR' => 'nom-fr-uniquement',
         ];
 
-        $validationErrorsResponse = $this->createItem('/cms-page-categories', $invalidData, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/cms-pages/categories', $invalidData, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertIsArray($validationErrorsResponse);
 
         $this->assertValidationErrors([
@@ -337,12 +337,12 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         unset($data['parentId']);
         $this->assertValidationErrors([
             ['propertyPath' => 'parentId', 'message' => 'This value should not be null.'],
-        ], $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
+        ], $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
 
         $data['parentId'] = 0;
         $this->assertValidationErrors([
             ['propertyPath' => 'parentId', 'message' => 'This value should be positive.'],
-        ], $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
+        ], $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY));
     }
 
     public function testInvalidPartialUpdateCmsPageCategory(): void
@@ -351,7 +351,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
 
         // The Update group validates the PATCH: the default language cannot be emptied, the parent and the shops
         // are checked like on the creation
-        $validationErrorsResponse = $this->partialUpdateItem('/cms-page-categories/' . $cmsPageCategoryId, [
+        $validationErrorsResponse = $this->partialUpdateItem('/cms-pages/categories/' . $cmsPageCategoryId, [
             'names' => ['en-US' => ''],
             'parentId' => 0,
             'shopIds' => ['3abc'],
@@ -365,7 +365,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         // Nothing was changed
         $this->assertSame(
             ['en-US' => 'Invalid update category', 'fr-FR' => 'Invalid update category'],
-            $this->getItem('/cms-page-categories/' . $cmsPageCategoryId, ['cms_page_category_read'])['names']
+            $this->getItem('/cms-pages/categories/' . $cmsPageCategoryId, ['cms_page_category_read'])['names']
         );
     }
 
@@ -373,10 +373,10 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
     {
         // CmsPageCategoryId rejects 0 with the base exception (422), an unknown category answers 404
         foreach ([999999 => Response::HTTP_NOT_FOUND, 0 => Response::HTTP_UNPROCESSABLE_ENTITY] as $categoryId => $status) {
-            $this->getItem('/cms-page-categories/' . $categoryId, ['cms_page_category_read'], $status);
-            $this->partialUpdateItem('/cms-page-categories/' . $categoryId, ['displayed' => true], ['cms_page_category_write'], $status);
-            $this->updateItem('/cms-page-categories/' . $categoryId . '/toggle-status', [], ['cms_page_category_write'], $status);
-            $this->deleteItem('/cms-page-categories/' . $categoryId, ['cms_page_category_write'], $status);
+            $this->getItem('/cms-pages/categories/' . $categoryId, ['cms_page_category_read'], $status);
+            $this->partialUpdateItem('/cms-pages/categories/' . $categoryId, ['displayed' => true], ['cms_page_category_write'], $status);
+            $this->updateItem('/cms-pages/categories/' . $categoryId . '/toggle-status', [], ['cms_page_category_write'], $status);
+            $this->deleteItem('/cms-pages/categories/' . $categoryId, ['cms_page_category_write'], $status);
         }
     }
 
@@ -387,12 +387,12 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
 
         if (self::isVersionUnder('9.2.1')) {
             // The core checks the parent from PrestaShop 9.2.1, older versions store the unknown parent
-            $this->assertSame(999999, $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'])['parentId']);
+            $this->assertSame(999999, $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'])['parentId']);
 
             return;
         }
 
-        $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'], Response::HTTP_NOT_FOUND);
+        $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'], Response::HTTP_NOT_FOUND);
     }
 
     public function testAddCmsPageCategoryWithDefaultValues(): void
@@ -406,7 +406,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
 
         if (self::isVersionUnder('9.2.0')) {
             // The defaults are applied from PrestaShop 9.2.0, the fields are required before
-            $validationErrorsResponse = $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $validationErrorsResponse = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
             $this->assertValidationErrors([
                 ['propertyPath' => 'displayed', 'message' => 'This value should not be null.'],
                 ['propertyPath' => 'descriptions', 'message' => 'This value should not be null.'],
@@ -415,7 +415,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             return;
         }
 
-        $cmsPageCategory = $this->createItem('/cms-page-categories', $data, ['cms_page_category_write']);
+        $cmsPageCategory = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write']);
         $empty = ['en-US' => '', 'fr-FR' => ''];
         $this->assertEquals([
             'cmsPageCategoryId' => $cmsPageCategory['cmsPageCategoryId'],
@@ -436,7 +436,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         [$cmsPageCategoryId] = $this->createSeveral(['One language category']);
 
         // The edit handler replaces every language of a localized field: the missing one becomes empty
-        $cmsPageCategory = $this->partialUpdateItem('/cms-page-categories/' . $cmsPageCategoryId, [
+        $cmsPageCategory = $this->partialUpdateItem('/cms-pages/categories/' . $cmsPageCategoryId, [
             'descriptions' => ['en-US' => 'Patched EN'],
         ], ['cms_page_category_write']);
         $this->assertSame(['en-US' => 'Patched EN', 'fr-FR' => ''], $cmsPageCategory['descriptions']);
@@ -450,10 +450,10 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $data = $this->getCreateData();
         $data['parentId'] = $parentId;
         $data['linkRewrites'] = ['en-US' => 'cascade-child-en', 'fr-FR' => 'cascade-child-fr'];
-        $childId = $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'])['cmsPageCategoryId'];
+        $childId = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'])['cmsPageCategoryId'];
 
-        $this->deleteItem('/cms-page-categories/' . $parentId, ['cms_page_category_write']);
-        $this->getItem('/cms-page-categories/' . $childId, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/cms-pages/categories/' . $parentId, ['cms_page_category_write']);
+        $this->getItem('/cms-pages/categories/' . $childId, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testGetRootCmsPageCategory(): void
@@ -462,13 +462,13 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         // reading it answered 500 before
         $this->markTestSkippedByMinVersion('9.2.1');
 
-        $rootCategory = $this->getItem('/cms-page-categories/1', ['cms_page_category_read']);
+        $rootCategory = $this->getItem('/cms-pages/categories/1', ['cms_page_category_read']);
         $this->assertSame(1, $rootCategory['cmsPageCategoryId']);
         $this->assertArrayHasKey('parentId', $rootCategory);
         $this->assertNull($rootCategory['parentId']);
 
         // The list returns null too, while the grid gives 0
-        $list = $this->listItems('/cms-page-categories', ['cms_page_category_read'], ['cmsPageCategoryId' => 1]);
+        $list = $this->listItems('/cms-pages/categories', ['cms_page_category_read'], ['cmsPageCategoryId' => 1]);
         $this->assertSame(1, $list['totalItems']);
         $this->assertArrayHasKey('parentId', $list['items'][0]);
         $this->assertNull($list['items'][0]['parentId']);
@@ -477,7 +477,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
     public function testDeleteRootCmsPageCategory(): void
     {
         // The root category cannot be deleted: CannotDeleteCmsPageCategoryException extends the base exception
-        $this->deleteItem('/cms-page-categories/1', ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->deleteItem('/cms-pages/categories/1', ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testAddCmsPageCategoryInContextShops(): void
@@ -488,7 +488,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         unset($data['shopIds']);
         $data['linkRewrites'] = ['en-US' => 'context-shops-en', 'fr-FR' => 'context-shops-fr'];
 
-        $cmsPageCategory = $this->createItem('/cms-page-categories', $data, ['cms_page_category_write']);
+        $cmsPageCategory = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write']);
         $this->assertSame([1], $cmsPageCategory['shopIds']);
     }
 
@@ -497,7 +497,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $data = $this->getCreateData();
         $data['shopIds'] = ['3abc'];
 
-        $validationErrorsResponse = $this->createItem('/cms-page-categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $validationErrorsResponse = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertValidationErrors([
             [
                 'propertyPath' => 'shopIds[0]',
@@ -524,7 +524,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
                 'en-US' => 'bulk-' . $index . '-en',
                 'fr-FR' => 'bulk-' . $index . '-fr',
             ];
-            $created = $this->createItem('/cms-page-categories', $data, ['cms_page_category_write']);
+            $created = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write']);
             $ids[] = $created['cmsPageCategoryId'];
         }
 

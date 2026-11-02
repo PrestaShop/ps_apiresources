@@ -193,6 +193,7 @@ class CmsPage
         'shopIds' => '[_context][shopIds]',
     ];
 
+    // GetCmsPageForEditing also returns previewUrl, deliberately not exposed: no Admin API use case is known for it
     public const QUERY_MAPPING = [
         '[localizedTitle]' => '[titles]',
         '[localizedMetaTitle]' => '[metaTitles]',

@@ -20,22 +20,25 @@
 
 declare(strict_types=1);
 
-namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPageCategory;
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\BulkDeleteCmsPageCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\BulkDisableCmsPageCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Command\BulkEnableCmsPageCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryException;
 use PrestaShop\PrestaShop\Core\Domain\CmsPageCategory\Exception\CmsPageCategoryNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSDelete(
-            uriTemplate: '/cms-page-categories/bulk-delete',
+            uriTemplate: '/cms-pages/categories/bulk-delete',
             CQRSCommand: BulkDeleteCmsPageCategoryCommand::class,
             scopes: [
                 'cms_page_category_write',
@@ -48,6 +51,32 @@ use Symfony\Component\Validator\Constraints as Assert;
                     . 'listed before it are already deleted, the following ones are not.',
             ),
         ),
+        new CQRSUpdate(
+            uriTemplate: '/cms-pages/categories/bulk-enable',
+            output: false,
+            CQRSCommand: BulkEnableCmsPageCategoryCommand::class,
+            scopes: [
+                'cms_page_category_write',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Enable several CMS page categories.',
+                description: 'Enables the listed categories. The handler stops at the first unknown category with a '
+                    . '404: the categories listed before it are already enabled, the following ones are not.',
+            ),
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/cms-pages/categories/bulk-disable',
+            output: false,
+            CQRSCommand: BulkDisableCmsPageCategoryCommand::class,
+            scopes: [
+                'cms_page_category_write',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Disable several CMS page categories.',
+                description: 'Disables the listed categories. The handler stops at the first unknown category with a '
+                    . '404: the categories listed before it are already disabled, the following ones are not.',
+            ),
+        ),
     ],
     exceptionToStatus: [
         CmsPageCategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
@@ -55,7 +84,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         CmsPageCategoryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
-class BulkDeleteCmsPageCategory
+class BulkCmsPageCategories
 {
     /**
      * @var int[]
