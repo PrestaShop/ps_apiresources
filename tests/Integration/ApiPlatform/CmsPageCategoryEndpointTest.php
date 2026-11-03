@@ -31,7 +31,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
     {
         parent::setUpBeforeClass();
         self::resetTables();
-        self::createApiClient(['cms_page_category_read', 'cms_page_category_write']);
+        self::createApiClient(['cms_page_category_read', 'cms_page_category_write', 'cms_page_read', 'cms_page_write']);
     }
 
     public static function tearDownAfterClass(): void
@@ -46,6 +46,9 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             'cms_category',
             'cms_category_lang',
             'cms_category_shop',
+            'cms',
+            'cms_lang',
+            'cms_shop',
         ]);
     }
 
@@ -451,9 +454,22 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $data['parentId'] = $parentId;
         $data['linkRewrites'] = ['en-US' => 'cascade-child-en', 'fr-FR' => 'cascade-child-fr'];
         $childId = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'])['cmsPageCategoryId'];
+        $cmsPageId = $this->createItem('/cms-pages', [
+            'cmsPageCategoryId' => $childId,
+            'titles' => ['en-US' => 'Cascade page', 'fr-FR' => 'Cascade page'],
+            'linkRewrites' => ['en-US' => 'cascade-page-en', 'fr-FR' => 'cascade-page-fr'],
+            'metaTitles' => ['en-US' => '', 'fr-FR' => ''],
+            'metaDescriptions' => ['en-US' => '', 'fr-FR' => ''],
+            'contents' => ['en-US' => '', 'fr-FR' => ''],
+            'indexedForSearch' => true,
+            'displayed' => true,
+            'shopIds' => [1],
+        ], ['cms_page_write'])['cmsPageId'];
 
+        // The pages of the deleted subcategories are deleted too
         $this->deleteItem('/cms-pages/categories/' . $parentId, ['cms_page_category_write']);
         $this->getItem('/cms-pages/categories/' . $childId, ['cms_page_category_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testGetRootCmsPageCategory(): void
