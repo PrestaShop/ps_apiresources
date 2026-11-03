@@ -436,6 +436,15 @@ class CmsPageEndpointTest extends ApiTestCase
         $this->assertSame(1, $filtered['totalItems']);
         $this->assertSame([$cmsPageId], array_column($filtered['items'], 'cmsPageId'));
 
+        // Several pages come back in the requested title order
+        [$pageB, $pageA] = $this->createSeveral(['Ordered page B', 'Ordered page A']);
+        foreach (['asc' => [$pageA, $pageB], 'desc' => [$pageB, $pageA]] as $sortOrder => $expectedIds) {
+            $ordered = $this->listItems('/cms-pages?orderBy=title&sortOrder=' . $sortOrder, ['cms_page_read'], [
+                'title' => 'Ordered page',
+            ]);
+            $this->assertSame($expectedIds, array_column($ordered['items'], 'cmsPageId'));
+        }
+
         $this->assertEquals(0, $this->countItems('/cms-pages', ['cms_page_read'], ['cmsPageCategoryId' => 999999]));
     }
 
