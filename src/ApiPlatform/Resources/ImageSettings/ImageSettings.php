@@ -24,57 +24,91 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\ImageSettings;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Command\EditImageSettingsCommand;
 use PrestaShop\PrestaShop\Core\Domain\ImageSettings\Query\GetImageSettingsForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * Global image generation settings. This is a singleton resource: it has no identifier,
- * the GET and the PUT share the same URI and expose the very same properties, and the PUT
- * returns the updated settings by replaying the GET query.
- */
 #[ApiResource(
     operations: [
         new CQRSGet(
             uriTemplate: '/image-settings',
             CQRSQuery: GetImageSettingsForEditing::class,
             scopes: ['image_settings_read'],
+            openapi: new OpenApiOperation(
+                summary: 'Get the image settings.',
+                description: 'Returns the global image generation settings (Design > Image settings in the back office). '
+                    . 'This is a singleton resource: it has no identifier.',
+            ),
         ),
         new CQRSUpdate(
             uriTemplate: '/image-settings',
-            read: false,
             CQRSCommand: EditImageSettingsCommand::class,
             CQRSQuery: GetImageSettingsForEditing::class,
             scopes: ['image_settings_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Replace the image settings.',
+                description: 'Replaces all the image generation settings and returns them. Every field is required: formats, '
+                    . 'baseFormat, avifQuality, jpegQuality, pngQuality, webpQuality, generationMethod, pictureMaxSize, '
+                    . 'pictureMaxWidth and pictureMaxHeight. jpg is always added to formats.',
+            ),
         ),
     ],
 )]
 class ImageSettings
 {
     /**
-     * The image formats to generate (jpg is always kept).
-     *
      * @var string[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'string'], 'example' => ['jpg', 'webp']])]
-    public array $formats;
+    #[ApiProperty(openapiContext: [
+        'description' => 'The image formats to generate: jpg is the base image (encoded as baseFormat says, always with a .jpg extension), always generated and added when missing; webp and avif are optional.',
+        'example' => ['jpg', 'webp'],
+    ])]
+    #[Assert\NotNull]
+    #[Assert\All([new Assert\Choice(['jpg', 'webp', 'avif'])])]
+    public ?array $formats = null;
 
-    public string $baseFormat;
+    #[ApiProperty(openapiContext: ['description' => 'Encoding of the base image: jpg always JPEG, png PNG only when the source image is a PNG, png_all always PNG.'])]
+    #[Assert\NotNull]
+    #[Assert\Choice(['jpg', 'png', 'png_all'])]
+    public ?string $baseFormat = null;
 
-    public int $avifQuality;
+    #[Assert\NotNull]
+    #[Assert\Range(min: 0, max: 100)]
+    public ?int $avifQuality = null;
 
-    public int $jpegQuality;
+    #[Assert\NotNull]
+    #[Assert\Range(min: 0, max: 100)]
+    public ?int $jpegQuality = null;
 
-    public int $pngQuality;
+    #[ApiProperty(openapiContext: ['description' => 'Lossless PNG compression level, from 0 (biggest file) to 9 (smallest file, slowest decompression).'])]
+    #[Assert\NotNull]
+    #[Assert\Range(min: 0, max: 9)]
+    public ?int $pngQuality = null;
 
-    public int $webpQuality;
+    #[Assert\NotNull]
+    #[Assert\Range(min: 0, max: 100)]
+    public ?int $webpQuality = null;
 
-    public int $generationMethod;
+    #[ApiProperty(openapiContext: ['description' => 'The side of the source image the thumbnails are based on: 0 automatic (longest side), 1 width, 2 height.'])]
+    #[Assert\NotNull]
+    #[Assert\Choice([0, 1, 2])]
+    public ?int $generationMethod = null;
 
-    public int $pictureMaxSize;
+    #[ApiProperty(openapiContext: ['description' => 'Maximum file size of the product customization pictures customers upload, in bytes.'])]
+    #[Assert\NotNull]
+    #[Assert\PositiveOrZero]
+    public ?int $pictureMaxSize = null;
 
-    public int $pictureMaxWidth;
+    #[ApiProperty(openapiContext: ['description' => 'Width of the product customization pictures customers upload, in pixels.'])]
+    #[Assert\NotNull]
+    #[Assert\PositiveOrZero]
+    public ?int $pictureMaxWidth = null;
 
-    public int $pictureMaxHeight;
+    #[ApiProperty(openapiContext: ['description' => 'Height of the product customization pictures customers upload, in pixels.'])]
+    #[Assert\NotNull]
+    #[Assert\PositiveOrZero]
+    public ?int $pictureMaxHeight = null;
 }

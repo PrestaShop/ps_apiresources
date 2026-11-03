@@ -27,8 +27,38 @@ use Tests\Resources\DatabaseDump;
 
 class ImageSettingsEndpointTest extends ApiTestCase
 {
+    // Install defaults (install-dev/data/xml/configuration.xml), with PS_IMAGE_QUALITY set to png by the theme
+    // (config/theme.yml); PS_IMAGE_GENERATION_METHOD is not set, so it reads as 0
+    private const DEFAULT_SETTINGS = [
+        'formats' => ['jpg'],
+        'baseFormat' => 'png',
+        'avifQuality' => 90,
+        'jpegQuality' => 90,
+        'pngQuality' => 7,
+        'webpQuality' => 80,
+        'generationMethod' => 0,
+        'pictureMaxSize' => 8388608,
+        'pictureMaxWidth' => 64,
+        'pictureMaxHeight' => 64,
+    ];
+
+    private const UPDATED_SETTINGS = [
+        'formats' => ['jpg', 'webp'],
+        'baseFormat' => 'png_all',
+        'avifQuality' => 50,
+        'jpegQuality' => 82,
+        'pngQuality' => 3,
+        'webpQuality' => 60,
+        'generationMethod' => 2,
+        'pictureMaxSize' => 2000000,
+        'pictureMaxWidth' => 1200,
+        'pictureMaxHeight' => 1100,
+    ];
+
     public static function setUpBeforeClass(): void
     {
+        // Restored before the parent setup, which changes the configuration the API needs
+        DatabaseDump::restoreTables(['configuration']);
         parent::setUpBeforeClass();
         self::createApiClient(['image_settings_read', 'image_settings_write']);
     }
@@ -45,72 +75,93 @@ class ImageSettingsEndpointTest extends ApiTestCase
         yield 'edit image settings endpoint' => ['PUT', '/image-settings'];
     }
 
-    /**
-     * The settings are a singleton resource, so the initial GET is the only fixture this test
-     * needs: everything else is built from the API itself.
-     */
-    public function testGetImageSettings(): array
+    public function testGetImageSettings(): void
     {
-        $settings = $this->getItem('/image-settings', ['image_settings_read']);
-
-        $this->assertEquals(
-            [
-                'formats',
-                'baseFormat',
-                'avifQuality',
-                'jpegQuality',
-                'pngQuality',
-                'webpQuality',
-                'generationMethod',
-                'pictureMaxSize',
-                'pictureMaxWidth',
-                'pictureMaxHeight',
-            ],
-            array_keys($settings)
-        );
-
-        return $settings;
+        $this->assertEquals(self::DEFAULT_SETTINGS, $this->getItem('/image-settings', ['image_settings_read']));
     }
 
     /**
      * @depends testGetImageSettings
      */
-    public function testUpdateImageSettings(array $initialSettings): array
+    public function testUpdateImageSettings(): void
     {
-        $updatedSettings = [
-            'formats' => ['jpg', 'webp'],
-            'baseFormat' => 'jpg',
-            'avifQuality' => 90,
-            'jpegQuality' => 82,
-            'pngQuality' => 7,
-            'webpQuality' => 80,
-            'generationMethod' => 0,
-            'pictureMaxSize' => 2000000,
-            'pictureMaxWidth' => 1200,
-            'pictureMaxHeight' => 1200,
-        ];
-        $this->assertNotEquals($initialSettings, $updatedSettings);
+        // Every field differs from its default, so a field the update drops cannot go unnoticed
+        foreach (self::UPDATED_SETTINGS as $field => $value) {
+            $this->assertNotEquals(self::DEFAULT_SETTINGS[$field], $value, $field);
+        }
 
         // The update returns the updated settings, built by replaying the GET query
-        $response = $this->updateItem(
-            '/image-settings',
-            $updatedSettings,
-            ['image_settings_write'],
-            Response::HTTP_OK
-        );
+        $response = $this->updateItem('/image-settings', self::UPDATED_SETTINGS, ['image_settings_write'], Response::HTTP_OK);
+        $this->assertEquals(self::UPDATED_SETTINGS, $response);
 
-        $this->assertEquals($updatedSettings, $response);
-
-        return $updatedSettings;
+        $this->assertEquals(self::UPDATED_SETTINGS, $this->getItem('/image-settings', ['image_settings_read']));
     }
 
     /**
      * @depends testUpdateImageSettings
      */
-    public function testGetUpdatedImageSettings(array $updatedSettings): void
+    public function testJpgFormatIsAlwaysAdded(): void
     {
-        $settings = $this->getItem('/image-settings', ['image_settings_read']);
+        $settings = ['formats' => ['webp']] + self::UPDATED_SETTINGS;
+        $response = $this->updateItem('/image-settings', $settings, ['image_settings_write'], Response::HTTP_OK);
+        $this->assertEquals(['formats' => ['webp', 'jpg']] + self::UPDATED_SETTINGS, $response);
 
-        $this->assertEquals($updatedSettings, $settings);
+        // Back to the state the following tests expect
+        $this->updateItem('/image-settings', self::UPDATED_SETTINGS, ['image_settings_write'], Response::HTTP_OK);
+    }
+
+    /**
+     * @depends testJpgFormatIsAlwaysAdded
+     */
+    public function testUpdateInvalidImageSettings(): void
+    {
+        $validationErrors = $this->updateItem(
+            '/image-settings',
+            [
+                'formats' => ['jpg', 'gif'],
+                'baseFormat' => 'tiff',
+                'avifQuality' => 101,
+                'jpegQuality' => -1,
+                'pngQuality' => 10,
+                'webpQuality' => 101,
+                'generationMethod' => 3,
+                'pictureMaxSize' => -1,
+                'pictureMaxWidth' => -1,
+                'pictureMaxHeight' => -1,
+            ],
+            ['image_settings_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertValidationErrors([
+            ['propertyPath' => 'formats[1]', 'message' => 'The value you selected is not a valid choice.'],
+            ['propertyPath' => 'baseFormat', 'message' => 'The value you selected is not a valid choice.'],
+            ['propertyPath' => 'avifQuality', 'message' => 'This value should be between 0 and 100.'],
+            ['propertyPath' => 'jpegQuality', 'message' => 'This value should be between 0 and 100.'],
+            ['propertyPath' => 'pngQuality', 'message' => 'This value should be between 0 and 9.'],
+            ['propertyPath' => 'webpQuality', 'message' => 'This value should be between 0 and 100.'],
+            ['propertyPath' => 'generationMethod', 'message' => 'The value you selected is not a valid choice.'],
+            ['propertyPath' => 'pictureMaxSize', 'message' => 'This value should be either positive or zero.'],
+            ['propertyPath' => 'pictureMaxWidth', 'message' => 'This value should be either positive or zero.'],
+            ['propertyPath' => 'pictureMaxHeight', 'message' => 'This value should be either positive or zero.'],
+        ], $validationErrors);
+
+        // Every field is required: a missing key and an explicit null get the same 422
+        $notNullErrors = array_map(
+            fn (string $field) => ['propertyPath' => $field, 'message' => 'This value should not be null.'],
+            array_keys(self::UPDATED_SETTINGS)
+        );
+        $validationErrors = $this->updateItem(
+            '/image-settings',
+            array_fill_keys(array_keys(self::UPDATED_SETTINGS), null),
+            ['image_settings_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertValidationErrors($notNullErrors, $validationErrors);
+        // Only formats is sent (an empty array would be sent as an empty body by the test client)
+        $validationErrors = $this->updateItem('/image-settings', ['formats' => ['jpg']], ['image_settings_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors(array_slice($notNullErrors, 1), $validationErrors);
+
+        // Nothing was persisted by the rejected calls
+        $this->assertEquals(self::UPDATED_SETTINGS, $this->getItem('/image-settings', ['image_settings_read']));
     }
 }
