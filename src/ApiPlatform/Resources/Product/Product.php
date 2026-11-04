@@ -59,6 +59,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new CQRSGet(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\d+'],
             CQRSQuery: GetProductForEditing::class,
             scopes: [
                 'product_read',
@@ -78,6 +79,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\d+'],
             CQRSCommand: UpdateProductCommand::class,
             CQRSQuery: GetProductForEditing::class,
             scopes: [
@@ -89,6 +91,7 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
         new CQRSDelete(
             uriTemplate: '/products/{productId}',
+            requirements: ['productId' => '\d+'],
             CQRSCommand: DeleteProductCommand::class,
             scopes: [
                 'product_write',
