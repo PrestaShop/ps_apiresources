@@ -90,6 +90,7 @@ jobs:
         env:
           CLI_PHP: ${{ (matrix.php == '8.1' && matrix.prestashop_version == 'develop') && '-d extension=pcov.so -d pcov.enabled=1 -d pcov.directory=./modules/ps_apiresources/ -d pcov.exclude="~(tests|vendor)~" -d memory_limit=-1' || ' ' }}
           CLI_PHPUNIT: ${{ (matrix.php == '8.1' && matrix.prestashop_version == 'develop') && ' ' || ' --no-coverage' }}
+          PS_VERSION: ${{ matrix.prestashop_version }}
         run : |
           USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
             php ${{env.CLI_PHP}} vendor/bin/phpunit -c modules/ps_apiresources/tests/Integration/phpunit-ci.xml${{ env.CLI_PHPUNIT }}
