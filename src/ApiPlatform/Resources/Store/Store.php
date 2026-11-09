@@ -183,6 +183,7 @@ class Store
     #[Assert\All(constraints: [
         // Sequentially: the count and the items are only checked on a list
         new Assert\Sequentially(constraints: [
+            new Assert\NotNull(),
             new Assert\Type('array'),
             new Assert\Count(exactly: 7),
             new Assert\All(constraints: [new Assert\Type('string')]),

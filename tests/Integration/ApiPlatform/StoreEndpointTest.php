@@ -188,12 +188,13 @@ class StoreEndpointTest extends ApiTestCase
      */
     public function testToggleStoreStatus(int $storeId): int
     {
-        // The edit test may have changed the status of the fixture: the toggle flips whatever the current state is
-        $enabled = $this->getItem('/stores/' . $storeId, ['store_read'])['enabled'];
+        // The edit test may have changed the status of the fixture: the toggle flips whatever the current state is,
+        // and changes nothing else
+        $expected = $this->getItem('/stores/' . $storeId, ['store_read']);
         $this->assertNull($this->updateItem('/stores/' . $storeId . '/toggle-status', null, ['store_write'], Response::HTTP_NO_CONTENT));
-        $this->assertSame(!$enabled, $this->getItem('/stores/' . $storeId, ['store_read'])['enabled']);
+        $this->assertEquals(array_replace($expected, ['enabled' => !$expected['enabled']]), $this->getItem('/stores/' . $storeId, ['store_read']));
         $this->assertNull($this->updateItem('/stores/' . $storeId . '/toggle-status', null, ['store_write'], Response::HTTP_NO_CONTENT));
-        $this->assertSame($enabled, $this->getItem('/stores/' . $storeId, ['store_read'])['enabled']);
+        $this->assertEquals($expected, $this->getItem('/stores/' . $storeId, ['store_read']));
 
         return $storeId;
     }
@@ -215,9 +216,11 @@ class StoreEndpointTest extends ApiTestCase
     {
         $storeIds = [$this->createFixtureStore(), $this->createFixtureStore()];
 
+        $expected = array_map(fn (int $storeId) => $this->getItem('/stores/' . $storeId, ['store_read']), $storeIds);
         $this->assertNull($this->updateItem('/stores/bulk-update-status', ['storeIds' => $storeIds, 'enabled' => false], ['store_write'], Response::HTTP_NO_CONTENT));
-        foreach ($storeIds as $storeId) {
-            $this->assertFalse($this->getItem('/stores/' . $storeId, ['store_read'])['enabled']);
+        foreach ($storeIds as $index => $storeId) {
+            // Only the status changes
+            $this->assertEquals(array_replace($expected[$index], ['enabled' => false]), $this->getItem('/stores/' . $storeId, ['store_read']));
         }
 
         return $storeIds;
@@ -309,16 +312,19 @@ class StoreEndpointTest extends ApiTestCase
             ['propertyPath' => 'shopIds[0]', 'message' => 'This value should be positive.'],
         ], $response);
 
-        // Refused by the typed regex and clean HTML constraints: the message carries the value, only the status is asserted
+        // Refused by the typed regex and clean HTML constraints: the message carries the value, the invalid fields are
+        // asserted
         foreach ([
-            ['names' => ['en-US' => 'Name with <tag>', 'fr-FR' => 'Nom avec <tag>']],
-            ['addresses' => ['en-US' => 'Address with <tag>', 'fr-FR' => 'Adresse avec <tag>']],
-            ['city' => 'City with <tag>'],
-            ['postcode' => 'post code!'],
-            ['phone' => 'phone number'],
-            ['notes' => ['en-US' => '<script>alert(1)</script>', 'fr-FR' => '<script>alert(1)</script>']],
-        ] as $overrides) {
-            $this->createItem('/stores', $this->getCreatePayload($overrides), ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            [['names' => ['en-US' => 'Name with <tag>', 'fr-FR' => 'Nom avec <tag>']], ['names[en-US]', 'names[fr-FR]']],
+            [['addresses' => ['en-US' => 'Address with <tag>', 'fr-FR' => 'Adresse avec <tag>']], ['addresses[en-US]', 'addresses[fr-FR]']],
+            [['city' => 'City with <tag>'], ['city']],
+            [['postcode' => 'post code!'], ['postcode']],
+            [['phone' => 'phone number'], ['phone']],
+            [['fax' => 'fax number'], ['fax']],
+            [['notes' => ['en-US' => '<script>alert(1)</script>', 'fr-FR' => '<script>alert(1)</script>']], ['notes[en-US]', 'notes[fr-FR]']],
+        ] as [$overrides, $invalidFields]) {
+            $response = $this->createItem('/stores', $this->getCreatePayload($overrides), ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $this->assertValidationErrors(array_map(fn (string $field) => ['propertyPath' => $field], $invalidFields), $response);
         }
 
         // An empty shop association is refused
@@ -387,18 +393,26 @@ class StoreEndpointTest extends ApiTestCase
             'countryId' => 0,
             'city' => '',
             'email' => 'not-an-email',
+            // A null schedule would reach the hours encoder
+            'hours' => ['en-US' => null, 'fr-FR' => null],
             'shopIds' => [],
         ], ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertValidationErrors([
             ['propertyPath' => 'countryId', 'message' => 'This value should be positive.'],
             ['propertyPath' => 'city', 'message' => 'This value should not be blank.'],
             ['propertyPath' => 'email', 'message' => 'This value is not a valid email address.'],
+            ['propertyPath' => 'hours[en-US]', 'message' => 'This value should not be null.'],
+            ['propertyPath' => 'hours[fr-FR]', 'message' => 'This value should not be null.'],
             ['propertyPath' => 'shopIds', 'message' => 'This value should not be blank.'],
         ], $response);
 
         // A localized field patched without its default language
-        $this->partialUpdateItem('/stores/' . $storeId, ['names' => ['fr-FR' => 'Only FR']], ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        $this->partialUpdateItem('/stores/' . $storeId, ['addresses' => ['fr-FR' => 'Only FR']], ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        foreach (['names', 'addresses'] as $field) {
+            $response = $this->partialUpdateItem('/stores/' . $storeId, [$field => ['fr-FR' => 'Only FR']], ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $this->assertValidationErrors([
+                ['propertyPath' => $field, 'message' => 'The field ' . $field . ' is required at least in your default language.'],
+            ], $response);
+        }
 
         $this->deleteItem('/stores/' . $storeId, ['store_write']);
     }
