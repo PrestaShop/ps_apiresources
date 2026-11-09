@@ -45,3 +45,9 @@ parameters:
             message: "#Class .*Country\\\\(Command\\\\(Bulk.*|ToggleCountryStatusCommand)|Exception\\\\DuplicateCountryIsoCodeException) not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Country/*
+        # The store create and edit commands only exist since PrestaShop 9.3 (PrestaShop#41414): the operations
+        # declare minVersion 9.3.0 so they are filtered out of the API on this core version.
+        -
+            message: "#Class .*Store\\\\Command\\\\(AddStoreCommand|EditStoreCommand) not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Store/Store.php
