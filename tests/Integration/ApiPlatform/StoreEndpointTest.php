@@ -162,20 +162,23 @@ class StoreEndpointTest extends ApiTestCase
         $stateIdFlorida = $this->getStateId('FL');
 
         // A country containing states needs one of its states: the country and the state move together
+        $expected = $this->getItem('/stores/' . $storeId, ['store_read']);
         $this->partialUpdateItem('/stores/' . $storeId, ['countryId' => $countryIdUS], ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        $updated = $this->partialUpdateItem('/stores/' . $storeId, ['countryId' => $countryIdUS, 'stateId' => $stateIdFlorida], ['store_write']);
-        $this->assertEquals($countryIdUS, $updated['countryId']);
-        $this->assertEquals($stateIdFlorida, $updated['stateId']);
+        $this->assertEquals($expected, $this->getItem('/stores/' . $storeId, ['store_read']));
+        $expected = array_replace($expected, ['countryId' => $countryIdUS, 'stateId' => $stateIdFlorida]);
+        $this->assertEquals($expected, $this->partialUpdateItem('/stores/' . $storeId, ['countryId' => $countryIdUS, 'stateId' => $stateIdFlorida], ['store_write']));
 
         // The state cannot be removed while the country requires one, nor kept when the new country has none
         $this->partialUpdateItem('/stores/' . $storeId, ['stateId' => null], ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->partialUpdateItem('/stores/' . $storeId, ['countryId' => $this->getCountryId('FR')], ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->partialUpdateItem('/stores/' . $storeId, ['stateId' => $this->getStateId('ON')], ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
+        $this->assertEquals($expected, $this->getItem('/stores/' . $storeId, ['store_read']));
+
         // A null state is removed together with the country change
-        $updated = $this->partialUpdateItem('/stores/' . $storeId, ['countryId' => $this->getCountryId('FR'), 'stateId' => null], ['store_write']);
-        $this->assertEquals($this->getCountryId('FR'), $updated['countryId']);
-        $this->assertNull($updated['stateId']);
+        $expected = array_replace($expected, ['countryId' => $this->getCountryId('FR'), 'stateId' => null]);
+        $this->assertEquals($expected, $this->partialUpdateItem('/stores/' . $storeId, ['countryId' => $this->getCountryId('FR'), 'stateId' => null], ['store_write']));
+        $this->assertEquals($expected, $this->getItem('/stores/' . $storeId, ['store_read']));
 
         return $storeId;
     }
@@ -289,7 +292,7 @@ class StoreEndpointTest extends ApiTestCase
             'phone' => str_repeat('1', 17),
             'fax' => str_repeat('1', 17),
             'email' => 'not-an-email',
-            'hours' => ['en-US' => ['', '', '', '', '', '', '', ''], 'fr-FR' => 'not a list'],
+            'hours' => ['en-US' => ['09:00 | 18:00', '09:00 | 18:00', '09:00 | 18:00'], 'fr-FR' => 'not a list'],
             'shopIds' => [0],
         ]), ['store_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->assertValidationErrors([
@@ -300,7 +303,8 @@ class StoreEndpointTest extends ApiTestCase
             ['propertyPath' => 'phone', 'message' => 'This value is too long. It should have 16 characters or less.'],
             ['propertyPath' => 'fax', 'message' => 'This value is too long. It should have 16 characters or less.'],
             ['propertyPath' => 'email', 'message' => 'This value is not a valid email address.'],
-            ['propertyPath' => 'hours[en-US]', 'message' => 'This collection should contain 7 elements or less.'],
+            // The front office reads exactly 7 days per language
+            ['propertyPath' => 'hours[en-US]', 'message' => 'This collection should contain exactly 7 elements.'],
             ['propertyPath' => 'hours[fr-FR]', 'message' => 'This value should be of type array.'],
             ['propertyPath' => 'shopIds[0]', 'message' => 'This value should be positive.'],
         ], $response);
@@ -357,8 +361,20 @@ class StoreEndpointTest extends ApiTestCase
 
         // The shops of the context are the default
         $store = $this->createItem('/stores', $payload, ['store_write']);
-        $this->assertEquals([1], $store['shopIds']);
+        $this->assertEquals($this->expectedStore($store['storeId'], ['shopIds' => [1]]), $store);
         $this->deleteItem('/stores/' . $store['storeId'], ['store_write']);
+    }
+
+    public function testAddStoreWithOutOfRangeCoordinates(): void
+    {
+        $this->markTestSkippedByMinVersion(self::COMMANDS_VERSION);
+
+        // The core commands do not check the bounds of the coordinates yet: a value of 5 digits or more before the
+        // decimal point exceeds the 13 characters of the legacy column once stored with 8 decimals, a raw legacy
+        // exception the API does not map. A range check in the core commands would answer 422
+        // (StoreConstraintException) and refuse 200 as well
+        $this->createItem('/stores', $this->getCreatePayload(['latitude' => 10000]), ['store_write'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        $this->createItem('/stores', $this->getCreatePayload(['longitude' => -10000]), ['store_write'], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     public function testEditStoreWithInvalidValues(): void

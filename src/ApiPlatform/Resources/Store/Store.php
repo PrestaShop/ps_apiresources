@@ -170,8 +170,10 @@ class Store
     public array $secondaryAddresses;
 
     #[ApiProperty(openapiContext: [
-        'description' => 'Opening hours by locale: a list of 7 strings, Monday first, each one "HH:MM | HH:MM" '
-            . '(opening | closing) or empty when the store is closed.',
+        'description' => 'Opening hours by locale: a list of exactly 7 strings, Monday first, each one "HH:MM | HH:MM" '
+            . '(opening | closing) or empty when the store is closed. The front office reads 7 days per language: '
+            . 'send the hours of every language, a language left out or an omitted field stores an empty value the '
+            . 'store page cannot display yet.',
         'example' => [
             'en-US' => ['09:00 | 18:00', '09:00 | 18:00', '09:00 | 18:00', '09:00 | 18:00', '09:00 | 18:00', '10:00 | 16:00', ''],
             'fr-FR' => ['09:00 | 18:00', '09:00 | 18:00', '09:00 | 18:00', '09:00 | 18:00', '09:00 | 18:00', '10:00 | 16:00', ''],
@@ -182,7 +184,7 @@ class Store
         // Sequentially: the count and the items are only checked on a list
         new Assert\Sequentially(constraints: [
             new Assert\Type('array'),
-            new Assert\Count(max: 7),
+            new Assert\Count(exactly: 7),
             new Assert\All(constraints: [new Assert\Type('string')]),
         ]),
     ])]
@@ -224,18 +226,22 @@ class Store
     public string $postcode;
 
     #[ApiProperty(openapiContext: [
-        'description' => 'Latitude of the store, stored with 8 decimals. Required on creation like in the back office; '
-            . 'null on read when a store created from the back office has no coordinates, never null in a request '
-            . 'body (omit the field on update to keep the stored value).',
+        'description' => 'Latitude of the store, between -90 and 90, stored with 8 decimals. Required on creation like '
+            . 'in the back office; null on read when a store created from the back office has no coordinates, never '
+            . 'null in a request body (omit the field on update to keep the stored value). The core does not check '
+            . 'the bounds yet: a value out of range is stored, a value of 5 digits or more before the decimal point '
+            . 'answers 500.',
         'example' => 25.765,
     ])]
     #[Assert\NotNull(groups: ['Create'])]
     public ?DecimalNumber $latitude;
 
     #[ApiProperty(openapiContext: [
-        'description' => 'Longitude of the store, stored with 8 decimals. Required on creation like in the back '
-            . 'office; null on read when a store created from the back office has no coordinates, never null in a '
-            . 'request body (omit the field on update to keep the stored value).',
+        'description' => 'Longitude of the store, between -180 and 180, stored with 8 decimals. Required on creation '
+            . 'like in the back office; null on read when a store created from the back office has no coordinates, '
+            . 'never null in a request body (omit the field on update to keep the stored value). The core does not '
+            . 'check the bounds yet: a value out of range is stored, a value of 5 digits or more before the decimal '
+            . 'point answers 500.',
         'example' => -80.2436,
     ])]
     #[Assert\NotNull(groups: ['Create'])]
@@ -284,8 +290,9 @@ class Store
      * @var int[]
      */
     #[ApiProperty(openapiContext: [
-        'description' => 'Shops associated with the store. On creation, defaults to the shops of the context. The '
-            . 'existence of the shops is not checked; an empty list is refused.',
+        'description' => 'Shops associated with the store. On creation, defaults to the shops of the context. An '
+            . 'empty list is refused; the existence of the shops is not checked yet (an unknown shop is stored), and '
+            . 'the core adds the shops of the context back on the next update.',
         'example' => [1, 3],
     ])]
     #[Assert\NotBlank(allowNull: true)]
