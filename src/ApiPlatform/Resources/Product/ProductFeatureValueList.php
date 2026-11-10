@@ -49,6 +49,10 @@ use Symfony\Component\Validator\Constraints as Assert;
                 summary: 'List the feature values of a product.',
                 description: 'The list is empty for a product without feature values, and for an unknown product.',
             ),
+            // The query doesn't check the product: no 404 on this operation
+            exceptionToStatus: [
+                ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+            ],
             CQRSQuery: GetProductFeatureValues::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['product_read'],

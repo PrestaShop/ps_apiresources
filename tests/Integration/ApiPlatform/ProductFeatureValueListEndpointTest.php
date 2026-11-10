@@ -147,4 +147,13 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
         $this->assertSame([], $this->deleteItem('/products/1/feature-values', ['product_write'], Response::HTTP_OK));
         $this->assertSame([], $this->getItem('/products/1/feature-values', ['product_read']));
     }
+
+    public function testWriteFeatureValuesOfUnknownProduct(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.1');
+
+        // Unlike the GET, the commands check the product
+        $this->updateItem('/products/999999/feature-values', ['featureValues' => [['featureId' => 1, 'featureValueId' => 3]]], ['product_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/products/999999/feature-values', ['product_write'], Response::HTTP_NOT_FOUND);
+    }
 }
