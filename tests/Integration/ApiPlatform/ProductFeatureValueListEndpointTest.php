@@ -30,13 +30,28 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
+        // The fixture features of product 1: a feature deleted by an earlier test class takes its values and their
+        // product associations with it
+        self::resetTables();
         self::createApiClient(['product_read', 'product_write']);
     }
 
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
-        DatabaseDump::restoreTables(['feature_product']);
+        self::resetTables();
+    }
+
+    protected static function resetTables(): void
+    {
+        DatabaseDump::restoreTables([
+            'feature',
+            'feature_lang',
+            'feature_product',
+            'feature_shop',
+            'feature_value',
+            'feature_value_lang',
+        ]);
     }
 
     public static function getProtectedEndpoints(): iterable
@@ -86,6 +101,41 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
             ['productId' => 1, 'featureId' => 1, 'featureValueId' => 3, 'custom' => false],
         ];
         $this->assertSame($expected, $featureValues);
+        $this->assertSame($expected, $this->getItem('/products/1/feature-values', ['product_read']));
+    }
+
+    /**
+     * @depends testSetFeatureValues
+     */
+    public function testSetInvalidFeatureValues(): void
+    {
+        $expected = $this->getItem('/products/1/feature-values', ['product_read']);
+
+        // An unknown id of the body answers 404
+        $this->updateItem('/products/1/feature-values', ['featureValues' => [['featureId' => 1, 'featureValueId' => 99999]]], ['product_write'], Response::HTTP_NOT_FOUND);
+        $this->updateItem('/products/1/feature-values', ['featureValues' => [['featureId' => 99999, 'featureValueId' => 3]]], ['product_write'], Response::HTTP_NOT_FOUND);
+        // A value of another feature, or the same value twice, answers 422
+        $this->updateItem('/products/1/feature-values', ['featureValues' => [['featureId' => 2, 'featureValueId' => 3]]], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->updateItem('/products/1/feature-values', ['featureValues' => [
+            ['featureId' => 1, 'featureValueId' => 3],
+            ['featureId' => 1, 'featureValueId' => 3],
+        ]], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // The list and its items are validated before the command is built
+        $response = $this->updateItem('/products/1/feature-values', ['featureValues' => []], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'featureValues', 'message' => 'This value should not be blank.'],
+        ], $response);
+        $response = $this->updateItem('/products/1/feature-values', ['featureValues' => [['featureId' => 0], ['featureId' => 1, 'featureValueId' => -3]]], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'featureValues[0].featureId', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'featureValues[0].featureValueId', 'message' => 'This value should not be null.'],
+            ['propertyPath' => 'featureValues[1].featureValueId', 'message' => 'This value should be positive.'],
+        ], $response);
+        // A wrong type is refused by the serializer
+        $this->updateItem('/products/1/feature-values', ['featureValues' => [['featureId' => 'abc', 'featureValueId' => 3]]], ['product_write'], Response::HTTP_BAD_REQUEST);
+
+        // Nothing changed
         $this->assertSame($expected, $this->getItem('/products/1/feature-values', ['product_read']));
     }
 

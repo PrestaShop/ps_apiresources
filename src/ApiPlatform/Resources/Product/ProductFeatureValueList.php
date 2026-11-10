@@ -23,16 +23,22 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\Product\Dto\ProductFeatureValue;
+use PrestaShop\PrestaShop\Core\Domain\Feature\Exception\FeatureNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Feature\Exception\FeatureValueNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Command\RemoveAllFeatureValuesFromProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Command\SetProductFeatureValuesCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Exception\DuplicateFeatureValueAssociationException;
+use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Exception\InvalidAssociatedFeatureException;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Exception\InvalidProductFeatureValuesFormatException;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Query\GetProductFeatureValues;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDeleteCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdateCollection;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -52,8 +58,10 @@ use Symfony\Component\HttpFoundation\Response;
             requirements: ['productId' => '\d+'],
             openapi: new OpenApiOperation(
                 summary: 'Replace the feature values of a product.',
-                description: 'Requires PrestaShop 9.2.1. Answers the feature values of the product.',
+                description: 'Requires PrestaShop 9.2.1. Answers the feature values of the product. An unknown feature or '
+                    . 'feature value answers 404, a value of another feature or the same value twice 422.',
             ),
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: SetProductFeatureValuesCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
             CQRSQuery: GetProductFeatureValues::class,
@@ -83,6 +91,11 @@ use Symfony\Component\HttpFoundation\Response;
         ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
         InvalidProductFeatureValuesFormatException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The ids of the body: an unknown one answers 404, a value of another feature or a duplicate 422
+        FeatureNotFoundException::class => Response::HTTP_NOT_FOUND,
+        FeatureValueNotFoundException::class => Response::HTTP_NOT_FOUND,
+        InvalidAssociatedFeatureException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        DuplicateFeatureValueAssociationException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ProductFeatureValueList
@@ -98,8 +111,12 @@ class ProductFeatureValueList
 
     /**
      * The feature values to set, only read by the update.
+     *
+     * @var ProductFeatureValue[]
      */
     #[ApiProperty(readable: false)]
+    #[Assert\NotBlank(groups: ['Update'])]
+    #[Assert\Valid]
     public array $featureValues;
 
     public const COMMAND_MAPPING = [
