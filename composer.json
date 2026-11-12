@@ -26,9 +26,6 @@
         },
         "classmap": [
             "ps_apiresources.php"
-        ],
-        "files": [
-            "polyfill/autoload.php"
         ]
     },
     "autoload-dev": {

@@ -18,13 +18,15 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
-namespace PrestaShopBundle\ApiPlatform\Metadata;
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Metadata;
 
 /**
  * An operation of a newer core on an older one: the arguments the parent operation doesn't know go to the extra
  * properties, and the operation requires the version introducing it, so the version filter removes it.
  */
-trait PolyfillOperationTrait
+trait OlderCoreOperationTrait
 {
     public function __construct(mixed ...$arguments)
     {
@@ -39,8 +41,8 @@ trait PolyfillOperationTrait
                 unset($arguments[$name]);
             }
         }
-        if (version_compare($extraProperties['minVersion'] ?? '0', self::POLYFILL_MIN_VERSION, '<')) {
-            $extraProperties['minVersion'] = self::POLYFILL_MIN_VERSION;
+        if (version_compare($extraProperties['minVersion'] ?? '0', self::CORE_MIN_VERSION, '<')) {
+            $extraProperties['minVersion'] = self::CORE_MIN_VERSION;
         }
         $arguments['extraProperties'] = $extraProperties;
 

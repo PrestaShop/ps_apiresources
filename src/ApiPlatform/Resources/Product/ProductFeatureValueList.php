@@ -23,6 +23,8 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\Module\APIResources\ApiPlatform\Metadata\CQRSDeleteCollection;
+use PrestaShop\Module\APIResources\ApiPlatform\Metadata\CQRSUpdateCollection;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Product\Dto\ProductFeatureValue;
 use PrestaShop\PrestaShop\Core\Domain\Feature\Exception\FeatureNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Feature\Exception\FeatureValueNotFoundException;
@@ -34,9 +36,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Exception\DuplicateFe
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Exception\InvalidAssociatedFeatureException;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Exception\InvalidProductFeatureValuesFormatException;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Query\GetProductFeatureValues;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDeleteCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdateCollection;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
