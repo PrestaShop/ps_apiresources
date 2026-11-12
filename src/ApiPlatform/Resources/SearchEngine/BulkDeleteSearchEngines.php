@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SearchEngine;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Command\BulkDeleteSearchEngineCommand;
 use PrestaShop\PrestaShop\Core\Domain\SearchEngine\Exception\SearchEngineNotFoundException;
@@ -47,7 +48,9 @@ class BulkDeleteSearchEngines
     /**
      * @var int[]
      */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
     #[Assert\Count(min: 1)]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $searchEngineIds = [];
 }

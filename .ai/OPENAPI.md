@@ -58,7 +58,11 @@ What the generator does and does not do: the input schema of a write
 operation is built per command (its parameters, through the command
 mapping) and the read schema from the query result, so they may
 legitimately differ; a typed `openapiContext` on an array documents its
-first level only (item types come from the `@var` docblock); the request
+first level only (item types come from the `@var` docblock); a list of
+DTOs (`@var Foo[]`) has its items documented in the resource schema, but
+as strings in the request body built from the command, so the
+description of the operation gives the item shape
+(`ProductFeatureValueList`); the request
 body of a `DELETE` is documented, from the command, only with
 `allowEmptyBody: false` (core 9.2.2; Swagger offers no field on older
 cores, and an optional body stays undocumented): a hand-written

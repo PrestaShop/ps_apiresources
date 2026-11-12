@@ -29,10 +29,10 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
 {
     public static function setUpBeforeClass(): void
     {
-        parent::setUpBeforeClass();
         // The fixture features of product 1: a feature deleted by an earlier test class takes its values and their
-        // product associations with it
+        // product associations with it. Restored before the parent installs fr-FR, which copies the values in it
         self::resetTables();
+        parent::setUpBeforeClass();
         self::createApiClient(['product_read', 'product_write']);
     }
 
@@ -67,9 +67,10 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
 
     public function testListFeatureValues(): void
     {
-        $this->assertSame([
-            ['productId' => 1, 'featureId' => 1, 'featureValueId' => 4, 'custom' => false],
-            ['productId' => 1, 'featureId' => 2, 'featureValueId' => 8, 'custom' => false],
+        // The locales of a value come in no guaranteed order
+        $this->assertEquals([
+            ['productId' => 1, 'featureId' => 1, 'featureValueId' => 4, 'custom' => false, 'values' => ['en-US' => 'Cotton', 'fr-FR' => 'Cotton']],
+            ['productId' => 1, 'featureId' => 2, 'featureValueId' => 8, 'custom' => false, 'values' => ['en-US' => 'Short sleeves', 'fr-FR' => 'Short sleeves']],
         ], $this->getItem('/products/1/feature-values', ['product_read']));
 
         // The query doesn't check the product
@@ -98,10 +99,10 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
             ],
         ], ['product_write']);
         $expected = [
-            ['productId' => 1, 'featureId' => 1, 'featureValueId' => 3, 'custom' => false],
+            ['productId' => 1, 'featureId' => 1, 'featureValueId' => 3, 'custom' => false, 'values' => ['en-US' => 'Ceramic', 'fr-FR' => 'Ceramic']],
         ];
-        $this->assertSame($expected, $featureValues);
-        $this->assertSame($expected, $this->getItem('/products/1/feature-values', ['product_read']));
+        $this->assertEquals($expected, $featureValues);
+        $this->assertEquals($expected, $this->getItem('/products/1/feature-values', ['product_read']));
     }
 
     /**
@@ -132,6 +133,13 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
             ['propertyPath' => 'featureValues[0].featureValueId', 'message' => 'This value should not be null.'],
             ['propertyPath' => 'featureValues[1].featureValueId', 'message' => 'This value should be positive.'],
         ], $response);
+        // A missing list and an explicit null give the same violation
+        foreach ([[], ['featureValues' => null]] as $body) {
+            $response = $this->requestApi('PUT', '/products/1/feature-values', null, ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY, ['body' => json_encode((object) $body), 'headers' => ['Content-Type' => 'application/json']]);
+            $this->assertValidationErrors([
+                ['propertyPath' => 'featureValues', 'message' => 'This value should not be blank.'],
+            ], $response);
+        }
         // A wrong type is refused by the serializer
         $this->updateItem('/products/1/feature-values', ['featureValues' => [['featureId' => 'abc', 'featureValueId' => 3]]], ['product_write'], Response::HTTP_BAD_REQUEST);
 
@@ -152,6 +160,8 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
     {
         $this->markTestSkippedByMinVersion('9.2.2');
 
+        $this->updateItem('/products/0/feature-values', ['featureValues' => [['featureId' => 1, 'featureValueId' => 3]]], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->deleteItem('/products/0/feature-values', ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         // Unlike the GET, the commands check the product
         $this->updateItem('/products/999999/feature-values', ['featureValues' => [['featureId' => 1, 'featureValueId' => 3]]], ['product_write'], Response::HTTP_NOT_FOUND);
         $this->deleteItem('/products/999999/feature-values', ['product_write'], Response::HTTP_NOT_FOUND);

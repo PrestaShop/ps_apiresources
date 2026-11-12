@@ -29,7 +29,8 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreateCollection as CoreCQRSCreate
 /*
  * This operation only exists from PrestaShop 9.2.2, and PHP fails to instantiate a resource using an operation class
  * the core lacks, which breaks the container build. The resources use this class instead: the operation of the core
- * itself when the core has it, a stand-in the version filter always removes otherwise. It is loaded by the PSR-4
+ * itself when the core has it, a stand-in the version filter removes otherwise (it stays when the experimental
+ * endpoints are enabled, like any operation of a newer core). It is loaded by the PSR-4
  * autoloader of the module, like any of its classes: a "files" entry in composer.json would be required by the core
  * on every request, whatever the version of the module in its folder.
  *
@@ -43,6 +44,6 @@ if (class_exists(CoreCQRSCreateCollection::class)) {
     {
         use OlderCoreOperationTrait;
 
-        private const CORE_MIN_VERSION = '9.2.2';
+        public const CORE_MIN_VERSION = '9.2.2';
     }
 }

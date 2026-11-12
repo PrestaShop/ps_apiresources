@@ -75,7 +75,7 @@ restates a rule: when a line below and the section disagree, the section wins an
   [Scopes](./CONTEXT.md#scopes), [Do / Don't](./CONTEXT.md#do--dont).
 - Evidence: the command and its handler (what the URI replaces decides `PUT` vs `PATCH`; a `PATCH` of the
   entity needs a handler applying only the fields and the languages sent, nullable getters prove nothing;
-  the read side decides the `CQRSQuery` of a write; from 9.2.2 a write on the sub-content of a parent answers the updated parent or list, not 204; the `CQRSQuery` of a `CQRSDelete` goes through `extraProperties` while older cores are supported, as a named argument it breaks them: [`VERSIONS.md`](./VERSIONS.md)), the sibling resources of the domain and the reference resources
+  the read side decides the `CQRSQuery` of a write (a bulk operation or a removal on the sub-content of a parent: the updated parent or list from 9.2.2, 204 when the domain keeps the older cores, "Architecture overview"); the `CQRSQuery` of a `CQRSDelete` goes through `extraProperties` while older cores are supported, as a named argument it breaks them: [`VERSIONS.md`](./VERSIONS.md)), the sibling resources of the domain and the reference resources
   (`Country`), `ApiResourceUriTemplateRector::SKIPPED_KEYWORDS` and the Rector dry run; for a duplicate
   (a functional one, as the Don't list defines it), the endpoints already serving the same data to the
   same caller: the item and the lists of the entity, the exclusions of `GenerateApiTrackingTableCommand`.

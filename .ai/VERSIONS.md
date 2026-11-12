@@ -99,7 +99,8 @@ that has the operation it is an alias of it (`class_alias`), so the core
 handles its own class; on an older core it is a stand-in: it moves the
 arguments its parent operation does not know to `extraProperties` and
 requires the version of the class, so the version filter removes the
-operation and the rest of the resource stays (`ProductFeatureValueList`:
+operation (unless the experimental endpoints are enabled, like any
+operation of a newer core) and the rest of the resource stays (`ProductFeatureValueList`:
 its `GET` on every core, its `PUT` and `DELETE` from 9.2.2). A new
 operation class of the core used by the module gets its class in the
 same PR; they go, and the resources import the core ones, when the

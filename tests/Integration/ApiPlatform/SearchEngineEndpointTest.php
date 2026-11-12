@@ -345,6 +345,13 @@ class SearchEngineEndpointTest extends ApiTestCase
             'searchEngineIds' => [],
         ];
         $this->bulkDeleteItems('/search-engines/bulk-delete', $bulkDeleteData, ['search_engine_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // The command casts each id with (int): 0 would answer 500, "3abc" would delete the search engine 3
+        $response = $this->bulkDeleteItems('/search-engines/bulk-delete', ['searchEngineIds' => [0, '3abc']], ['search_engine_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'searchEngineIds[0]', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'searchEngineIds[1]', 'message' => 'This value should be of type integer.'],
+        ], $response);
     }
 
     public function testBulkDeleteSearchEnginesNotFound(): void

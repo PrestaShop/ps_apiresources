@@ -371,8 +371,8 @@ public array $validOrders;
   setter by the core (`MultiParameterSetterAdapter`): from 9.2.1
   (PrestaShop#43252) it lists the parameters without default as
   `required` and makes the object nullable when the setter accepts `null`
-  alone; a missing required parameter answers 422 with a violation on
-  the API field (`reductionAmount.amount`), a 400 before. The property
+  alone. From 9.2.2, a missing required parameter answers 422 with a
+  violation on the API field (`reductionAmount.amount`), a 400 before. The property
   description says what `null` does and which fields are required beyond
   the signature (`currencyId` when `0` throws), for the older cores too.
 

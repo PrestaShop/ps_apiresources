@@ -24,7 +24,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Metadata;
 
 /**
  * An operation of a newer core on an older one: the arguments the parent operation doesn't know go to the extra
- * properties, and the operation requires the version introducing it, so the version filter removes it.
+ * properties, and the operation requires the version introducing it, so the version filter removes it (unless the
+ * experimental endpoints are enabled).
+ *
+ * Remove it with the classes using it, as soon as the module requires the version introducing them.
  */
 trait OlderCoreOperationTrait
 {
@@ -35,6 +38,11 @@ trait OlderCoreOperationTrait
             (new \ReflectionMethod(parent::class, '__construct'))->getParameters()
         );
         $extraProperties = $arguments['extraProperties'] ?? [];
+        // A core knowing the argument refuses a value differing from the extra property
+        if (isset($arguments['minVersion'])) {
+            $extraProperties['minVersion'] = $arguments['minVersion'];
+            unset($arguments['minVersion']);
+        }
         foreach ($arguments as $name => $value) {
             if (is_string($name) && !in_array($name, $knownArguments, true)) {
                 $extraProperties[$name] = $value;
