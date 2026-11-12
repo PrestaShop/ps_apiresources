@@ -62,7 +62,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             requirements: ['productId' => '\d+'],
             openapi: new OpenApiOperation(
                 summary: 'Replace the feature values of a product.',
-                description: 'Requires PrestaShop 9.2.1. Answers the feature values of the product. An unknown feature or '
+                description: 'Requires PrestaShop 9.2.2. Answers the feature values of the product. An unknown feature or '
                     . 'feature value answers 404, a value of another feature or the same value twice 422.',
             ),
             validationContext: ['groups' => ['Default', 'Update']],
@@ -72,7 +72,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['product_write'],
             extraProperties: [
-                'minVersion' => '9.2.1',
+                'minVersion' => '9.2.2',
             ],
         ),
         new CQRSDeleteCollection(
@@ -80,14 +80,14 @@ use Symfony\Component\Validator\Constraints as Assert;
             requirements: ['productId' => '\d+'],
             openapi: new OpenApiOperation(
                 summary: 'Remove all the feature values of a product.',
-                description: 'Requires PrestaShop 9.2.1. Answers the feature values of the product, an empty list.',
+                description: 'Requires PrestaShop 9.2.2. Answers the feature values of the product, an empty list.',
             ),
             CQRSCommand: RemoveAllFeatureValuesFromProductCommand::class,
             CQRSQuery: GetProductFeatureValues::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['product_write'],
             extraProperties: [
-                'minVersion' => '9.2.1',
+                'minVersion' => '9.2.2',
             ],
         ),
     ],

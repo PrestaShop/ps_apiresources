@@ -728,7 +728,7 @@ class DiscountEndpointTest extends ApiTestCase
      */
     public function testMissingAmountParameter(array $discount): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         // A null amount is a type error of the sub object
         $this->partialUpdateItem('/discounts/' . $discount['discountId'], [

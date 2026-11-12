@@ -85,7 +85,7 @@ rejects it: pass the ones younger than 9.0.3 through `extraProperties:
 named argument since 9.0.0 and needs no such care). An unknown argument
 or operation class is not an endpoint failure: the core instantiates
 every resource while building its container (scopes extraction), so the
-back office and the whole API answer 500 on that core. From 9.2.1 the
+back office and the whole API answer 500 on that core. From 9.2.2 the
 core ignores such a resource instead, with a warning in the logs (an
 unknown class outside `PrestaShopBundle\` and `PrestaShop\PrestaShop\`, a typo in a class of the
 module, still fails: PHPStan reports both kinds on its legs).
@@ -93,14 +93,14 @@ module, still fails: PHPStan reports both kinds on its legs).
 The operation classes younger than the oldest supported core are used
 through a class of the module, `src/ApiPlatform/Metadata/`
 (`CQRSCreateCollection`, `CQRSUpdateCollection`,
-`CQRSPartialUpdateCollection`, `CQRSDeleteCollection` of 9.2.1), which
+`CQRSPartialUpdateCollection`, `CQRSDeleteCollection` of 9.2.2), which
 the resources import instead of the one of `PrestaShopBundle`. On a core
 that has the operation it is an alias of it (`class_alias`), so the core
 handles its own class; on an older core it is a stand-in: it moves the
 arguments its parent operation does not know to `extraProperties` and
 requires the version of the class, so the version filter removes the
 operation and the rest of the resource stays (`ProductFeatureValueList`:
-its `GET` on every core, its `PUT` and `DELETE` from 9.2.1). A new
+its `GET` on every core, its `PUT` and `DELETE` from 9.2.2). A new
 operation class of the core used by the module gets its class in the
 same PR; they go, and the resources import the core ones, when the
 oldest supported core ships the class.

@@ -27,13 +27,13 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDeleteCollection as CoreCQRSDeleteCollection;
 
 /*
- * This operation only exists from PrestaShop 9.2.1, and PHP fails to instantiate a resource using an operation class
+ * This operation only exists from PrestaShop 9.2.2, and PHP fails to instantiate a resource using an operation class
  * the core lacks, which breaks the container build. The resources use this class instead: the operation of the core
  * itself when the core has it, a stand-in the version filter always removes otherwise. It is loaded by the PSR-4
  * autoloader of the module, like any of its classes: a "files" entry in composer.json would be required by the core
  * on every request, whatever the version of the module in its folder.
  *
- * Remove it, and use the operation of the core in the resources, as soon as the module requires PrestaShop >= 9.2.1.
+ * Remove it, and use the operation of the core in the resources, as soon as the module requires PrestaShop >= 9.2.2.
  */
 if (class_exists(CoreCQRSDeleteCollection::class)) {
     class_alias(CoreCQRSDeleteCollection::class, CQRSDeleteCollection::class);
@@ -43,6 +43,6 @@ if (class_exists(CoreCQRSDeleteCollection::class)) {
     {
         use OlderCoreOperationTrait;
 
-        private const CORE_MIN_VERSION = '9.2.1';
+        private const CORE_MIN_VERSION = '9.2.2';
     }
 }

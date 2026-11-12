@@ -58,8 +58,8 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
     {
         yield 'list product feature values endpoint' => ['GET', '/products/1/feature-values'];
 
-        // The write operations use the CQRS*Collection operations of core 9.2.1, filtered out on older cores
-        if (self::isVersionAtLeast('9.2.1')) {
+        // The write operations use the CQRS*Collection operations of core 9.2.2, filtered out on older cores
+        if (self::isVersionAtLeast('9.2.2')) {
             yield 'set product feature values endpoint' => ['PUT', '/products/1/feature-values'];
             yield 'remove all product feature values endpoint' => ['DELETE', '/products/1/feature-values'];
         }
@@ -79,8 +79,8 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
 
     public function testWriteOperationsAreFilteredOutOnOlderCores(): void
     {
-        if (self::isVersionAtLeast('9.2.1')) {
-            $this->markTestSkipped('The write operations exist from PrestaShop 9.2.1');
+        if (self::isVersionAtLeast('9.2.2')) {
+            $this->markTestSkipped('The write operations exist from PrestaShop 9.2.2');
         }
 
         // The resource still loads: only its write operations are missing
@@ -90,7 +90,7 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
 
     public function testSetFeatureValues(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $featureValues = $this->updateItem('/products/1/feature-values', [
             'featureValues' => [
@@ -150,7 +150,7 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
 
     public function testWriteFeatureValuesOfUnknownProduct(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         // Unlike the GET, the commands check the product
         $this->updateItem('/products/999999/feature-values', ['featureValues' => [['featureId' => 1, 'featureValueId' => 3]]], ['product_write'], Response::HTTP_NOT_FOUND);
