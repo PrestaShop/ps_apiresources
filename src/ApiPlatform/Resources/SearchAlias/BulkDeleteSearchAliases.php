@@ -43,39 +43,15 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: BulkDeleteSearchTermsAliasesCommand::class,
             scopes: ['search_alias_write'],
             allowEmptyBody: false,
-            openapiContext: [
-                'requestBody' => [
-                    'required' => true,
-                    'content' => [
-                        'application/json' => [
-                            'schema' => [
-                                'type' => 'object',
-                                'required' => ['searchTerms'],
-                                'properties' => [
-                                    'searchTerms' => [
-                                        'type' => 'array',
-                                        'items' => ['type' => 'string'],
-                                    ],
-                                ],
-                            ],
-                            'example' => [
-                                'searchTerms' => ['blouse', 't-shirt'],
-                            ],
-                        ],
-                    ],
-                ],
-            ],
         ),
     ]
 )]
 class BulkDeleteSearchAliases
 {
-    #[ApiProperty(
-        openapiContext: [
-            'type' => 'array',
-            'items' => ['type' => 'string'],
-        ]
-    )]
+    /**
+     * @var string[]
+     */
+    #[ApiProperty(openapiContext: ['example' => ['blouse', 't-shirt']])]
     #[Assert\NotBlank]
     #[Assert\Count(min: 1)]
     public array $searchTerms = [];

@@ -80,9 +80,11 @@ class ProductCarrier
     /**
      * Carrier reference ids to associate with the product. Write-only: the responses expose the
      * resulting associations through the carriers property.
+     *
+     * @var int[]|null
      */
     #[Assert\NotNull]
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 2]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 2]])]
     public ?array $carrierReferenceIds = null;
 
     /**
