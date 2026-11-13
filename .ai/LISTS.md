@@ -18,7 +18,7 @@ Read when an operation is a `PaginatedList`, a `CQRSPaginate` or a
 - `CQRSGetCollection` only when the handler returns a plain array, without
   pagination; a result wrapped in an object becomes a `CQRSGet` with an
   array property. A result indexed by id answers a JSON list with
-  `extraProperties: ['collectionAsList' => true]` (core 9.2.1).
+  `extraProperties: ['collectionAsList' => true]` (core 9.2.2).
 - `offset` / `limit` are exposed when the query supports them, never
   capped silently at a core default.
 
@@ -87,11 +87,11 @@ The paginated envelope is `{totalItems, orderBy, sortOrder, limit,
 offset, filters, items}` (`offset` an integer, `items` a JSON list;
 `orderBy` echoes the requested field, otherwise the default of the
 `filtersClass` named back by `filtersMapping`, and is absent only when
-there is neither; `filters` is `[]` when empty, and before 9.2.1 `offset` is absent on the first page, a
-null the serializer drops where 9.2.1 returns `0`; core behaviours the
+there is neither; `filters` is `[]` when empty, and before 9.2.2 `offset` is absent on the first page, a
+null the serializer drops where 9.2.2 returns `0`; core behaviours the
 tests account for). The
 core documents the `limit` / `offset` / `orderBy` / `sortOrder` /
-`filters[...]` parameters and the envelope from 9.2.1, for both
+`filters[...]` parameters and the envelope from 9.2.2, for both
 `PaginatedList` and `CQRSPaginate` (the detection is on the
 `QueryListProvider`). A `CQRSGetCollection` answers a JSON array. The
 core UI tests (`tests/UI/campaigns/functional/API/` in the PrestaShop

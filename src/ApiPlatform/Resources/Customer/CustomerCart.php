@@ -50,7 +50,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
  * consecutive calls can answer the same cartId. Its response only holds the identifiers until the cart
  * endpoints exist to return the created cart, hence the experimental flag.
  *
- * The list needs PrestaShop 9.2.1 (PrestaShop/PrestaShop#43116): older cores answer 500 on a cart holding products,
+ * The list needs PrestaShop 9.2.2 (PrestaShop/PrestaShop#43116): older cores answer 500 on a cart holding products,
  * as the total was computed without a context cart. The creation works on older cores, except for an unknown
  * customer which gets an orphan cart and 201 instead of 404.
  */
@@ -62,7 +62,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
             CQRSQuery: GetCustomerCarts::class,
             scopes: ['customer_read'],
             extraProperties: [
-                'minVersion' => '9.2.1',
+                'minVersion' => '9.2.2',
             ],
             openapi: new OpenApiOperation(
                 summary: 'List the pending carts of a customer.',
@@ -83,7 +83,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
                 summary: 'Create an empty cart for a customer.',
                 description: 'Creates an empty cart for the customer and returns its identifier. No body is expected. '
                     . 'When the customer already has an empty cart, that cart is returned instead of a new one. '
-                    . 'An unknown customer answers 404 from PrestaShop 9.2.1, older versions create a cart that '
+                    . 'An unknown customer answers 404 from PrestaShop 9.2.2, older versions create a cart that '
                     . 'belongs to no customer and answer 201. Experimental: the response should be the created cart, '
                     . 'which needs the cart endpoints that are not available yet.',
             ),

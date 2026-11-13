@@ -17,7 +17,7 @@ gives the parameters of a collection. What the resource must add:
   needs it on **both** operations sharing the method, otherwise the doc
   shows two "Creates a … resource" entries.
 - A description for every non-obvious behaviour: version differences
-  (`minVersion`, a response shape that differs before 9.2.1), values
+  (`minVersion`, a response shape that differs before 9.2.2), values
   formatted for display, fields that are always empty, side effects (an
   existing empty cart is reused), what a "set" operation replaces, a
   `PATCH` replacing every language of a localized field (all of them must
@@ -75,7 +75,7 @@ property stays in the schema the GET shares, flagged `writeOnly: true`
 (sent in requests, never returned), which is correct.
 
 Class and property comments are PHPDoc for developers: the core does not
-publish them (9.2.1 removed the factory that published class comments,
+publish them (9.2.2 removed the factory that published class comments,
 older cores never loaded it; property summaries need
 `phpdocumentor/reflection-docblock`, which the core does not ship — only
 the `@var` types are read). Public text goes in `description` only:

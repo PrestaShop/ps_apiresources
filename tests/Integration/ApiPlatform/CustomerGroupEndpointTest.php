@@ -247,8 +247,8 @@ class CustomerGroupEndpointTest extends ApiTestCase
             $this->partialUpdateItem('/customers/groups/' . $customerGroupId, ['reductionPercent' => 5.5], ['customer_group_write'])
         );
 
-        // The reduction is checked by the core command since PrestaShop 9.2.1
-        if (self::isVersionAtLeast('9.2.1')) {
+        // The reduction is checked by the core command since PrestaShop 9.2.2
+        if (self::isVersionAtLeast('9.2.2')) {
             $this->partialUpdateItem('/customers/groups/' . $customerGroupId, ['reductionPercent' => 150], ['customer_group_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 

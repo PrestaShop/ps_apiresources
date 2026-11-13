@@ -71,7 +71,7 @@ A version-constrained endpoint needs matching test handling (see
 - An endpoint already shipped in a tagged release that gets gated behind
   a newer version disappears from the older cores. Weigh the loss, keep
   the operations that work everywhere (e.g. `POST /customers/{customerId}/carts`
-  kept for every core while `GET` needs 9.2.1), and list it as a BC break.
+  kept for every core while `GET` needs 9.2.2), and list it as a BC break.
 - A prerequisite that lands in `develop` gates the endpoint on the next
   minor (`CONTEXT.md` → "Working with the core"): when a solution works
   on every supported core, prefer it (a configuration-level fix, a

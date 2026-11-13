@@ -56,7 +56,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             validationContext: ['groups' => ['Default', 'Create']],
             openapi: new OpenApiOperation(
                 summary: 'Create a customer.',
-                description: 'Creates a customer and returns it. newsletterSubscribed is applied from PrestaShop 9.2.1, '
+                description: 'Creates a customer and returns it. newsletterSubscribed is applied from PrestaShop 9.2.2, '
                     . 'older versions ignore it on creation: set it with a partial update instead.',
             ),
         ),

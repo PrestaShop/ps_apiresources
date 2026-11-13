@@ -42,7 +42,7 @@ use Symfony\Component\HttpFoundation\Response;
             CQRSQueryMapping: self::QUERY_MAPPING,
             ApiResourceMapping: self::API_RESOURCE_MAPPING,
             extraProperties: [
-                // The query result is indexed by customer id, the response is a list from PrestaShop 9.2.1
+                // The query result is indexed by customer id, the response is a list from PrestaShop 9.2.2
                 'collectionAsList' => true,
             ],
             parameters: new Parameters([
@@ -54,7 +54,7 @@ use Symfony\Component\HttpFoundation\Response;
             ]),
             openapiContext: [
                 'summary' => 'Search customers.',
-                'description' => 'Returns the list of customers matching the phrases (before PrestaShop 9.2.1 the list is an object indexed by customer id).',
+                'description' => 'Returns the list of customers matching the phrases (before PrestaShop 9.2.2 the list is an object indexed by customer id).',
                 'parameters' => [
                     [
                         'name' => 'phrases',

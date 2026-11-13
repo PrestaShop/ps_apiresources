@@ -53,8 +53,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             extraProperties: [
-                // The query result booleans of the sub objects are cast from 9.2.1
-                'minVersion' => '9.2.1',
+                // The query result booleans of the sub objects are cast from 9.2.2
+                'minVersion' => '9.2.2',
             ],
             openapi: new OpenApiOperation(
                 summary: 'Get the details of a customer.',
@@ -73,7 +73,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             extraProperties: [
                 // Returns the customer details
-                'minVersion' => '9.2.1',
+                'minVersion' => '9.2.2',
             ],
             validationContext: ['groups' => ['Default', 'Update']],
             openapi: new OpenApiOperation(
