@@ -402,8 +402,8 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
                 $this->getExpectedTaxRule($fixtures, 'DE'),
             ],
         ];
-        if (self::isVersionUnder('9.2.1')) {
-            // The first page has a null offset the serializer drops, PrestaShop 9.2.1 returns 0
+        if (self::isVersionUnder('9.2.2')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.2 returns 0
             unset($expected['offset']);
         }
         $this->assertEquals($expected, $response);
@@ -442,8 +442,8 @@ class TaxRulesGroupEndpointTest extends ApiTestCase
             'filters' => [],
             'items' => [],
         ];
-        if (self::isVersionUnder('9.2.1')) {
-            // The first page has a null offset the serializer drops, PrestaShop 9.2.1 returns 0
+        if (self::isVersionUnder('9.2.2')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.2 returns 0
             unset($expected['offset']);
         }
         foreach ([999999, 0] as $taxRulesGroupId) {

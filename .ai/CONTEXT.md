@@ -283,8 +283,8 @@ declared `= null`, otherwise the uninitialized property is skipped
 whatever the context says.
 
 Lists of scalars are typed with a docblock, `@var int[]` / `@var string[]`:
-the core reads the item type from it, for the resource schema from 9.2.1
-and for the request body built from the command from 9.2.1 with
+the core reads the item type from it, for the resource schema from 9.2.2
+and for the request body built from the command from 9.2.2 with
 PrestaShop#43264 (older cores document a plain array, or string items in
 a request body). `#[ApiProperty(openapiContext: [...])]` carries the
 `description` and the `example` only ([`OPENAPI.md`](./OPENAPI.md)),
@@ -339,9 +339,9 @@ public array $validOrders;
 - Mapping and casting apply inside DTOs: `CQRSQueryMapping` renames
   nested fields (`[ordersInformation][validOrders][@index][id_order]` →
   `[...][orderId]`), the core casts the booleans of nested objects and
-  of `@var Foo[]` lists from 9.2.1 — a DTO holding a list or a boolean
-  filled from a query result needs `minVersion: 9.2.1` (the `@var Foo[]`
-  item type is also read from 9.2.1 only).
+  of `@var Foo[]` lists from 9.2.2 — a DTO holding a list or a boolean
+  filled from a query result needs `minVersion: 9.2.2` (the `@var Foo[]`
+  item type is also read from 9.2.2 only).
 - A localized value inside a sub object is a `#[LocalizedValue]`
   property of its DTO, indexed by locale like on the resource. The core
   only converts the properties of the resource itself (a DTO property
@@ -358,7 +358,7 @@ public array $validOrders;
   like any sub object (`DiscountMinimumAmount`) and nullable when the
   setter accepts `null` (`minimumAmount: null` unsets the amount,
   `{"amount": null}` is invalid). The request body is built from the
-  setter by the core (`MultiParameterSetterAdapter`): from 9.2.1
+  setter by the core (`MultiParameterSetterAdapter`): from 9.2.2
   (PrestaShop#43252) it lists the parameters without default as
   `required` and makes the object nullable when the setter accepts `null`
   alone. The property description says what `null` does and which fields
@@ -680,7 +680,7 @@ for the patterns above:
 - **Shared read / write format, with a normalizer as last resort** —
   `src/ApiPlatform/Resources/Carrier/CarrierRanges.php` and
   `src/ApiPlatform/Normalizer/CarrierRangesCollectionNormalizer.php`.
-- **Typed DTO sub objects, `@var Foo[]` lists, `minVersion` 9.2.1,
+- **Typed DTO sub objects, `@var Foo[]` lists, `minVersion` 9.2.2,
   explicit summaries and descriptions, write-only input** —
   `src/ApiPlatform/Resources/Customer/CustomerDetails.php` and
   `src/ApiPlatform/Resources/Customer/Dto/`.
@@ -690,7 +690,7 @@ for the patterns above:
   `src/ApiPlatform/Resources/Discount/Dto/`, the only resource using the
   pattern; an experimental domain still evolving, copy the two properties
   and their DTOs, not the resource (`productConditions` keeps the legacy
-  hand-written schema: a DTO list filled from a query needs 9.2.1).
+  hand-written schema: a DTO list filled from a query needs 9.2.2).
 - **Exception mapping** — see [`ERRORS.md`](./ERRORS.md) (`OrderReturn`).
 - **Shop association** — see [`MULTISHOP.md`](./MULTISHOP.md)
   (`CustomerGroup`, `Product`, `CombinationList`).

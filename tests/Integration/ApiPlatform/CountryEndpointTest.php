@@ -144,8 +144,8 @@ class CountryEndpointTest extends ApiTestCase
                 ],
             ],
         ];
-        if (self::isVersionUnder('9.2.1')) {
-            // The first page has a null offset the serializer drops, PrestaShop 9.2.1 returns 0
+        if (self::isVersionUnder('9.2.2')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.2 returns 0
             unset($expected['offset']);
         }
         $this->assertEquals($expected, $filtered);
@@ -270,8 +270,8 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testCountryWithThreeLetterIsoCode(): void
     {
-        // The creation keeps the 3 letters from PrestaShop 9.2.1, older versions keep the first 2
-        $expectedIsoCode = self::isVersionAtLeast('9.2.1') ? 'XAB' : 'XA';
+        // The creation keeps the 3 letters from PrestaShop 9.2.2, older versions keep the first 2
+        $expectedIsoCode = self::isVersionAtLeast('9.2.2') ? 'XAB' : 'XA';
         $country = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XAB', 'callPrefix' => 997]), ['country_write']);
         $countryId = $country['countryId'];
         $this->assertSame($expectedIsoCode, $country['isoCode']);
@@ -320,7 +320,7 @@ class CountryEndpointTest extends ApiTestCase
 
     public function testAddCountryWithUnknownZone(): void
     {
-        if (self::isVersionUnder('9.2.1')) {
+        if (self::isVersionUnder('9.2.2')) {
             // Older cores store the unknown zone id
             $country = $this->createItem('/countries', $this->getCreatePayload(['zoneId' => 999999]), ['country_write']);
             $this->assertEquals(999999, $country['zoneId']);
@@ -329,7 +329,7 @@ class CountryEndpointTest extends ApiTestCase
             return;
         }
 
-        // The core checks that the zone exists from PrestaShop 9.2.1
+        // The core checks that the zone exists from PrestaShop 9.2.2
         $this->createItem('/countries', $this->getCreatePayload(['zoneId' => 999999]), ['country_write'], Response::HTTP_NOT_FOUND);
 
         $countryId = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XW', 'callPrefix' => 995]), ['country_write'])['countryId'];
@@ -360,9 +360,9 @@ class CountryEndpointTest extends ApiTestCase
     {
         $defaultCountryId = (int) \Configuration::get('PS_COUNTRY_DEFAULT');
 
-        // The core refuses the default country from PrestaShop 9.2.1; before, the legacy model throws an exception
+        // The core refuses the default country from PrestaShop 9.2.2; before, the legacy model throws an exception
         // the core does not map: the request answers 500 and the country is not deleted either
-        $expectedStatus = self::isVersionAtLeast('9.2.1') ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_INTERNAL_SERVER_ERROR;
+        $expectedStatus = self::isVersionAtLeast('9.2.2') ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_INTERNAL_SERVER_ERROR;
         $this->deleteItem('/countries/' . $defaultCountryId, ['country_write'], $expectedStatus);
         $this->assertEquals($defaultCountryId, $this->getItem('/countries/' . $defaultCountryId, ['country_read'])['countryId']);
     }
@@ -575,11 +575,11 @@ class CountryEndpointTest extends ApiTestCase
         );
         $this->getItem('/countries/' . $second, ['country_read'], Response::HTTP_NOT_FOUND);
 
-        // The default country of the shop is refused from PrestaShop 9.2.1 and the others are deleted; before, the
+        // The default country of the shop is refused from PrestaShop 9.2.2 and the others are deleted; before, the
         // exception of the legacy model is not collected and aborts the whole request with a 500
         $third = $this->createItem('/countries', $this->getCreatePayload(['isoCode' => 'XM', 'callPrefix' => 985]), ['country_write'])['countryId'];
         $defaultCountryId = (int) \Configuration::get('PS_COUNTRY_DEFAULT');
-        if (self::isVersionUnder('9.2.1')) {
+        if (self::isVersionUnder('9.2.2')) {
             $this->bulkDeleteItems('/countries/bulk-delete', ['countryIds' => [$defaultCountryId, $third]], ['country_write'], Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->assertEquals($defaultCountryId, $this->getItem('/countries/' . $defaultCountryId, ['country_read'])['countryId']);
             $this->deleteItem('/countries/' . $third, ['country_write']);

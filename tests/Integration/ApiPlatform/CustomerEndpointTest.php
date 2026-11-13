@@ -89,8 +89,8 @@ class CustomerEndpointTest extends ApiTestCase
             '/customers/search?phrases[]=test',
         ];
 
-        // The customer details operations require PrestaShop 9.2.1
-        if (self::isVersionAtLeast('9.2.1')) {
+        // The customer details operations require PrestaShop 9.2.2
+        if (self::isVersionAtLeast('9.2.2')) {
             yield 'get customer details endpoint' => [
                 'GET',
                 '/customers/1/details',
@@ -163,7 +163,7 @@ class CustomerEndpointTest extends ApiTestCase
         ], ['customer_write']);
 
         // Older cores have no newsletter in AddCustomerCommand and ignore the field, fixed by PrestaShop/PrestaShop#43116
-        $this->assertSame(self::isVersionAtLeast('9.2.1'), $customer['newsletterSubscribed']);
+        $this->assertSame(self::isVersionAtLeast('9.2.2'), $customer['newsletterSubscribed']);
     }
 
     public function testAddCustomerWithB2bFields(): int
@@ -552,7 +552,7 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testSetCustomerPrivateNote(int $customerId): int
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $privateNote = 'A private note about this customer';
 
@@ -575,7 +575,7 @@ class CustomerEndpointTest extends ApiTestCase
 
     public function testSetCustomerPrivateNoteNotFound(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $this->partialUpdateItem('/customers/99999/set-private-note', ['privateNote' => 'A note'], ['customer_write'], Response::HTTP_NOT_FOUND);
     }
@@ -585,7 +585,7 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testInvalidCustomerPrivateNote(int $customerId): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $expectedErrors = [
             [
@@ -708,7 +708,7 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testGetMinimalCustomerDetails(int $customerId): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $customer = $this->getItem('/customers/' . $customerId . '/details', ['customer_read']);
 
@@ -766,7 +766,7 @@ class CustomerEndpointTest extends ApiTestCase
      */
     public function testCustomerDetailsTotalSpentInDefaultCurrency(int $customerId): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         // @todo: create the currency with the API once a currency endpoint exists
         $currency = new \Currency();
@@ -790,7 +790,7 @@ class CustomerEndpointTest extends ApiTestCase
 
     public function testGetCustomerDetailsOrders(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         // The fixture customer has orders, none of them is valid
         $customer = $this->getItem('/customers/1/details', ['customer_read']);
@@ -815,7 +815,7 @@ class CustomerEndpointTest extends ApiTestCase
 
     public function testGetCustomerDetailsNotFound(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         // Try to get a non-existent customer details
         $this->requestApi('GET', '/customers/99999/details', null, ['customer_read'], Response::HTTP_NOT_FOUND);
@@ -1159,7 +1159,7 @@ class CustomerEndpointTest extends ApiTestCase
         $this->assertIsArray($searchResults);
         $this->assertNotEmpty($searchResults);
         // Older cores keep the query result indexed by customer id
-        if (self::isVersionAtLeast('9.2.1')) {
+        if (self::isVersionAtLeast('9.2.2')) {
             $this->assertTrue(array_is_list($searchResults));
         }
 

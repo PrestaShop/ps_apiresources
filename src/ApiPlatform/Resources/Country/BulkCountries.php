@@ -58,7 +58,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             openapi: new OpenApiOperation(
                 summary: 'Delete several countries.',
                 description: 'Deletes the listed countries. A country that cannot be deleted (unknown, or the default '
-                    . 'country of the shop from PrestaShop 9.2.1) does not stop the others: the response is a 207 '
+                    . 'country of the shop from PrestaShop 9.2.2) does not stop the others: the response is a 207 '
                     . 'with one error per failed country, each with its own status (404 unknown, 422 refused).',
             ),
         ),

@@ -237,7 +237,7 @@ older ones, even subtly, the test asserts the contract of each version
 instead of skipping (`CountryEndpointTest`: the duplicate ISO code
 created before 9.2.0, the unknown zone stored, the default country
 answering 500, a 3-letter ISO code cut to 2 letters on creation and the
-list envelope without `offset` on the first page before 9.2.1). An
+list envelope without `offset` on the first page before 9.2.2). An
 operation gated with `minVersion` is skipped on the older cores, its 404
 there is not tested (`VersionedEndpointsTest` covers the filtering). In
 a class that mixes gated and ungated operations, the gated entries of

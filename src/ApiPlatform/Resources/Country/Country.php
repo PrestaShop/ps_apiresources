@@ -65,7 +65,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             openapi: new OpenApiOperation(
                 summary: 'Create a country.',
-                description: 'Before PrestaShop 9.2.1 the creation keeps only the first 2 letters of a 3-letter ISO '
+                description: 'Before PrestaShop 9.2.2 the creation keeps only the first 2 letters of a 3-letter ISO '
                     . 'code: send the full code afterwards with PATCH /countries/{countryId}, which accepts 3 letters '
                     . 'on every version.',
             ),
@@ -121,14 +121,14 @@ use Symfony\Component\Validator\Constraints as Assert;
     exceptionToStatus: [
         CountryNotFoundException::class => Response::HTTP_NOT_FOUND,
         // The first matching class wins: ZoneNotFoundException extends ZoneException; the core checks
-        // that the zone exists from PrestaShop 9.2.1, older versions store an unknown zone id
+        // that the zone exists from PrestaShop 9.2.2, older versions store an unknown zone id
         ZoneNotFoundException::class => Response::HTTP_NOT_FOUND,
         ZoneException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         // Invalid ISO code, call prefix, zip code format or address format
         CountryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         // The ISO code is unique from PrestaShop 9.2.0 (older versions create the duplicate silently)
         DuplicateCountryIsoCodeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        // The default country of the shop cannot be deleted (PrestaShop 9.2.1, a 500 before)
+        // The default country of the shop cannot be deleted (PrestaShop 9.2.2, a 500 before)
         CannotDeleteCountryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
@@ -155,7 +155,7 @@ class Country
     #[Assert\NotBlank(groups: ['Create'])]
     #[Assert\NotBlank(allowNull: true, groups: ['Update'])]
     #[TypedRegex(['type' => TypedRegex::TYPE_LANGUAGE_ISO_CODE])]
-    // 2 or 3 letters like the back office form; before 9.2.1, AddCountryCommand keeps the first 2 only
+    // 2 or 3 letters like the back office form; before 9.2.2, AddCountryCommand keeps the first 2 only
     #[Assert\Length(max: 3)]
     public string $isoCode;
 
@@ -176,7 +176,7 @@ class Country
     public int $defaultCurrencyId;
 
     #[ApiProperty(openapiContext: [
-        'description' => 'Zone of the country. An unknown zone answers 404 from PrestaShop 9.2.1, older versions store '
+        'description' => 'Zone of the country. An unknown zone answers 404 from PrestaShop 9.2.2, older versions store '
             . 'it and the country disappears from the list.',
     ])]
     #[Assert\NotNull(groups: ['Create'])]

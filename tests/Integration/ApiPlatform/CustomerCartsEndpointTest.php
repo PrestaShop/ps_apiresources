@@ -27,7 +27,7 @@ use Tests\Resources\DatabaseDump;
 
 /**
  * The carts of a customer: GET /customers/{customerId}/carts lists the carts that never became an order (PrestaShop
- * 9.2.1 and later), POST /customers/{customerId}/carts creates one (CreateEmptyCustomerCartCommand).
+ * 9.2.2 and later), POST /customers/{customerId}/carts creates one (CreateEmptyCustomerCartCommand).
  */
 class CustomerCartsEndpointTest extends ApiTestCase
 {
@@ -57,7 +57,7 @@ class CustomerCartsEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'create customer cart endpoint' => ['POST', '/customers/1/carts'];
-        if (self::isVersionAtLeast('9.2.1')) {
+        if (self::isVersionAtLeast('9.2.2')) {
             yield 'get customer carts endpoint' => ['GET', '/customers/1/carts'];
         }
     }
@@ -92,7 +92,7 @@ class CustomerCartsEndpointTest extends ApiTestCase
     public function testCreateCustomerCartUnknownCustomerNotFound(): void
     {
         // Older cores create a cart with no customer and answer 201, fixed by PrestaShop/PrestaShop#43116
-        $expectedHttpCode = self::isVersionAtLeast('9.2.1') ? Response::HTTP_NOT_FOUND : Response::HTTP_CREATED;
+        $expectedHttpCode = self::isVersionAtLeast('9.2.2') ? Response::HTTP_NOT_FOUND : Response::HTTP_CREATED;
 
         $this->createItem('/customers/999999/carts', null, ['customer_write'], $expectedHttpCode);
     }
@@ -100,7 +100,7 @@ class CustomerCartsEndpointTest extends ApiTestCase
     public function testCustomerCartsListTheCartsNeverOrdered(): void
     {
         // Older cores answer 500 on a cart holding products, the listing requires PrestaShop/PrestaShop#43116
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $customer = $this->createItem('/customers', [
             'firstName' => 'Jane',
@@ -130,7 +130,7 @@ class CustomerCartsEndpointTest extends ApiTestCase
     public function testCustomerCartsWithProducts(): void
     {
         // Older cores answer 500 on a cart holding products, the listing requires PrestaShop/PrestaShop#43116
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $customer = $this->createItem('/customers', [
             'firstName' => 'John',
@@ -159,7 +159,7 @@ class CustomerCartsEndpointTest extends ApiTestCase
     public function testCustomerCartsInvalidCustomerId(): void
     {
         // Older cores answer 500 on a cart holding products, the listing requires PrestaShop/PrestaShop#43116
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         // 0 matches the \d+ requirement but is rejected by the CustomerId value object
         $this->getItem('/customers/0/carts', ['customer_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -168,7 +168,7 @@ class CustomerCartsEndpointTest extends ApiTestCase
     public function testCustomerCartsUnknownCustomerNotFound(): void
     {
         // Older cores answer 500 on a cart holding products, the listing requires PrestaShop/PrestaShop#43116
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $this->getItem('/customers/999999/carts', ['customer_read'], Response::HTTP_NOT_FOUND);
     }
