@@ -66,11 +66,13 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/products/{productId}/feature-values',
             requirements: ['productId' => '\d+'],
             openapi: new OpenApiOperation(
-                summary: 'Replace the feature values of a product.',
-                description: 'Requires PrestaShop 9.2.2. Replaces the whole list and answers the feature values of the product. '
-                    . 'featureValues is a list of {featureId, featureValueId} objects (the generated request body shows '
-                    . 'strings). The values left out are removed whatever the shop, a custom value left out is deleted. An '
-                    . 'unknown feature or feature value answers 404, a value of another feature or the same value twice 422.',
+                summary: 'Set the feature values of a product.',
+                description: 'Requires PrestaShop 9.2.2. Sets the feature values of the product for every shop and answers '
+                    . 'the ones the GET lists. featureValues is a list of {featureId, featureValueId} objects (the generated '
+                    . 'request body shows strings). Every value left out is removed, the ones of a feature not associated '
+                    . 'with the shop of the context included, which the GET does not list: a body built from the GET of '
+                    . 'one shop removes them. A custom value left out is deleted. An unknown feature or feature value '
+                    . 'answers 404, a value of another feature or the same value twice 422.',
             ),
             validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: SetProductFeatureValuesCommand::class,

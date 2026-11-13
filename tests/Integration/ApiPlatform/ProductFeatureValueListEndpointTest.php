@@ -67,6 +67,8 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
 
     public function testListFeatureValues(): void
     {
+        // The demo associations of product 1, not a fixture of the test: they can only be created through the PUT,
+        // which the cores before 9.2.2 don't have, while the GET is tested on every core
         // The locales of a value come in no guaranteed order
         $this->assertEquals([
             ['productId' => 1, 'featureId' => 1, 'featureValueId' => 4, 'custom' => false, 'values' => ['en-US' => 'Cotton', 'fr-FR' => 'Cotton']],
@@ -89,6 +91,9 @@ class ProductFeatureValueListEndpointTest extends ApiTestCase
         $this->deleteItem('/products/1/feature-values', ['product_write'], Response::HTTP_METHOD_NOT_ALLOWED);
     }
 
+    /**
+     * @depends testListFeatureValues
+     */
     public function testSetFeatureValues(): void
     {
         $this->markTestSkippedByMinVersion('9.2.2');
