@@ -57,7 +57,9 @@ jobs:
             echo "docker install failed"
             exit
           fi
-          bash -l -c 'while [[ "$(curl -L -s -o /dev/null -w %{http_code} 'http://localhost:8001/install-dev/')" != "200" ]]; do echo "waiting for shop install"; sleep 5; done'
+          # Apache only starts once the shop is installed: the web installer then answers 200, or 409 on the cores
+          # that refuse to run it on an installed shop (PrestaShop 9.2.1)
+          bash -l -c 'until [[ "$(curl -L -s -o /dev/null -w %{http_code} 'http://localhost:8001/install-dev/')" =~ ^(200|409)$ ]]; do echo "waiting for shop install"; sleep 5; done'
           USER_ID=$(id -u) GROUP_ID=$(id -g) docker exec prestashop-prestashop-git-1 \
             php bin/console prestashop:module uninstall ps_apiresources
 

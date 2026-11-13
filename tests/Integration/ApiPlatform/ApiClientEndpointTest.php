@@ -31,8 +31,10 @@ class ApiClientEndpointTest extends ApiTestCase
     public static function setUpBeforeClass(): void
     {
         parent::setUpBeforeClass();
-        // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients
-        self::createApiClient(['api_client_write', 'api_client_read']);
+        // Pre-create the API Client with the needed scopes, this way we reduce the number of created API Clients.
+        // It also holds hook_read, the scope the tests give to the clients they create: from PrestaShop 9.2.1 a
+        // client can only grant the scopes it holds
+        self::createApiClient(['api_client_write', 'api_client_read', 'hook_read']);
     }
 
     public static function getProtectedEndpoints(): iterable
