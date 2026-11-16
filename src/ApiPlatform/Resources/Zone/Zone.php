@@ -96,7 +96,10 @@ class Zone
     #[Assert\NotNull(groups: ['Create'])]
     public bool $enabled;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank(allowNull: true)]
     public array $shopIds;
 

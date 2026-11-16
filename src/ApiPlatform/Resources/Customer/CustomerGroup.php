@@ -121,9 +121,10 @@ class CustomerGroup
     #[Assert\NotNull(groups: ['Create'])]
     public bool $showPrice;
 
+    /**
+     * @var int[]
+     */
     #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => ['type' => 'integer'],
         'description' => 'Shops associated with the group. On creation, optional from PrestaShop 9.2.0 where it defaults '
             . 'to the shops of the context, required on older versions.',
     ])]

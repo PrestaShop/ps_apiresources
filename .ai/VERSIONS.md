@@ -78,11 +78,41 @@ A version-constrained endpoint needs matching test handling (see
   literal `Choice` list rather than an enum only the newer core has).
 
 The named operation arguments (`minVersion`, `maxVersion`,
-`defaultValues`…) are copied by the core into `extraProperties`, but a
-core that does not know an argument rejects it: pass the ones younger
-than 9.0.3 through `extraProperties: [...]` so the resource still loads
-there (`experimentalOperation` is a named argument since 9.0.0 and
-needs no such care).
+`defaultValues`, `CQRSQuery` on a `CQRSDelete`…) are copied by the core
+into `extraProperties`, but a core that does not know an argument
+rejects it: pass the ones younger than 9.0.3 through `extraProperties:
+[...]` so the resource still loads there (`experimentalOperation` is a
+named argument since 9.0.0 and needs no such care). An unknown argument
+or operation class is not an endpoint failure: the core instantiates
+every resource while building its container (scopes extraction), so the
+back office and the whole API answer 500 on that core. From 9.2.2 the
+core ignores such a resource instead, with a warning in the logs (an
+unknown class outside `PrestaShopBundle\` and `PrestaShop\PrestaShop\`, a typo in a class of the
+module, still fails: PHPStan reports both kinds on its legs).
+
+The operation classes younger than the oldest supported core are used
+through a class of the module, `src/ApiPlatform/Metadata/`
+(`CQRSCreateCollection`, `CQRSUpdateCollection`,
+`CQRSPartialUpdateCollection`, `CQRSDeleteCollection` of 9.2.2), which
+the resources import instead of the one of `PrestaShopBundle`. On a core
+that has the operation it is an alias of it (`class_alias`), so the core
+handles its own class; on an older core it is a stand-in: it moves the
+arguments its parent operation does not know to `extraProperties` and
+requires the version of the class, so the version filter removes the
+operation (unless the experimental endpoints are enabled, like any
+operation of a newer core) and the rest of the resource stays (`ProductFeatureValueList`:
+its `GET` on every core, its `PUT` and `DELETE` from 9.2.2). A new
+operation class of the core used by the module gets its class in the
+same PR; they go, and the resources import the core ones, when the
+oldest supported core ships the class.
+
+These classes are loaded by the PSR-4 autoloader of the module like any
+other, never through a `files` entry of `composer.json`: the core
+installs the module with composer, so its own autoloader would require
+that file on every request, back office and front office included, and
+any version of the module without it in the folder (an older release, a
+rollback) is a fatal error. Nothing of the module is loaded
+unconditionally by the core.
 
 ## Features per core version
 

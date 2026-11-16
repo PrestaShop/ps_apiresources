@@ -154,7 +154,9 @@ class Manufacturer
     #[LocalizedValue]
     public array $metaKeywords;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer']])]
+    /**
+     * @var int[]
+     */
     #[Assert\NotBlank(allowNull: true)]
     public array $shopIds;
 

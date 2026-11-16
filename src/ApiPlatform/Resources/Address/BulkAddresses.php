@@ -37,6 +37,29 @@ use Symfony\Component\Validator\Constraints as Assert;
                 'address_write',
             ],
             allowEmptyBody: false,
+            // The generated body is empty: the getter of the command is getAdressIds(), not the one of addressIds
+            openapiContext: [
+                'requestBody' => [
+                    'required' => true,
+                    'content' => [
+                        'application/json' => [
+                            'schema' => [
+                                'type' => 'object',
+                                'required' => ['addressIds'],
+                                'properties' => [
+                                    'addressIds' => [
+                                        'type' => 'array',
+                                        'items' => ['type' => 'integer'],
+                                    ],
+                                ],
+                            ],
+                            'example' => [
+                                'addressIds' => [1, 3],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
         ),
     ],
     exceptionToStatus: [
@@ -48,7 +71,7 @@ class BulkAddresses
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
     public array $addressIds;
 }

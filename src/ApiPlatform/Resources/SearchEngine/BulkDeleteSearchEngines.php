@@ -36,6 +36,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/search-engines/bulk-delete',
             CQRSCommand: BulkDeleteSearchEngineCommand::class,
             scopes: ['search_engine_write'],
+            allowEmptyBody: false,
         ),
     ],
     exceptionToStatus: [
@@ -44,13 +45,12 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class BulkDeleteSearchEngines
 {
-    #[ApiProperty(
-        openapiContext: [
-            'type' => 'array',
-            'items' => ['type' => 'int'],
-        ]
-    )]
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
     #[Assert\Count(min: 1)]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $searchEngineIds = [];
 }

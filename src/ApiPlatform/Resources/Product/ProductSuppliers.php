@@ -118,8 +118,6 @@ class ProductSuppliers
      * @var int[]
      */
     #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => ['type' => 'integer'],
         'description' => 'Ids of the suppliers associated with the product. Always returned, whatever the product type.',
         'example' => [1],
     ])]

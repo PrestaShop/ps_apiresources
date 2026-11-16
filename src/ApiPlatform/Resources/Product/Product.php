@@ -208,7 +208,10 @@ class Product
 
     public DecimalNumber $additionalShippingCost;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     public array $carrierReferenceIds;
 
     #[Assert\Choice(choices: DeliveryTimeNoteType::ALLOWED_TYPES)]
@@ -305,7 +308,10 @@ class Product
 
     public string $coverThumbnailUrl;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     public array $shopIds;
 
     #[ApiProperty(openapiContext: [
