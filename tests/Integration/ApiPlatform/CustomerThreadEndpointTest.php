@@ -27,6 +27,8 @@ use Tests\Resources\DatabaseDump;
 
 class CustomerThreadEndpointTest extends ApiTestCase
 {
+    private const FIRST_MESSAGE = 'Hello, I have a question about my order.';
+
     private static int $originalMailMethod;
 
     public static function setUpBeforeClass(): void
@@ -87,6 +89,14 @@ class CustomerThreadEndpointTest extends ApiTestCase
         $thread->status = $status;
         $thread->add();
 
+        // A contact form thread always starts with the customer's message
+        $message = new \CustomerMessage();
+        $message->id_customer_thread = (int) $thread->id;
+        $message->id_employee = 0;
+        $message->message = self::FIRST_MESSAGE;
+        $message->private = false;
+        $message->add();
+
         return (int) $thread->id;
     }
 
@@ -115,7 +125,9 @@ class CustomerThreadEndpointTest extends ApiTestCase
         );
         $this->assertSame($customerThreadId, $thread['customerThreadId']);
         $this->assertSame(1, $thread['languageId']);
-        $this->assertSame([], $thread['messages']);
+        $this->assertCount(1, $thread['messages']);
+        $this->assertSame('customer', $thread['messages'][0]['type']);
+        $this->assertSame(self::FIRST_MESSAGE, $thread['messages'][0]['message']);
     }
 
     public function testGetNonExistentCustomerThreadDetails(): void
@@ -169,9 +181,10 @@ class CustomerThreadEndpointTest extends ApiTestCase
 
         // The reply is observed through the details endpoint instead of counting rows in
         // ps_customer_message.
+        // Messages are sorted by date: the seeded message and the reply can share the same second
         $messages = $this->getDetails($customerThreadId)['messages'];
-        $this->assertCount(1, $messages);
-        $this->assertSame('Thanks for reaching out, here is our reply.', $messages[0]['message']);
+        $this->assertCount(2, $messages);
+        $this->assertContains('Thanks for reaching out, here is our reply.', array_column($messages, 'message'));
 
         return $customerThreadId;
     }
@@ -199,7 +212,7 @@ class CustomerThreadEndpointTest extends ApiTestCase
         );
 
         // Forwarding appends a message to the thread
-        $this->assertCount(2, $this->getDetails($customerThreadId)['messages']);
+        $this->assertCount(3, $this->getDetails($customerThreadId)['messages']);
     }
 
     public function testDeleteCustomerThread(): void
