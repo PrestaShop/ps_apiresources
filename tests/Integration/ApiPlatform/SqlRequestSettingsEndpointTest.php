@@ -97,16 +97,33 @@ class SqlRequestSettingsEndpointTest extends ApiTestCase
     /**
      * @depends testSaveSqlRequestSettings
      */
-    public function testSaveUnsupportedFileEncodingIsRejected(array $updatedSettings): void
+    public function testSaveInvalidSqlRequestSettingsIsRejected(array $updatedSettings): void
     {
-        $this->updateItem(
+        // The encoding is case sensitive, like in the command
+        foreach (['utf-32', 'UTF-8'] as $fileEncoding) {
+            $response = $this->updateItem(
+                '/sql-request-settings',
+                ['fileEncoding' => $fileEncoding, 'fileSeparator' => ','],
+                ['sql_management_write'],
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
+            $this->assertValidationErrors([
+                ['propertyPath' => 'fileEncoding', 'message' => 'The value you selected is not a valid choice.'],
+            ], $response);
+        }
+
+        // One character, like the back office field
+        $response = $this->updateItem(
             '/sql-request-settings',
-            ['fileEncoding' => 'utf-32', 'fileSeparator' => ','],
+            ['fileEncoding' => 'utf-8', 'fileSeparator' => ';;'],
             ['sql_management_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
+        $this->assertValidationErrors([
+            ['propertyPath' => 'fileSeparator', 'message' => 'This value is too long. It should have 1 character or less.'],
+        ], $response);
 
-        // The rejected update must not have changed anything
+        // The rejected updates must not have changed anything
         $this->assertEquals($updatedSettings, $this->getItem('/sql-request-settings', ['sql_management_read']));
     }
 }

@@ -26,6 +26,7 @@ use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Command\SaveSqlRequestSettingsCommand;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Exception\SqlRequestSettingsConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Query\GetSqlRequestSettings;
+use PrestaShop\PrestaShop\Core\Encoding\CharsetEncoding;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -57,12 +58,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 class SqlRequestSettings
 {
-    /**
-     * One of utf-8, iso-8859-1.
-     */
     #[Assert\NotBlank]
+    #[Assert\Choice([CharsetEncoding::UTF_8, CharsetEncoding::ISO_8859_1])]
     public string $fileEncoding;
 
     #[Assert\NotBlank]
+    #[Assert\Length(max: 1)]
     public string $fileSeparator;
 }
