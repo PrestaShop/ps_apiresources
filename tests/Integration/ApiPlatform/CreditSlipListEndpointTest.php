@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class CreditSlipListEndpointTest extends ApiTestCase
@@ -48,20 +49,23 @@ class CreditSlipListEndpointTest extends ApiTestCase
     {
         $this->assertSame(0, $this->countItems('/credit-slips', ['credit_slip_read']));
 
-        $firstSlipId = $this->createCreditSlip(1);
-        $secondSlipId = $this->createCreditSlip(2);
+        $firstSlipId = $this->createCreditSlip(1, '2024-01-10 10:00:00');
+        $secondSlipId = $this->createCreditSlip(2, '2024-02-20 15:30:00');
 
         $paginatedCreditSlips = $this->listItems('/credit-slips', ['credit_slip_read']);
         $this->assertSame(2, $paginatedCreditSlips['totalItems']);
-
-        $creditSlip = $paginatedCreditSlips['items'][0];
-        $this->assertIsString($creditSlip['dateAdd']);
-        unset($creditSlip['dateAdd']);
         $this->assertSame([
-            'creditSlipId' => $firstSlipId,
-            'orderId' => 1,
-        ], $creditSlip);
-        $this->assertSame($secondSlipId, $paginatedCreditSlips['items'][1]['creditSlipId']);
+            [
+                'creditSlipId' => $firstSlipId,
+                'orderId' => 1,
+                'dateAdd' => '2024-01-10 10:00:00',
+            ],
+            [
+                'creditSlipId' => $secondSlipId,
+                'orderId' => 2,
+                'dateAdd' => '2024-02-20 15:30:00',
+            ],
+        ], $paginatedCreditSlips['items']);
 
         $listedIds = function (array $filters): array {
             return array_column($this->listItems('/credit-slips', ['credit_slip_read'], $filters)['items'], 'creditSlipId');
@@ -69,10 +73,19 @@ class CreditSlipListEndpointTest extends ApiTestCase
         $this->assertSame([$secondSlipId, $firstSlipId], array_column($this->listItems('/credit-slips?orderBy=orderId&sortOrder=desc', ['credit_slip_read'])['items'], 'creditSlipId'));
         $this->assertSame([$secondSlipId], $listedIds(['orderId' => 2]));
         $this->assertSame([$firstSlipId], $listedIds(['creditSlipId' => $firstSlipId]));
-        $this->assertSame([$firstSlipId, $secondSlipId], $listedIds(['dateAdd' => ['from' => date('Y-m-d'), 'to' => date('Y-m-d')]]));
+        $this->assertSame([$firstSlipId], $listedIds(['dateAdd' => ['from' => '2024-01-01', 'to' => '2024-01-31']]));
+        $this->assertSame([$secondSlipId], $listedIds(['dateAdd' => ['from' => '2024-02-01']]));
+        $this->assertSame([$firstSlipId], $listedIds(['dateAdd' => ['to' => '2024-01-31']]));
     }
 
-    private function createCreditSlip(int $orderId): int
+    public function testListCreditSlipsRejectsUnsupportedSorting(): void
+    {
+        foreach (['creditSlipId', 'dateAdd'] as $orderBy) {
+            $this->requestApi('GET', '/credit-slips?orderBy=' . $orderBy, null, ['credit_slip_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
+    private function createCreditSlip(int $orderId, string $dateAdd): int
     {
         $creditSlip = new \OrderSlip();
         $creditSlip->id_order = $orderId;
@@ -82,7 +95,9 @@ class CreditSlipListEndpointTest extends ApiTestCase
         $creditSlip->total_products_tax_incl = 12;
         $creditSlip->total_shipping_tax_excl = 0;
         $creditSlip->total_shipping_tax_incl = 0;
-        $creditSlip->add();
+        $creditSlip->date_add = $dateAdd;
+        $creditSlip->date_upd = $dateAdd;
+        $creditSlip->add(false);
 
         return (int) $creditSlip->id;
     }
