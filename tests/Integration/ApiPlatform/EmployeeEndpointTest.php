@@ -348,4 +348,35 @@ class EmployeeEndpointTest extends ApiTestCase
             $this->getItem('/employees/' . $employeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
         }
     }
+
+    /**
+     * PrestaShop/PrestaShop#43276 (9.2.2): EditEmployeeHandler applies only the fields sent, and answers 404 on an
+     * unknown id instead of saving a new employee
+     */
+    public function testPartialUpdateWithOneField(): void
+    {
+        $this->markTestSkippedByMinVersion('9.2.2');
+
+        $employeeId = $this->createEmployee('partial.update@example.com');
+        $employee = $this->getItem('/employees/' . $employeeId, ['employee_read']);
+
+        $updatedEmployee = $this->partialUpdateItem('/employees/' . $employeeId, ['lastName' => 'Durand'], ['employee_write']);
+        $this->assertEquals(['lastName' => 'Durand'] + $employee, $updatedEmployee);
+
+        $this->partialUpdateItem('/employees/999999', ['lastName' => 'Durand'], ['employee_write'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testBulkDeleteStopsAtTheFirstUnknownId(): void
+    {
+        $firstEmployeeId = $this->createEmployee('bulkpartial1.actions@example.com');
+        $lastEmployeeId = $this->createEmployee('bulkpartial2.actions@example.com');
+
+        // Core behaviour: the ids before the unknown one are deleted, the following ones are kept
+        $this->bulkDeleteItems('/employees/bulk-delete', [
+            'employeeIds' => [$firstEmployeeId, 999999, $lastEmployeeId],
+        ], ['employee_write'], Response::HTTP_NOT_FOUND);
+
+        $this->getItem('/employees/' . $firstEmployeeId, ['employee_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/employees/' . $lastEmployeeId, ['employee_read']);
+    }
 }
