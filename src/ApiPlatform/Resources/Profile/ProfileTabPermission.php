@@ -24,6 +24,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Profile;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Command\UpdateTabPermissionsCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Exception\InvalidPermissionValueException;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Exception\PermissionUpdateException;
@@ -48,6 +49,7 @@ use Symfony\Component\HttpFoundation\Response;
         ),
     ],
     exceptionToStatus: [
+        ProfileConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         InvalidPermissionValueException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         PermissionUpdateException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],

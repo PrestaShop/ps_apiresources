@@ -26,8 +26,10 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Permission\Query\GetPermissionsForConfiguration;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The permission configuration of the whole back office.
@@ -64,6 +66,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
                 ],
             ],
         ),
+    ],
+    exceptionToStatus: [
+        // employeeProfileId lower than 1
+        ProfileConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class ProfilePermissions

@@ -154,6 +154,24 @@ class ProfilePermissionEndpointTest extends ApiTestCase
         );
     }
 
+    public function testInvalidProfileIdIsRejected(): void
+    {
+        // ProfileId refuses 0: the value object answers 422, not 500
+        $this->getItem('/profiles/permissions?employeeProfileId=0', ['profile_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->updateItem(
+            '/profiles/0/tab-permissions',
+            ['tabId' => $this->getConfigurableTabId(), 'permission' => 'view', 'enabled' => true],
+            ['profile_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->updateItem(
+            '/profiles/0/module-permissions',
+            ['moduleId' => $this->getConfigurableModuleId(), 'permission' => 'view', 'enabled' => true],
+            ['profile_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+    }
+
     public function testUpdateModulePermission(): void
     {
         $moduleId = $this->getConfigurableModuleId();

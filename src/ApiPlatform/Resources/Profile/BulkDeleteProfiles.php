@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Profile;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\BulkDeleteProfileCommand;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileException;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,6 +44,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         ProfileNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // Also the SuperAdmin profile or a profile assigned to an employee
+        ProfileException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkDeleteProfiles
@@ -50,7 +53,11 @@ class BulkDeleteProfiles
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
+    #[Assert\All([
+        new Assert\Type('integer'),
+        new Assert\Positive(),
+    ])]
     public array $profileIds;
 }
