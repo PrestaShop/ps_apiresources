@@ -37,6 +37,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             filtersClass: EmployeeFilters::class,
             filtersMapping: [
                 '[sessionId]' => '[id_employee_session]',
+                '[employeeId]' => '[id_employee]',
+                '[firstName]' => '[firstname]',
+                '[lastName]' => '[lastname]',
+                '[dateUpd]' => '[date_upd]',
             ],
         ),
     ]
@@ -48,14 +52,20 @@ class EmployeeSessionList
 
     public int $employeeId;
 
-    public string $firstname;
+    public string $firstName;
 
-    public string $lastname;
+    public string $lastName;
 
     public string $email;
+
+    #[ApiProperty(openapiContext: ['description' => 'Last activity of the session.'])]
+    public \DateTimeImmutable $dateUpd;
 
     public const MAPPING = [
         '[id_employee_session]' => '[sessionId]',
         '[id_employee]' => '[employeeId]',
+        '[firstname]' => '[firstName]',
+        '[lastname]' => '[lastName]',
+        '[date_upd]' => '[dateUpd]',
     ];
 }

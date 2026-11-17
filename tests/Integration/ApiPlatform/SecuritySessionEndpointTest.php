@@ -114,8 +114,7 @@ class SecuritySessionEndpointTest extends ApiTestCase
         $first = $paginated['items'][0];
         $this->assertEquals($sessionId, $first['sessionId']);
         $this->assertEquals(1, $first['customerId']);
-        $this->assertArrayHasKey('firstname', $first);
-        $this->assertArrayHasKey('email', $first);
+        $this->assertEquals(['sessionId', 'customerId', 'firstName', 'lastName', 'email', 'dateUpd'], array_keys($first));
     }
 
     public function testDeleteCustomerSession(): void
@@ -157,8 +156,7 @@ class SecuritySessionEndpointTest extends ApiTestCase
         $first = $paginated['items'][0];
         $this->assertEquals($sessionId, $first['sessionId']);
         $this->assertEquals(1, $first['employeeId']);
-        $this->assertArrayHasKey('firstname', $first);
-        $this->assertArrayHasKey('email', $first);
+        $this->assertEquals(['sessionId', 'employeeId', 'firstName', 'lastName', 'email', 'dateUpd'], array_keys($first));
     }
 
     public function testDeleteEmployeeSession(): void
@@ -229,5 +227,82 @@ class SecuritySessionEndpointTest extends ApiTestCase
         $listed = $this->listedIds($listUrl, ['employee_session_read']);
         $this->assertNotContains($outdatedId, $listed);
         $this->assertContains($currentId, $listed);
+    }
+
+    public static function getSessionTypes(): iterable
+    {
+        yield 'customer' => ['customer'];
+        yield 'employee' => ['employee'];
+    }
+
+    private function seedSession(string $type, string $age = 'now'): int
+    {
+        return 'customer' === $type ? $this->seedCustomerSession(1, $age) : $this->seedEmployeeSession(1, $age);
+    }
+
+    /**
+     * @dataProvider getSessionTypes
+     */
+    public function testListSessionsFilteredByOwner(string $type): void
+    {
+        $sessionId = $this->seedSession($type);
+        $scopes = [$type . '_session_read'];
+
+        $this->assertContains(
+            $sessionId,
+            array_column($this->listItems('/' . $type . '-sessions', $scopes, [$type . 'Id' => 1])['items'], 'sessionId')
+        );
+        $this->assertSame(0, $this->countItems('/' . $type . '-sessions', $scopes, [$type . 'Id' => 99999]));
+    }
+
+    /**
+     * @dataProvider getSessionTypes
+     */
+    public function testInvalidSessionIdsAreRejected(string $type): void
+    {
+        $sessionId = $this->seedSession($type);
+        $scopes = [$type . '_session_write'];
+
+        // The session id value object refuses 0
+        $this->deleteItem('/' . $type . '-sessions/0', $scopes, Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->bulkDeleteItems('/' . $type . '-sessions/bulk-delete', ['sessionIds' => []], $scopes, Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        // The command casts each id with (int): "<id>abc" would delete the session <id>
+        $response = $this->bulkDeleteItems(
+            '/' . $type . '-sessions/bulk-delete',
+            ['sessionIds' => [0, $sessionId . 'abc']],
+            $scopes,
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertValidationErrors([
+            ['propertyPath' => 'sessionIds[0]', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'sessionIds[1]', 'message' => 'This value should be of type integer.'],
+        ], $response);
+
+        $this->assertContains($sessionId, $this->listedIds('/' . $type . '-sessions?orderBy=sessionId&sortOrder=desc', [$type . '_session_read']));
+    }
+
+    /**
+     * The repository deletes the sessions one by one and stops at the first unknown id: the ones before it
+     * are deleted, the ones after it are kept.
+     *
+     * @dataProvider getSessionTypes
+     */
+    public function testBulkDeleteStopsAtFirstUnknownSession(string $type): void
+    {
+        $deletedId = $this->seedSession($type);
+        $keptId = $this->seedSession($type);
+
+        $this->bulkDeleteItems(
+            '/' . $type . '-sessions/bulk-delete',
+            ['sessionIds' => [$deletedId, 99999, $keptId]],
+            [$type . '_session_write'],
+            Response::HTTP_NOT_FOUND
+        );
+
+        $listed = $this->listedIds('/' . $type . '-sessions?orderBy=sessionId&sortOrder=desc', [$type . '_session_read']);
+        $this->assertNotContains($deletedId, $listed);
+        $this->assertContains($keptId, $listed);
     }
 }

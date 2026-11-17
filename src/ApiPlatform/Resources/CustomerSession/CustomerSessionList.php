@@ -37,6 +37,10 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
             filtersClass: CustomerFilters::class,
             filtersMapping: [
                 '[sessionId]' => '[id_customer_session]',
+                '[customerId]' => '[id_customer]',
+                '[firstName]' => '[firstname]',
+                '[lastName]' => '[lastname]',
+                '[dateUpd]' => '[date_upd]',
             ],
         ),
     ]
@@ -48,14 +52,20 @@ class CustomerSessionList
 
     public int $customerId;
 
-    public string $firstname;
+    public string $firstName;
 
-    public string $lastname;
+    public string $lastName;
 
     public string $email;
+
+    #[ApiProperty(openapiContext: ['description' => 'Last activity of the session.'])]
+    public \DateTimeImmutable $dateUpd;
 
     public const MAPPING = [
         '[id_customer_session]' => '[sessionId]',
         '[id_customer]' => '[customerId]',
+        '[firstname]' => '[firstName]',
+        '[lastname]' => '[lastName]',
+        '[date_upd]' => '[dateUpd]',
     ];
 }

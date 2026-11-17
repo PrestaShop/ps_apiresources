@@ -23,6 +23,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CustomerSession;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Security\Command\DeleteCustomerSessionCommand;
+use PrestaShop\PrestaShop\Core\Domain\Security\Exception\SessionException;
 use PrestaShop\PrestaShop\Core\Domain\Security\Exception\SessionNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,6 +42,8 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         SessionNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // Also a zero id, refused by the session id value object
+        SessionException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CustomerSession

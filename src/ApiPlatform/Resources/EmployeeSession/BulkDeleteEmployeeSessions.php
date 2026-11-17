@@ -23,6 +23,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\EmployeeSession;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Security\Command\BulkDeleteEmployeeSessionsCommand;
+use PrestaShop\PrestaShop\Core\Domain\Security\Exception\SessionException;
 use PrestaShop\PrestaShop\Core\Domain\Security\Exception\SessionNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,6 +42,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         SessionNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // Also the sessions the repository failed to delete
+        SessionException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkDeleteEmployeeSessions
@@ -48,7 +51,11 @@ class BulkDeleteEmployeeSessions
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
+    #[Assert\All([
+        new Assert\Type('integer'),
+        new Assert\Positive(),
+    ])]
     public array $sessionIds;
 }
