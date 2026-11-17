@@ -60,7 +60,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 class ImageSettings
 {
     /**
-     * @var string[]
+     * @var string[]|null
      */
     #[ApiProperty(openapiContext: [
         'description' => 'The image formats to generate: jpg is the base image (encoded as baseFormat says, always with a .jpg extension), always generated and added when missing; webp and avif are optional.',
