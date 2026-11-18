@@ -87,7 +87,12 @@ jobs:
         working-directory: prestashop
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: php bin/console prestashop:api:generate-tracking-table --env=test --output="$RUNNER_TEMP/api-endpoints-tracking.md" --github-token="$GITHUB_TOKEN"
+        run: |
+          # bin/console loads the legacy config before the kernel defines _PS_IN_TEST_, so the legacy Db
+          # would target "prestashop" instead of the "test_prestashop" database created by create-test-db
+          echo "<?php define('_PS_IN_TEST_', 1);" > "$RUNNER_TEMP/ps-in-test.php"
+          php -d auto_prepend_file="$RUNNER_TEMP/ps-in-test.php" bin/console prestashop:api:generate-tracking-table \
+            --env=test --output="$RUNNER_TEMP/api-endpoints-tracking.md" --github-token="$GITHUB_TOKEN"
 
       - name: Upload the tracking table
         if: always()
