@@ -91,8 +91,12 @@ class VersionedEndpointsTest extends ApiTestCase
                 'resource_file_mtime' => @filemtime(self::getInstalledResourcePath()) ?: null,
                 'container_file' => $containerFile,
                 'container_file_mtime' => $containerFile ? @filemtime($containerFile) : null,
-                'module_active_in_container' => in_array('ps_apiresources', $container->getParameter('prestashop.active_modules'), true),
-                'resource_directories' => $container->getParameter('api_platform.resource_class_directories'),
+                'module_active_in_container' => $container->hasParameter('prestashop.active_modules')
+                    ? in_array('ps_apiresources', $container->getParameter('prestashop.active_modules'), true)
+                    : 'parameter missing',
+                'resource_directories' => $container->hasParameter('api_platform.resource_class_directories')
+                    ? $container->getParameter('api_platform.resource_class_directories')
+                    : 'parameter missing',
                 'now' => time(),
             ];
         }
