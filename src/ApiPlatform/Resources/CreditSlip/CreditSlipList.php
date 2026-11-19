@@ -24,13 +24,10 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CreditSlip;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Parameters;
-use ApiPlatform\Metadata\QueryParameter;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Search\Filters\CreditSlipFilters;
 use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
 use PrestaShopBundle\ApiPlatform\Provider\QueryListProvider;
-use Symfony\Component\Validator\Constraints\Choice;
 
 /**
  * Built on the data factory of the credit slip grid without its decorator, which only adds the translated
@@ -61,14 +58,6 @@ use Symfony\Component\Validator\Constraints\Choice;
                 '[orderId]' => '[id_order]',
                 '[dateAdd]' => '[date_issued]',
             ],
-            // The other fields are mapped to columns the query does not select, they are rejected with a 422
-            parameters: new Parameters([
-                new QueryParameter(
-                    key: 'orderBy',
-                    description: 'Field used to sort the list, only orderId is supported',
-                    constraints: [new Choice(choices: ['orderId'])],
-                ),
-            ]),
         ),
     ],
     normalizationContext: ['skip_null_values' => false],

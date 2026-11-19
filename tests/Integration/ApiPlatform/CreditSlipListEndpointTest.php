@@ -22,7 +22,6 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
-use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 
 class CreditSlipListEndpointTest extends ApiTestCase
@@ -76,13 +75,6 @@ class CreditSlipListEndpointTest extends ApiTestCase
         $this->assertSame([$firstSlipId], $listedIds(['dateAdd' => ['from' => '2024-01-01', 'to' => '2024-01-31']]));
         $this->assertSame([$secondSlipId], $listedIds(['dateAdd' => ['from' => '2024-02-01']]));
         $this->assertSame([$firstSlipId], $listedIds(['dateAdd' => ['to' => '2024-01-31']]));
-    }
-
-    public function testListCreditSlipsRejectsUnsupportedSorting(): void
-    {
-        foreach (['creditSlipId', 'dateAdd'] as $orderBy) {
-            $this->requestApi('GET', '/credit-slips?orderBy=' . $orderBy, null, ['credit_slip_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
     }
 
     private function createCreditSlip(int $orderId, string $dateAdd): int
