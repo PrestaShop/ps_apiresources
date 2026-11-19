@@ -22,15 +22,18 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Category;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Module\APIResources\Validation\IframeValidationGroupsResolver;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\AddRootCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryCoverImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\DeleteCategoryThumbnailImageCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\EditCategoryCommand;
+use PrestaShop\PrestaShop\Core\Domain\Category\Command\EditRootCategoryCommand;
 use PrestaShop\PrestaShop\Core\Domain\Category\Command\SetCategoryIsEnabledCommand;
-use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Category\Query\GetCategoryForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -73,6 +76,39 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::COMMAND_MAPPING,
         ),
+        new CQRSCreate(
+            uriTemplate: '/categories/roots',
+            validationContext: [IframeValidationGroupsResolver::class, 'create'],
+            CQRSCommand: AddRootCategoryCommand::class,
+            CQRSQuery: GetCategoryForEditing::class,
+            scopes: [
+                'category_write',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::ADD_ROOT_COMMAND_MAPPING,
+            openapi: new OpenApiOperation(
+                summary: 'Create a root category.',
+                description: 'Creates a category directly under the absolute root category (the one holding the shop '
+                    . 'root categories): no parent is taken from the payload, parentCategoryId is the absolute root '
+                    . 'in the response.',
+            ),
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/categories/roots/{categoryId}',
+            requirements: ['categoryId' => '\d+'],
+            validationContext: [IframeValidationGroupsResolver::class, 'update'],
+            CQRSCommand: EditRootCategoryCommand::class,
+            CQRSQuery: GetCategoryForEditing::class,
+            scopes: [
+                'category_write',
+            ],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::EDIT_ROOT_COMMAND_MAPPING,
+            openapi: new OpenApiOperation(
+                summary: 'Update a root category.',
+                description: 'Updates the fields sent. The absolute root category itself cannot be edited and answers 422.',
+            ),
+        ),
         new CQRSPartialUpdate(
             uriTemplate: '/categories/{categoryId}/status',
             CQRSCommand: SetCategoryIsEnabledCommand::class,
@@ -101,8 +137,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         ),
     ],
     exceptionToStatus: [
-        CategoryConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
         CategoryNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // Base exception thrown directly by the handlers and by CategoryId (id 0); covers its constraint subclass
+        CategoryException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Category
@@ -193,7 +230,7 @@ class Category
         '[name]' => '[names]',
         '[description]' => '[descriptions]',
         '[additionalDescription]' => '[additionalDescriptions]',
-        '[associatedShopIds]' => '[shopIds]',
+        '[shopAssociationIds]' => '[shopIds]',
         '[metaTitle]' => '[metaTitles]',
         '[metaDescription]' => '[metaDescriptions]',
         '[linkRewrite]' => '[linkRewrites]',
@@ -209,5 +246,32 @@ class Category
         '[metaTitles]' => '[localizedMetaTitles]',
         '[metaDescriptions]' => '[localizedMetaDescriptions]',
         '[linkRewrites]' => '[localizedLinkRewrites]',
+    ];
+
+    /**
+     * AddRootCategoryCommand takes the localized names and link rewrites as constructor
+     * arguments named "name" and "linkRewrite" (no parent category, unlike AddCategoryCommand).
+     * The status maps to "isActive" (the command constructor argument / setter), not "isEnabled".
+     */
+    public const ADD_ROOT_COMMAND_MAPPING = [
+        '[names]' => '[name]',
+        '[linkRewrites]' => '[linkRewrite]',
+        '[enabled]' => '[isActive]',
+        '[descriptions]' => '[localizedDescriptions]',
+        '[additionalDescriptions]' => '[localizedAdditionalDescriptions]',
+        '[shopIds]' => '[associatedShopIds]',
+        '[metaTitles]' => '[localizedMetaTitles]',
+        '[metaDescriptions]' => '[localizedMetaDescriptions]',
+    ];
+
+    public const EDIT_ROOT_COMMAND_MAPPING = [
+        '[names]' => '[localizedNames]',
+        '[linkRewrites]' => '[localizedLinkRewrites]',
+        '[enabled]' => '[isActive]',
+        '[descriptions]' => '[localizedDescriptions]',
+        '[additionalDescriptions]' => '[localizedAdditionalDescriptions]',
+        '[shopIds]' => '[associatedShopIds]',
+        '[metaTitles]' => '[localizedMetaTitles]',
+        '[metaDescriptions]' => '[localizedMetaDescriptions]',
     ];
 }
