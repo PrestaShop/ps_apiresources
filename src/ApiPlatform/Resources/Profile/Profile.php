@@ -24,15 +24,22 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Profile;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
+use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\AddProfileCommand;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Command\DeleteProfileCommand;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Command\EditProfileCommand;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileException;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Profile\ProfileSettings;
 use PrestaShop\PrestaShop\Core\Domain\Profile\Query\GetProfileForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
@@ -45,7 +52,19 @@ use Symfony\Component\HttpFoundation\Response;
         ),
         new CQRSCreate(
             uriTemplate: '/profiles',
+            validationContext: ['groups' => ['Default', 'Create']],
             CQRSCommand: AddProfileCommand::class,
+            CQRSQuery: GetProfileForEditing::class,
+            scopes: ['profile_write'],
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            CQRSCommandMapping: self::COMMAND_MAPPING,
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/profiles/{profileId}',
+            requirements: ['profileId' => '\d+'],
+            read: false,
+            validationContext: ['groups' => ['Default', 'Update']],
+            CQRSCommand: EditProfileCommand::class,
             CQRSQuery: GetProfileForEditing::class,
             scopes: ['profile_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
@@ -59,6 +78,8 @@ use Symfony\Component\HttpFoundation\Response;
     ],
     exceptionToStatus: [
         ProfileNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // Also the SuperAdmin profile or a profile assigned to an employee on delete
+        ProfileException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class Profile
@@ -66,7 +87,19 @@ class Profile
     #[ApiProperty(identifier: true)]
     public int $profileId;
 
+    /**
+     * EditProfileHandler replaces the whole name array: an update without the default language passes DefaultLanguage
+     * and is refused by the handler (ProfileException, 422).
+     */
     #[LocalizedValue]
+    #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
+    #[DefaultLanguage(groups: ['Update'], fieldName: 'names', allowNull: true)]
+    #[Assert\All(constraints: [
+        new TypedRegex([
+            'type' => TypedRegex::TYPE_GENERIC_NAME,
+        ]),
+        new Assert\Length(max: ProfileSettings::NAME_MAX_LENGTH),
+    ])]
     public array $names;
 
     protected const QUERY_MAPPING = [
