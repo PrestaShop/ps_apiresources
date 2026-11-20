@@ -4,8 +4,9 @@
 # The rules live in .ai/CONTEXT.md, its on-demand .ai/*.md contexts and .ai/REVIEW.md (review checklist). This
 # file only maps the paths to them and sets how CodeRabbit runs: it changes when that mapping changes, never
 # when a rule does.
-# The first review is manual: comment "@coderabbitai full review" on the pull request; each later push gets
-# an incremental review.
+# The first review starts once the CI is green: .github/workflows/coderabbit-trigger.yml comments
+# "@coderabbitai review" as ps-jarvis; each later push gets an incremental review. Comment
+# "@coderabbitai full review" to start one by hand.
 # Reference: https://docs.coderabbit.ai/reference/configuration
 
 language: en-US
@@ -70,8 +71,9 @@ reviews:
         Review with the one-place-per-rule principle of .ai/STRUCTURE.md → "Maintenance"; a rule
         contradicted by a resource of the PR is a finding on one of them, say which.
   auto_review:
-    # No automatic first review, and no description keyword nor label trigger that would start one; once a
-    # review was requested, each push gets an incremental review
+    # No automatic first review, and no description keyword nor label trigger that would start one: the
+    # first review waits for the CI (see the header); once a review was requested, each push gets an
+    # incremental review
     enabled: false
     auto_incremental_review: true
   finishing_touches:

@@ -1,0 +1,37 @@
+name: CodeRabbit trigger
+on:
+  workflow_run:
+    workflows: ["Integration tests", "PHP tests"]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  request-review:
+    name: Request the first CodeRabbit review
+    if: >-
+      github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      # Never check out the pull request code: the job runs with the ps-jarvis token
+      - env:
+          GH_TOKEN: ${{ secrets.JARVIS_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # Both workflows trigger this job: wait until every check of the commit is green
+          not_green=$(gh api "repos/$REPO/commits/$SHA/check-runs?per_page=100" --jq '
+            [.check_runs[] | select(.app.slug == "github-actions")
+             | select(.status != "completed"
+                      or (.conclusion | IN("success","skipped","neutral") | not))] | length')
+          [ "$not_green" -eq 0 ] || { echo "CI not fully green yet"; exit 0; }
+          # workflow_run.pull_requests is empty for pull requests from forks
+          pr=$(gh pr list --repo "$REPO" --state open --search "$SHA" --json number --jq '.[0].number')
+          [ -n "$pr" ] || { echo "No open pull request for $SHA"; exit 0; }
+          # Only the first review: later pushes get incremental reviews
+          already=$(gh api "repos/$REPO/issues/$pr/comments?per_page=100" --jq '
+            [.[] | select(.user.login == "ps-jarvis" and (.body | startswith("@coderabbitai review")))] | length')
+          if [ "$already" -eq 0 ]; then
+            gh pr comment "$pr" --repo "$REPO" --body "@coderabbitai review"
+          fi
