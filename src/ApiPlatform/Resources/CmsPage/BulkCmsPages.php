@@ -1,0 +1,98 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
+
+use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDeleteCmsPageCommand;
+use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDisableCmsPageCommand;
+use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkEnableCmsPageCommand;
+use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageException;
+use PrestaShop\PrestaShop\Core\Domain\CmsPage\Exception\CmsPageNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ApiResource(
+    operations: [
+        new CQRSDelete(
+            uriTemplate: '/cms-pages/bulk-delete',
+            CQRSCommand: BulkDeleteCmsPageCommand::class,
+            scopes: [
+                'cms_page_write',
+            ],
+            allowEmptyBody: false,
+            openapi: new OpenApiOperation(
+                summary: 'Delete several CMS pages.',
+                description: 'Deletes the listed pages. The handler stops at the first unknown page with a 404: the '
+                    . 'pages listed before it are already deleted, the following ones are not.',
+            ),
+        ),
+        // Deliberate deviation from ADR 0023 (one PATCH bulk-update-status with the value in the body): the core only
+        // has BulkEnableCmsPageCommand and BulkDisableCmsPageCommand, one command per status, and the module cannot
+        // pick a command from a body value. A core command taking the status would bring the ADR endpoint.
+        new CQRSUpdate(
+            uriTemplate: '/cms-pages/bulk-enable',
+            output: false,
+            CQRSCommand: BulkEnableCmsPageCommand::class,
+            scopes: [
+                'cms_page_write',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Enable several CMS pages.',
+                description: 'Enables the listed pages. The handler stops at the first unknown page with a 404: the '
+                    . 'pages listed before it are already enabled, the following ones are not.',
+            ),
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/cms-pages/bulk-disable',
+            output: false,
+            CQRSCommand: BulkDisableCmsPageCommand::class,
+            scopes: [
+                'cms_page_write',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Disable several CMS pages.',
+                description: 'Disables the listed pages. The handler stops at the first unknown page with a 404: the '
+                    . 'pages listed before it are already disabled, the following ones are not.',
+            ),
+        ),
+    ],
+    exceptionToStatus: [
+        CmsPageNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // CmsPageId throws the base exception on an invalid id, the CmsPage domain has no constraint exception
+        CmsPageException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
+)]
+class BulkCmsPages
+{
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
+    #[Assert\NotBlank]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
+    public array $cmsPageIds;
+}
