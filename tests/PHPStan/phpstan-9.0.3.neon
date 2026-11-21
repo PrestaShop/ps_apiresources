@@ -17,7 +17,7 @@ parameters:
         -
             message: "#Class .*TaxRulesGroup\\\\TaxRule\\\\(Command|Exception).* not found.#"
             identifier: class.notFound
-            count: 6
+            count: 8
             path: ../../src/ApiPlatform/Resources/TaxRule/*
         # The carrier queries used by the endpoints declaring minVersion 9.2.0: they are filtered out
         # of the API on this core version, where the classes are indeed absent.
