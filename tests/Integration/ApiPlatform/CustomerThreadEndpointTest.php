@@ -171,13 +171,14 @@ class CustomerThreadEndpointTest extends ApiTestCase
         $this->assertSame(['closed', 'pending1', 'pending2'], array_keys($this->getDetails($customerThreadId)['actions']));
     }
 
-    public function testSetStatusWithoutStatusIsRejected(): void
+    public function testSetBlankStatusIsRejected(): void
     {
         $customerThreadId = $this->seedCustomerThread('open');
 
         $validationErrors = $this->updateItem(
             '/customer-threads/' . $customerThreadId . '/set-status',
-            [],
+            // An empty array would be sent as an empty body, a JSON syntax error (400)
+            ['status' => ''],
             ['customer_service_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
