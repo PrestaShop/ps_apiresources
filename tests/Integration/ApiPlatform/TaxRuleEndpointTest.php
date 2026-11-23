@@ -67,6 +67,11 @@ class TaxRuleEndpointTest extends ApiTestCase
             'DELETE',
             '/tax-rules/1',
         ];
+
+        yield 'bulk delete endpoint' => [
+            'DELETE',
+            '/tax-rules/bulk-delete',
+        ];
     }
 
     public function testListTaxRules(): array
@@ -307,6 +312,101 @@ class TaxRuleEndpointTest extends ApiTestCase
         $this->assertEquals(0, $taxRules['totalItems']);
     }
 
+    public function testBulkDeleteTaxRules(): void
+    {
+        // A dedicated group with three rules, so the remaining set is known
+        $fixtures = $this->createTaxRuleFixtures();
+
+        $this->assertNull($this->bulkDeleteItems(
+            '/tax-rules/bulk-delete',
+            [
+                'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+                'taxRuleIds' => [$fixtures['taxRuleIds']['FR'], $fixtures['taxRuleIds']['IT']],
+            ],
+            ['tax_rule_write'],
+            Response::HTTP_NO_CONTENT
+        ));
+
+        $this->assertEquals(
+            [$this->expectedTaxRuleListItem($fixtures, 'DE', 'Germany', 2, 'API test rule DE')],
+            $this->listTaxRulesOfGroup($fixtures['taxRulesGroupId'])
+        );
+    }
+
+    public function testBulkDeleteTaxRulesWithUnknownTaxRule(): void
+    {
+        $fixtures = $this->createTaxRuleFixtures();
+
+        // The core handler deletes the known tax rules, then refuses the request as a whole
+        $this->bulkDeleteItems(
+            '/tax-rules/bulk-delete',
+            [
+                'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+                'taxRuleIds' => [$fixtures['taxRuleIds']['FR'], 999999],
+            ],
+            ['tax_rule_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+
+        $this->assertEquals(
+            [
+                $this->expectedTaxRuleListItem($fixtures, 'IT', 'Italy', 1, 'API test rule IT'),
+                $this->expectedTaxRuleListItem($fixtures, 'DE', 'Germany', 2, 'API test rule DE'),
+            ],
+            $this->listTaxRulesOfGroup($fixtures['taxRulesGroupId'])
+        );
+    }
+
+    public function testBulkDeleteTaxRulesWithUnknownGroup(): void
+    {
+        $fixtures = $this->createTaxRuleFixtures();
+
+        // An unknown group is refused before any tax rule is deleted
+        $this->bulkDeleteItems(
+            '/tax-rules/bulk-delete',
+            ['taxRulesGroupId' => 999999, 'taxRuleIds' => [$fixtures['taxRuleIds']['FR']]],
+            ['tax_rule_write'],
+            Response::HTTP_NOT_FOUND
+        );
+
+        $this->assertEquals(
+            [
+                $this->expectedTaxRuleListItem($fixtures, 'FR', 'France', 0, 'API test rule FR'),
+                $this->expectedTaxRuleListItem($fixtures, 'IT', 'Italy', 1, 'API test rule IT'),
+                $this->expectedTaxRuleListItem($fixtures, 'DE', 'Germany', 2, 'API test rule DE'),
+            ],
+            $this->listTaxRulesOfGroup($fixtures['taxRulesGroupId'])
+        );
+    }
+
+    public function testInvalidBulkDeleteTaxRules(): void
+    {
+        // The payload is validated before anything runs
+        $response = $this->bulkDeleteItems(
+            '/tax-rules/bulk-delete',
+            ['taxRulesGroupId' => 1, 'taxRuleIds' => [0, '3abc']],
+            ['tax_rule_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($response);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'taxRuleIds[0]', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'taxRuleIds[1]', 'message' => 'This value should be of type integer.'],
+        ], $response);
+
+        $response = $this->bulkDeleteItems(
+            '/tax-rules/bulk-delete',
+            ['taxRulesGroupId' => 0, 'taxRuleIds' => []],
+            ['tax_rule_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+        $this->assertIsArray($response);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'taxRulesGroupId', 'message' => 'This value should be positive.'],
+            ['propertyPath' => 'taxRuleIds', 'message' => 'This value should not be blank.'],
+        ], $response);
+    }
+
     public function testInvalidTaxRule(): void
     {
         // countryId = 0 is Core's "all active countries" fan-out sentinel: rejected here since this
@@ -381,6 +481,38 @@ class TaxRuleEndpointTest extends ApiTestCase
             'taxId' => $taxId,
             'taxRuleIds' => $taxRuleIds,
             'countryIds' => $countryIds,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function listTaxRulesOfGroup(int $taxRulesGroupId): array
+    {
+        return $this->listItems('/tax-rules?orderBy=taxRuleId&sortOrder=asc', ['tax_rule_read'], [
+            'taxRulesGroupId' => $taxRulesGroupId,
+        ])['items'];
+    }
+
+    /**
+     * @param array{taxRulesGroupId: int, taxId: int, taxRuleIds: array<string, int>, countryIds: array<string, int>} $fixtures
+     *
+     * @return array<string, mixed>
+     */
+    private function expectedTaxRuleListItem(array $fixtures, string $isoCode, string $countryName, int $behavior, string $description): array
+    {
+        return [
+            'taxRuleId' => $fixtures['taxRuleIds'][$isoCode],
+            'taxRulesGroupId' => $fixtures['taxRulesGroupId'],
+            'countryId' => $fixtures['countryIds'][$isoCode],
+            'countryName' => $countryName,
+            'stateId' => 0,
+            'stateName' => '--',
+            'zipcode' => '--',
+            'behavior' => $behavior,
+            'rate' => 10.0,
+            'taxName' => 'API Test Tax',
+            'description' => $description,
         ];
     }
 
