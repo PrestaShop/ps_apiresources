@@ -31,16 +31,9 @@ class CartProcessOrderEmailEndpointTest extends ApiTestCase
 
     public static function setUpBeforeClass(): void
     {
-        // The cart fixture goes through POST /carts (PrestaShop/ps_apiresources#201), gated on 9.2.0
-        if (self::isVersionUnder('9.2.0')) {
-            static::markTestSkipped('POST /carts requires PrestaShop >= 9.2.0, see Cart::VERSION_GATE');
-
-            return;
-        }
-
         parent::setUpBeforeClass();
         self::resetTables();
-        self::createApiClient(['cart_write', 'customer_write', 'order_write']);
+        self::createApiClient(['customer_write', 'order_write']);
 
         // The process-order email is sent for real otherwise
         self::$originalMailMethod = (int) \Configuration::get('PS_MAIL_METHOD');
@@ -59,6 +52,7 @@ class CartProcessOrderEmailEndpointTest extends ApiTestCase
     {
         DatabaseDump::restoreTables([
             'cart',
+            'cart_product',
             'customer',
             'customer_group',
         ]);
@@ -81,7 +75,7 @@ class CartProcessOrderEmailEndpointTest extends ApiTestCase
             'groupIds' => [3],
             'enabled' => true,
         ], ['customer_write'])['customerId'];
-        $cartId = $this->createItem('/carts', ['customerId' => $customerId], ['cart_write'])['cartId'];
+        $cartId = $this->createItem('/customers/' . $customerId . '/carts', null, ['customer_write'])['cartId'];
 
         // The command only sends the email, it has no read side to replay
         $this->assertNull($this->updateItem('/carts/' . $cartId . '/process-order-emails', null, ['order_write'], Response::HTTP_NO_CONTENT));

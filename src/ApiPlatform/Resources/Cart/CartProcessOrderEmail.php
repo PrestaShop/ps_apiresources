@@ -18,6 +18,8 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Cart;
 
 use ApiPlatform\Metadata\ApiProperty;
@@ -26,7 +28,6 @@ use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Cart\Exception\CartNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Exception\CustomerNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Command\SendProcessOrderEmailCommand;
-use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderEmailSendException;
 use PrestaShop\PrestaShop\Core\Domain\Order\Exception\OrderException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -49,8 +50,8 @@ use Symfony\Component\HttpFoundation\Response;
         CartNotFoundException::class => Response::HTTP_NOT_FOUND,
         CustomerNotFoundException::class => Response::HTTP_NOT_FOUND,
         CartConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The handler wraps the legacy errors in it, and OrderEmailSendException (mail not sent) extends it
         OrderException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
-        OrderEmailSendException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class CartProcessOrderEmail
