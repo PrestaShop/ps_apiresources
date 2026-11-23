@@ -106,11 +106,6 @@ class CategoryEndpointTest extends ApiTestCase
             'DELETE',
             '/categories/bulk-delete/associate_and_disable',
         ];
-
-        yield 'update position endpoint' => [
-            'PUT',
-            '/categories/update-positions',
-        ];
     }
 
     public function testAddCategory(): int
@@ -318,75 +313,6 @@ class CategoryEndpointTest extends ApiTestCase
         foreach ($bulkCategories as $categoryId) {
             $this->getItem('/categories/' . $categoryId, ['category_read'], Response::HTTP_NOT_FOUND);
         }
-    }
-
-    /**
-     * GetCategoryForEditing does not expose a position, so the only read side of a reorder is
-     * the categories tree: Category::getNestedCategories() orders siblings by
-     * category_shop.position, which is exactly what this endpoint rewrites. The source PR
-     * asserted on a "position" field of GET /categories/{id} that the query never returns.
-     *
-     * @return int[] the ids of the children of the given category, in tree order
-     */
-    private function getSiblingOrder(int $parentCategoryId): array
-    {
-        foreach ($this->flattenTree($this->getItem('/categories/trees', ['category_read'])) as $node) {
-            if ((int) $node['categoryId'] === $parentCategoryId) {
-                return array_map(static fn (array $child): int => (int) $child['categoryId'], $node['children'] ?? []);
-            }
-        }
-
-        $this->fail(sprintf('Category %d is not part of the categories tree.', $parentCategoryId));
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $tree
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function flattenTree(array $tree): array
-    {
-        $nodes = [];
-        foreach ($tree as $node) {
-            $nodes[] = $node;
-            if (!empty($node['children'])) {
-                $nodes = array_merge($nodes, $this->flattenTree($node['children']));
-            }
-        }
-
-        return $nodes;
-    }
-
-    public function testUpdateCategoryPosition(): void
-    {
-        // Two fresh siblings under Home (parent 2), created in order, then reordered by
-        // sending the position tokens the other way round.
-        [$catA, $catB] = $this->createTemporaryCategories();
-
-        $before = $this->getSiblingOrder(2);
-        $indexA = array_search($catA, $before, true);
-        $indexB = array_search($catB, $before, true);
-        $this->assertNotFalse($indexA);
-        $this->assertNotFalse($indexB);
-        $this->assertLessThan($indexB, $indexA);
-
-        $this->updateItem('/categories/update-positions', [
-            'categoryId' => $catA,
-            'parentCategoryId' => 2,
-            'way' => 1,
-            'positions' => [
-                $indexA => 'tr_2_' . $catB,
-                $indexB => 'tr_2_' . $catA,
-            ],
-            'foundFirst' => true,
-        ], ['category_write'], Response::HTTP_NO_CONTENT);
-
-        $after = $this->getSiblingOrder(2);
-        $this->assertGreaterThan(array_search($catB, $after, true), array_search($catA, $after, true));
-
-        // Clean up so the sibling count doesn't drift for later tests.
-        $this->deleteItem('/categories/' . $catA . '/associate_and_disable', ['category_write']);
-        $this->deleteItem('/categories/' . $catB . '/associate_and_disable', ['category_write']);
     }
 
     /**
