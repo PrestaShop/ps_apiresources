@@ -62,6 +62,9 @@ class GenerateApiTrackingTableCommand extends Command
         'SearchCombinationsForAssociation' => self::USELESS_DUPLICATE,
         // GET /products/{productId}/combinations already lists a product combinations with filters
         'SearchProductCombinations' => self::USELESS_DUPLICATE,
+        // The expandable row of the back office order grid, GET /orders/{orderId} returns its content (addresses,
+        // products, carrier, tax method) and much more
+        'GetOrderPreview' => self::USELESS_DUPLICATE,
         // Quick access links are a back office UI customization feature.
         'AddQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
         'EditQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
