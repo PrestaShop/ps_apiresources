@@ -48,7 +48,7 @@ class CurrencyEndpointTest extends ApiTestCase
         yield 'update endpoint' => ['PATCH', '/currencies/1'];
         yield 'delete endpoint' => ['DELETE', '/currencies/1'];
         yield 'toggle status endpoint' => ['PUT', '/currencies/1/toggle-status'];
-        yield 'bulk toggle status endpoint' => ['PUT', '/currencies/bulk-toggle-status'];
+        yield 'bulk update status endpoint' => ['PATCH', '/currencies/bulk-update-status'];
         yield 'bulk delete endpoint' => ['DELETE', '/currencies/bulk-delete'];
         yield 'create unofficial endpoint' => ['POST', '/currencies/unofficials'];
         yield 'update unofficial endpoint' => ['PATCH', '/currencies/unofficials/999999'];
@@ -200,14 +200,19 @@ class CurrencyEndpointTest extends ApiTestCase
      */
     public function testToggleCurrencyStatus(int $currencyId): int
     {
-        // The toggle takes no body and flips the status, so two calls bring it back
-        $this->assertTrue($this->getItem('/currencies/' . $currencyId, ['currency_read'])['enabled']);
+        // The toggle takes no body, flips the status and answers the updated currency, so two calls bring it back
+        $expected = $this->getItem('/currencies/' . $currencyId, ['currency_read']);
+        $this->assertTrue($expected['enabled']);
 
-        $this->assertNull($this->updateItem('/currencies/' . $currencyId . '/toggle-status', null, ['currency_write'], Response::HTTP_NO_CONTENT));
-        $this->assertFalse($this->getItem('/currencies/' . $currencyId, ['currency_read'])['enabled']);
+        $expected['enabled'] = false;
+        $this->assertEquals($expected, $this->updateItem('/currencies/' . $currencyId . '/toggle-status', null, ['currency_write']));
+        $this->assertEquals($expected, $this->getItem('/currencies/' . $currencyId, ['currency_read']));
 
-        $this->assertNull($this->updateItem('/currencies/' . $currencyId . '/toggle-status', null, ['currency_write'], Response::HTTP_NO_CONTENT));
-        $this->assertTrue($this->getItem('/currencies/' . $currencyId, ['currency_read'])['enabled']);
+        $expected['enabled'] = true;
+        $this->assertEquals($expected, $this->updateItem('/currencies/' . $currencyId . '/toggle-status', null, ['currency_write']));
+        $this->assertEquals($expected, $this->getItem('/currencies/' . $currencyId, ['currency_read']));
+
+        $this->updateItem('/currencies/999999/toggle-status', null, ['currency_write'], Response::HTTP_NOT_FOUND);
 
         return $currencyId;
     }
@@ -229,13 +234,22 @@ class CurrencyEndpointTest extends ApiTestCase
         $secondId = $this->createCurrency('NZD');
 
         // Bulk disable
-        $this->updateItem('/currencies/bulk-toggle-status', [
+        $this->partialUpdateItem('/currencies/bulk-update-status', [
             'currencyIds' => [$firstId, $secondId],
             'enabled' => false,
         ], ['currency_write'], Response::HTTP_NO_CONTENT);
 
         $this->assertFalse($this->getItem('/currencies/' . $firstId, ['currency_read'])['enabled']);
         $this->assertFalse($this->getItem('/currencies/' . $secondId, ['currency_read'])['enabled']);
+
+        // Bulk enable
+        $this->partialUpdateItem('/currencies/bulk-update-status', [
+            'currencyIds' => [$firstId, $secondId],
+            'enabled' => true,
+        ], ['currency_write'], Response::HTTP_NO_CONTENT);
+
+        $this->assertTrue($this->getItem('/currencies/' . $firstId, ['currency_read'])['enabled']);
+        $this->assertTrue($this->getItem('/currencies/' . $secondId, ['currency_read'])['enabled']);
 
         // Bulk delete (soft delete, so we only assert the command succeeds)
         $this->bulkDeleteItems('/currencies/bulk-delete', [
@@ -254,10 +268,35 @@ class CurrencyEndpointTest extends ApiTestCase
             'currencyIds' => [999999],
         ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        $this->updateItem('/currencies/bulk-toggle-status', [
+        $this->partialUpdateItem('/currencies/bulk-update-status', [
             'currencyIds' => [999999],
             'enabled' => true,
         ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testInvalidBulkCurrencies(): void
+    {
+        $operations = [
+            ['DELETE', '/currencies/bulk-delete', []],
+            ['PATCH', '/currencies/bulk-update-status', ['enabled' => true]],
+        ];
+        foreach ($operations as [$method, $url, $body]) {
+            // The bulk commands cast each id with (int): "3abc" would act on currency 3
+            $response = $this->requestApi($method, $url, ['currencyIds' => ['3abc']] + $body, ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $this->assertValidationErrors([
+                ['propertyPath' => 'currencyIds[0]', 'message' => 'This value should be of type integer.'],
+            ], $response);
+
+            $response = $this->requestApi($method, $url, ['currencyIds' => []] + $body, ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $this->assertValidationErrors([
+                ['propertyPath' => 'currencyIds', 'message' => 'This value should not be blank.'],
+            ], $response);
+        }
+
+        $response = $this->partialUpdateItem('/currencies/bulk-update-status', ['currencyIds' => [1]], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'enabled', 'message' => 'This value should not be null.'],
+        ], $response);
     }
 
     public function testInvalidCurrency(): void
@@ -271,6 +310,19 @@ class CurrencyEndpointTest extends ApiTestCase
         ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
 
         $this->assertIsArray($response);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'isoCode', 'message' => 'This value should not be blank.'],
+        ], $response);
+    }
+
+    public function testInvalidUnofficialCurrency(): void
+    {
+        $response = $this->createItem('/currencies/unofficials', [
+            'isoCode' => '',
+            'exchangeRate' => 1.0,
+            'enabled' => true,
+        ], ['currency_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
         $this->assertValidationErrors([
             ['propertyPath' => 'isoCode', 'message' => 'This value should not be blank.'],
         ], $response);
@@ -319,7 +371,7 @@ class CurrencyEndpointTest extends ApiTestCase
     {
         $this->partialUpdateItem(
             '/currencies/unofficials/999999',
-            ['isoCode' => 'ZZZ'],
+            ['isoCode' => 'ZZZ', 'enabled' => true],
             ['currency_write'],
             Response::HTTP_NOT_FOUND
         );

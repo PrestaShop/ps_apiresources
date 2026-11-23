@@ -22,12 +22,14 @@ declare(strict_types=1);
 
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Currency;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Parameters;
 use ApiPlatform\Metadata\QueryParameter;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Query\GetReferenceCurrency;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
+use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 
 #[ApiResource(
@@ -53,14 +55,23 @@ use Symfony\Component\HttpFoundation\Response;
 )]
 class ReferenceCurrency
 {
+    #[ApiProperty(identifier: true)]
     public string $isoCode;
 
     public string $numericIsoCode;
 
+    // GetReferenceCurrencyHandler indexes the localized values by language id
+    #[LocalizedValue]
     public array $names;
 
+    #[LocalizedValue]
     public array $symbols;
 
+    #[ApiProperty(openapiContext: [
+        'description' => 'CLDR currency format pattern of each language.',
+        'example' => ['en-US' => '¤#,##0.00', 'fr-FR' => '#,##0.00 ¤'],
+    ])]
+    #[LocalizedValue]
     public array $patterns;
 
     public int $precision;

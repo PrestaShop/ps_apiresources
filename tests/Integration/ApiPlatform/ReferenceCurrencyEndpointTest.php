@@ -39,18 +39,27 @@ class ReferenceCurrencyEndpointTest extends ApiTestCase
 
     public function testGetReferenceCurrency(): void
     {
-        $result = $this->getItem('/currencies/references?isoCode=EUR', ['currency_read']);
-
-        $this->assertArrayHasKey('isoCode', $result);
-        $this->assertSame('EUR', $result['isoCode']);
-        $this->assertArrayHasKey('numericIsoCode', $result);
-        $this->assertIsString($result['numericIsoCode']);
-        $this->assertArrayHasKey('names', $result);
-        $this->assertIsArray($result['names']);
-        $this->assertArrayHasKey('symbols', $result);
-        $this->assertArrayHasKey('patterns', $result);
-        $this->assertArrayHasKey('precision', $result);
-        $this->assertIsInt($result['precision']);
+        // The localized values come from the CLDR data of each installed language, keyed by locale
+        $this->assertEquals(
+            [
+                'isoCode' => 'EUR',
+                'numericIsoCode' => '978',
+                'names' => [
+                    'en-US' => 'Euro',
+                    'fr-FR' => 'euro',
+                ],
+                'symbols' => [
+                    'en-US' => '€',
+                    'fr-FR' => '€',
+                ],
+                'patterns' => [
+                    'en-US' => '¤#,##0.00',
+                    'fr-FR' => "#,##0.00\u{00A0}¤",
+                ],
+                'precision' => 2,
+            ],
+            $this->getItem('/currencies/references?isoCode=EUR', ['currency_read'])
+        );
     }
 
     public function testGetUnknownReferenceCurrencyReturnsNotFound(): void

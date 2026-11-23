@@ -24,12 +24,14 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Currency;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\AddCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\AddUnofficialCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\DeleteCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\EditCurrencyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Command\EditUnofficialCurrencyCommand;
+use PrestaShop\PrestaShop\Core\Domain\Currency\Command\ToggleCurrencyStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CannotUpdateCurrencyException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Currency\Exception\CurrencyException;
@@ -39,6 +41,7 @@ use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -78,6 +81,26 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetCurrencyForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['currency_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Update a currency.',
+                description: 'Partial update of an official currency. enabled is required: the core applies it on '
+                    . 'every edit and would otherwise disable the currency. The ISO code of an official currency '
+                    . 'cannot be changed (422).',
+            ),
+        ),
+        new CQRSUpdate(
+            uriTemplate: '/currencies/{currencyId}/toggle-status',
+            requirements: ['currencyId' => '\d+'],
+            allowEmptyBody: true,
+            CQRSCommand: ToggleCurrencyStatusCommand::class,
+            CQRSQuery: GetCurrencyForEditing::class,
+            CQRSQueryMapping: self::QUERY_MAPPING,
+            scopes: ['currency_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Toggle the status of a currency.',
+                description: 'Flips the enabled status without a body and returns the updated currency. To set a '
+                    . 'given status, send enabled to PATCH /currencies/{currencyId}.',
+            ),
         ),
         // Unofficial currencies are the same structure, created and edited through their own
         // commands because the core does not resolve them against the CLDR reference data.
@@ -89,6 +112,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetCurrencyForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['currency_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Create an unofficial currency.',
+                description: 'Creates a currency that is not resolved against the CLDR reference data, with any '
+                    . 'ISO code.',
+            ),
         ),
         new CQRSPartialUpdate(
             uriTemplate: '/currencies/unofficials/{currencyId}',
@@ -100,6 +128,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSQuery: GetCurrencyForEditing::class,
             CQRSQueryMapping: self::QUERY_MAPPING,
             scopes: ['currency_write'],
+            openapi: new OpenApiOperation(
+                summary: 'Update an unofficial currency.',
+                description: 'Partial update of an unofficial currency, including its ISO code. enabled is required: '
+                    . 'the core applies it on every edit and would otherwise disable the currency.',
+            ),
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
@@ -121,8 +154,11 @@ class Currency
     #[Assert\IsNull(groups: ['UpdateOfficial'], message: 'The ISO code of an official currency cannot be changed.')]
     public string $isoCode;
 
-    // Only a JSON number is accepted on input, a numeric string answers 400
-    #[ApiProperty(openapiContext: ['type' => 'number', 'example' => 1.5])]
+    #[ApiProperty(openapiContext: [
+        'description' => 'Exchange rate against the default currency of the shop, sent as a JSON number: a numeric '
+            . 'string answers 400.',
+        'example' => 1.5,
+    ])]
     #[Assert\NotNull(groups: ['Create'])]
     public DecimalNumber $exchangeRate;
 
@@ -145,7 +181,10 @@ class Currency
 
     public bool $unofficial;
 
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     public array $shopIds;
 
     // AddCurrencyCommand / EditCurrencyCommand use isEnabled + localized* field names
