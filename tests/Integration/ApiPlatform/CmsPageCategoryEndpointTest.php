@@ -388,8 +388,8 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $data = $this->getCreateData();
         $data['parentId'] = 999999;
 
-        if (self::isVersionUnder('9.2.1')) {
-            // The core checks the parent from PrestaShop 9.2.1, older versions store the unknown parent
+        if (self::isVersionUnder('9.2.2')) {
+            // The core checks the parent from PrestaShop 9.2.2, older versions store the unknown parent
             $this->assertSame(999999, $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'])['parentId']);
 
             return;
@@ -474,9 +474,9 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
 
     public function testGetRootCmsPageCategory(): void
     {
-        // The core builds the root category without parent from PrestaShop 9.2.1 (PrestaShop/PrestaShop#43269),
+        // The core builds the root category without parent from PrestaShop 9.2.2 (PrestaShop/PrestaShop#43269),
         // reading it answered 500 before
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
 
         $rootCategory = $this->getItem('/cms-pages/categories/1', ['cms_page_category_read']);
         $this->assertSame(1, $rootCategory['cmsPageCategoryId']);

@@ -143,7 +143,7 @@ class CmsPageCategory
 
     #[ApiProperty(openapiContext: [
         'description' => 'Parent category, null for the root category. An unknown parent answers 404 from '
-            . 'PrestaShop 9.2.1, older versions store it. Reading the root category needs PrestaShop 9.2.1.',
+            . 'PrestaShop 9.2.2, older versions store it. Reading the root category needs PrestaShop 9.2.2.',
     ])]
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\Positive]
@@ -204,8 +204,8 @@ class CmsPageCategory
         '[shopIds]' => '[shopAssociation]',
     ];
 
-    // Up to PrestaShop 9.2.0 the query result may expose the status as a string ("1"/"0"): the core casts it from
-    // 9.2.1 (QueryResultSerializerTrait), remove this setter once 9.2.1 is the minimum version
+    // Up to PrestaShop 9.2.1 the query result may expose the status as a string ("1"/"0"): the core casts it from
+    // 9.2.2 (QueryResultSerializerTrait), remove this setter once 9.2.2 is the minimum version
     public function setDisplayed(string|int|bool $displayed): self
     {
         $this->displayed = (bool) $displayed;

@@ -223,8 +223,8 @@ class CmsPage
         '[displayed]' => '[isDisplayed]',
     ];
 
-    // Up to PrestaShop 9.2.0 the query result exposes the booleans as strings ("1"/"0"): the core casts them from
-    // 9.2.1 (QueryResultSerializerTrait), remove these setters once 9.2.1 is the minimum version
+    // Up to PrestaShop 9.2.1 the query result exposes the booleans as strings ("1"/"0"): the core casts them from
+    // 9.2.2 (QueryResultSerializerTrait), remove these setters once 9.2.2 is the minimum version
     public function setIndexedForSearch(string|int|bool $indexedForSearch): self
     {
         $this->indexedForSearch = (bool) $indexedForSearch;
