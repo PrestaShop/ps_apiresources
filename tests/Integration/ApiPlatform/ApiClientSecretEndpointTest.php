@@ -83,9 +83,13 @@ class ApiClientSecretEndpointTest extends ApiTestCase
 
     public static function getInvalidSecrets(): iterable
     {
-        yield 'missing secret' => [
-            [],
-            [['propertyPath' => 'secret', 'message' => 'This value should not be blank.']],
+        // An empty array would be sent as an empty body, which is a JSON syntax error (400)
+        yield 'blank secret' => [
+            ['secret' => ''],
+            [
+                ['propertyPath' => 'secret', 'message' => 'This value should not be blank.'],
+                ['propertyPath' => 'secret', 'message' => sprintf('This value is too short. It should have %d characters or more.', ApiClientSecret::MIN_SIZE)],
+            ],
         ];
         yield 'too short secret' => [
             ['secret' => str_repeat('a', ApiClientSecret::MIN_SIZE - 1)],
@@ -116,7 +120,7 @@ class ApiClientSecretEndpointTest extends ApiTestCase
 
         $this->assertIsArray($validationErrors);
         $this->assertValidationErrors($expectedErrors, $validationErrors);
-        if (isset($data['secret'])) {
+        if (!empty($data['secret'])) {
             $this->assertStringNotContainsString($data['secret'], json_encode($validationErrors));
         }
     }
