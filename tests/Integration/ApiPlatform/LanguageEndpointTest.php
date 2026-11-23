@@ -65,8 +65,8 @@ class LanguageEndpointTest extends ApiTestCase
     public static function getProtectedEndpoints(): iterable
     {
         yield 'get endpoint' => ['GET', '/languages/1'];
-        yield 'create endpoint' => ['POST', '/languages'];
-        yield 'update with images endpoint' => ['POST', '/languages/1'];
+        yield 'create endpoint' => ['POST', '/languages', 'multipart/form-data'];
+        yield 'update with images endpoint' => ['POST', '/languages/1', 'multipart/form-data'];
         yield 'update endpoint' => ['PATCH', '/languages/1'];
         yield 'set status endpoint' => ['PATCH', '/languages/1/set-status'];
         yield 'delete endpoint' => ['DELETE', '/languages/1'];

@@ -176,10 +176,12 @@ class Language
     #[TypedRegex(['type' => TypedRegex::TYPE_LANGUAGE_CODE])]
     public string $tagIETF;
 
-    #[ApiProperty(
-        writable: false,
-        openapiContext: ['description' => 'Read only: derived by the core from the ISO code, empty when it is unknown.'],
-    )]
+    /**
+     * Read only: the core derives it from the ISO code and the commands have no locale argument, so a sent value is
+     * ignored. It is not declared writable: false because the response is denormalized from the query result into
+     * this class, and a non-writable property would be dropped from it.
+     */
+    #[ApiProperty(openapiContext: ['description' => 'Read only: derived by the core from the ISO code, a sent value is ignored.'])]
     public string $locale;
 
     #[Assert\NotBlank(groups: ['Create'])]
