@@ -51,7 +51,7 @@ class MailTemplateEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'generate theme mail templates endpoint' => ['PUT', '/mail-templates'];
+        yield 'generate theme mail templates endpoint' => ['PUT', '/mail-templates/generate'];
 
         if (self::isVersionAtLeast(self::READ_EDIT_MIN_VERSION)) {
             yield 'list mail templates endpoint' => ['GET', '/mail-templates?locale=' . self::LOCALE];
@@ -193,7 +193,7 @@ class MailTemplateEndpointTest extends ApiTestCase
     public function testGenerateThemeMailTemplates(): void
     {
         $return = $this->updateItem(
-            '/mail-templates',
+            '/mail-templates/generate',
             [
                 'themeName' => 'classic',
                 'language' => 'en',
@@ -209,7 +209,7 @@ class MailTemplateEndpointTest extends ApiTestCase
 
     public function testGenerateThemeMailTemplatesWithInvalidData(): void
     {
-        $response = $this->updateItem('/mail-templates', [
+        $response = $this->updateItem('/mail-templates/generate', [
             'themeName' => '',
             'language' => '',
         ], ['mail_template_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -219,11 +219,11 @@ class MailTemplateEndpointTest extends ApiTestCase
         ], $response);
 
         // Unknown theme and unknown language are rejected by the core, not by the resource
-        $this->updateItem('/mail-templates', [
+        $this->updateItem('/mail-templates/generate', [
             'themeName' => 'not_a_theme',
             'language' => 'en',
         ], ['mail_template_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        $this->updateItem('/mail-templates', [
+        $this->updateItem('/mail-templates/generate', [
             'themeName' => 'classic',
             'language' => 'zz',
         ], ['mail_template_write'], Response::HTTP_UNPROCESSABLE_ENTITY);

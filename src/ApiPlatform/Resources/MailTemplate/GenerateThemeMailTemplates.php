@@ -32,7 +32,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new CQRSUpdate(
-            uriTemplate: '/mail-templates',
+            uriTemplate: '/mail-templates/generate',
             output: false,
             CQRSCommand: GenerateThemeMailTemplatesCommand::class,
             scopes: ['mail_template_write'],
