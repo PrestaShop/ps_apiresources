@@ -81,20 +81,54 @@ class ApiClientSecretEndpointTest extends ApiTestCase
         return $apiClient;
     }
 
-    /**
-     * @depends testForceApiClientSecret
-     */
-    public function testForceTooShortApiClientSecretIsRejected(array $apiClient): array
+    public static function getInvalidSecrets(): iterable
     {
-        // The core value object constrains the secret length
-        $this->partialUpdateItem(
-            '/api-clients/' . $apiClient['apiClientId'] . '/secrets',
+        yield 'missing secret' => [
+            [],
+            [['propertyPath' => 'secret', 'message' => 'This value should not be blank.']],
+        ];
+        yield 'too short secret' => [
             ['secret' => str_repeat('a', ApiClientSecret::MIN_SIZE - 1)],
+            [['propertyPath' => 'secret', 'message' => sprintf('This value is too short. It should have %d characters or more.', ApiClientSecret::MIN_SIZE)]],
+        ];
+        yield 'too long secret' => [
+            ['secret' => str_repeat('a', ApiClientSecret::MAX_SIZE + 1)],
+            [['propertyPath' => 'secret', 'message' => sprintf('This value is too long. It should have %d characters or less.', ApiClientSecret::MAX_SIZE)]],
+        ];
+    }
+
+    /**
+     * The length is validated on the field before the command, so the secret sent is never
+     * echoed back in the error.
+     *
+     * @depends testForceApiClientSecret
+     *
+     * @dataProvider getInvalidSecrets
+     */
+    public function testForceInvalidApiClientSecretIsRejected(array $data, array $expectedErrors, array $apiClient): void
+    {
+        $validationErrors = $this->partialUpdateItem(
+            '/api-clients/' . $apiClient['apiClientId'] . '/secrets',
+            $data,
             ['api_client_write'],
             Response::HTTP_UNPROCESSABLE_ENTITY
         );
 
-        return $apiClient;
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors($expectedErrors, $validationErrors);
+        if (isset($data['secret'])) {
+            $this->assertStringNotContainsString($data['secret'], json_encode($validationErrors));
+        }
+    }
+
+    public function testForceSecretOfUnknownApiClient(): void
+    {
+        $this->partialUpdateItem(
+            '/api-clients/999999/secrets',
+            ['secret' => self::FORCED_SECRET],
+            ['api_client_write'],
+            Response::HTTP_NOT_FOUND
+        );
     }
 
     /**
@@ -102,7 +136,7 @@ class ApiClientSecretEndpointTest extends ApiTestCase
      * as a scalar, which the core CommandProcessor cannot forward to the API resource without
      * that fix. This test stays red until the core PR is merged into the target branches.
      *
-     * @depends testForceTooShortApiClientSecretIsRejected
+     * @depends testForceApiClientSecret
      */
     public function testGenerateApiClientSecret(array $apiClient): void
     {

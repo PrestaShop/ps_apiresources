@@ -73,10 +73,12 @@ class ApiClientSecret
     public int $apiClientId;
 
     /**
-     * Required by the PATCH, ignored by the PUT which generates it. The core value object
-     * additionally constrains its length (32 to 72 characters).
+     * Required by the PATCH, ignored by the PUT which generates it. The length bounds are the
+     * ones of the core value object (ApiClientSecret::MIN_SIZE / MAX_SIZE), checked here so that
+     * the violation is reported on the field without echoing the secret sent.
      */
     #[Assert\NotBlank(groups: ['Force'])]
+    #[Assert\Length(min: 32, max: 72, groups: ['Force'])]
     public string $secret;
 
     public const RESOURCE_MAPPING = [
