@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\Module\APIResources\ApiPlatform\Metadata\CQRSDeleteCollection;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn\Dto\OrderReturnCustomizationField;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn\Dto\OrderReturnProductRow;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\BulkDeleteProductsFromOrderReturnCommand;
@@ -33,7 +34,6 @@ use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\CannotDeleteLastProd
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Query\GetOrderReturnProducts;
-use PrestaShopBundle\ApiPlatform\Metadata\CQRSDeleteCollection;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGetCollection;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -49,8 +49,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             openapi: new OpenApiOperation(
                 summary: 'List the product lines of an order return.',
                 description: 'Not paginated. The customized lines come first. customizationId is 0 on a line without '
-                    . 'customization. Before PrestaShop 9.2.1, the list also holds the customized lines of the other '
-                    . 'returns of the same order, lists a customized line twice and customizationFields is always empty.',
+                    . 'customization. Until the core lists only the lines of the queried return (PrestaShop#43434), the list '
+                    . 'also holds the customized lines of the other returns of the same order, lists a customized line '
+                    . 'twice and customizationFields is always empty.',
             ),
             CQRSQuery: GetOrderReturnProducts::class,
             scopes: ['order_return_read'],
@@ -59,11 +60,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/order-returns/{orderReturnId}/products/bulk-delete',
             requirements: ['orderReturnId' => '\d+'],
             extraProperties: [
-                'minVersion' => '9.2.1',
+                'minVersion' => '9.2.2',
             ],
             openapi: new OpenApiOperation(
                 summary: 'Remove several product lines from an order return.',
-                description: 'Requires PrestaShop 9.2.1. The body is required. Answers the remaining lines, like '
+                description: 'Requires PrestaShop 9.2.2. The body is required. Answers the remaining lines, like '
                     . 'GET /order-returns/{orderReturnId}/products. An order return keeps at least one line (422).',
             ),
             CQRSCommand: BulkDeleteProductsFromOrderReturnCommand::class,
@@ -82,11 +83,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/order-returns/{orderReturnId}/products/{orderDetailId}',
             requirements: ['orderReturnId' => '\d+', 'orderDetailId' => '\d+'],
             extraProperties: [
-                'minVersion' => '9.2.1',
+                'minVersion' => '9.2.2',
             ],
             openapi: new OpenApiOperation(
                 summary: 'Remove a product line from an order return.',
-                description: 'Requires PrestaShop 9.2.1. Removes the line of the order detail that has no '
+                description: 'Requires PrestaShop 9.2.2. Removes the line of the order detail that has no '
                     . 'customization, an unknown line answers 404. To remove a customized line, use DELETE '
                     . '/order-returns/{orderReturnId}/products/bulk-delete with its customizationId. Answers the '
                     . 'remaining lines. An order return keeps at least one line (422).',
@@ -121,7 +122,7 @@ class OrderReturnProductList
 
     /**
      * Customer-provided data of a customized line (file thumbnails, text inputs), empty for a classic line.
-     * Filled from PrestaShop 9.2.1.
+     * Filled once the core lists the customization of the line (PrestaShop#43434).
      *
      * @var OrderReturnCustomizationField[]
      */

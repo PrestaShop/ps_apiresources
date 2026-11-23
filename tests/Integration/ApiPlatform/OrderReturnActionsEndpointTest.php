@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Adapter\OrderReturn\Repository\OrderReturnRepository;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -54,8 +55,8 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
         yield 'bulk delete endpoint' => ['DELETE', '/order-returns/bulk-delete'];
         yield 'list products endpoint' => ['GET', '/order-returns/1/products'];
 
-        // The product deletions use the CQRSDeleteCollection of core 9.2.1, filtered out on older cores
-        if (self::isVersionAtLeast('9.2.1')) {
+        // The product deletions use the CQRSDeleteCollection of core 9.2.2, filtered out on older cores
+        if (self::isVersionAtLeast('9.2.2')) {
             yield 'delete product endpoint' => ['DELETE', '/order-returns/1/products/1'];
             yield 'bulk delete products endpoint' => ['DELETE', '/order-returns/1/products/bulk-delete'];
         }
@@ -133,8 +134,11 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
 
     public function testListOnlyTheLinesOfTheOrderReturn(): void
     {
-        // Before 9.2.1, the list holds the customized lines of every return of the order, and lists them twice
-        $this->markTestSkippedByMinVersion('9.2.1');
+        // Until PrestaShop/PrestaShop#43434, the list holds the customized lines of every return of the order, lists
+        // them twice and leaves customizationFields empty. The fix adds OrderReturnRepository::getProductLines().
+        if (!method_exists(OrderReturnRepository::class, 'getProductLines')) {
+            $this->markTestSkipped('Requires the GetOrderReturnProducts fix of PrestaShop/PrestaShop#43434');
+        }
         $classicReturnId = $this->seedOrderReturn();
 
         // A second return of the same order holds a customized line of the order detail 1 (a text field)
@@ -177,7 +181,7 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
 
     public function testDeleteProductFromOrderReturn(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
         $orderReturnId = $this->seedOrderReturn();
 
         // A line that is not in the return
@@ -199,7 +203,7 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
 
     public function testBulkDeleteProductsFromOrderReturn(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
         $orderReturnId = $this->seedOrderReturn();
 
         // Answers the remaining lines
@@ -214,7 +218,7 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
 
     public function testBulkDeleteEveryProductFromOrderReturnIsRefused(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
         $orderReturnId = $this->seedOrderReturn();
 
         // Emptying a merchandise return is refused by the core, which is a client error
@@ -230,7 +234,7 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
 
     public function testBulkDeleteProductsWithInvalidBodies(): void
     {
-        $this->markTestSkippedByMinVersion('9.2.1');
+        $this->markTestSkippedByMinVersion('9.2.2');
         $orderReturnId = $this->seedOrderReturn();
         $uri = '/order-returns/' . $orderReturnId . '/products/bulk-delete';
 
@@ -295,8 +299,8 @@ class OrderReturnActionsEndpointTest extends ApiTestCase
 
     public function testBulkDeleteOrderReturnsWithUnknownId(): void
     {
-        // Before 9.2.1, an unknown id answers 404 and stops the deletion
-        $this->markTestSkippedByMinVersion('9.2.1');
+        // Before 9.2.2, an unknown id answers 404 and stops the deletion
+        $this->markTestSkippedByMinVersion('9.2.2');
         $orderReturnIds = [$this->seedOrderReturn(), $this->seedOrderReturn()];
 
         $this->bulkCommandItemsWithExpectedErrors(

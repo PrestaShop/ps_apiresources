@@ -41,9 +41,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             openapi: new OpenApiOperation(
                 summary: 'Delete several order returns.',
-                description: 'The body is required. From PrestaShop 9.2.1, the order returns that cannot be deleted '
+                description: 'The body is required. From PrestaShop 9.2.2, the order returns that cannot be deleted '
                     . '(an unknown id answers a 404 error) are listed in a 207 response and the other ones are '
-                    . 'deleted. Before 9.2.1, an unknown id answers 404 and stops the deletion: the order returns '
+                    . 'deleted. Before 9.2.2, an unknown id answers 404 and stops the deletion: the order returns '
                     . 'listed before it are deleted, the ones after it are kept.',
             ),
             CQRSCommand: BulkDeleteOrderReturnsCommand::class,
