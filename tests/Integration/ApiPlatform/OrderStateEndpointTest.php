@@ -271,8 +271,8 @@ class OrderStateEndpointTest extends ApiTestCase
     {
         $createData = array_merge($this->getCreateData(), ['sendEmail' => true]);
 
-        if (!self::isVersionAtLeast('9.2.1')) {
-            // Older cores do not check the templates on creation (only on update)
+        if (!self::isVersionAtLeast('9.2.2')) {
+            // Older cores do not check the templates on creation (only on update), see PrestaShop/PrestaShop#43382
             $this->createItem('/order-states', $createData, ['order_state_write']);
 
             return;
@@ -280,6 +280,30 @@ class OrderStateEndpointTest extends ApiTestCase
 
         // Sending e-mails needs a template in every language: MissingOrderStateRequiredFieldsException
         $this->createItem('/order-states', $createData, ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testPartialUpdateOfOneLanguageKeepsTheOthers(): void
+    {
+        // Older cores replace the whole localized name on edit, so the default language ends up empty
+        // (see PrestaShop/PrestaShop#43268)
+        $this->markTestSkippedByMinVersion('9.2.2');
+
+        $orderState = $this->createItem('/order-states', $this->getCreateData(), ['order_state_write']);
+        $orderStateId = $orderState['orderStateId'];
+
+        $patchData = [
+            'names' => [
+                'fr-FR' => 'Seulement FR',
+            ],
+        ];
+        $expected = $this->getExpectedOrderState($orderStateId, array_merge($this->getCreateData(), [
+            'names' => [
+                'en-US' => 'Awaiting review EN',
+                'fr-FR' => 'Seulement FR',
+            ],
+        ]));
+        $this->assertEquals($expected, $this->partialUpdateItem('/order-states/' . $orderStateId, $patchData, ['order_state_write']));
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
     }
 
     public function testAddOrderStateWithDefaultValues(): void

@@ -80,6 +80,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::UPDATE_COMMAND_MAPPING,
+            openapi: new OpenApiOperation(
+                description: 'From PrestaShop 9.2.2, the languages missing from "names" and "templates" keep their '
+                    . 'current value. Older versions replace the whole localized field, so every language must be sent.',
+            ),
         ),
         new CQRSDelete(
             uriTemplate: '/order-states/{orderStateId}',
