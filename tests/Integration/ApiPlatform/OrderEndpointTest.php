@@ -550,8 +550,10 @@ class OrderEndpointTest extends ApiTestCase
         $this->assertEquals($order, $updatedOrder);
         $this->assertEquals($order, $this->getOrder(self::ORDER_ID));
 
-        // The discount is not part of the order anymore
-        $this->deleteItem('/orders/' . self::ORDER_ID . '/discounts/' . $orderCartRuleId, ['order_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        // The core keeps the removed discount row (flagged as deleted): removing it again changes nothing
+        $this->assertEquals($order, $this->deleteItem('/orders/' . self::ORDER_ID . '/discounts/' . $orderCartRuleId, ['order_write'], Response::HTTP_OK));
+        // A discount that is not part of the order is refused by the core
+        $this->deleteItem('/orders/' . self::ORDER_ID . '/discounts/99999', ['order_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testAddInvalidDiscount(): void

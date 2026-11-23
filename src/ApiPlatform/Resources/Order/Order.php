@@ -328,7 +328,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             openapi: new OpenApiOperation(
                 summary: 'Remove a discount from an order.',
                 description: 'Removes a discount of the order (orderCartRuleId, read in discounts), the order amounts '
-                    . 'are updated, and returns the order. A discount that is not part of the order answers 422.',
+                    . 'are updated, and returns the order. A discount that is not part of the order answers 422; the core keeps a '
+                    . 'removed discount, so removing it again answers 200 and changes nothing.',
             ),
         ),
         new CQRSCreate(
