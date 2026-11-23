@@ -97,6 +97,11 @@ final class ApiResourceNormalizerRule implements Rule
         // as imageIds and coverImageId per shop, which CQRSQueryMapping cannot compute, and the
         // request body and response are a top-level list instead of the resource object.
         'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\ShopProductImagesSerializer',
+        // Valid: GetProductForEditing returns the product tags as a list of {languageId, tags} objects while every
+        // other localized field, and SetProductTagsCommand, index the values by language id. Turning a list into a
+        // map keyed by one of its fields cannot be expressed with CQRSQueryMapping ("@index" only substitutes
+        // positions), so this normalizer indexes the tags of ProductBasicInformation by language id.
+        'PrestaShop\\Module\\APIResources\\ApiPlatform\\Normalizer\\ProductBasicInformationNormalizer',
     ];
 
     public function getNodeType(): string
