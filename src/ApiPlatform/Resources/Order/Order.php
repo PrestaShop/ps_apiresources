@@ -349,7 +349,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             openapi: new OpenApiOperation(
                 summary: 'Add a payment to an order.',
                 description: 'Records a payment on the order, and returns the order (the payment is read back in '
-                    . 'payments). An unknown currency or invoice answers 422.',
+                    . 'payments). Once the order has an invoice, the payment must be attached to it (orderInvoiceId, the '
+                    . 'documentId of the invoice in documents). An unknown currency or invoice answers 422.',
             ),
         ),
         new CQRSCreate(
