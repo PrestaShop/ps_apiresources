@@ -58,3 +58,9 @@ parameters:
             message: "#Class .*Store\\\\Command\\\\(AddStoreCommand|EditStoreCommand) not found.#"
             identifier: class.notFound
             path: ../../src/ApiPlatform/Resources/Store/Store.php
+        # The combination feature value CQRS layer only exists since PrestaShop 9.3: the operations declare
+        # minVersion 9.3.0 so they are filtered out of the API on this core version.
+        -
+            message: "#Class .*Product\\\\Combination\\\\FeatureValue\\\\(Command|Query)\\\\.* not found.#"
+            identifier: class.notFound
+            path: ../../src/ApiPlatform/Resources/Product/CombinationFeatureValueList.php
