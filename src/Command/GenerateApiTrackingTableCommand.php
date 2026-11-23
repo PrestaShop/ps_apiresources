@@ -62,6 +62,9 @@ class GenerateApiTrackingTableCommand extends Command
         'SearchCombinationsForAssociation' => self::USELESS_DUPLICATE,
         // GET /products/{productId}/combinations already lists a product combinations with filters
         'SearchProductCombinations' => self::USELESS_DUPLICATE,
+        // /categories/bulk-update-status already toggles a set of categories either way
+        'BulkEnableCategoriesCommand' => self::USELESS_DUPLICATE,
+        'BulkDisableCategoriesCommand' => self::USELESS_DUPLICATE,
         // Quick access links are a back office UI customization feature.
         'AddQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
         'EditQuickAccessCommand' => self::REASON_BACK_OFFICE_UI,
