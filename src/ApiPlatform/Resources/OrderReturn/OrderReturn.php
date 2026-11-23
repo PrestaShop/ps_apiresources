@@ -24,12 +24,15 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\OrderReturn;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\DeleteOrderReturnCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Command\UpdateOrderReturnStateCommand;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Exception\OrderReturnNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturn\Query\GetOrderReturnForEditing;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturnState\Exception\OrderReturnStateException;
 use PrestaShop\PrestaShop\Core\Domain\OrderReturnState\Exception\OrderReturnStateNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use Symfony\Component\HttpFoundation\Response;
@@ -49,6 +52,20 @@ use Symfony\Component\Validator\Constraints as Assert;
             read: false,
             CQRSCommand: UpdateOrderReturnStateCommand::class,
             CQRSQuery: GetOrderReturnForEditing::class,
+            scopes: ['order_return_write'],
+            validationContext: ['groups' => ['Default', 'Update']],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/order-returns/{orderReturnId}',
+            requirements: ['orderReturnId' => '\d+'],
+            extraProperties: [
+                'minVersion' => '9.2.0',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Delete an order return.',
+                description: 'Deletes the order return and its product lines.',
+            ),
+            CQRSCommand: DeleteOrderReturnCommand::class,
             scopes: ['order_return_write'],
         ),
     ],
@@ -76,8 +93,12 @@ class OrderReturn
 
     public string $orderDate;
 
-    #[Assert\NotNull]
-    public int $orderReturnStateId;
+    /**
+     * Only required when updating: ApiPlatform validates the resource on the DELETE too and the state is never
+     * sent there. Nullable so that an explicit null gets the same 422 as a missing field (a wrong type answers 400).
+     */
+    #[Assert\NotNull(groups: ['Update'])]
+    public ?int $orderReturnStateId = null;
 
     public string $question;
 }
