@@ -22,14 +22,29 @@ declare(strict_types=1);
 
 namespace PsApiResourcesTest\Integration\ApiPlatform;
 
+use PrestaShop\PrestaShop\Adapter\Language\LanguageImageManager;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Resources\DatabaseDump;
 use Tests\Resources\Resetter\LanguageResetter;
 
 class LanguageEndpointTest extends ApiTestCase
 {
+    /**
+     * Languages created by the tests, by id, with their ISO code: their images survive the database restore
+     *
+     * @var array<int, string>
+     */
+    protected static array $createdLanguages = [];
+
     public static function setUpBeforeClass(): void
     {
+        // Every operation of the domain requires PrestaShop 9.3.0 (PrestaShop/PrestaShop#42852)
+        if (self::isVersionUnder('9.3.0')) {
+            static::markTestSkipped('The language endpoints require PrestaShop 9.3.0');
+
+            return;
+        }
+
         parent::setUpBeforeClass();
         DatabaseDump::restoreTables(['lang', 'lang_shop']);
         self::createApiClient(['language_read', 'language_write']);
@@ -38,8 +53,12 @@ class LanguageEndpointTest extends ApiTestCase
     public static function tearDownAfterClass(): void
     {
         parent::tearDownAfterClass();
+        $imageManager = new LanguageImageManager();
+        foreach (self::$createdLanguages as $languageId => $isoCode) {
+            $imageManager->deleteImages($languageId, $isoCode);
+        }
+        self::$createdLanguages = [];
         DatabaseDump::restoreTables(['lang', 'lang_shop']);
-        // Reset the languages (and the related tables) to the state they had before this test
         LanguageResetter::resetLanguages();
     }
 
@@ -47,6 +66,7 @@ class LanguageEndpointTest extends ApiTestCase
     {
         yield 'get endpoint' => ['GET', '/languages/1'];
         yield 'create endpoint' => ['POST', '/languages'];
+        yield 'update with images endpoint' => ['POST', '/languages/1'];
         yield 'update endpoint' => ['PATCH', '/languages/1'];
         yield 'set status endpoint' => ['PATCH', '/languages/1/set-status'];
         yield 'delete endpoint' => ['DELETE', '/languages/1'];
@@ -55,49 +75,70 @@ class LanguageEndpointTest extends ApiTestCase
     }
 
     /**
-     * Every language these tests operate on is created through POST /languages. The status and
-     * delete tests used the addLanguageByLocale() command-bus helper because the create
-     * endpoint lived in another PR.
-     *
-     * AddLanguageHandler validates and copies both image paths, so they must point at a real
-     * image. _PS_IMG_DIR_ is the test fixture image directory and does not ship l/en.jpg, so
-     * the images are generated in the system temp directory instead.
+     * Form values of a multipart creation: all strings, booleans as 1 / 0
      */
-    private function createLanguage(string $isoCode, bool $enabled = true): array
+    private function getCreateParameters(string $isoCode, string $tagIETF): array
     {
-        // AddLanguageHandler consumes the files it is given, so each call needs its own copies
-        $flag = self::createFlagImage('flag');
-        $noPicture = self::createFlagImage('no-picture');
-
-        return $this->createItem('/languages', [
+        return [
             'name' => 'Test ' . strtoupper($isoCode),
             'isoCode' => $isoCode,
-            'tagIETF' => $isoCode . '-' . strtoupper($isoCode),
+            'tagIETF' => $tagIETF,
             'shortDateFormat' => 'Y-m-d',
             'fullDateFormat' => 'Y-m-d H:i:s',
-            'flagImagePath' => $flag,
-            'noPictureImagePath' => $noPicture,
-            'rtl' => false,
-            'enabled' => $enabled,
-            'shopIds' => [1],
-        ], ['language_write'], Response::HTTP_CREATED);
+            'rtl' => '0',
+            'enabled' => '1',
+            'shopIds' => ['1'],
+        ];
     }
 
-    /**
-     * Writes a fresh 16x11 JPEG and returns its path. AddLanguageHandler copies the file away
-     * from where it is given, so the image cannot be generated once and reused: every create
-     * needs its own file, for the flag and for the no-picture image alike.
-     */
-    private static function createFlagImage(string $suffix): string
+    private function getMultipartOptions(array $parameters, array $files): array
     {
-        $path = sprintf('%s/ps-api-language-%s-%s.jpg', sys_get_temp_dir(), $suffix, uniqid());
+        return [
+            'headers' => [
+                'content-type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => $parameters,
+                'files' => $files,
+            ],
+        ];
+    }
 
-        $image = imagecreatetruecolor(16, 11);
-        imagefill($image, 0, 0, imagecolorallocate($image, 0, 0, 128));
-        imagejpeg($image, $path);
-        imagedestroy($image);
+    private function getImageFiles(): array
+    {
+        // Two different assets: the API removes each uploaded file, so they cannot share a temporary copy
+        return [
+            'flagImage' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/lang/en.jpg'),
+            'noPictureImage' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/lang/fr.jpg'),
+        ];
+    }
 
-        return $path;
+    private function createLanguage(string $isoCode, string $tagIETF, array $parameters = []): array
+    {
+        $language = $this->requestApi('POST', '/languages', null, ['language_write'], Response::HTTP_CREATED, $this->getMultipartOptions(
+            array_merge($this->getCreateParameters($isoCode, $tagIETF), $parameters),
+            $this->getImageFiles()
+        ));
+        self::$createdLanguages[$language['languageId']] = $isoCode;
+
+        return $language;
+    }
+
+    private function getExpectedLanguage(int $languageId, string $isoCode, string $tagIETF, string $locale, array $data = []): array
+    {
+        return array_merge([
+            'languageId' => $languageId,
+            'name' => 'Test ' . strtoupper($isoCode),
+            'isoCode' => $isoCode,
+            'tagIETF' => $tagIETF,
+            // Derived by the core from the ISO code
+            'locale' => $locale,
+            'shortDateFormat' => 'Y-m-d',
+            'fullDateFormat' => 'Y-m-d H:i:s',
+            'rtl' => false,
+            'enabled' => true,
+            'shopIds' => [1],
+        ], $data);
     }
 
     private function getLanguage(int $languageId): array
@@ -105,134 +146,197 @@ class LanguageEndpointTest extends ApiTestCase
         return $this->getItem('/languages/' . $languageId, ['language_read']);
     }
 
-    private function isLanguageEnabled(int $languageId): bool
-    {
-        return (bool) $this->getLanguage($languageId)['enabled'];
-    }
-
     public function testCreateLanguage(): int
     {
-        $language = $this->createLanguage('ts');
+        $language = $this->createLanguage('nl', 'nl-nl');
         $this->assertArrayHasKey('languageId', $language);
         $languageId = (int) $language['languageId'];
 
-        // Pin the whole payload, not just a couple of fields: a renamed, removed or unexpectedly
-        // added field would go through green otherwise. locale is derived by the core from the
-        // IETF tag, so it is read from the response instead of being hard-coded; the flag and
-        // no-picture image paths are write-only and never round-trip.
-        $expected = [
-            'languageId' => $languageId,
-            'name' => 'Test TS',
-            'isoCode' => 'ts',
-            'tagIETF' => 'ts-TS',
-            'locale' => $language['locale'],
+        // The form values are all strings, but the returned language uses the real field types, and the images are
+        // not part of the payload
+        $expected = $this->getExpectedLanguage($languageId, 'nl', 'nl-nl', 'nl-NL');
+        $this->assertEquals($expected, $language);
+        $this->assertEquals($expected, $this->getLanguage($languageId));
+
+        // The images are stored: the flag by language id, the "no picture" image by ISO code
+        $this->assertFileExists(_PS_IMG_DIR_ . 'l/' . $languageId . '.jpg');
+        $this->assertFileExists(_PS_IMG_DIR_ . 'p/nl.jpg');
+        $this->assertFileExists(_PS_IMG_DIR_ . 'c/nl.jpg');
+        $this->assertFileExists(_PS_IMG_DIR_ . 'm/nl.jpg');
+
+        return $languageId;
+    }
+
+    public function testCreateLanguageWithDefaultValues(): void
+    {
+        $parameters = $this->getCreateParameters('pl', 'pl-pl');
+        unset($parameters['rtl'], $parameters['enabled'], $parameters['shopIds']);
+
+        $language = $this->requestApi('POST', '/languages', null, ['language_write'], Response::HTTP_CREATED, $this->getMultipartOptions(
+            $parameters,
+            $this->getImageFiles()
+        ));
+        self::$createdLanguages[$language['languageId']] = 'pl';
+
+        // The defaults of the BO form: not RTL, enabled, the shop of the context
+        $this->assertEquals($this->getExpectedLanguage((int) $language['languageId'], 'pl', 'pl-pl', 'pl-PL'), $language);
+    }
+
+    public function testCreateLanguageAsJsonIsRejected(): void
+    {
+        // The images are required, so the creation only accepts multipart form data
+        $this->createItem('/languages', [
+            'name' => 'Test JSON',
+            'isoCode' => 'pt',
+            'tagIETF' => 'pt-pt',
             'shortDateFormat' => 'Y-m-d',
             'fullDateFormat' => 'Y-m-d H:i:s',
-            'rtl' => false,
-            'enabled' => true,
-            'shopIds' => [1],
+        ], ['language_write'], Response::HTTP_UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    /**
+     * @depends testCreateLanguage
+     */
+    public function testPartialUpdateLanguage(int $languageId): int
+    {
+        $patchData = [
+            'name' => 'Renamed test',
+            'shortDateFormat' => 'd-m-Y',
+            'fullDateFormat' => 'd-m-Y H:i:s',
         ];
-        $this->assertEquals($expected, $language);
-        // The create replays GetLanguageForEditing, so it answers exactly what the GET does
+        $expected = $this->getExpectedLanguage($languageId, 'nl', 'nl-nl', 'nl-NL', $patchData);
+
+        $updated = $this->partialUpdateItem('/languages/' . $languageId, $patchData, ['language_write']);
+        $this->assertEquals($expected, $updated);
         $this->assertEquals($expected, $this->getLanguage($languageId));
 
         return $languageId;
     }
 
     /**
-     * @depends testCreateLanguage
+     * @depends testPartialUpdateLanguage
      */
-    public function testEditLanguage(int $languageId): void
+    public function testUpdateLanguageWithImages(int $languageId): int
     {
-        // Asserted through the API instead of
-        // SELECT name FROM ps_lang WHERE id_lang = ...
-        $updated = $this->partialUpdateItem(
-            '/languages/' . $languageId,
-            ['name' => 'RenamedTest'],
-            ['language_write']
-        );
+        $flagPath = _PS_IMG_DIR_ . 'l/' . $languageId . '.jpg';
+        $noPicturePath = _PS_IMG_DIR_ . 'p/nl.jpg';
+        $previousFlag = md5_file($flagPath);
+        $previousNoPicture = md5_file($noPicturePath);
 
-        $this->assertSame('RenamedTest', $updated['name']);
-        $this->assertEquals($this->getLanguage($languageId), $updated);
+        // The images are replaced by a multipart update, which updates the other fields of the payload at the same time
+        $updated = $this->requestApi('POST', '/languages/' . $languageId, null, ['language_write'], Response::HTTP_OK, $this->getMultipartOptions(
+            ['name' => 'Updated with images'],
+            [
+                // Swapped compared to the creation, so both stored images change
+                'flagImage' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/lang/fr.jpg'),
+                'noPictureImage' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/lang/en.jpg'),
+            ]
+        ));
+        $expected = $this->getExpectedLanguage($languageId, 'nl', 'nl-nl', 'nl-NL', [
+            'name' => 'Updated with images',
+            'shortDateFormat' => 'd-m-Y',
+            'fullDateFormat' => 'd-m-Y H:i:s',
+        ]);
+        $this->assertEquals($expected, $updated);
+        $this->assertEquals($expected, $this->getLanguage($languageId));
+
+        clearstatcache();
+        $this->assertNotEquals($previousFlag, md5_file($flagPath));
+        $this->assertNotEquals($previousNoPicture, md5_file($noPicturePath));
+
+        // Without images, the multipart update keeps the stored ones
+        $currentFlag = md5_file($flagPath);
+        $expected['name'] = 'Updated without images';
+        $this->assertEquals($expected, $this->requestApi('POST', '/languages/' . $languageId, null, ['language_write'], Response::HTTP_OK, $this->getMultipartOptions(
+            ['name' => 'Updated without images'],
+            []
+        )));
+        clearstatcache();
+        $this->assertEquals($currentFlag, md5_file($flagPath));
+
+        return $languageId;
     }
 
-    public function testEditUnknownLanguageReturnsNotFound(): void
+    /**
+     * @depends testUpdateLanguageWithImages
+     */
+    public function testSetStatus(int $languageId): int
     {
-        $this->partialUpdateItem(
-            '/languages/999999',
-            ['name' => 'Whatever'],
-            ['language_write'],
-            Response::HTTP_NOT_FOUND
-        );
-    }
-
-    public function testSetStatus(): void
-    {
-        $languageId = (int) $this->createLanguage('tu')['languageId'];
-        $this->assertTrue($this->isLanguageEnabled($languageId));
-
-        // The status change replays the query of the GET, so it answers with the language
-        $updated = $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
+        $expected = $this->getExpectedLanguage($languageId, 'nl', 'nl-nl', 'nl-NL', [
+            'name' => 'Updated without images',
+            'shortDateFormat' => 'd-m-Y',
+            'fullDateFormat' => 'd-m-Y H:i:s',
             'enabled' => false,
-        ], ['language_write']);
-        $this->assertFalse($updated['enabled']);
-        $this->assertEquals($this->getLanguage($languageId), $updated);
-        $this->assertFalse($this->isLanguageEnabled($languageId));
+        ]);
+        $this->assertEquals($expected, $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
+            'enabled' => false,
+        ], ['language_write']));
+        $this->assertEquals($expected, $this->getLanguage($languageId));
 
-        $updated = $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
+        $expected['enabled'] = true;
+        $this->assertEquals($expected, $this->partialUpdateItem('/languages/' . $languageId . '/set-status', [
             'enabled' => true,
-        ], ['language_write']);
-        $this->assertTrue($updated['enabled']);
-        $this->assertEquals($this->getLanguage($languageId), $updated);
-        $this->assertTrue($this->isLanguageEnabled($languageId));
+        ], ['language_write']));
+        $this->assertEquals($expected, $this->getLanguage($languageId));
+
+        return $languageId;
     }
 
-    public function testSetStatusNotFound(): void
+    /**
+     * @depends testSetStatus
+     */
+    public function testDeleteLanguage(int $languageId): void
     {
-        $this->partialUpdateItem('/languages/999999/set-status', [
-            'enabled' => false,
-        ], ['language_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/languages/' . $languageId, ['language_write']);
+        $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
+
+        // The core removes the images of a deleted language
+        $this->assertFileDoesNotExist(_PS_IMG_DIR_ . 'l/' . $languageId . '.jpg');
+        $this->assertFileDoesNotExist(_PS_IMG_DIR_ . 'p/nl.jpg');
+        unset(self::$createdLanguages[$languageId]);
+    }
+
+    public function testUnknownLanguage(): void
+    {
+        $this->getItem('/languages/999999', ['language_read'], Response::HTTP_NOT_FOUND);
+        $this->partialUpdateItem('/languages/999999', ['name' => 'Whatever'], ['language_write'], Response::HTTP_NOT_FOUND);
+        $this->partialUpdateItem('/languages/999999/set-status', ['enabled' => false], ['language_write'], Response::HTTP_NOT_FOUND);
+        $this->deleteItem('/languages/999999', ['language_write'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkUpdateStatus(): void
     {
-        $languageIds = [
-            (int) $this->createLanguage('tv')['languageId'],
-            (int) $this->createLanguage('tw')['languageId'],
+        $languages = [
+            $this->createLanguage('sv', 'sv-se'),
+            $this->createLanguage('da', 'da-dk'),
         ];
+        $languageIds = array_map(static fn (array $language): int => (int) $language['languageId'], $languages);
 
         $this->updateItem('/languages/bulk-update-status', [
             'languageIds' => $languageIds,
             'enabled' => false,
         ], ['language_write'], Response::HTTP_NO_CONTENT);
-        foreach ($languageIds as $languageId) {
-            $this->assertFalse($this->isLanguageEnabled($languageId));
+        foreach ($languages as $language) {
+            $this->assertEquals(
+                array_merge($language, ['enabled' => false]),
+                $this->getLanguage((int) $language['languageId'])
+            );
         }
 
         $this->updateItem('/languages/bulk-update-status', [
             'languageIds' => $languageIds,
             'enabled' => true,
         ], ['language_write'], Response::HTTP_NO_CONTENT);
-        foreach ($languageIds as $languageId) {
-            $this->assertTrue($this->isLanguageEnabled($languageId));
+        foreach ($languages as $language) {
+            $this->assertEquals($language, $this->getLanguage((int) $language['languageId']));
         }
-    }
-
-    public function testDelete(): void
-    {
-        $languageId = (int) $this->createLanguage('tx')['languageId'];
-
-        $this->deleteItem('/languages/' . $languageId, ['language_write']);
-
-        // Asserted through the API instead of Validate::isLoadedObject(new Language($id))
-        $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
     }
 
     public function testBulkDelete(): void
     {
         $languageIds = [
-            (int) $this->createLanguage('ty')['languageId'],
-            (int) $this->createLanguage('tz')['languageId'],
+            (int) $this->createLanguage('fi', 'fi-fi')['languageId'],
+            (int) $this->createLanguage('cs', 'cs-cz')['languageId'],
         ];
 
         $this->bulkDeleteItems('/languages/bulk-delete', [
@@ -241,6 +345,72 @@ class LanguageEndpointTest extends ApiTestCase
 
         foreach ($languageIds as $languageId) {
             $this->getItem('/languages/' . $languageId, ['language_read'], Response::HTTP_NOT_FOUND);
+            unset(self::$createdLanguages[$languageId]);
         }
+    }
+
+    public function testInvalidCreate(): void
+    {
+        // Every field breaks the rules of the BO form, and the "no picture" image is missing
+        $validationErrorsResponse = $this->requestApi('POST', '/languages', null, ['language_write'], Response::HTTP_UNPROCESSABLE_ENTITY, $this->getMultipartOptions(
+            [
+                'name' => '<b>Invalid</b>',
+                'isoCode' => 'a1',
+                'tagIETF' => 'not a tag',
+                'shortDateFormat' => '<Y>',
+                'fullDateFormat' => '',
+            ],
+            [
+                'flagImage' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/archive/test_install_cqrs_command.zip'),
+            ]
+        ));
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'name'],
+            ['propertyPath' => 'isoCode'],
+            ['propertyPath' => 'tagIETF'],
+            ['propertyPath' => 'shortDateFormat'],
+            ['propertyPath' => 'fullDateFormat'],
+            ['propertyPath' => 'flagImage'],
+            ['propertyPath' => 'noPictureImage'],
+        ], $validationErrorsResponse);
+    }
+
+    public function testInvalidUpdate(): void
+    {
+        $languageId = (int) $this->createLanguage('hu', 'hu-hu')['languageId'];
+
+        $validationErrorsResponse = $this->partialUpdateItem('/languages/' . $languageId, [
+            'name' => '<b>Invalid</b>',
+            'isoCode' => 'a1',
+            'shortDateFormat' => '<Y>',
+        ], ['language_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'name'],
+            ['propertyPath' => 'isoCode'],
+            ['propertyPath' => 'shortDateFormat'],
+        ], $validationErrorsResponse);
+
+        // An image that is not one is refused on the multipart update as well
+        $validationErrorsResponse = $this->requestApi('POST', '/languages/' . $languageId, null, ['language_write'], Response::HTTP_UNPROCESSABLE_ENTITY, $this->getMultipartOptions(
+            [],
+            ['noPictureImage' => $this->prepareUploadedFile(__DIR__ . '/../../Resources/assets/archive/test_install_cqrs_command.zip')]
+        ));
+        $this->assertIsArray($validationErrorsResponse);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'noPictureImage'],
+        ], $validationErrorsResponse);
+    }
+
+    public function testAddExistingIsoCode(): void
+    {
+        $this->createLanguage('el', 'el-gr');
+
+        // LanguageConstraintException::DUPLICATE_ISO_CODE
+        $this->requestApi('POST', '/languages', null, ['language_write'], Response::HTTP_UNPROCESSABLE_ENTITY, $this->getMultipartOptions(
+            $this->getCreateParameters('el', 'el-gr'),
+            $this->getImageFiles()
+        ));
     }
 }

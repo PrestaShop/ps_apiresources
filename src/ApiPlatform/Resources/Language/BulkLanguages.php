@@ -40,6 +40,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommand: BulkDeleteLanguagesCommand::class,
             scopes: ['language_write'],
             allowEmptyBody: false,
+            // Like the other operations of the domain (see Language)
+            extraProperties: [
+                'minVersion' => '9.3.0',
+            ],
         ),
     ],
     exceptionToStatus: [
@@ -53,7 +57,7 @@ class BulkLanguages
     /**
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
     public array $languageIds;
 }
