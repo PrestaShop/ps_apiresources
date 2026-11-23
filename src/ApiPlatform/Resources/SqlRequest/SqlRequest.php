@@ -24,10 +24,11 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SqlRequest;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Command\AddSqlRequestCommand;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Command\DeleteSqlRequestCommand;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Command\EditSqlRequestCommand;
-use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Exception\SqlRequestConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Exception\SqlRequestException;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Exception\SqlRequestNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Query\GetSqlRequestForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
@@ -60,24 +61,44 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/sql-requests/{sqlRequestId}',
             requirements: ['sqlRequestId' => '\d+'],
             read: false,
+            validationContext: ['groups' => ['Default', 'Update']],
             CQRSCommand: EditSqlRequestCommand::class,
             CQRSQuery: GetSqlRequestForEditing::class,
             scopes: ['sql_management_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             ApiResourceMapping: self::RESOURCE_MAPPING,
+            extraProperties: [
+                // EditSqlRequestCommand only accepts a SqlRequestId value object up to PrestaShop 9.2, so the
+                // command cannot be built from the id of the URI (TypeError): PrestaShop/PrestaShop#41742
+                'minVersion' => '9.3.0',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Update a SQL request.',
+                description: 'Partial update: only the sent fields change. The SQL query is validated like in the '
+                    . 'back office. Available from PrestaShop 9.3.0.',
+            ),
         ),
         new CQRSDelete(
             uriTemplate: '/sql-requests/{sqlRequestId}',
             requirements: ['sqlRequestId' => '\d+'],
-            output: false,
             CQRSCommand: DeleteSqlRequestCommand::class,
             scopes: ['sql_management_write'],
+            extraProperties: [
+                // Same constructor as EditSqlRequestCommand: PrestaShop/PrestaShop#41742
+                'minVersion' => '9.3.0',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Delete a SQL request.',
+                description: 'Available from PrestaShop 9.3.0.',
+            ),
         ),
     ],
     normalizationContext: ['skip_null_values' => false],
     exceptionToStatus: [
+        // The first matching class wins: SqlRequestNotFoundException extends SqlRequestException
         SqlRequestNotFoundException::class => Response::HTTP_NOT_FOUND,
-        SqlRequestConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // Invalid id (SqlRequestId), name or SQL query (SqlRequestConstraintException)
+        SqlRequestException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class SqlRequest
@@ -86,9 +107,16 @@ class SqlRequest
     public int $sqlRequestId;
 
     #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\NotBlank(allowNull: true, groups: ['Update'])]
     public string $name;
 
+    #[ApiProperty(openapiContext: [
+        'description' => 'A single SELECT query, validated like in the back office: the tables must exist and the '
+            . 'LIMIT clause, if any, must be numeric.',
+        'example' => 'SELECT id_country, iso_code FROM ps_country',
+    ])]
     #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\NotBlank(allowNull: true, groups: ['Update'])]
     public string $sql;
 
     /**

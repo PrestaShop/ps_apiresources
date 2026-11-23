@@ -36,33 +36,46 @@ class DatabaseTablesEndpointTest extends ApiTestCase
         yield 'get database table fields endpoint' => ['GET', '/sql-requests/database-tables/' . _DB_PREFIX_ . 'product/fields'];
     }
 
-    public function testGetDatabaseTables(): string
+    public function testGetDatabaseTables(): void
     {
         $result = $this->getItem('/sql-requests/database-tables', ['sql_management_read']);
 
-        $this->assertArrayHasKey('tables', $result);
-        $this->assertNotEmpty($result['tables']);
-
-        return $result['tables'][0];
+        $this->assertEquals(['tables'], array_keys($result));
+        $this->assertContainsOnly('string', $result['tables']);
+        $this->assertContains(_DB_PREFIX_ . 'request_sql', $result['tables']);
     }
 
-    /**
-     * @depends testGetDatabaseTables
-     */
-    public function testGetDatabaseTableFields(string $tableName): void
+    public function testGetDatabaseTableFields(): void
     {
+        $tableName = _DB_PREFIX_ . 'request_sql';
         $result = $this->getItem('/sql-requests/database-tables/' . $tableName . '/fields', ['sql_management_read']);
 
-        $this->assertArrayHasKey('tableName', $result);
-        $this->assertSame($tableName, $result['tableName']);
-        $this->assertArrayHasKey('fields', $result);
-        $this->assertNotEmpty($result['fields']);
-
+        // The column types are those MySQL reports (int(11) or int depending on the server version): their format is
+        // asserted, then copied into the expected payload
+        $this->assertEquals(['tableName', 'fields'], array_keys($result));
+        $this->assertCount(3, $result['fields']);
         foreach ($result['fields'] as $field) {
-            $this->assertArrayHasKey('name', $field);
-            $this->assertArrayHasKey('type', $field);
-            $this->assertIsString($field['name']);
             $this->assertIsString($field['type']);
         }
+        $this->assertEquals(
+            [
+                'tableName' => $tableName,
+                'fields' => [
+                    ['name' => 'id_request_sql', 'type' => $result['fields'][0]['type']],
+                    ['name' => 'name', 'type' => $result['fields'][1]['type']],
+                    ['name' => 'sql', 'type' => $result['fields'][2]['type']],
+                ],
+            ],
+            $result
+        );
+        $this->assertStringStartsWith('int', $result['fields'][0]['type']);
+        $this->assertSame('varchar(200)', $result['fields'][1]['type']);
+        $this->assertSame('mediumtext', $result['fields'][2]['type']);
     }
+
+    /*
+     * No test for an unknown table: GetDatabaseTableFieldsListHandler runs DESCRIBE without checking that the table
+     * exists, so the database exception escapes as a 500. The check belongs to the core handler (a not-found
+     * exception this resource would map to 404).
+     */
 }

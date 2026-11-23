@@ -18,10 +18,14 @@
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
 
+declare(strict_types=1);
+
 namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\SqlRequest;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\Module\APIResources\ApiPlatform\Resources\SqlRequest\Dto\DatabaseTableField;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Exception\SqlManagementConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\SqlManagement\Query\GetDatabaseTableFieldsList;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -36,6 +40,11 @@ use Symfony\Component\HttpFoundation\Response;
             scopes: [
                 'sql_management_read',
             ],
+            openapi: new OpenApiOperation(
+                summary: 'List the columns of a database table.',
+                description: 'Returns the name and the MySQL type of each column of the table, which must be one of '
+                    . 'the tables listed by GET /sql-requests/database-tables.',
+            ),
         ),
     ],
     exceptionToStatus: [
@@ -48,17 +57,7 @@ class DatabaseTableFields
     public string $tableName;
 
     /**
-     * @var array<int, array{name: string, type: string}>
+     * @var DatabaseTableField[]
      */
-    #[ApiProperty(openapiContext: [
-        'type' => 'array',
-        'items' => [
-            'type' => 'object',
-            'properties' => [
-                'name' => ['type' => 'string'],
-                'type' => ['type' => 'string'],
-            ],
-        ],
-    ])]
     public array $fields;
 }

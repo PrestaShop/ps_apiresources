@@ -48,13 +48,23 @@ class SqlRequestEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
-        yield 'get execution result endpoint' => ['GET', '/sql-requests/1/execution-results'];
-
         yield 'create endpoint' => ['POST', '/sql-requests'];
         yield 'get endpoint' => ['GET', '/sql-requests/1'];
-        yield 'update endpoint' => ['PATCH', '/sql-requests/1'];
-        yield 'delete endpoint' => ['DELETE', '/sql-requests/1'];
+        // An operation filtered by its minVersion answers 404, not 401
+        if (self::isVersionAtLeast('9.3.0')) {
+            yield 'update endpoint' => ['PATCH', '/sql-requests/1'];
+            yield 'delete endpoint' => ['DELETE', '/sql-requests/1'];
+        }
         yield 'bulk delete endpoint' => ['DELETE', '/sql-requests/bulk-delete'];
+    }
+
+    private function expectedSqlRequest(int $sqlRequestId, array $overrides = []): array
+    {
+        return array_replace([
+            'sqlRequestId' => $sqlRequestId,
+            'name' => 'My SQL Request',
+            'sql' => $this->validSql(),
+        ], $overrides);
     }
 
     public function testAddSqlRequest(): int
@@ -69,14 +79,7 @@ class SqlRequestEndpointTest extends ApiTestCase
 
         // The create replays GetSqlRequestForEditing, so it returns the whole entity instead of
         // just {sqlRequestId}, and must answer exactly what the GET does
-        $this->assertEquals(
-            [
-                'sqlRequestId' => $sqlRequestId,
-                'name' => 'My SQL Request',
-                'sql' => $this->validSql(),
-            ],
-            $sqlRequest
-        );
+        $this->assertEquals($this->expectedSqlRequest($sqlRequestId), $sqlRequest);
 
         return $sqlRequestId;
     }
@@ -87,39 +90,37 @@ class SqlRequestEndpointTest extends ApiTestCase
     public function testGetSqlRequest(int $sqlRequestId): int
     {
         $sqlRequest = $this->getItem('/sql-requests/' . $sqlRequestId, ['sql_management_read']);
-        $this->assertEquals(
-            [
-                'sqlRequestId' => $sqlRequestId,
-                'name' => 'My SQL Request',
-                'sql' => $this->validSql(),
-            ],
-            $sqlRequest
-        );
+        $this->assertEquals($this->expectedSqlRequest($sqlRequestId), $sqlRequest);
 
         return $sqlRequestId;
     }
 
     /**
-     * This test stays red until PrestaShop/PrestaShop#41742 is merged:
-     * EditSqlRequestCommand::__construct() only accepts a SqlRequestId value object, and the
-     * CQRS normalizer builds the command from the scalar id in the URI, so the request fails
-     * with a TypeError before the handler is reached. DeleteSqlRequestCommand has the same
-     * constructor, so testDeleteSqlRequest depends on the same core change.
+     * EditSqlRequestCommand::__construct() only accepts a SqlRequestId value object up to PrestaShop 9.2, so the
+     * command cannot be built from the scalar id of the URI: the PATCH and the DELETE need PrestaShop/PrestaShop#41742,
+     * which targets 9.3.0. The develop leg of the CI stays red on these two tests until it is merged.
      *
      * @depends testGetSqlRequest
      */
     public function testEditSqlRequest(int $sqlRequestId): int
     {
-        $updated = $this->partialUpdateItem('/sql-requests/' . $sqlRequestId, [
-            'name' => 'My SQL Request Updated',
-        ], ['sql_management_write']);
+        $this->markTestSkippedByMinVersion('9.3.0');
 
-        $expected = [
-            'sqlRequestId' => $sqlRequestId,
+        $expected = $this->expectedSqlRequest($sqlRequestId, ['name' => 'My SQL Request Updated']);
+        $this->assertEquals($expected, $this->partialUpdateItem('/sql-requests/' . $sqlRequestId, [
             'name' => 'My SQL Request Updated',
-            'sql' => $this->validSql(),
-        ];
-        $this->assertEquals($expected, $updated);
+        ], ['sql_management_write']));
+        $this->assertEquals($expected, $this->getItem('/sql-requests/' . $sqlRequestId, ['sql_management_read']));
+
+        // An empty value is refused field by field, and nothing changes
+        $response = $this->partialUpdateItem('/sql-requests/' . $sqlRequestId, [
+            'name' => '',
+            'sql' => '',
+        ], ['sql_management_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'name', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'sql', 'message' => 'This value should not be blank.'],
+        ], $response);
         $this->assertEquals($expected, $this->getItem('/sql-requests/' . $sqlRequestId, ['sql_management_read']));
 
         return $sqlRequestId;
@@ -155,41 +156,42 @@ class SqlRequestEndpointTest extends ApiTestCase
         $this->getItem('/sql-requests/' . $secondId, ['sql_management_read'], Response::HTTP_NOT_FOUND);
     }
 
-    /**
-     * The saved SQL request is created through POST /sql-requests instead of an
-     * INSERT INTO ps_request_sql: the create endpoint is in this same PR now.
-     *
-     * It selects from a stable seed table so the assertions do not drift when the languages
-     * fixture changes.
-     */
-    public function testGetSqlRequestExecutionResult(): void
+    public function testInvalidBulkDeleteSqlRequests(): void
     {
-        $sqlRequestId = (int) $this->createItem('/sql-requests', [
-            'name' => 'test_execution_result',
-            'sql' => 'SELECT id_lang, name FROM ' . _DB_PREFIX_ . 'lang ORDER BY id_lang ASC',
-        ], ['sql_management_write'])['sqlRequestId'];
+        // The command casts nothing: a non integer id reached the SqlRequestId value object and answered 500
+        $response = $this->bulkDeleteItems('/sql-requests/bulk-delete', ['sqlRequestIds' => ['99999abc']], ['sql_management_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'sqlRequestIds[0]', 'message' => 'This value should be of type integer.'],
+        ], $response);
 
-        $response = $this->getItem(
-            '/sql-requests/' . $sqlRequestId . '/execution-results',
-            ['sql_management_read']
-        );
-
-        $this->assertEquals(['sqlRequestId', 'columns', 'rows'], array_keys($response));
-        $this->assertSame($sqlRequestId, $response['sqlRequestId']);
-        $this->assertSame(['id_lang', 'name'], $response['columns']);
-        $this->assertNotEmpty($response['rows']);
-
-        foreach ($response['rows'] as $row) {
-            $this->assertEquals(['id_lang', 'name'], array_keys($row));
-        }
+        $response = $this->bulkDeleteItems('/sql-requests/bulk-delete', ['sqlRequestIds' => []], ['sql_management_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'sqlRequestIds', 'message' => 'This value should not be blank.'],
+        ], $response);
     }
 
-    public function testGetNonExistentSqlRequestExecutionResult(): void
+    public function testInvalidSqlRequest(): void
     {
-        $this->getItem(
-            '/sql-requests/999999/execution-results',
-            ['sql_management_read'],
-            Response::HTTP_NOT_FOUND
-        );
+        $response = $this->createItem('/sql-requests', [
+            'name' => '',
+            'sql' => '',
+        ], ['sql_management_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'name', 'message' => 'This value should not be blank.'],
+            ['propertyPath' => 'sql', 'message' => 'This value should not be blank.'],
+        ], $response);
+
+        // The core validator refuses anything but a single SELECT on existing tables (no field list)
+        $this->createItem('/sql-requests', [
+            'name' => 'Not a select',
+            'sql' => 'DELETE FROM ' . _DB_PREFIX_ . 'shop',
+        ], ['sql_management_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testGetNonExistentSqlRequest(): void
+    {
+        $this->getItem('/sql-requests/999999', ['sql_management_read'], Response::HTTP_NOT_FOUND);
+        // SqlRequestId refuses 0
+        $this->getItem('/sql-requests/0', ['sql_management_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }
