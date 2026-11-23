@@ -128,6 +128,13 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         'default-supplier',
         'stock',
         'transform-to-customer',
+        // Actions on an order
+        'set-internal-note',
+        'set-invoice-address',
+        'set-delivery-address',
+        'set-currency',
+        'update-status',
+        'resend-email',
     ];
 
     public function __construct()
