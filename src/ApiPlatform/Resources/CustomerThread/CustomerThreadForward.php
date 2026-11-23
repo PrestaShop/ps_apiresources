@@ -35,8 +35,9 @@ use Symfony\Component\Validator\Constraints as Assert;
  * thread representation lives on CustomerThreadDetails, so this operation answers an empty
  * 204: the result is observed through GET /customer-threads/{customerThreadId}/details.
  *
- * Requires PrestaShop/PrestaShop#42047, which gives ForwardCustomerThreadCommand a public
- * constructor — the named constructors it ships with today cannot be used by the serializer.
+ * Requires PrestaShop/PrestaShop#42047 (develop, so 9.3.0), which gives
+ * ForwardCustomerThreadCommand a public constructor: the named constructors the older cores
+ * ship with cannot be used by the serializer.
  */
 #[ApiResource(
     operations: [
@@ -46,6 +47,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             output: false,
             CQRSCommand: ForwardCustomerThreadCommand::class,
             scopes: ['customer_service_write'],
+            extraProperties: [
+                'minVersion' => '9.3.0',
+            ],
         ),
     ],
     exceptionToStatus: [

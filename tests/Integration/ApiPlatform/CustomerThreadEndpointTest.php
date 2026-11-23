@@ -64,7 +64,10 @@ class CustomerThreadEndpointTest extends ApiTestCase
         yield 'get details endpoint' => ['GET', '/customer-threads/1/details'];
         yield 'set-status endpoint' => ['PUT', '/customer-threads/1/set-status'];
         yield 'reply endpoint' => ['PUT', '/customer-threads/1/messages'];
-        yield 'forward endpoint' => ['POST', '/customer-threads/1/forwards'];
+        // The forward is only exposed from 9.3.0, older cores answer 404
+        if (self::isVersionAtLeast('9.3.0')) {
+            yield 'forward endpoint' => ['POST', '/customer-threads/1/forwards'];
+        }
         yield 'delete endpoint' => ['DELETE', '/customer-threads/1'];
         yield 'bulk delete endpoint' => ['DELETE', '/customer-threads/bulk-delete'];
     }
@@ -168,13 +171,36 @@ class CustomerThreadEndpointTest extends ApiTestCase
         $this->assertSame(['closed', 'pending1', 'pending2'], array_keys($this->getDetails($customerThreadId)['actions']));
     }
 
+    public function testSetStatusWithoutStatusIsRejected(): void
+    {
+        $customerThreadId = $this->seedCustomerThread('open');
+
+        $validationErrors = $this->updateItem(
+            '/customer-threads/' . $customerThreadId . '/set-status',
+            [],
+            ['customer_service_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'status',
+                'message' => 'This value should not be blank.',
+            ],
+        ], $validationErrors);
+    }
+
     public function testReplyToCustomerThread(): int
     {
         $customerThreadId = $this->seedCustomerThread();
 
         $this->updateItem(
             '/customer-threads/' . $customerThreadId . '/messages',
-            ['replyMessage' => 'Thanks for reaching out, here is our reply.'],
+            [
+                'replyMessage' => 'Thanks for reaching out, here is our reply.',
+                'employeeId' => 1,
+            ],
             ['customer_service_write'],
             Response::HTTP_NO_CONTENT
         );
@@ -190,17 +216,44 @@ class CustomerThreadEndpointTest extends ApiTestCase
     }
 
     /**
+     * An API client has no logged-in employee, so the reply names the employee it is attributed to.
+     */
+    public function testReplyWithoutEmployeeIsRejected(): void
+    {
+        $customerThreadId = $this->seedCustomerThread();
+
+        $validationErrors = $this->updateItem(
+            '/customer-threads/' . $customerThreadId . '/messages',
+            ['replyMessage' => 'A reply without employee.'],
+            ['customer_service_write'],
+            Response::HTTP_UNPROCESSABLE_ENTITY
+        );
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'employeeId',
+                'message' => 'This value should not be null.',
+            ],
+        ], $validationErrors);
+
+        // Nothing was saved
+        $this->assertCount(1, $this->getDetails($customerThreadId)['messages']);
+    }
+
+    /**
      * Forwarding builds its email from the last message of the thread, so it needs a thread
      * that has already been replied to — which the reply endpoint above provides.
      *
-     * Requires PrestaShop/PrestaShop#42047: ForwardCustomerThreadCommand::__construct() is
-     * private on the current cores, so the serializer cannot build the command. This test
-     * stays red until that core PR is merged into the target branches.
+     * Requires PrestaShop/PrestaShop#42047 (develop, 9.3.0): ForwardCustomerThreadCommand::__construct()
+     * is private on the older cores, so the serializer cannot build the command.
      *
      * @depends testReplyToCustomerThread
      */
     public function testForwardCustomerThread(int $customerThreadId): void
     {
+        $this->markTestSkippedByMinVersion('9.3.0');
+
         $this->createItem(
             '/customer-threads/' . $customerThreadId . '/forwards',
             [
@@ -249,5 +302,48 @@ class CustomerThreadEndpointTest extends ApiTestCase
                 Response::HTTP_NOT_FOUND
             );
         }
+    }
+
+    /**
+     * The threads are deleted one by one: the first unknown id stops the deletion, the threads
+     * listed before it are already gone and the ones after it are kept.
+     */
+    public function testBulkDeleteStopsAtTheFirstUnknownCustomerThread(): void
+    {
+        $deletedThreadId = $this->seedCustomerThread();
+        $keptThreadId = $this->seedCustomerThread();
+
+        $this->bulkDeleteItems('/customer-threads/bulk-delete', [
+            'customerThreadIds' => [$deletedThreadId, 999999, $keptThreadId],
+        ], ['customer_service_write'], Response::HTTP_NOT_FOUND);
+
+        $this->requestApi(
+            'GET',
+            '/customer-threads/' . $deletedThreadId . '/details',
+            null,
+            ['customer_service_read'],
+            Response::HTTP_NOT_FOUND
+        );
+        $this->assertSame($keptThreadId, $this->getDetails($keptThreadId)['customerThreadId']);
+    }
+
+    public function testBulkDeleteInvalidCustomerThreadIdsIsRejected(): void
+    {
+        $customerThreadId = $this->seedCustomerThread();
+
+        $validationErrors = $this->bulkDeleteItems('/customer-threads/bulk-delete', [
+            'customerThreadIds' => [$customerThreadId, 0],
+        ], ['customer_service_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertIsArray($validationErrors);
+        $this->assertValidationErrors([
+            [
+                'propertyPath' => 'customerThreadIds[1]',
+                'message' => 'This value should be positive.',
+            ],
+        ], $validationErrors);
+
+        // The validation runs before the command: nothing was deleted
+        $this->assertSame($customerThreadId, $this->getDetails($customerThreadId)['customerThreadId']);
     }
 }

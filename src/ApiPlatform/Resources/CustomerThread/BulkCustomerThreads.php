@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CustomerThread;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\CustomerService\Command\BulkDeleteCustomerThreadCommand;
+use PrestaShop\PrestaShop\Core\Domain\CustomerService\Exception\CustomerServiceException;
 use PrestaShop\PrestaShop\Core\Domain\CustomerService\Exception\CustomerThreadNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,14 +42,19 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     exceptionToStatus: [
         CustomerThreadNotFoundException::class => Response::HTTP_NOT_FOUND,
+        CustomerServiceException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
     ],
 )]
 class BulkCustomerThreads
 {
     /**
+     * The threads are deleted one by one: the first unknown id stops the deletion with a 404,
+     * the threads listed before it are already deleted.
+     *
      * @var int[]
      */
-    #[ApiProperty(openapiContext: ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]])]
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
     #[Assert\NotBlank]
+    #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $customerThreadIds;
 }

@@ -31,12 +31,14 @@ use PrestaShop\PrestaShop\Core\Domain\CustomerService\Exception\CustomerThreadNo
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSUpdate;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ApiResource(
     operations: [
         new CQRSUpdate(
             uriTemplate: '/customer-threads/{customerThreadId}/set-status',
             requirements: ['customerThreadId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'SetStatus']],
             output: false,
             CQRSCommand: UpdateCustomerThreadStatusCommand::class,
             CQRSCommandMapping: self::COMMAND_MAPPING,
@@ -61,8 +63,10 @@ class CustomerThread
     public int $customerThreadId;
 
     /**
-     * One of open, closed, pending1, pending2.
+     * One of open, closed, pending1, pending2. Setting the status the thread already has
+     * answers 422: the core counts no updated row as a failure.
      */
+    #[Assert\NotBlank(groups: ['SetStatus'])]
     public string $status;
 
     /**
