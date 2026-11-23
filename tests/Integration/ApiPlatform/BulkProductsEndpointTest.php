@@ -143,12 +143,15 @@ class BulkProductsEndpointTest extends ApiTestCase
             $this->getItem('/products/' . $productId, ['product_read'], Response::HTTP_NOT_FOUND);
         }
 
-        // An unknown product doesn't stop the others, the failure is reported once all the products are processed
-        $productId = $this->createProduct('bulk product three', 'produit groupe trois');
+        // An unknown product answers 404 and stops the deletion there: the core bulk handler only collects the product
+        // exceptions, not the shop association failure of an unknown product
+        $deletedProductId = $this->createProduct('bulk product three', 'produit groupe trois');
+        $keptProductId = $this->createProduct('bulk product four', 'produit groupe quatre');
         $this->bulkDeleteItems('/products/bulk-delete', [
-            'productIds' => [$productId, 999999],
-        ], ['product_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        $this->getItem('/products/' . $productId, ['product_read'], Response::HTTP_NOT_FOUND);
+            'productIds' => [$deletedProductId, 999999, $keptProductId],
+        ], ['product_write'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/products/' . $deletedProductId, ['product_read'], Response::HTTP_NOT_FOUND);
+        $this->getItem('/products/' . $keptProductId, ['product_read']);
     }
 
     private function assertBulkIdsValidation(string $method, string $uri, array $extraData = []): void

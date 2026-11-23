@@ -30,6 +30,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Command\BulkDuplicateProductComman
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\BulkUpdateProductStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\BulkProductException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
+use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopAssociationNotFound;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
@@ -86,8 +87,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['product_write'],
             openapi: new OpenApiOperation(
                 summary: 'Delete several products.',
-                description: 'Deletes the listed products. A product that cannot be deleted (unknown) does not stop '
-                    . 'the others, the response is then a 422 once all the products are processed.',
+                description: 'Deletes the listed products, in their order. An unknown product answers 404 and stops '
+                    . 'the deletion there: the products listed before it are deleted, the following ones are not.',
             ),
         ),
     ],
@@ -97,6 +98,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         // The failed products of a bulk action: the product bulk exceptions don't implement the core
         // BulkCommandExceptionInterface, so they answer a 422 instead of the 207 detailing each product
         BulkProductException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+        // The deletion of an unknown product fails on its shop association, an exception the bulk handler doesn't
+        // collect (it only collects the product exceptions): the bulk stops at that product
+        ShopAssociationNotFound::class => Response::HTTP_NOT_FOUND,
     ],
 )]
 class BulkProducts
