@@ -58,10 +58,9 @@ class CurrencyEndpointTest extends ApiTestCase
 
     /**
      * Pins the whole CAD currency created by testAddCurrency. The localized fields hold one entry per
-     * language the currency was saved with, and the edit fills every installed language, which other
-     * test classes may have added: their key set is checked against $locales and only en-US is pinned.
+     * installed language (en-US and the fr-FR of ApiTestCase): their key set is checked and en-US is pinned.
      */
-    private function assertCadCurrency(int $currencyId, array $actual, array $overrides = [], ?array $locales = null): void
+    private function assertCadCurrency(int $currencyId, array $actual, array $overrides = []): void
     {
         $localizedFields = ['names', 'symbols', 'transformations'];
         $this->assertEquals(
@@ -80,8 +79,9 @@ class CurrencyEndpointTest extends ApiTestCase
         $this->assertSame('Canadian Dollar', $actual['names']['en-US']);
         $this->assertSame('$', $actual['symbols']['en-US']);
         $this->assertSame('', $actual['transformations']['en-US']);
+        $locales = array_column(\Language::getLanguages(false), 'locale');
         foreach ($localizedFields as $field) {
-            $this->assertEqualsCanonicalizing($locales ?? ['en-US'], array_keys($actual[$field]));
+            $this->assertEqualsCanonicalizing($locales, array_keys($actual[$field]));
         }
     }
 
@@ -143,8 +143,7 @@ class CurrencyEndpointTest extends ApiTestCase
             'enabled' => true,
         ], ['currency_write']);
 
-        $locales = array_column(\Language::getLanguages(false), 'locale');
-        $this->assertCadCurrency($currencyId, $updated, ['exchangeRate' => 2.5], $locales);
+        $this->assertCadCurrency($currencyId, $updated, ['exchangeRate' => 2.5]);
         $this->assertEquals($updated, $this->getItem('/currencies/' . $currencyId, ['currency_read']));
 
         return $currencyId;
