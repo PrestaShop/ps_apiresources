@@ -25,7 +25,6 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Order;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
-use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Dto\OrderCarrier;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Dto\OrderDiscount;
 use PrestaShop\Module\APIResources\ApiPlatform\Resources\Order\Dto\OrderDocument;
@@ -302,6 +301,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             ApiResourceMapping: self::API_RESOURCE_MAPPING,
             extraProperties: [
                 'minVersion' => '9.2.2',
+                'defaultValues' => [
+                    // AddCartRuleToOrderCommand has no default for it, free shipping has no value
+                    'discountValue' => null,
+                ],
             ],
             validationContext: ['groups' => ['Default', 'AddDiscount']],
             openapi: new OpenApiOperation(
@@ -496,9 +499,10 @@ class Order
     #[Assert\Positive]
     public int $orderHistoryId;
 
-    // Input of PATCH /carriers/{orderCarrierId}, read back in carriers
+    // Input of PATCH /carriers/{orderCarrierId}, read back in carriers. No default value: an initialized write-only
+    // property would be returned by the write operations
     #[ApiProperty(readable: false)]
-    public ?string $trackingNumber = null;
+    public ?string $trackingNumber;
 
     // Input of PATCH /products/{orderDetailId}, read back in products
     #[ApiProperty(readable: false)]
@@ -506,21 +510,24 @@ class Order
     #[Assert\Positive]
     public int $quantity;
 
-    // Input of PATCH /products/{orderDetailId}, read back in products
-    #[ApiProperty(readable: false)]
+    // Input of PATCH /products/{orderDetailId}, read back in products. A string: UpdateProductInOrderCommand takes the
+    // prices as strings, and a DecimalNumber is normalized as a float that its constructor refuses
+    #[ApiProperty(readable: false, openapiContext: ['description' => 'Unit price tax included, a numeric string.', 'example' => '11.90'])]
     #[Assert\NotNull(groups: ['UpdateProduct'])]
-    public DecimalNumber $unitPriceTaxIncluded;
+    #[Assert\Type('numeric')]
+    public string $unitPriceTaxIncluded;
 
     // Input of PATCH /products/{orderDetailId}, read back in products
-    #[ApiProperty(readable: false)]
+    #[ApiProperty(readable: false, openapiContext: ['description' => 'Unit price tax excluded, a numeric string.', 'example' => '11.90'])]
     #[Assert\NotNull(groups: ['UpdateProduct'])]
-    public DecimalNumber $unitPriceTaxExcluded;
+    #[Assert\Type('numeric')]
+    public string $unitPriceTaxExcluded;
 
     // Input of PATCH /products/{orderDetailId}, POST /discounts and POST /payments: the invoice the line, the discount
     // or the payment is attached to
     #[ApiProperty(readable: false)]
     #[Assert\Positive]
-    public ?int $orderInvoiceId = null;
+    public ?int $orderInvoiceId;
 
     // Input of POST /discounts, read back in discounts
     #[ApiProperty(readable: false)]
@@ -537,9 +544,11 @@ class Order
     ])]
     public string $discountType;
 
-    // Input of POST /discounts: a percentage or an amount depending on discountType, required except for free shipping
-    #[ApiProperty(readable: false, openapiContext: ['description' => 'Percentage or amount of the discount depending on discountType, required except for free_shipping.'])]
-    public ?DecimalNumber $discountValue = null;
+    // Input of POST /discounts: a percentage or an amount depending on discountType, required except for free shipping.
+    // A string, like the value AddCartRuleToOrderCommand takes; null by default (defaultValues of the operation)
+    #[ApiProperty(readable: false, openapiContext: ['description' => 'Percentage or amount of the discount depending on discountType, a numeric string, required except for free_shipping.', 'example' => '5.00'])]
+    #[Assert\Type('numeric')]
+    public ?string $discountValue;
 
     // Input of POST /payments, read back in payments
     #[ApiProperty(readable: false)]
@@ -551,10 +560,11 @@ class Order
     #[Assert\NotBlank(groups: ['AddPayment'])]
     public string $paymentMethod;
 
-    // Input of POST /payments, read back (formatted) in payments
-    #[ApiProperty(readable: false)]
+    // Input of POST /payments, read back (formatted) in payments. A string, like the amount AddPaymentCommand takes
+    #[ApiProperty(readable: false, openapiContext: ['description' => 'Amount of the payment, a numeric string.', 'example' => '50.50'])]
     #[Assert\NotNull(groups: ['AddPayment'])]
-    public DecimalNumber $paymentAmount;
+    #[Assert\Type('numeric')]
+    public string $paymentAmount;
 
     // Input of POST /payments
     #[ApiProperty(readable: false)]
@@ -564,7 +574,7 @@ class Order
 
     // Input of POST /payments, read back in payments
     #[ApiProperty(readable: false)]
-    public ?string $transactionId = null;
+    public ?string $transactionId;
 
     // Input of POST /payments: the employee recorded on the payment, none (0) by default
     #[ApiProperty(readable: false, openapiContext: ['description' => 'Employee recorded on the payment, none (0) by default.'])]
