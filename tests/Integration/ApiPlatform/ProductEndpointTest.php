@@ -380,6 +380,27 @@ class ProductEndpointTest extends ApiTestCase
     }
 
     /**
+     * @dataProvider provideInvalidProductIds
+     */
+    public function testProductItemWithInvalidId(string $productId, int $expectedHttpCode): void
+    {
+        $url = '/products/' . $productId;
+        $this->getItem($url, ['product_read'], $expectedHttpCode);
+        $this->partialUpdateItem($url, ['enabled' => false], ['product_write'], $expectedHttpCode);
+        $this->deleteItem($url, ['product_write'], $expectedHttpCode);
+    }
+
+    public static function provideInvalidProductIds(): iterable
+    {
+        yield 'zero' => ['0', Response::HTTP_UNPROCESSABLE_ENTITY];
+        yield 'negative' => ['-1', Response::HTTP_NOT_FOUND];
+        yield 'text' => ['abc', Response::HTTP_NOT_FOUND];
+        yield 'numeric-prefix' => ['1abc', Response::HTTP_NOT_FOUND];
+        yield 'decimal' => ['1.5', Response::HTTP_NOT_FOUND];
+        yield 'unknown-positive' => ['99999', Response::HTTP_NOT_FOUND];
+    }
+
+    /**
      * @depends testPartialUpdateProduct
      *
      * @param int $productId
