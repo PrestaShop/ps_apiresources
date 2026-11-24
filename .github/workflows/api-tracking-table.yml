@@ -40,7 +40,7 @@ jobs:
           root-password: 'password'
 
       - name: Checkout PrestaShop develop
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: PrestaShop/PrestaShop
           ref: develop
@@ -57,7 +57,7 @@ jobs:
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
       - name: Cache Composer directory
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('prestashop/composer.lock') }}
@@ -72,7 +72,7 @@ jobs:
         run: rm -rf prestashop/modules/ps_apiresources
 
       - name: Checkout ps_apiresources dev
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: dev
           path: prestashop/modules/ps_apiresources
@@ -96,7 +96,7 @@ jobs:
 
       - name: Upload the tracking table
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: api-endpoints-tracking
           path: ${{ runner.temp }}/api-endpoints-tracking.md
