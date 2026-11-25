@@ -72,6 +72,16 @@ class SearchAliasEndpointTest extends ApiTestCase
             'DELETE',
             '/search-aliases/bulk-delete',
         ];
+
+        yield 'get alias by id endpoint' => [
+            'GET',
+            '/search-aliases/aliases/1',
+        ];
+
+        yield 'search terms endpoint' => [
+            'GET',
+            '/search-terms?phrase=blo',
+        ];
     }
 
     public function testCreateSearchAlias(): void
@@ -535,6 +545,88 @@ class SearchAliasEndpointTest extends ApiTestCase
             }
         }
         $this->assertTrue($hasAliasError, 'Should have validation error about missing alias field');
+    }
+
+    public function testGetAliasForEditing(): void
+    {
+        // Create a search alias, then resolve one of its alias row IDs from the database
+        $postData = [
+            'searchTerm' => 'editing-term',
+            'aliases' => [
+                ['alias' => 'editing-alias-one', 'enabled' => true],
+                ['alias' => 'editing-alias-two', 'enabled' => false],
+            ],
+        ];
+        $this->createItem('/search-aliases', $postData, ['search_alias_write'], Response::HTTP_CREATED);
+
+        $aliasId = $this->getAliasIdFromDatabase('editing-term', 'editing-alias-one');
+
+        // Getting an alias by its ID returns the whole search-term group it belongs to.
+        // Like the search-term GET, the response carries both 'active' and 'enabled'.
+        $response = $this->getItem('/search-aliases/aliases/' . $aliasId, ['search_alias_read']);
+        $this->assertEquals([
+            'aliasId' => $aliasId,
+            'searchTerm' => 'editing-term',
+            'aliases' => [
+                ['alias' => 'editing-alias-one', 'active' => 1, 'enabled' => 1],
+                ['alias' => 'editing-alias-two', 'active' => 0, 'enabled' => 0],
+            ],
+        ], $response);
+    }
+
+    public function testGetAliasForEditingNotFound(): void
+    {
+        $this->getItem('/search-aliases/aliases/99999999', ['search_alias_read'], Response::HTTP_NOT_FOUND);
+    }
+
+    public function testSearchForSearchTerm(): void
+    {
+        // Create several search terms sharing a common prefix
+        foreach (['autocomplete-alpha', 'autocomplete-beta', 'autocomplete-gamma'] as $term) {
+            $this->createItem('/search-aliases', [
+                'searchTerm' => $term,
+                'aliases' => [['alias' => $term . '-alias', 'enabled' => true]],
+            ], ['search_alias_write'], Response::HTTP_CREATED);
+        }
+
+        // All matching terms, sorted alphabetically
+        $response = $this->getItem('/search-terms?phrase=autocomplete', ['search_alias_read']);
+        $this->assertEquals([
+            'searchTerms' => ['autocomplete-alpha', 'autocomplete-beta', 'autocomplete-gamma'],
+        ], $response);
+
+        // The limit parameter caps the number of returned terms
+        $limited = $this->getItem('/search-terms?phrase=autocomplete&limit=2', ['search_alias_read']);
+        $this->assertEquals(['searchTerms' => ['autocomplete-alpha', 'autocomplete-beta']], $limited);
+
+        // A phrase matching nothing returns an empty list
+        $empty = $this->getItem('/search-terms?phrase=no-such-search-term', ['search_alias_read']);
+        $this->assertEquals(['searchTerms' => []], $empty);
+    }
+
+    public function testSearchForSearchTermMissingPhrase(): void
+    {
+        // The phrase query parameter is required
+        $this->requestApi('GET', '/search-terms', null, ['search_alias_read'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testSearchForSearchTermInvalidLimit(): void
+    {
+        // A non-positive limit is rejected by the CQRS query
+        $this->requestApi('GET', '/search-terms?phrase=autocomplete&limit=0', null, ['search_alias_read'], Response::HTTP_BAD_REQUEST);
+    }
+
+    private function getAliasIdFromDatabase(string $searchTerm, string $alias): int
+    {
+        $connection = static::getContainer()->get('doctrine.dbal.default_connection');
+        $id = $connection->fetchOne(
+            'SELECT id_alias FROM ' . _DB_PREFIX_ . 'alias WHERE search = ? AND alias = ?',
+            [$searchTerm, $alias]
+        );
+
+        $this->assertNotFalse($id, "Alias '$alias' for term '$searchTerm' should exist in database");
+
+        return (int) $id;
     }
 
     private function createTestSearchAlias2(): void
