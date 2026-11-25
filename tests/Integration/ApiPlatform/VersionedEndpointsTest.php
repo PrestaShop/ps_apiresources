@@ -25,6 +25,7 @@ namespace PsApiResourcesTest\Integration\ApiPlatform;
 
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PrestaShop\PrestaShop\Core\Version;
+use Symfony\Component\Routing\Exception\ExceptionInterface as RoutingException;
 
 /**
  * End-to-end test of the minVersion/maxVersion endpoint filtering, handled by the module's (deprecated)
@@ -62,6 +63,48 @@ class VersionedEndpointsTest extends ApiTestCase
             unlink(self::getInstalledResourcePath());
         }
         self::clearCache();
+    }
+
+    /**
+     * The tests fail intermittently on CI with the test resource unknown to the kernel (no route, no scope),
+     * see https://github.com/PrestaShop/ps_apiresources/issues/462. Fail right away with what the kernel
+     * actually loaded, so that a failing run tells which step is missing.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $kernel = static::bootKernel();
+        $container = static::getContainer();
+        try {
+            $container->get('router')->match('/test/module/versioned/always/hook/1');
+            $routeFound = true;
+        } catch (RoutingException) {
+            $routeFound = false;
+        }
+
+        if (!$routeFound) {
+            $containerFile = (new \ReflectionObject($kernel->getContainer()))->getFileName();
+            $diagnostic = [
+                'pid' => getmypid(),
+                'resource_file_exists' => file_exists(self::getInstalledResourcePath()),
+                'resource_file_mtime' => @filemtime(self::getInstalledResourcePath()) ?: null,
+                'container_file' => $containerFile,
+                'container_file_mtime' => $containerFile ? @filemtime($containerFile) : null,
+                'module_active_in_container' => $container->hasParameter('prestashop.active_modules')
+                    ? in_array('ps_apiresources', $container->getParameter('prestashop.active_modules'), true)
+                    : 'parameter missing',
+                'resource_directories' => $container->hasParameter('api_platform.resource_class_directories')
+                    ? $container->getParameter('api_platform.resource_class_directories')
+                    : 'parameter missing',
+                'now' => time(),
+            ];
+        }
+        static::ensureKernelShutdown();
+
+        if (!$routeFound) {
+            self::fail('The test resource is not registered in the kernel: ' . json_encode($diagnostic, JSON_UNESCAPED_SLASHES));
+        }
     }
 
     public static function getProtectedEndpoints(): iterable
