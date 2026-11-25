@@ -355,6 +355,24 @@ class ProductCombinationEndpointTest extends ApiTestCase
     }
 
     /**
+     * @dataProvider provideInvalidCombinationIds
+     */
+    public function testGetProductCombinationWithInvalidId(string $combinationId, int $expectedHttpCode): void
+    {
+        $this->getItem('/products/combinations/' . $combinationId, ['product_read'], $expectedHttpCode);
+    }
+
+    public static function provideInvalidCombinationIds(): iterable
+    {
+        yield 'zero' => ['0', Response::HTTP_UNPROCESSABLE_ENTITY];
+        yield 'negative' => ['-1', Response::HTTP_NOT_FOUND];
+        yield 'text' => ['abc', Response::HTTP_NOT_FOUND];
+        yield 'numeric-prefix' => ['1abc', Response::HTTP_NOT_FOUND];
+        yield 'decimal' => ['1.5', Response::HTTP_NOT_FOUND];
+        yield 'unknown-positive' => ['99999', Response::HTTP_NOT_FOUND];
+    }
+
+    /**
      * @depends testAddProductWithCombinations
      */
     public function testInvalidCombinationGeneration(int $productId): void
