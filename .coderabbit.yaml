@@ -30,7 +30,7 @@ reviews:
   in_progress_fortune: false
   poem: false
   review_status: false
-  review_info: false
+  review_info: true
   # Kept: the prompt to fix a finding with an AI agent, with the "Fix comments" finishing touch below
   enable_prompt_for_ai_agents: true
   path_filters:
