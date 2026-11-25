@@ -100,7 +100,9 @@ final class ApiResourceUriTemplateRector extends AbstractRector
      * specific elements that are unique (like the cover)
      */
     private const SKIPPED_KEYWORDS = [
+        'adapt-to-rtl',
         'batch',
+        'import',
         'status',
         'toggle-status',
         'set-status',
