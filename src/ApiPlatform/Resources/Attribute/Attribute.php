@@ -30,6 +30,7 @@ use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\Command\EditAttri
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\Exception\AttributeConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\Exception\AttributeNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\Query\GetAttributeForEditing;
+use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Command\DeleteAttributeTextureImageCommand;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
@@ -74,6 +75,15 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/attributes/attributes/{attributeId}',
             requirements: ['attributeId' => '\d+'],
             CQRSCommand: DeleteAttributeCommand::class,
+            scopes: [
+                'attribute_write',
+            ],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/attributes/attributes/{attributeId}/textures',
+            requirements: ['attributeId' => '\d+'],
+            output: false,
+            CQRSCommand: DeleteAttributeTextureImageCommand::class,
             scopes: [
                 'attribute_write',
             ],
