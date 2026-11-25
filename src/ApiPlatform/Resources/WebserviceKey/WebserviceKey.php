@@ -25,11 +25,13 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\WebserviceKey;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use PrestaShop\PrestaShop\Core\Domain\Webservice\Command\AddWebserviceKeyCommand;
+use PrestaShop\PrestaShop\Core\Domain\Webservice\Command\DeleteWebserviceKeyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Webservice\Command\EditWebserviceKeyCommand;
 use PrestaShop\PrestaShop\Core\Domain\Webservice\Exception\WebserviceConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Webservice\Exception\WebserviceKeyNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Webservice\Query\GetWebserviceKeyForEditing;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\Form\Admin\Type\FormattedTextareaType;
@@ -47,6 +49,13 @@ use Symfony\Component\Validator\Constraints as Assert;
                 '[shopIds]' => '[associatedShops]',
                 '[enabled]' => '[status]',
             ],
+        ),
+        new CQRSDelete(
+            uriTemplate: '/webservice-keys/{webserviceKeyId}',
+            requirements: ['webserviceKeyId' => '\d+'],
+            output: false,
+            CQRSCommand: DeleteWebserviceKeyCommand::class,
+            scopes: ['webservice_key_write']
         ),
         new CQRSGet(
             uriTemplate: '/webservice-keys/{webserviceKeyId}',
