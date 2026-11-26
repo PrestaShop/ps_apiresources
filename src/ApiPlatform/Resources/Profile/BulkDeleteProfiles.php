@@ -1,0 +1,70 @@
+<?php
+/**
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License version 3.0
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA and Contributors <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+declare(strict_types=1);
+
+namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Profile;
+
+use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Command\BulkDeleteProfileCommand;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileException;
+use PrestaShop\PrestaShop\Core\Domain\Profile\Exception\ProfileNotFoundException;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ApiResource(
+    operations: [
+        new CQRSDelete(
+            uriTemplate: '/profiles/bulk-delete',
+            CQRSCommand: BulkDeleteProfileCommand::class,
+            scopes: [
+                'profile_write',
+            ],
+            allowEmptyBody: false,
+            openapi: new OpenApiOperation(
+                summary: 'Delete several profiles.',
+                description: 'Deletes the listed profiles in order. The first profile that cannot be deleted (unknown: '
+                    . '404; the SuperAdmin profile or a profile assigned to an employee: 422) stops the request: the '
+                    . 'profiles listed before it are deleted, the ones after it are kept.',
+            ),
+        ),
+    ],
+    exceptionToStatus: [
+        ProfileNotFoundException::class => Response::HTTP_NOT_FOUND,
+        // Also the SuperAdmin profile or a profile assigned to an employee
+        ProfileException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+    ],
+)]
+class BulkDeleteProfiles
+{
+    /**
+     * @var int[]
+     */
+    #[ApiProperty(openapiContext: ['example' => [1, 3]])]
+    #[Assert\NotBlank]
+    #[Assert\All([
+        new Assert\Type('integer'),
+        new Assert\Positive(),
+    ])]
+    public array $profileIds;
+}
