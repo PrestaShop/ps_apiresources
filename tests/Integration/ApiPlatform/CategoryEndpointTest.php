@@ -55,6 +55,8 @@ class CategoryEndpointTest extends ApiTestCase
 
     public static function getProtectedEndpoints(): iterable
     {
+        yield 'get categories tree endpoint' => ['GET', '/categories/trees'];
+
         yield 'get endpoint' => [
             'GET',
             '/categories/3',
@@ -82,6 +84,11 @@ class CategoryEndpointTest extends ApiTestCase
 
         yield 'update status endpoint' => [
             'PATCH',
+            '/categories/3/status',
+        ];
+
+        yield 'get status endpoint' => [
+            'GET',
             '/categories/3/status',
         ];
 
@@ -220,6 +227,31 @@ class CategoryEndpointTest extends ApiTestCase
         $this->assertTrue($category['enabled']);
     }
 
+    public function testGetCategoryStatus(): void
+    {
+        // Force a known status, then read it back through the dedicated status endpoint
+        $this->requestApi(
+            Request::METHOD_PATCH,
+            '/categories/3/status',
+            ['enabled' => false],
+            ['category_write'],
+            Response::HTTP_OK
+        );
+
+        $this->assertEquals(['categoryId' => 3, 'enabled' => false], $this->getItem('/categories/3/status', ['category_read']));
+
+        // Re-enable and assert the status endpoint reflects the change
+        $this->requestApi(
+            Request::METHOD_PATCH,
+            '/categories/3/status',
+            ['enabled' => true],
+            ['category_write'],
+            Response::HTTP_OK
+        );
+
+        $this->assertEquals(['categoryId' => 3, 'enabled' => true], $this->getItem('/categories/3/status', ['category_read']));
+    }
+
     public function testDeleteCategoryThumbnail(): void
     {
         // This test checks the happy path of the "delete thumbnail" endpoint.
@@ -313,5 +345,50 @@ class CategoryEndpointTest extends ApiTestCase
         ], ['category_write']);
 
         return [$cat1['categoryId'], $cat2['categoryId']];
+    }
+
+    /**
+     * The tree is the read side of the whole category hierarchy, so it is asserted against a
+     * category this suite created rather than against whatever the fixtures ship: the
+     * standalone test could only check that the first row had the expected keys.
+     */
+    public function testGetCategoriesTree(): void
+    {
+        $categoryId = $this->createItem('/categories', [
+            'names' => ['en-US' => 'Tree probe EN', 'fr-FR' => 'Tree probe FR'],
+            'linkRewrites' => ['en-US' => 'tree-probe-en', 'fr-FR' => 'tree-probe-fr'],
+            'isActive' => true,
+            'parentCategoryId' => 2,
+            'shopIds' => [1],
+        ], ['category_write'])['categoryId'];
+
+        $node = static fn (int $id, string $name, array $children = []): array => [
+            'categoryId' => $id,
+            'enabled' => true,
+            'name' => $name,
+            'displayName' => $name,
+            'children' => $children,
+        ];
+
+        // The whole tree, so a field lost or left unmapped at any depth fails the test
+        $this->assertEquals(
+            [
+                $node(2, 'Home', [
+                    $node(3, 'Clothes', [
+                        $node(4, 'Men'),
+                        $node(5, 'Women'),
+                    ]),
+                    $node(6, 'Accessories', [
+                        $node(7, 'Stationery'),
+                        $node(8, 'Home Accessories'),
+                    ]),
+                    $node(9, 'Art'),
+                    $node($categoryId, 'Tree probe EN'),
+                ]),
+            ],
+            $this->getItem('/categories/trees', ['category_read'])
+        );
+
+        $this->deleteItem('/categories/' . $categoryId . '/associate_and_disable', ['category_write']);
     }
 }
