@@ -299,7 +299,10 @@ class OrderStateEndpointTest extends ApiTestCase
 
         if (!self::isVersionAtLeast('9.2.2')) {
             // Older cores do not check the templates on creation (only on update), see PrestaShop/PrestaShop#43382
-            $this->createItem('/order-states', $createData, ['order_state_write']);
+            $orderState = $this->createItem('/order-states', $createData, ['order_state_write']);
+            $expected = $this->getExpectedOrderState($orderState['orderStateId'], $createData);
+            $this->assertEquals($expected, $orderState);
+            $this->assertEquals($expected, $this->getItem('/order-states/' . $orderState['orderStateId'], ['order_state_read']));
 
             return;
         }
@@ -373,10 +376,9 @@ class OrderStateEndpointTest extends ApiTestCase
         }
 
         $orderState = $this->createItem('/order-states', $createData, ['order_state_write']);
-        $this->assertEquals(
-            $this->getExpectedOrderState($orderState['orderStateId'], array_merge($this->getCreateData(), $createData)),
-            $orderState
-        );
+        $expected = $this->getExpectedOrderState($orderState['orderStateId'], array_merge($this->getCreateData(), $createData));
+        $this->assertEquals($expected, $orderState);
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderState['orderStateId'], ['order_state_read']));
     }
 
     public function testInvalidOrderStateValues(): void
