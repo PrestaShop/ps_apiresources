@@ -118,13 +118,16 @@ class OrderState
     #[LocalizedValue]
     #[DefaultLanguage(groups: ['Create'], fieldName: 'names')]
     #[DefaultLanguage(groups: ['Update'], fieldName: 'names', allowNull: true)]
-    // Same rules as the back office form (OrderStateType)
+    // Same rules as the back office form (OrderStateType); the type first, TypedRegex throws on a non-string
     #[Assert\All(constraints: [
-        new Assert\NotNull(),
-        new TypedRegex([
-            'type' => TypedRegex::TYPE_GENERIC_NAME,
+        new Assert\Sequentially([
+            new Assert\NotNull(),
+            new Assert\Type('string'),
+            new TypedRegex([
+                'type' => TypedRegex::TYPE_GENERIC_NAME,
+            ]),
+            new Assert\Length(max: OrderStateSettings::NAME_MAX_LENGTH),
         ]),
-        new Assert\Length(max: OrderStateSettings::NAME_MAX_LENGTH),
     ])]
     public array $names;
 
@@ -136,10 +139,15 @@ class OrderState
     ])]
     #[LocalizedValue]
     #[Assert\NotNull(groups: ['Create'])]
-    // Mail template names, validated by OrderState::$definition (isTplName, 64 characters)
+    // Mail template names, validated by OrderState::$definition (isTplName, 64 characters); the handler calls
+    // strlen() on each of them, so a null or non-string value must not reach it
     #[Assert\All(constraints: [
-        new Assert\Regex(pattern: '/^[a-zA-Z0-9_-]*$/'),
-        new Assert\Length(max: 64),
+        new Assert\Sequentially([
+            new Assert\NotNull(),
+            new Assert\Type('string'),
+            new Assert\Regex(pattern: '/^[a-zA-Z0-9_-]*$/'),
+            new Assert\Length(max: 64),
+        ]),
     ])]
     public array $templates;
 

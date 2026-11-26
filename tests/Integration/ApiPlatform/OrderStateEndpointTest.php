@@ -400,6 +400,17 @@ class OrderStateEndpointTest extends ApiTestCase
             ['propertyPath' => 'templates[fr-FR]'],
             ['propertyPath' => 'color'],
         ], $validationErrorsResponse);
+
+        $invalidData = $this->getCreateData();
+        $invalidData['names'] = ['en-US' => 17, 'fr-FR' => 'Nom FR'];
+        $invalidData['sendEmail'] = true;
+        $invalidData['templates'] = ['en-US' => 'payment', 'fr-FR' => null];
+
+        $validationErrorsResponse = $this->createItem('/order-states', $invalidData, ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'names[en-US]'],
+            ['propertyPath' => 'templates[fr-FR]'],
+        ], $validationErrorsResponse);
     }
 
     public function testInvalidOrderStateUpdate(): void
@@ -422,6 +433,24 @@ class OrderStateEndpointTest extends ApiTestCase
         $this->assertValidationErrors([
             ['propertyPath' => 'names[en-US]'],
             ['propertyPath' => 'names[fr-FR]'],
+        ], $validationErrorsResponse);
+
+        $validationErrorsResponse = $this->partialUpdateItem('/order-states/' . $orderStateId, [
+            'names' => ['en-US' => 17],
+            'sendEmail' => true,
+            'templates' => ['en-US' => 'payment', 'fr-FR' => null],
+        ], ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'names[en-US]'],
+            ['propertyPath' => 'templates[fr-FR]'],
+        ], $validationErrorsResponse);
+
+        $validationErrorsResponse = $this->partialUpdateItem('/order-states/' . $orderStateId, [
+            'sendEmail' => true,
+            'templates' => ['en-US' => 'payment', 'fr-FR' => 7],
+        ], ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'templates[fr-FR]'],
         ], $validationErrorsResponse);
 
         // Sending e-mails needs a template in every language: MissingOrderStateRequiredFieldsException
