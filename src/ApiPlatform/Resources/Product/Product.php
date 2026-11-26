@@ -24,14 +24,21 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\Product;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
 use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\TypedRegex;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AddProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\DeleteProductCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Command\DuplicateProductCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Command\RemoveAllProductTagsCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Command\SetProductTagsCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductTypeCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Exception\InvalidProductTypeException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductNotFoundException;
+use PrestaShop\PrestaShop\Core\Domain\Product\Pack\Exception\ProductPackException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Pack\ValueObject\PackStockType;
 use PrestaShop\PrestaShop\Core\Domain\Product\ProductSettings;
 use PrestaShop\PrestaShop\Core\Domain\Product\Query\GetProductForEditing;
@@ -97,6 +104,96 @@ use Symfony\Component\Validator\Constraints as Assert;
                 '[_context][shopConstraint]' => '[shopConstraint]',
             ]
         ),
+        new CQRSCreate(
+            uriTemplate: '/products/{productId}/duplicate',
+            requirements: ['productId' => '\d+'],
+            // The product to duplicate is identified by the URI, no request body is expected
+            allowEmptyBody: true,
+            CQRSCommand: DuplicateProductCommand::class,
+            CQRSQuery: GetProductForEditing::class,
+            scopes: [
+                'product_write',
+            ],
+            CQRSQueryMapping: Product::QUERY_MAPPING,
+            CQRSCommandMapping: [
+                '[_context][shopConstraint]' => '[shopConstraint]',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Duplicate a product.',
+                description: 'Creates a copy of the product (combinations, images, prices, associations...) and answers '
+                    . 'the new product. The copy is disabled, its names are prefixed with "copy of" (translated in each '
+                    . 'language) and its link rewrites with "copy-of".',
+            ),
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/products/{productId}/change-type',
+            requirements: ['productId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'ChangeType']],
+            CQRSCommand: UpdateProductTypeCommand::class,
+            CQRSQuery: GetProductForEditing::class,
+            scopes: [
+                'product_write',
+            ],
+            CQRSQueryMapping: Product::QUERY_MAPPING,
+            CQRSCommandMapping: [
+                '[type]' => '[productType]',
+            ],
+            exceptionToStatus: [
+                ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
+                ProductConstraintException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+                // A product used in a pack cannot become a pack
+                InvalidProductTypeException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+                // The packed products of a pack changed to another type are removed first
+                ProductPackException::class => Response::HTTP_UNPROCESSABLE_ENTITY,
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Change the type of a product.',
+                description: 'Sets the type of the product and answers the updated product. The content of the '
+                    . 'previous type is removed: the packed products of a pack, the combinations of a product with '
+                    . 'combinations (its stock is reset), the file of a virtual product. Changing to the combinations '
+                    . 'type also resets the stock of the product. A product contained in a pack cannot become a pack '
+                    . '(422).',
+            ),
+        ),
+        new CQRSPartialUpdate(
+            uriTemplate: '/products/{productId}/tags',
+            requirements: ['productId' => '\d+'],
+            validationContext: ['groups' => ['Default', 'SetTags']],
+            CQRSCommand: SetProductTagsCommand::class,
+            CQRSQuery: GetProductForEditing::class,
+            scopes: [
+                'product_write',
+            ],
+            CQRSQueryMapping: Product::QUERY_MAPPING,
+            CQRSCommandMapping: [
+                '[tags]' => '[localizedTags]',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Set the tags of a product.',
+                description: 'Replaces the tags of each language sent and answers the updated product: the languages '
+                    . 'left out keep their tags, an empty list removes the tags of its language.',
+            ),
+        ),
+        new CQRSDelete(
+            uriTemplate: '/products/{productId}/tags',
+            requirements: ['productId' => '\d+'],
+            CQRSCommand: RemoveAllProductTagsCommand::class,
+            scopes: [
+                'product_write',
+            ],
+            extraProperties: [
+                // A CQRSDelete answers the resource read back by a query from PrestaShop 9.2.2, the arguments are
+                // passed as extra properties so that the resource still loads on the older cores
+                'CQRSQuery' => GetProductForEditing::class,
+                'CQRSQueryMapping' => Product::QUERY_MAPPING,
+                'minVersion' => '9.2.2',
+            ],
+            openapi: new OpenApiOperation(
+                summary: 'Remove all the tags of a product.',
+                description: 'Requires PrestaShop 9.2.2. Removes the tags of the product in every language and answers '
+                    . 'the updated product.',
+            ),
+        ),
     ],
     exceptionToStatus: [
         ProductNotFoundException::class => Response::HTTP_NOT_FOUND,
@@ -109,7 +206,7 @@ class Product
     #[ApiProperty(identifier: true)]
     public int $productId;
 
-    #[Assert\NotBlank(groups: ['Create'])]
+    #[Assert\NotBlank(groups: ['Create', 'ChangeType'])]
     #[Assert\Choice(choices: ProductType::AVAILABLE_TYPES)]
     public string $type;
 
@@ -133,10 +230,17 @@ class Product
     #[LocalizedValue]
     public array $shortDescriptions;
 
+    /**
+     * The tags of each language, a list of strings by locale. Written by PATCH /products/{productId}/tags.
+     */
     #[LocalizedValue]
+    #[Assert\NotBlank(groups: ['SetTags'])]
     #[Assert\All(constraints: [
-        new TypedRegex([
-            'type' => TypedRegex::TYPE_GENERIC_NAME,
+        new Assert\Sequentially([
+            new Assert\Type('array'),
+            new Assert\All(constraints: [
+                new Assert\Type('string'),
+            ]),
         ]),
     ])]
     public array $tags;

@@ -128,6 +128,7 @@ final class ApiResourceUriTemplateRector extends AbstractRector
         'default-supplier',
         'stock',
         'transform-to-customer',
+        'change-type',
     ];
 
     public function __construct()

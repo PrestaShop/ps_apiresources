@@ -75,6 +75,12 @@ services:
     autoconfigure: true
     public: false
 
+  # See class docblock: indexes the product tags of GetProductForEditing by language id, the format of
+  # PATCH /products/{productId}/tags
+  PrestaShop\Module\APIResources\ApiPlatform\Normalizer\ProductBasicInformationNormalizer:
+    autoconfigure: true
+    public: false
+
   PrestaShopBundle\ApiPlatform\Serializer\CQRSApiSerializer:
     class: PrestaShop\Module\APIResources\Serializer\QueryParameterTypeCastSerializer
     decorates: 'api_platform.serializer'
