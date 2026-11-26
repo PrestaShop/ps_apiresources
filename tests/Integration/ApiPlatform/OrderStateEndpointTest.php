@@ -176,26 +176,39 @@ class OrderStateEndpointTest extends ApiTestCase
      */
     public function testListOrderStates(int $orderStateId): int
     {
-        $paginatedOrderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
-        $this->assertGreaterThanOrEqual(1, $paginatedOrderStates['totalItems']);
-        $this->assertEquals('orderStateId', $paginatedOrderStates['orderBy']);
-
-        $this->assertEquals(
-            [
-                'orderStateId' => $orderStateId,
-                'name' => 'Updated status EN',
-                'color' => '#32CD32',
-                'sendEmail' => false,
-                'delivery' => false,
-                'invoice' => false,
-                'template' => '',
-                'unremovable' => false,
+        // The whole envelope is asserted on a list the test fully controls: an exact filter on its own fixture
+        $filtered = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read'], ['orderStateId' => $orderStateId]);
+        $expected = [
+            'totalItems' => 1,
+            'orderBy' => 'orderStateId',
+            'sortOrder' => 'desc',
+            'limit' => 50,
+            'offset' => 0,
+            'filters' => ['orderStateId' => $orderStateId],
+            'items' => [
+                [
+                    'orderStateId' => $orderStateId,
+                    'name' => 'Updated status EN',
+                    'color' => '#32CD32',
+                    'sendEmail' => false,
+                    'delivery' => false,
+                    'invoice' => false,
+                    'template' => '',
+                    'unremovable' => false,
+                ],
             ],
-            $paginatedOrderStates['items'][0]
-        );
+        ];
+        if (self::isVersionUnder('9.2.2')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.2 returns 0
+            unset($expected['offset']);
+        }
+        $this->assertEquals($expected, $filtered);
 
-        $filtered = $this->listItems('/order-states', ['order_state_read'], ['sendEmail' => 1]);
-        $this->assertNotContains($orderStateId, array_column($filtered['items'], 'orderStateId'));
+        // The boolean filter matches exactly
+        $withoutEmail = $this->listItems('/order-states', ['order_state_read'], ['orderStateId' => $orderStateId, 'sendEmail' => false]);
+        $this->assertEquals(1, $withoutEmail['totalItems']);
+        $withEmail = $this->listItems('/order-states', ['order_state_read'], ['orderStateId' => $orderStateId, 'sendEmail' => true]);
+        $this->assertEquals(0, $withEmail['totalItems']);
 
         return $orderStateId;
     }
@@ -209,13 +222,26 @@ class OrderStateEndpointTest extends ApiTestCase
         // This endpoint returns an empty response and a 204 HTTP code
         $this->assertNull($return);
 
-        // Order states are soft-deleted (existing orders may reference them): the record is
-        // still readable but flagged as deleted, and no longer appears in the listing.
-        $this->assertTrue($this->getItem('/order-states/' . $orderStateId, ['order_state_read'])['deleted']);
+        // Order states are soft deleted (existing orders may reference them): the record stays
+        // readable and editable, flagged as deleted, and leaves the listing
+        $expected = $this->getExpectedOrderState($orderStateId, array_merge($this->getCreateData(), [
+            'names' => [
+                'en-US' => 'Updated status EN',
+                'fr-FR' => 'Updated status FR',
+            ],
+            'color' => '#32CD32',
+        ]));
+        $expected['deleted'] = true;
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
+        $this->assertEquals(0, $this->countItems('/order-states', ['order_state_read'], ['orderStateId' => $orderStateId]));
 
-        $orderStates = $this->listItems('/order-states?orderBy=orderStateId&sortOrder=desc', ['order_state_read']);
-        $listedIds = array_column($orderStates['items'], 'orderStateId');
-        $this->assertNotContains($orderStateId, $listedIds);
+        $expected['color'] = '#FF8C00';
+        $this->assertEquals($expected, $this->partialUpdateItem('/order-states/' . $orderStateId, ['color' => '#FF8C00'], ['order_state_write']));
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
+
+        // Deleting it again is accepted and changes nothing
+        $this->assertNull($this->deleteItem('/order-states/' . $orderStateId, ['order_state_write']));
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
     }
 
     public function testDeleteNativeOrderState(): void
@@ -280,6 +306,29 @@ class OrderStateEndpointTest extends ApiTestCase
 
         // Sending e-mails needs a template in every language: MissingOrderStateRequiredFieldsException
         $this->createItem('/order-states', $createData, ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testFileInformationIsNotUploaded(): void
+    {
+        $orderState = $this->createItem('/order-states', $this->getCreateData(), ['order_state_write']);
+        $orderStateId = $orderState['orderStateId'];
+        $fileInformation = ['pathName' => '/etc/hostname', 'fileSize' => 10, 'mimeType' => 'image/gif', 'originalName' => 'icon.gif'];
+
+        // Not documented, but EditOrderStateCommand::setFileInformation() still receives it: move_uploaded_file()
+        // ignores a path that is not an upload, so the other fields are saved and no icon is written
+        $expected = $this->getExpectedOrderState($orderStateId, array_merge($this->getCreateData(), ['color' => '#32CD32']));
+        $this->assertEquals($expected, $this->partialUpdateItem('/order-states/' . $orderStateId, [
+            'color' => '#32CD32',
+            'fileInformation' => $fileInformation,
+        ], ['order_state_write']));
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
+        $this->assertFileDoesNotExist(_PS_ORDER_STATE_IMG_DIR_ . $orderStateId . '.gif');
+
+        // A size above the max upload size is refused (sent alone: the handler saves the other fields before the upload fails)
+        $this->partialUpdateItem('/order-states/' . $orderStateId, [
+            'fileInformation' => array_merge($fileInformation, ['fileSize' => PHP_INT_MAX]),
+        ], ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderStateId, ['order_state_read']));
     }
 
     public function testPartialUpdateOfOneLanguageKeepsTheOthers(): void

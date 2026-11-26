@@ -63,6 +63,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
+            openapi: new OpenApiOperation(
+                description: 'From PrestaShop 9.2.0, the omitted booleans default to false and "templates" to an empty '
+                    . 'list; older versions require them. With "sendEmail": true, "templates" must hold a template in '
+                    . 'every language, but older versions than 9.2.2 create the state without template.',
+            ),
             extraProperties: [
                 // The defaults of the back office form, applied before the validation from PrestaShop 9.2.0
                 // (the fields stay required on older versions)
@@ -194,13 +199,19 @@ class OrderState
         'delivery' => false,
     ];
 
+    // setFileInformation() takes the path of an uploaded icon, which a JSON body cannot provide. No context fills
+    // [_context][fileInformation]: the mapping only removes the field from the documented body (PrestaShop 9.2.0). A
+    // client sending it anyway reaches the uploader: move_uploaded_file() ignores a path that is not an upload (200,
+    // no icon), and a size above the max upload size answers 422
+    private const HIDDEN_FILE_INFORMATION = ['[_context][fileInformation]' => '[fileInformation]'];
+
     public const CREATE_COMMAND_MAPPING = [
         '[names]' => '[localizedNames]',
         '[templates]' => '[localizedTemplates]',
-    ];
+    ] + self::HIDDEN_FILE_INFORMATION;
 
     public const UPDATE_COMMAND_MAPPING = [
         '[names]' => '[name]',
         '[templates]' => '[template]',
-    ];
+    ] + self::HIDDEN_FILE_INFORMATION;
 }

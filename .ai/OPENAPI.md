@@ -46,6 +46,15 @@ gives the parameters of a collection. What the resource must add:
   (an associative array becomes a JSON object).
 - `deprecationReason` on a field or operation kept for backward
   compatibility.
+- A command setter the API cannot fill (`setFileInformation()`, the path
+  of an uploaded file a JSON body cannot provide) is hidden from the
+  documented body by a `'[_context][field]' => '[field]'` entry in the
+  command mapping (core 9.2.0): no context provides that key, so nothing
+  is copied, and the core leaves `[_context]` targets out of the request
+  body. It only hides the field: a client sending it still reaches the
+  setter, and the test asserts every answer (`OrderState`: the uploader
+  ignores a path that is not an upload, 200 without icon, and refuses a
+  size above the max upload size, 422).
 
 What must not be done: `type: string` overrides on `DecimalNumber`
 properties (they are JSON numbers), object schemas written by hand (use a
