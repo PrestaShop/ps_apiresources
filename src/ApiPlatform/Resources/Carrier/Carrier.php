@@ -29,6 +29,7 @@ use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\CleanHtml;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\AddCarrierCommand;
+use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\DeleteCarrierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\EditCarrierCommand;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Command\SetCarrierTaxRuleGroupCommand;
 use PrestaShop\PrestaShop\Core\Domain\Carrier\Exception\CannotAddCarrierException;
@@ -43,6 +44,7 @@ use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\TaxRulesGroup\Exception\TaxRulesGroupNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Zone\Exception\ZoneNotFoundException;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSCreate;
+use PrestaShopBundle\ApiPlatform\Metadata\CQRSDelete;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSGet;
 use PrestaShopBundle\ApiPlatform\Metadata\CQRSPartialUpdate;
 use PrestaShopBundle\ApiPlatform\Metadata\LocalizedValue;
@@ -118,6 +120,13 @@ use Symfony\Component\Validator\Constraints as Assert;
             scopes: ['carrier_write'],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::SET_TAX_RULE_GROUP_COMMAND_MAPPING,
+        ),
+        new CQRSDelete(
+            uriTemplate: '/carriers/{carrierId}',
+            requirements: ['carrierId' => '\d+'],
+            output: false,
+            CQRSCommand: DeleteCarrierCommand::class,
+            scopes: ['carrier_write'],
         ),
     ],
     exceptionToStatus: [
