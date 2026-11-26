@@ -416,6 +416,14 @@ class OrderStateEndpointTest extends ApiTestCase
             ['propertyPath' => 'names'],
         ], $validationErrorsResponse);
 
+        $validationErrorsResponse = $this->partialUpdateItem('/order-states/' . $orderStateId, [
+            'names' => ['en-US' => null, 'fr-FR' => null],
+        ], ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->assertValidationErrors([
+            ['propertyPath' => 'names[en-US]'],
+            ['propertyPath' => 'names[fr-FR]'],
+        ], $validationErrorsResponse);
+
         // Sending e-mails needs a template in every language: MissingOrderStateRequiredFieldsException
         $this->partialUpdateItem('/order-states/' . $orderStateId, [
             'sendEmail' => true,

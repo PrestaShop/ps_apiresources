@@ -120,6 +120,7 @@ class OrderState
     #[DefaultLanguage(groups: ['Update'], fieldName: 'names', allowNull: true)]
     // Same rules as the back office form (OrderStateType)
     #[Assert\All(constraints: [
+        new Assert\NotNull(),
         new TypedRegex([
             'type' => TypedRegex::TYPE_GENERIC_NAME,
         ]),
