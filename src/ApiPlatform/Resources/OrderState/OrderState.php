@@ -65,8 +65,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
             openapi: new OpenApiOperation(
                 description: 'From PrestaShop 9.2.0, the omitted booleans default to false and "templates" to an empty '
-                    . 'list; older versions require them. With "sendEmail": true, "templates" must hold a template in '
-                    . 'every language, but older versions than 9.2.2 create the state without template.',
+                    . 'list; older versions require them. From PrestaShop 9.2.2, "sendEmail": true answers 422 when '
+                    . '"templates" is empty or holds an empty template; older versions create the state without '
+                    . 'template. A language left out of "templates" gets no template.',
             ),
             extraProperties: [
                 // The defaults of the back office form, applied before the validation from PrestaShop 9.2.0

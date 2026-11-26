@@ -307,8 +307,28 @@ class OrderStateEndpointTest extends ApiTestCase
             return;
         }
 
-        // Sending e-mails needs a template in every language: MissingOrderStateRequiredFieldsException
+        // Sending e-mails needs at least one template and refuses an empty one: MissingOrderStateRequiredFieldsException
         $this->createItem('/order-states', $createData, ['order_state_write'], Response::HTTP_UNPROCESSABLE_ENTITY);
+    }
+
+    public function testAddOrderStateSendingEmailsWithSomeTemplates(): void
+    {
+        // Only the templates sent are checked: a language left out of "templates" gets no template
+        $createData = array_merge($this->getCreateData(), [
+            'sendEmail' => true,
+            'templates' => [
+                'en-US' => 'payment',
+            ],
+        ]);
+        $orderState = $this->createItem('/order-states', $createData, ['order_state_write']);
+        $expected = $this->getExpectedOrderState($orderState['orderStateId'], array_merge($createData, [
+            'templates' => [
+                'en-US' => 'payment',
+                'fr-FR' => '',
+            ],
+        ]));
+        $this->assertEquals($expected, $orderState);
+        $this->assertEquals($expected, $this->getItem('/order-states/' . $orderState['orderStateId'], ['order_state_read']));
     }
 
     public function testFileInformationIsNotUploaded(): void
@@ -336,10 +356,6 @@ class OrderStateEndpointTest extends ApiTestCase
 
     public function testPartialUpdateOfOneLanguageKeepsTheOthers(): void
     {
-        // Older cores replace the whole localized name on edit, so the default language ends up empty
-        // (see PrestaShop/PrestaShop#43268)
-        $this->markTestSkippedByMinVersion('9.2.2');
-
         $orderState = $this->createItem('/order-states', $this->getCreateData(), ['order_state_write']);
         $orderStateId = $orderState['orderStateId'];
 
@@ -348,6 +364,19 @@ class OrderStateEndpointTest extends ApiTestCase
                 'fr-FR' => 'Seulement FR',
             ],
         ];
+
+        if (self::isVersionUnder('9.2.2')) {
+            // Older cores replace the whole localized name on edit: the default language ends up empty, the legacy
+            // model throws an exception the core does not map, and nothing is saved (see PrestaShop/PrestaShop#43268)
+            $this->partialUpdateItem('/order-states/' . $orderStateId, $patchData, ['order_state_write'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            $this->assertEquals(
+                $this->getExpectedOrderState($orderStateId, $this->getCreateData()),
+                $this->getItem('/order-states/' . $orderStateId, ['order_state_read'])
+            );
+
+            return;
+        }
+
         $expected = $this->getExpectedOrderState($orderStateId, array_merge($this->getCreateData(), [
             'names' => [
                 'en-US' => 'Awaiting review EN',
