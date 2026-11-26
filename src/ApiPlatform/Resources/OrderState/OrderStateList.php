@@ -43,10 +43,11 @@ use PrestaShopBundle\ApiPlatform\Metadata\PaginatedList;
                 '[sendEmail]' => '[send_email]',
             ],
             openapi: new OpenApiOperation(
-                description: 'Lists the order states that are not deleted. Filters: orderStateId, sendEmail, delivery '
-                    . 'and invoice match exactly, name and template match partially; color and unremovable are not '
-                    . 'filterable and an unknown filter is ignored. orderBy accepts the same fields as the filters. The '
-                    . 'name and template are returned in a single language.',
+                description: 'Lists the order states that are not deleted. Filters: orderStateId matches exactly, '
+                    . 'sendEmail, delivery and invoice take 1 or 0 (true and false are not converted and select the '
+                    . 'wrong rows), name and template match partially; color and unremovable are not filterable and an '
+                    . 'unknown filter is ignored. orderBy accepts the same fields as the filters. The name and template '
+                    . 'are returned in a single language.',
             ),
         ),
     ]

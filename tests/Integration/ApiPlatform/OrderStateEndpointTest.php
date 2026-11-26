@@ -204,10 +204,10 @@ class OrderStateEndpointTest extends ApiTestCase
         }
         $this->assertEquals($expected, $filtered);
 
-        // The boolean filter matches exactly
-        $withoutEmail = $this->listItems('/order-states', ['order_state_read'], ['orderStateId' => $orderStateId, 'sendEmail' => false]);
+        // The boolean filters take 1 or 0, as sent in a query string
+        $withoutEmail = $this->listItems('/order-states', ['order_state_read'], ['orderStateId' => $orderStateId, 'sendEmail' => '0']);
         $this->assertEquals(1, $withoutEmail['totalItems']);
-        $withEmail = $this->listItems('/order-states', ['order_state_read'], ['orderStateId' => $orderStateId, 'sendEmail' => true]);
+        $withEmail = $this->listItems('/order-states', ['order_state_read'], ['orderStateId' => $orderStateId, 'sendEmail' => '1']);
         $this->assertEquals(0, $withEmail['totalItems']);
 
         return $orderStateId;
