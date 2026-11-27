@@ -84,7 +84,8 @@ use Symfony\Component\Validator\Constraints as Assert;
                 summary: 'Update a CMS page category.',
                 description: 'Partial update: only the sent fields change. A localized field replaces all its '
                     . 'languages: send every language, a missing one takes the value of the default language for '
-                    . 'names and linkRewrites, and becomes empty for the other localized fields.',
+                    . 'names and linkRewrites, and becomes empty for the other localized fields. Before PrestaShop '
+                    . '9.2.2, an update of the root category is applied but answers 500, as it cannot be read back.',
             ),
         ),
         new CQRSUpdate(
@@ -101,7 +102,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             openapi: new OpenApiOperation(
                 summary: 'Toggle the status of a CMS page category.',
                 description: 'Flips the displayed status without a body and returns the updated category. To set a '
-                    . 'given status, send displayed to PATCH /cms-pages/categories/{cmsPageCategoryId}.',
+                    . 'given status, send displayed to PATCH /cms-pages/categories/{cmsPageCategoryId}. Before '
+                    . 'PrestaShop 9.2.2, the toggle of the root category is applied but answers 500, as it cannot be '
+                    . 'read back.',
             ),
         ),
         new CQRSDelete(
