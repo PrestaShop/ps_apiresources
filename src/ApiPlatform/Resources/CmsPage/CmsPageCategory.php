@@ -150,7 +150,9 @@ class CmsPageCategory
     public ?int $parentId;
 
     // The NotNull constraints of the Create group answer 422 on the cores older than 9.2.0, which ignore
-    // CREATE_DEFAULT_VALUES: a missing displayed is a 400 there, a missing descriptions a TypeError in the handler
+    // CREATE_DEFAULT_VALUES: a missing displayed is a 400 there, a missing descriptions a TypeError in the handler.
+    // The schema keeps the boolean type that the compatibility setter below would widen to its union.
+    #[ApiProperty(schema: ['type' => 'boolean'])]
     #[Assert\NotNull(groups: ['Create'])]
     public bool $displayed;
 

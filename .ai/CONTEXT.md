@@ -237,7 +237,7 @@ a review does not flag them, and a new endpoint never copies them.
 |----------|----------|
 | `PUT /manufacturers/bulk-delete`, `PUT /taxes/bulk-delete` (`CQRSUpdate`) | `DELETE` + `CQRSDelete` |
 | `PUT /categories/bulk-update-status`, `PUT /modules/bulk-update-status`, `PUT /stores/bulk-update-status`, `PUT /tax-rules-groups/bulk-update-status`, `PUT /zones/bulk-update-status`, `PUT /countries/bulk-update-status` + `bulk-update-zone` (not released yet) (`CQRSUpdate`) | `PATCH` + `CQRSPartialUpdate` |
-| `PUT /taxes/bulk-set-status`; `PUT /customers/bulk-enable` + `bulk-disable`; `PUT /suppliers/bulk-enable` + `bulk-disable` | one `PATCH /x/bulk-update-status`, the value in the body |
+| `PUT /taxes/bulk-set-status`; `PUT /customers/bulk-enable` + `bulk-disable`; `PUT /suppliers/bulk-enable` + `bulk-disable`; `PUT /cms-pages/bulk-enable` + `bulk-disable`, `PUT /cms-pages/categories/bulk-enable` + `bulk-disable` (not released yet) | one `PATCH /x/bulk-update-status`, the value in the body |
 | `PUT /modules/bulk-uninstall` | `POST` when no method fits |
 | `PATCH /categories/{categoryId}/status`, `PATCH /tax-rules-groups/{taxRulesGroupId}/set-status`, `PUT /hooks/{hookId}/status`, `PUT /modules/{technicalName}/status` | the `PATCH` of the resource (`enabled`), or a `toggle-status` without value (`/zones`, `/stores`, `/countries`); a rule of the reviews of 2026-03, the ADR still gives `/hooks/{hookId}/status` as its sub part example |
 

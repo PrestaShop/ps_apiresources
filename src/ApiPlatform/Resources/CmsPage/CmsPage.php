@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use ApiPlatform\OpenApi\Model\RequestBody;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\DefaultLanguage;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\AddCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\DeleteCmsPageCommand;
@@ -65,6 +66,17 @@ use Symfony\Component\Validator\Constraints as Assert;
             ],
             CQRSQueryMapping: self::QUERY_MAPPING,
             CQRSCommandMapping: self::CREATE_COMMAND_MAPPING,
+            openapi: new OpenApiOperation(
+                // Written by hand: AddCmsPageCommand exposes getCmsPageCategory() for its $cmsPageCategoryId
+                // parameter, so the body generated from the command misses that required field
+                requestBody: new RequestBody(
+                    'The new CmsPage resource',
+                    new \ArrayObject([
+                        'application/json' => ['schema' => self::CREATE_REQUEST_SCHEMA],
+                    ]),
+                    true,
+                ),
+            ),
             extraProperties: [
                 // The defaults of the back office form, applied before the validation from PrestaShop 9.2.0
                 // (the fields stay required on older versions)
@@ -131,9 +143,7 @@ class CmsPage
     #[ApiProperty(identifier: true)]
     public int $cmsPageId;
 
-    // The accessor of AddCmsPageCommand is getCmsPageCategory(), not getCmsPageCategoryId(), so the generator
-    // drops this parameter from the documented POST body; the constraints give a 422 instead of the 400 of a
-    // missing constructor argument
+    // The constraints give a 422 instead of the 400 of a missing constructor argument
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\Positive]
     public int $cmsPageCategoryId;
@@ -162,9 +172,12 @@ class CmsPage
     #[Assert\NotNull(groups: ['Create'])]
     public array $contents;
 
+    // The schema keeps the boolean type that the compatibility setters below would widen to their union
+    #[ApiProperty(schema: ['type' => 'boolean'])]
     #[Assert\NotNull(groups: ['Create'])]
     public bool $indexedForSearch;
 
+    #[ApiProperty(schema: ['type' => 'boolean'])]
     #[Assert\NotNull(groups: ['Create'])]
     public bool $displayed;
 
@@ -172,8 +185,7 @@ class CmsPage
      * @var int[]
      */
     #[ApiProperty(openapiContext: [
-        'description' => 'Shops of the page. Optional on creation from PrestaShop 9.2.0, the shops of the context are '
-            . 'used when it is omitted (required on older versions). The existence of the shops is not checked.',
+        'description' => self::SHOP_IDS_DESCRIPTION,
         'example' => [1, 3],
     ])]
     #[Assert\NotBlank(groups: ['Create'])]
@@ -191,6 +203,37 @@ class CmsPage
         'indexedForSearch' => true,
         'displayed' => false,
         'shopIds' => '[_context][shopIds]',
+    ];
+
+    private const SHOP_IDS_DESCRIPTION = 'Shops of the page. Optional on creation from PrestaShop 9.2.0, the shops of '
+        . 'the context are used when it is omitted (required on older versions). The existence of the shops is not '
+        . 'checked.';
+
+    private const LOCALIZED_SCHEMA = [
+        'type' => 'object',
+        'example' => ['en-US' => 'value', 'fr-FR' => 'valeur'],
+    ];
+
+    // The body generated from AddCmsPageCommand, plus the cmsPageCategoryId it misses
+    public const CREATE_REQUEST_SCHEMA = [
+        'type' => 'object',
+        'required' => ['cmsPageCategoryId', 'titles', 'linkRewrites'],
+        'properties' => [
+            'cmsPageCategoryId' => ['type' => 'integer', 'example' => 1],
+            'titles' => self::LOCALIZED_SCHEMA,
+            'linkRewrites' => self::LOCALIZED_SCHEMA,
+            'metaTitles' => self::LOCALIZED_SCHEMA + ['default' => []],
+            'metaDescriptions' => self::LOCALIZED_SCHEMA + ['default' => []],
+            'contents' => self::LOCALIZED_SCHEMA + ['default' => []],
+            'indexedForSearch' => ['type' => 'boolean', 'default' => true],
+            'displayed' => ['type' => 'boolean', 'default' => false],
+            'shopIds' => [
+                'type' => 'array',
+                'items' => ['type' => 'integer'],
+                'description' => self::SHOP_IDS_DESCRIPTION,
+                'example' => [1, 3],
+            ],
+        ],
     ];
 
     // GetCmsPageForEditing also returns previewUrl, deliberately not exposed: no Admin API use case is known for it

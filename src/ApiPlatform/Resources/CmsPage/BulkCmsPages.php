@@ -25,6 +25,7 @@ namespace PrestaShop\Module\APIResources\ApiPlatform\Resources\CmsPage;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\OpenApi\Model\Operation as OpenApiOperation;
+use ApiPlatform\OpenApi\Model\RequestBody;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDeleteCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkDisableCmsPageCommand;
 use PrestaShop\PrestaShop\Core\Domain\CmsPage\Command\BulkEnableCmsPageCommand;
@@ -48,6 +49,11 @@ use Symfony\Component\Validator\Constraints as Assert;
                 summary: 'Delete several CMS pages.',
                 description: 'Deletes the listed pages. The handler stops at the first unknown page with a 404: the '
                     . 'pages listed before it are already deleted, the following ones are not.',
+                requestBody: new RequestBody(
+                    'The CMS pages.',
+                    new \ArrayObject(['application/json' => ['schema' => self::REQUEST_SCHEMA]]),
+                    true,
+                ),
             ),
         ),
         // Deliberate deviation from ADR 0023 (one PATCH bulk-update-status with the value in the body): the core only
@@ -64,6 +70,11 @@ use Symfony\Component\Validator\Constraints as Assert;
                 summary: 'Enable several CMS pages.',
                 description: 'Enables the listed pages. The handler stops at the first unknown page with a 404: the '
                     . 'pages listed before it are already enabled, the following ones are not.',
+                requestBody: new RequestBody(
+                    'The CMS pages.',
+                    new \ArrayObject(['application/json' => ['schema' => self::REQUEST_SCHEMA]]),
+                    true,
+                ),
             ),
         ),
         new CQRSUpdate(
@@ -77,6 +88,11 @@ use Symfony\Component\Validator\Constraints as Assert;
                 summary: 'Disable several CMS pages.',
                 description: 'Disables the listed pages. The handler stops at the first unknown page with a 404: the '
                     . 'pages listed before it are already disabled, the following ones are not.',
+                requestBody: new RequestBody(
+                    'The CMS pages.',
+                    new \ArrayObject(['application/json' => ['schema' => self::REQUEST_SCHEMA]]),
+                    true,
+                ),
             ),
         ),
     ],
@@ -95,4 +111,14 @@ class BulkCmsPages
     #[Assert\NotBlank]
     #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $cmsPageIds;
+
+    // Written by hand: the page bulk commands expose getCmsPages() for their $cmsPageIds parameter, so the body
+    // generated from them is an empty object
+    public const REQUEST_SCHEMA = [
+        'type' => 'object',
+        'required' => ['cmsPageIds'],
+        'properties' => [
+            'cmsPageIds' => ['type' => 'array', 'items' => ['type' => 'integer'], 'example' => [1, 3]],
+        ],
+    ];
 }

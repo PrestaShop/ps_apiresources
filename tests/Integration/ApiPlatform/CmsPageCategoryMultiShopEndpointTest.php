@@ -34,7 +34,8 @@ use Tests\Resources\Resetter\LanguageResetter;
 use Tests\Resources\Resetter\ShopResetter;
 
 /**
- * The shops of a created CMS page category: without shopIds in the payload, the shops of the request context are used.
+ * The shops of a created CMS page category: without shopIds in the payload, the shops of the request context are used,
+ * an explicit list is kept.
  */
 class CmsPageCategoryMultiShopEndpointTest extends ApiTestCase
 {
@@ -99,6 +100,28 @@ class CmsPageCategoryMultiShopEndpointTest extends ApiTestCase
 
         $readBack = $this->getItem('/cms-pages/categories/' . $cmsPageCategory['cmsPageCategoryId'], ['cms_page_category_read'], Response::HTTP_OK, $contextOptions);
         $this->assertSame([self::$secondShopId], $readBack['shopIds']);
+    }
+
+    public function testExplicitShopIdsAreKept(): void
+    {
+        // The context targets the second shop only, the category is associated with the shops of the payload
+        $shopIds = [self::DEFAULT_SHOP_ID, self::$secondShopId];
+        $payload = array_replace($this->getPayload(), [
+            'linkRewrites' => [
+                'en-US' => 'explicit-shops-category',
+                'fr-FR' => 'categorie-boutiques-explicites',
+            ],
+            'shopIds' => $shopIds,
+        ]);
+        $cmsPageCategory = $this->createItem('/cms-pages/categories', $payload, ['cms_page_category_write'], Response::HTTP_CREATED, [
+            'extra' => ['parameters' => ['shopId' => self::$secondShopId]],
+        ]);
+        $this->assertSame($shopIds, $cmsPageCategory['shopIds']);
+
+        $readBack = $this->getItem('/cms-pages/categories/' . $cmsPageCategory['cmsPageCategoryId'], ['cms_page_category_read'], Response::HTTP_OK, [
+            'extra' => ['parameters' => ['shopId' => self::DEFAULT_SHOP_ID]],
+        ]);
+        $this->assertSame($shopIds, $readBack['shopIds']);
     }
 
     protected function getPayload(): array
