@@ -31,7 +31,7 @@ reviews:
   labeling_instructions:
     - label: "Need human review"
       instructions: >-
-        Apply to every pull request as soon as a review of it is complete, whatever its findings.
+        Apply to every pull request you reviewed, whatever its findings.
   suggested_reviewers: false
   in_progress_fortune: false
   poem: false
