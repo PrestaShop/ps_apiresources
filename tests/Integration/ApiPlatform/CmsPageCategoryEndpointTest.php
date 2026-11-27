@@ -491,15 +491,13 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         ];
 
         // parentId filters but cannot be used in orderBy: the core grid sorts on its filter name
+        $filters = [
+            'parentId' => $parentId,
+            'name' => 'Listed child',
+        ];
         foreach (['asc' => [$childA, $childB], 'desc' => [$childB, $childA]] as $sortOrder => $expectedIds) {
-            $list = $this->listItems('/cms-pages/categories?orderBy=name&sortOrder=' . $sortOrder, ['cms_page_category_read'], [
-                'parentId' => $parentId,
-                'name' => 'Listed child',
-            ]);
-            $this->assertSame(2, $list['totalItems']);
-            $this->assertEquals('name', $list['orderBy']);
-            $this->assertEquals($sortOrder, $list['sortOrder']);
-            $this->assertEquals(array_map(fn (int $id) => $expectedItems[$id], $expectedIds), $list['items']);
+            $list = $this->listItems('/cms-pages/categories?orderBy=name&sortOrder=' . $sortOrder, ['cms_page_category_read'], $filters);
+            $this->assertEquals($this->expectedList($filters, array_map(fn (int $id) => $expectedItems[$id], $expectedIds), 'name', $sortOrder), $list);
         }
 
         $this->assertEquals(0, $this->countItems('/cms-pages/categories', ['cms_page_category_read'], ['parentId' => $childA]));
@@ -536,16 +534,81 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         // reading it answered 500 before
         $this->markTestSkippedByMinVersion('9.2.2');
 
-        $rootCategory = $this->getItem('/cms-pages/categories/1', ['cms_page_category_read']);
-        $this->assertSame(1, $rootCategory['cmsPageCategoryId']);
-        $this->assertArrayHasKey('parentId', $rootCategory);
-        $this->assertNull($rootCategory['parentId']);
+        // The fixture of the root category has no fr-FR row: the language is added by the test after the install
+        $emptyTexts = ['en-US' => ''];
+        $this->assertSame([
+            'cmsPageCategoryId' => 1,
+            'names' => ['en-US' => 'Home'],
+            'linkRewrites' => ['en-US' => 'home'],
+            'parentId' => null,
+            'displayed' => true,
+            'descriptions' => $emptyTexts,
+            'metaTitles' => $emptyTexts,
+            'metaDescriptions' => $emptyTexts,
+            'shopIds' => [1],
+        ], $this->getItem('/cms-pages/categories/1', ['cms_page_category_read']));
 
         // The list returns null too, while the grid gives 0
-        $list = $this->listItems('/cms-pages/categories', ['cms_page_category_read'], ['cmsPageCategoryId' => 1]);
-        $this->assertSame(1, $list['totalItems']);
-        $this->assertArrayHasKey('parentId', $list['items'][0]);
-        $this->assertNull($list['items'][0]['parentId']);
+        $filters = ['cmsPageCategoryId' => 1];
+        $this->assertEquals($this->expectedList($filters, [
+            ['cmsPageCategoryId' => 1, 'name' => 'Home', 'description' => '', 'parentId' => null, 'displayed' => true, 'position' => 0],
+        ]), $this->listItems('/cms-pages/categories', ['cms_page_category_read'], $filters));
+    }
+
+    public function testMoveCmsPageCategoryAndPage(): void
+    {
+        [$categoryId, $targetId] = $this->createSeveral(['Moved category', 'Target category']);
+
+        $moved = $this->partialUpdateItem('/cms-pages/categories/' . $categoryId, ['parentId' => $targetId], ['cms_page_category_write']);
+        $expected = $this->expectedCmsPageCategory($categoryId, [
+            'names' => ['en-US' => 'Moved category', 'fr-FR' => 'Moved category'],
+            'linkRewrites' => ['en-US' => 'bulk-0-en', 'fr-FR' => 'bulk-0-fr'],
+            'parentId' => $targetId,
+        ]);
+        $this->assertEquals($expected, $moved);
+        $this->assertEquals($expected, $this->getItem('/cms-pages/categories/' . $categoryId, ['cms_page_category_read']));
+
+        $emptyTexts = ['en-US' => '', 'fr-FR' => ''];
+        $pageData = [
+            'cmsPageCategoryId' => $categoryId,
+            'titles' => ['en-US' => 'Moved page', 'fr-FR' => 'Moved page'],
+            'linkRewrites' => ['en-US' => 'moved-page-en', 'fr-FR' => 'moved-page-fr'],
+            'metaTitles' => $emptyTexts,
+            'metaDescriptions' => $emptyTexts,
+            'contents' => $emptyTexts,
+            'indexedForSearch' => true,
+            'displayed' => true,
+            'shopIds' => [1],
+        ];
+        $cmsPageId = $this->createItem('/cms-pages', $pageData, ['cms_page_write'])['cmsPageId'];
+        $expectedPage = array_replace(['cmsPageId' => $cmsPageId], $pageData, ['cmsPageCategoryId' => $targetId]);
+        $this->assertEquals(
+            $expectedPage,
+            $this->partialUpdateItem('/cms-pages/' . $cmsPageId, ['cmsPageCategoryId' => $targetId], ['cms_page_write'])
+        );
+        $this->assertEquals($expectedPage, $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']));
+    }
+
+    /**
+     * The whole envelope of a list filtered down to the fixtures of the test
+     */
+    private function expectedList(array $filters, array $items, string $orderBy = 'position', string $sortOrder = 'asc'): array
+    {
+        $expected = [
+            'totalItems' => count($items),
+            'orderBy' => $orderBy,
+            'sortOrder' => $sortOrder,
+            'limit' => 50,
+            'offset' => 0,
+            'filters' => $filters,
+            'items' => $items,
+        ];
+        if (self::isVersionUnder('9.2.2')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.2 returns 0
+            unset($expected['offset']);
+        }
+
+        return $expected;
     }
 
     public function testDeleteRootCmsPageCategory(): void

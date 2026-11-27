@@ -148,6 +148,7 @@ class CmsPageEndpointTest extends ApiTestCase
                 'fr-FR' => 'Updated page FR',
             ],
             'displayed' => false,
+            'indexedForSearch' => false,
         ];
 
         // The fields and languages not sent are untouched
@@ -174,6 +175,7 @@ class CmsPageEndpointTest extends ApiTestCase
                 'fr-FR' => 'Updated page FR',
             ],
             'displayed' => true,
+            'indexedForSearch' => false,
         ]);
         $toggled = $this->updateItem('/cms-pages/' . $cmsPageId . '/toggle-status', [], ['cms_page_write']);
         $this->assertEquals($expectedCmsPage, $toggled);
@@ -447,13 +449,37 @@ class CmsPageEndpointTest extends ApiTestCase
 
         // The list fields are filtered and ordered through their API names (cmsPageCategoryId filters but cannot be
         // used in orderBy: the core grid sorts on its filter name)
-        $filtered = $this->listItems('/cms-pages?orderBy=title&sortOrder=asc', ['cms_page_read'], [
+        $filters = [
             'cmsPageCategoryId' => 1,
             'title' => 'Filtered page',
-        ]);
-        $this->assertEquals('title', $filtered['orderBy']);
-        $this->assertSame(1, $filtered['totalItems']);
-        $this->assertSame([$cmsPageId], array_column($filtered['items'], 'cmsPageId'));
+        ];
+        $filtered = $this->listItems('/cms-pages?orderBy=title&sortOrder=asc', ['cms_page_read'], $filters);
+        // The position depends on the pages the fixtures ship
+        $this->assertIsInt($filtered['items'][0]['position'] ?? null);
+        $expected = [
+            'totalItems' => 1,
+            'orderBy' => 'title',
+            'sortOrder' => 'asc',
+            'limit' => 50,
+            'offset' => 0,
+            'filters' => $filters,
+            'items' => [
+                [
+                    'cmsPageId' => $cmsPageId,
+                    'title' => 'Filtered page',
+                    'linkRewrite' => 'bulk-0-en',
+                    'metaTitle' => 'Meta title EN',
+                    'cmsPageCategoryId' => 1,
+                    'displayed' => true,
+                    'position' => $filtered['items'][0]['position'],
+                ],
+            ],
+        ];
+        if (self::isVersionUnder('9.2.2')) {
+            // The first page has a null offset the serializer drops, PrestaShop 9.2.2 returns 0
+            unset($expected['offset']);
+        }
+        $this->assertEquals($expected, $filtered);
 
         // Several pages come back in the requested title order
         [$pageB, $pageA] = $this->createSeveral(['Ordered page B', 'Ordered page A']);
