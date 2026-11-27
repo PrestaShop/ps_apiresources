@@ -502,7 +502,7 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
             $this->assertEquals(array_map(fn (int $id) => $expectedItems[$id], $expectedIds), $list['items']);
         }
 
-        $this->assertEquals(0, $this->countItems('/cms-pages/categories', ['cms_page_category_read'], ['parentId' => 999999]));
+        $this->assertEquals(0, $this->countItems('/cms-pages/categories', ['cms_page_category_read'], ['parentId' => $childA]));
     }
 
     public function testDeleteCmsPageCategoryDeletesItsSubcategories(): void
