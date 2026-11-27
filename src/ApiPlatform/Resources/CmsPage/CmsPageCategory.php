@@ -143,7 +143,7 @@ class CmsPageCategory
 
     #[ApiProperty(openapiContext: [
         'description' => 'Parent category, null for the root category. An unknown parent answers 404 from '
-            . 'PrestaShop 9.2.2, older versions store it. Reading the root category needs PrestaShop 9.2.2.',
+            . 'PrestaShop 9.2.2; older versions store it on creation and answer 422 on update. Reading the root category needs PrestaShop 9.2.2.',
     ])]
     #[Assert\NotNull(groups: ['Create'])]
     #[Assert\Positive]

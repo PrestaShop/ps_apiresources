@@ -391,10 +391,29 @@ class CmsPageEndpointTest extends ApiTestCase
             'contents' => ['en-US' => '<p>Patched EN</p>'],
             'titles' => ['en-US' => 'Patched EN'],
         ], ['cms_page_write']);
-        $this->assertSame(['en-US' => '<p>Patched EN</p>', 'fr-FR' => ''], $cmsPage['contents']);
-        $this->assertSame(['en-US' => 'Patched EN', 'fr-FR' => 'Patched EN'], $cmsPage['titles']);
         // The fields not sent keep their languages
-        $this->assertSame($this->getCreateData()['metaTitles'], $cmsPage['metaTitles']);
+        $expectedCmsPage = $this->expectedCmsPage($cmsPageId, [
+            'titles' => ['en-US' => 'Patched EN', 'fr-FR' => 'Patched EN'],
+            'linkRewrites' => ['en-US' => 'bulk-0-en', 'fr-FR' => 'bulk-0-fr'],
+            'contents' => ['en-US' => '<p>Patched EN</p>', 'fr-FR' => ''],
+        ]);
+        $this->assertEquals($expectedCmsPage, $cmsPage);
+        $this->assertEquals($expectedCmsPage, $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read']));
+    }
+
+    public function testPartialUpdateCmsPageInUnknownCategory(): void
+    {
+        [$cmsPageId] = $this->createSeveral(['Unknown category page']);
+
+        // The page handler checks the category and throws the not found exception of the category domain
+        $this->partialUpdateItem('/cms-pages/' . $cmsPageId, ['cmsPageCategoryId' => 999999], ['cms_page_write'], Response::HTTP_NOT_FOUND);
+        $this->assertEquals(
+            $this->expectedCmsPage($cmsPageId, [
+                'titles' => ['en-US' => 'Unknown category page', 'fr-FR' => 'Unknown category page'],
+                'linkRewrites' => ['en-US' => 'bulk-0-en', 'fr-FR' => 'bulk-0-fr'],
+            ]),
+            $this->getItem('/cms-pages/' . $cmsPageId, ['cms_page_read'])
+        );
     }
 
     public function testInvalidCmsPage(): void
@@ -466,7 +485,12 @@ class CmsPageEndpointTest extends ApiTestCase
         $data['linkRewrites'] = ['en-US' => 'context-shops-en', 'fr-FR' => 'context-shops-fr'];
 
         $cmsPage = $this->createItem('/cms-pages', $data, ['cms_page_write']);
-        $this->assertSame([1], $cmsPage['shopIds']);
+        $expectedCmsPage = $this->expectedCmsPage($cmsPage['cmsPageId'], [
+            'linkRewrites' => $data['linkRewrites'],
+            'shopIds' => [1],
+        ]);
+        $this->assertEquals($expectedCmsPage, $cmsPage);
+        $this->assertEquals($expectedCmsPage, $this->getItem('/cms-pages/' . $cmsPage['cmsPageId'], ['cms_page_read']));
     }
 
     public function testInvalidCmsPageCategoryAndShops(): void

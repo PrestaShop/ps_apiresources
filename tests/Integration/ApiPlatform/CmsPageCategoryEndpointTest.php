@@ -442,9 +442,67 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $cmsPageCategory = $this->partialUpdateItem('/cms-pages/categories/' . $cmsPageCategoryId, [
             'descriptions' => ['en-US' => 'Patched EN'],
         ], ['cms_page_category_write']);
-        $this->assertSame(['en-US' => 'Patched EN', 'fr-FR' => ''], $cmsPageCategory['descriptions']);
         // The fields not sent keep their languages
-        $this->assertSame($this->getCreateData()['metaTitles'], $cmsPageCategory['metaTitles']);
+        $expectedCmsPageCategory = $this->expectedCmsPageCategory($cmsPageCategoryId, [
+            'names' => ['en-US' => 'One language category', 'fr-FR' => 'One language category'],
+            'linkRewrites' => ['en-US' => 'bulk-0-en', 'fr-FR' => 'bulk-0-fr'],
+            'descriptions' => ['en-US' => 'Patched EN', 'fr-FR' => ''],
+        ]);
+        $this->assertEquals($expectedCmsPageCategory, $cmsPageCategory);
+        $this->assertEquals($expectedCmsPageCategory, $this->getItem('/cms-pages/categories/' . $cmsPageCategoryId, ['cms_page_category_read']));
+    }
+
+    public function testPartialUpdateCmsPageCategoryWithUnknownParent(): void
+    {
+        [$cmsPageCategoryId] = $this->createSeveral(['Unknown parent category']);
+
+        // From PrestaShop 9.2.2 the handler checks the parent (404), older versions refuse to move a category under a
+        // parent CMSCategory::checkBeforeMove() cannot walk up to the root (CmsPageCategoryConstraintException, 422)
+        $this->partialUpdateItem(
+            '/cms-pages/categories/' . $cmsPageCategoryId,
+            ['parentId' => 999999],
+            ['cms_page_category_write'],
+            self::isVersionUnder('9.2.2') ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_NOT_FOUND
+        );
+        $this->assertEquals(
+            $this->expectedCmsPageCategory($cmsPageCategoryId, [
+                'names' => ['en-US' => 'Unknown parent category', 'fr-FR' => 'Unknown parent category'],
+                'linkRewrites' => ['en-US' => 'bulk-0-en', 'fr-FR' => 'bulk-0-fr'],
+            ]),
+            $this->getItem('/cms-pages/categories/' . $cmsPageCategoryId, ['cms_page_category_read'])
+        );
+    }
+
+    public function testListCmsPageCategoriesWithFiltersAndOrder(): void
+    {
+        [$parentId] = $this->createSeveral(['Listed parent']);
+        $childIds = [];
+        foreach (['Listed child B', 'Listed child A'] as $index => $name) {
+            $data = $this->getCreateData();
+            $data['parentId'] = $parentId;
+            $data['names'] = ['en-US' => $name, 'fr-FR' => $name];
+            $data['linkRewrites'] = ['en-US' => 'listed-child-' . $index . '-en', 'fr-FR' => 'listed-child-' . $index . '-fr'];
+            $childIds[] = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write'])['cmsPageCategoryId'];
+        }
+        [$childB, $childA] = $childIds;
+        $expectedItems = [
+            $childA => ['cmsPageCategoryId' => $childA, 'name' => 'Listed child A', 'description' => 'Description EN', 'parentId' => $parentId, 'displayed' => true, 'position' => 1],
+            $childB => ['cmsPageCategoryId' => $childB, 'name' => 'Listed child B', 'description' => 'Description EN', 'parentId' => $parentId, 'displayed' => true, 'position' => 0],
+        ];
+
+        // parentId filters but cannot be used in orderBy: the core grid sorts on its filter name
+        foreach (['asc' => [$childA, $childB], 'desc' => [$childB, $childA]] as $sortOrder => $expectedIds) {
+            $list = $this->listItems('/cms-pages/categories?orderBy=name&sortOrder=' . $sortOrder, ['cms_page_category_read'], [
+                'parentId' => $parentId,
+                'name' => 'Listed child',
+            ]);
+            $this->assertSame(2, $list['totalItems']);
+            $this->assertEquals('name', $list['orderBy']);
+            $this->assertEquals($sortOrder, $list['sortOrder']);
+            $this->assertEquals(array_map(fn (int $id) => $expectedItems[$id], $expectedIds), $list['items']);
+        }
+
+        $this->assertEquals(0, $this->countItems('/cms-pages/categories', ['cms_page_category_read'], ['parentId' => 999999]));
     }
 
     public function testDeleteCmsPageCategoryDeletesItsSubcategories(): void
@@ -505,7 +563,12 @@ class CmsPageCategoryEndpointTest extends ApiTestCase
         $data['linkRewrites'] = ['en-US' => 'context-shops-en', 'fr-FR' => 'context-shops-fr'];
 
         $cmsPageCategory = $this->createItem('/cms-pages/categories', $data, ['cms_page_category_write']);
-        $this->assertSame([1], $cmsPageCategory['shopIds']);
+        $expectedCmsPageCategory = $this->expectedCmsPageCategory($cmsPageCategory['cmsPageCategoryId'], [
+            'linkRewrites' => $data['linkRewrites'],
+            'shopIds' => [1],
+        ]);
+        $this->assertEquals($expectedCmsPageCategory, $cmsPageCategory);
+        $this->assertEquals($expectedCmsPageCategory, $this->getItem('/cms-pages/categories/' . $cmsPageCategory['cmsPageCategoryId'], ['cms_page_category_read']));
     }
 
     public function testInvalidCmsPageCategoryShopIds(): void
