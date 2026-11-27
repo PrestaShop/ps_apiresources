@@ -15,7 +15,9 @@ tone_instructions: >-
 
 reviews:
   profile: chill
-  request_changes_workflow: false
+  auto_approvals:
+    enabled: true
+    allow_author_approval: false
   # The findings go inline; the walkthrough comment stays as short as possible
   high_level_summary: false
   collapse_walkthrough: true
@@ -25,7 +27,13 @@ reviews:
   assess_linked_issues: false
   related_issues: false
   related_prs: false
-  suggested_labels: false
+  # Its only label: "Need human review", put on the PR once a review is done
+  suggested_labels: true
+  auto_apply_labels: true
+  labeling_instructions:
+    - label: "Need human review"
+      instructions: >-
+        Apply to every pull request you reviewed, whatever its findings.
   suggested_reviewers: false
   in_progress_fortune: false
   poem: false
